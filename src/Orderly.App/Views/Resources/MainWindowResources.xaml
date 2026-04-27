@@ -26,9 +26,26 @@
         <Setter Property="LineHeight" Value="20" />
     </Style>
 
+    <Style x:Key="HasItemsEmptyStateTextStyle" TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+        <Setter Property="Visibility" Value="Collapsed" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Tag}" Value="False">
+                <Setter Property="Visibility" Value="Visible" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
         <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style x:Key="StatusMessageTitleTextStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsStatusError}" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
@@ -98,6 +115,15 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="HasItemsListBoxStyle" TargetType="ListBox">
+        <Setter Property="Visibility" Value="Visible" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Tag}" Value="False">
+                <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <Style x:Key="ToolbarPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">

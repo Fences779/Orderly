@@ -54,8 +54,8 @@
                     <TextBlock Text="客户、订单、跟进和快捷回复集中处理" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button x:Name="AddCustomerButton" Content="+ 新增客户" Style="{StaticResource ToolbarPrimaryButtonStyle}" Click="AddCustomerButton_Click" AutomationProperties.AutomationId="Btn_AddCustomer" />
-                    <Button x:Name="AddOrderButton" Content="+ 创建订单" Style="{StaticResource ToolbarPrimaryButtonStyle}" Click="AddOrderButton_Click" AutomationProperties.AutomationId="Btn_AddOrder" />
+                    <Button x:Name="AddCustomerButton" Content="+ 新增客户" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding AddCustomerCommand}" AutomationProperties.AutomationId="Btn_AddCustomer" />
+                    <Button x:Name="AddOrderButton" Content="+ 创建订单" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding AddOrderCommand}" AutomationProperties.AutomationId="Btn_AddOrder" />
                     <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="10,0,0,0" MinWidth="108">
                         <StackPanel>
                             <TextBlock Text="待处理" Style="{StaticResource CaptionTextStyle}" />
@@ -175,17 +175,7 @@
                                 </Border>
                                 <Border Style="{StaticResource StatusPanelStyle}">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding StatusMessageTitle}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsStatusError}" Value="True">
-                                                            <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                                        <TextBlock Text="{Binding StatusMessageTitle}" Style="{StaticResource StatusMessageTitleTextStyle}" />
                                         <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{StaticResource HeadingBrush}" />
                                     </StackPanel>
                                 </Border>
@@ -818,39 +808,35 @@
                             <TextBlock Text="快捷：" Foreground="{StaticResource MutedBrush}" FontSize="12"
                                        VerticalAlignment="Center" Margin="0,0,6,6" />
                             <Button Content="全部" Style="{StaticResource ChipButtonStyle}"
-                                    Click="QuickFilter_All_Click"
+                                    Click="QuickFilter_Click"
+                                    Tag="All"
                                     AutomationProperties.AutomationId="Chip_All" />
                             <Button Content="今日跟进" Style="{StaticResource ChipButtonStyle}"
-                                    Click="QuickFilter_Today_Click"
+                                    Click="QuickFilter_Click"
+                                    Tag="TodayFollowUp"
                                     AutomationProperties.AutomationId="Chip_TodayFollowUp" />
                             <Button Content="逾期跟进" Style="{StaticResource ChipButtonStyle}"
-                                    Click="QuickFilter_Overdue_Click"
+                                    Click="QuickFilter_Click"
+                                    Tag="OverdueFollowUp"
                                     AutomationProperties.AutomationId="Chip_OverdueFollowUp" />
                             <Button Content="明日跟进" Style="{StaticResource ChipButtonStyle}"
-                                    Click="QuickFilter_Tomorrow_Click"
+                                    Click="QuickFilter_Click"
+                                    Tag="TomorrowFollowUp"
                                     AutomationProperties.AutomationId="Chip_TomorrowFollowUp" />
                             <Button Content="待处理订单" Style="{StaticResource ChipButtonStyle}"
-                                    Click="QuickFilter_Pending_Click"
+                                    Click="QuickFilter_Click"
+                                    Tag="PendingOrders"
                                     AutomationProperties.AutomationId="Chip_PendingOrders" />
                             <Button Content="已成交订单" Style="{StaticResource ChipButtonStyle}"
-                                    Click="QuickFilter_Won_Click"
+                                    Click="QuickFilter_Click"
+                                    Tag="WonOrders"
                                     AutomationProperties.AutomationId="Chip_WonOrders" />
                         </WrapPanel>
 
                         <!-- 状态消息面板 -->
                         <Border Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" Style="{StaticResource StatusPanelStyle}" Margin="18,0,0,0">
                             <StackPanel>
-                                <TextBlock Text="{Binding StatusMessageTitle}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsStatusError}" Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                <TextBlock Text="{Binding StatusMessageTitle}" Style="{StaticResource StatusMessageTitleTextStyle}" />
                                 <TextBlock Text="{Binding StatusMessage}" Margin="0,5,0,0" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
@@ -875,35 +861,18 @@
                                 </Border>
                             </DockPanel>
 
-                            <TextBlock Text="{Binding CustomersEmptyStateText}">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasCustomers}" Value="False">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <TextBlock Text="{Binding CustomersEmptyStateText}"
+                                       Style="{StaticResource HasItemsEmptyStateTextStyle}"
+                                       Tag="{Binding HasCustomers}" />
 
                             <ListBox ItemsSource="{Binding Customers}"
                                      SelectedItem="{Binding SelectedCustomer}"
                                      BorderThickness="0"
                                      Background="Transparent"
+                                     Style="{StaticResource HasItemsListBoxStyle}"
+                                     Tag="{Binding HasCustomers}"
                                      ItemContainerStyle="{StaticResource CardListBoxItemStyle}"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                <ListBox.Style>
-                                    <Style TargetType="ListBox">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasCustomers}" Value="False">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ListBox.Style>
                                 <ListBox.ItemTemplate>
                                     <StaticResource ResourceKey="CustomerListItemTemplate" />
                                 </ListBox.ItemTemplate>
@@ -923,35 +892,18 @@
                                 </Border>
                             </DockPanel>
 
-                            <TextBlock Text="{Binding OrdersEmptyStateText}">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasOrders}" Value="False">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                            <TextBlock Text="{Binding OrdersEmptyStateText}"
+                                       Style="{StaticResource HasItemsEmptyStateTextStyle}"
+                                       Tag="{Binding HasOrders}" />
 
                             <ListBox ItemsSource="{Binding Orders}"
                                      SelectedItem="{Binding SelectedOrderItem}"
                                      BorderThickness="0"
                                      Background="Transparent"
+                                     Style="{StaticResource HasItemsListBoxStyle}"
+                                     Tag="{Binding HasOrders}"
                                      ItemContainerStyle="{StaticResource CardListBoxItemStyle}"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                <ListBox.Style>
-                                    <Style TargetType="ListBox">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasOrders}" Value="False">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ListBox.Style>
                                 <ListBox.ItemTemplate>
                                     <StaticResource ResourceKey="OrderListItemTemplate" />
                                 </ListBox.ItemTemplate>
