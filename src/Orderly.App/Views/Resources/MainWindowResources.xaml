@@ -1,0 +1,372 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:conv="clr-namespace:Orderly.App.Converters">
+    <conv:EnumLabelConverter x:Key="EnumLabelConverter" />
+    <conv:SectionVisibilityConverter x:Key="SectionVisibilityConverter" />
+    <SolidColorBrush x:Key="HeadingBrush" Color="#17211D" />
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#5F6661" />
+    <SolidColorBrush x:Key="SurfaceSoftBrush" Color="#FBFAF6" />
+    <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#FFFDFC" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#E9F1EC" />
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#345A4D" />
+    <SolidColorBrush x:Key="WarmSoftBrush" Color="#F5EFE2" />
+    <SolidColorBrush x:Key="WarmTextBrush" Color="#8A5A1E" />
+    <SolidColorBrush x:Key="DangerSoftBrush" Color="#F8EEEB" />
+    <SolidColorBrush x:Key="DangerBorderBrush" Color="#E8D1CA" />
+    <SolidColorBrush x:Key="DangerTextBrush" Color="#9C4D41" />
+    <SolidColorBrush x:Key="TimelineBrush" Color="#D9E2DC" />
+
+    <Style x:Key="EmptyStateTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="18" />
+        <Setter Property="LineHeight" Value="20" />
+    </Style>
+
+    <Style x:Key="CaptionTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{StaticResource HeadingBrush}" />
+    </Style>
+
+    <Style x:Key="MetricValueTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="22" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{StaticResource HeadingBrush}" />
+    </Style>
+
+    <Style x:Key="CountBadgeBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="#F4F0E7" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="Padding" Value="8,2" />
+    </Style>
+
+    <Style x:Key="SummaryMetricCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12" />
+    </Style>
+
+    <Style x:Key="StatusPanelStyle" TargetType="Border">
+        <Setter Property="Background" Value="#F4F1E8" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsStatusError}" Value="True">
+                <Setter Property="Background" Value="{StaticResource DangerSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource DangerBorderBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="CardListBoxItemStyle" TargetType="ListBoxItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="AutomationProperties.AutomationId" Value="{Binding RemoteId}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="ContainerBorder" Background="Transparent" CornerRadius="10" Padding="2">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ContainerBorder" Property="Background" Value="#F4F1E8" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ContainerBorder" Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ToolbarPrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Margin" Value="0,0,10,10" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="MinWidth" Value="96" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="#186A4D" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="#186A4D" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="#14553E" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="#14553E" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="Background" Value="#D8DEDA" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="#D8DEDA" />
+                            <Setter Property="Foreground" Value="#7C857E" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Cursor" Value="Arrow" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ToolbarSecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="MinWidth" Value="84" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
+        <Setter Property="Foreground" Value="#36433D" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="#F2EEE4" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="#E8E1D4" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="Background" Value="#F5F2EA" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="#E6E0D6" />
+                            <Setter Property="Foreground" Value="#8B908B" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Cursor" Value="Arrow" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SectionBlockBorderStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+        <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+        <Setter Property="Margin" Value="0,0,0,14" />
+        <Setter Property="Padding" Value="14" />
+    </Style>
+
+    <Style x:Key="ListItemBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
+        <Setter Property="BorderBrush" Value="#ECE5D9" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+
+    <Style x:Key="AccentPillBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="8,2" />
+    </Style>
+
+    <Style x:Key="OutlinePillBorderStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Padding" Value="8,2" />
+    </Style>
+
+    <DataTemplate x:Key="CustomerListItemTemplate">
+        <Border x:Name="CustomerItemCard" Style="{StaticResource ListItemBorderStyle}" AutomationProperties.AutomationId="{Binding RemoteId}">
+            <StackPanel>
+                <DockPanel>
+                    <TextBlock x:Name="CustomerNameText"
+                               Text="{Binding Name}"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource HeadingBrush}"
+                               TextWrapping="Wrap" />
+                    <TextBlock x:Name="CustomerLastContactText"
+                               DockPanel.Dock="Right"
+                               Foreground="{StaticResource SecondaryTextBrush}"
+                               Margin="12,2,0,0"
+                               Text="{Binding LastContactAt, StringFormat=最近联系：{0:MM-dd HH:mm}}" />
+                </DockPanel>
+
+                <WrapPanel Margin="0,10,0,0">
+                    <Border Style="{StaticResource AccentPillBorderStyle}" Margin="0,0,8,8">
+                        <TextBlock Text="{Binding Status, Converter={StaticResource EnumLabelConverter}}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                    </Border>
+                    <Border Style="{StaticResource OutlinePillBorderStyle}" Margin="0,0,8,8">
+                        <TextBlock Text="{Binding Priority, Converter={StaticResource EnumLabelConverter}}" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                    </Border>
+                </WrapPanel>
+
+                <TextBlock x:Name="CustomerSourceText"
+                           Text="{Binding SourcePlatform, StringFormat=来源：{0}}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Margin="0,0,0,4"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Text="{Binding ContactHandle, StringFormat=联系：{0}}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ContactHandle}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <TextBlock Text="{Binding Phone, StringFormat=电话：{0}}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ContactHandle}" Value="">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Phone}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+
+                <TextBlock Text="联系方式：待补充"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding ContactHandle}" Value="" />
+                                        <Condition Binding="{Binding Phone}" Value="" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding Name}" Value="">
+                <Setter TargetName="CustomerNameText" Property="Text" Value="未知客户" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding SourcePlatform}" Value="">
+                <Setter TargetName="CustomerSourceText" Property="Text" Value="来源：未记录" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding LastContactAt}" Value="{x:Null}">
+                <Setter TargetName="CustomerLastContactText" Property="Text" Value="最近联系：暂无记录" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                <Setter TargetName="CustomerItemCard" Property="Background" Value="#EEF4F0" />
+                <Setter TargetName="CustomerItemCard" Property="BorderBrush" Value="#D5E4DA" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="OrderListItemTemplate">
+        <Border x:Name="OrderItemCard" Style="{StaticResource ListItemBorderStyle}" AutomationProperties.AutomationId="{Binding RemoteId}">
+            <StackPanel>
+                <DockPanel>
+                    <TextBlock Text="{Binding CustomerNameDisplay}"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentTextBrush}"
+                               TextWrapping="Wrap" />
+                    <TextBlock DockPanel.Dock="Right"
+                               Text="{Binding AmountText}"
+                               Foreground="{StaticResource WarmTextBrush}"
+                               FontWeight="Bold"
+                               Margin="12,0,0,0" />
+                </DockPanel>
+
+                <TextBlock Text="{Binding TitleDisplay}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource HeadingBrush}"
+                           Margin="0,6,0,0"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Text="{Binding RequirementSummary}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           TextWrapping="Wrap"
+                           LineHeight="20"
+                           Margin="0,8,0,0"
+                           MaxHeight="42" />
+
+                <WrapPanel Margin="0,10,0,0">
+                    <Border Style="{StaticResource AccentPillBorderStyle}" Margin="0,0,8,8">
+                        <TextBlock Text="{Binding StatusLabel}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                    </Border>
+                    <Border Style="{StaticResource OutlinePillBorderStyle}" Margin="0,0,8,8">
+                        <TextBlock Text="{Binding NextFollowUpDisplay, StringFormat=跟进：{0}}" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                    </Border>
+                </WrapPanel>
+
+                <TextBlock Text="{Binding LastActivityDisplay}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Margin="0,2,0,0" />
+            </StackPanel>
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                <Setter TargetName="OrderItemCard" Property="Background" Value="#EEF4F0" />
+                <Setter TargetName="OrderItemCard" Property="BorderBrush" Value="#D5E4DA" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+</ResourceDictionary>
