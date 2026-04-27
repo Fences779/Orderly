@@ -28,6 +28,7 @@ public partial class App : System.Windows.Application
     private SqliteConnectionFactory? _connectionFactory;
     private string? _databasePath;
     private bool _startupDataPrepared;
+    private QaDataMaintenanceService.QaDataMaintenanceCommand _qaMaintenanceCommand;
 
     public bool IsExiting { get; private set; }
 
@@ -35,10 +36,18 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         _startupArgs = e.Args;
+        QaDataMaintenanceService.TryGetRequestedCommand(_startupArgs, out _qaMaintenanceCommand);
         Console.WriteLine("App starting");
 
         try
         {
+            if (_qaMaintenanceCommand != QaDataMaintenanceService.QaDataMaintenanceCommand.None)
+            {
+                await RunQaMaintenanceCommandAsync();
+                ExitApplication();
+                return;
+            }
+
             if (QaDataSeeder.IsRequested(_startupArgs))
             {
                 await EnsureDatabasePreparedAsync();
@@ -52,11 +61,19 @@ public partial class App : System.Windows.Application
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(
-                $"启动失败：{ex.Message}",
-                "Orderly",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            if (_qaMaintenanceCommand != QaDataMaintenanceService.QaDataMaintenanceCommand.None)
+            {
+                Environment.ExitCode = 1;
+                Console.Error.WriteLine($"QA data maintenance failed: {ex.Message}");
+            }
+            else
+            {
+                System.Windows.MessageBox.Show(
+                    $"启动失败：{ex.Message}",
+                    "Orderly",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
 
             ExitApplication();
             return;
@@ -198,6 +215,24 @@ public partial class App : System.Windows.Application
         loginView.Opacity = 1;
         loginView.Show();
         loginView.Activate();
+    }
+
+    private async Task RunQaMaintenanceCommandAsync()
+    {
+        await EnsureDatabasePreparedAsync();
+
+        var connectionFactory = _connectionFactory ?? throw new InvalidOperationException("Database connection factory is not initialized.");
+        var maintenanceService = new QaDataMaintenanceService(connectionFactory);
+
+        object result = _qaMaintenanceCommand switch
+        {
+            QaDataMaintenanceService.QaDataMaintenanceCommand.Status => await maintenanceService.GetStatusAsync(),
+            QaDataMaintenanceService.QaDataMaintenanceCommand.Clear => await maintenanceService.ClearAsync(),
+            QaDataMaintenanceService.QaDataMaintenanceCommand.Reset => await maintenanceService.ResetAsync(),
+            _ => throw new InvalidOperationException("Unsupported QA data maintenance command.")
+        };
+
+        Console.WriteLine(result);
     }
 
     private async Task<string> EnsureDatabasePreparedAsync()
