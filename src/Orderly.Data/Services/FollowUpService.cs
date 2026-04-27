@@ -15,6 +15,11 @@ public sealed class FollowUpService : IFollowUpService
         _activityLogRepository = activityLogRepository;
     }
 
+    public Task<IReadOnlyList<FollowUp>> GetFollowUpsAsync(CancellationToken cancellationToken = default)
+    {
+        return _followUpRepository.ListAsync(cancellationToken);
+    }
+
     public Task<IReadOnlyList<FollowUp>> GetPendingFollowUpsAsync(CancellationToken cancellationToken = default)
     {
         return _followUpRepository.ListPendingAsync(cancellationToken);
@@ -41,7 +46,7 @@ public sealed class FollowUpService : IFollowUpService
     public async Task CompleteFollowUpAsync(int id, DateTime completedAt, CancellationToken cancellationToken = default)
     {
         var followUp = await _followUpRepository.GetByIdAsync(id, cancellationToken);
-        if (followUp is null)
+        if (followUp is null || !CanTransition(followUp.Status))
         {
             return;
         }
@@ -50,6 +55,47 @@ public sealed class FollowUpService : IFollowUpService
         followUp.CompletedAt = completedAt;
         await _followUpRepository.UpdateAsync(followUp, cancellationToken);
         await AddActivityAsync(ActivityType.FollowUpCompleted, followUp.CustomerId, followUp.DealId, followUp.OrderId, "完成跟进", followUp.Title, cancellationToken);
+    }
+
+    public async Task SnoozeFollowUpAsync(int id, DateTime scheduledAt, CancellationToken cancellationToken = default)
+    {
+        var followUp = await _followUpRepository.GetByIdAsync(id, cancellationToken);
+        if (followUp is null || !CanTransition(followUp.Status) || followUp.ScheduledAt == scheduledAt)
+        {
+            return;
+        }
+
+        var oldScheduledAt = followUp.ScheduledAt;
+        followUp.Status = FollowUpStatus.Pending;
+        followUp.ScheduledAt = scheduledAt;
+        followUp.CompletedAt = null;
+        await _followUpRepository.UpdateAsync(followUp, cancellationToken);
+        await AddActivityAsync(
+            ActivityType.FollowUpSnoozed,
+            followUp.CustomerId,
+            followUp.DealId,
+            followUp.OrderId,
+            "延期跟进",
+            $"{followUp.Title}：{oldScheduledAt:yyyy-MM-dd HH:mm} -> {scheduledAt:yyyy-MM-dd HH:mm}",
+            cancellationToken);
+    }
+
+    public async Task CancelFollowUpAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var followUp = await _followUpRepository.GetByIdAsync(id, cancellationToken);
+        if (followUp is null || !CanTransition(followUp.Status))
+        {
+            return;
+        }
+
+        followUp.Status = FollowUpStatus.Cancelled;
+        await _followUpRepository.UpdateAsync(followUp, cancellationToken);
+        await AddActivityAsync(ActivityType.FollowUpCancelled, followUp.CustomerId, followUp.DealId, followUp.OrderId, "取消跟进", followUp.Title, cancellationToken);
+    }
+
+    private static bool CanTransition(FollowUpStatus status)
+    {
+        return status is FollowUpStatus.Pending or FollowUpStatus.InProgress or FollowUpStatus.Overdue;
     }
 
     private Task AddActivityAsync(ActivityType type, int? customerId, int? dealId, int? orderId, string title, string description, CancellationToken cancellationToken)

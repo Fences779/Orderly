@@ -80,6 +80,7 @@
             <Setter Property="Margin" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="AutomationProperties.AutomationId" Value="{Binding RemoteId}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -223,10 +224,10 @@
                     <TextBlock Text="Orderly" FontSize="26" FontWeight="Bold" Foreground="#17211D" />
                     <TextBlock Text="本地商家工作台" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,20" />
 
-                    <Button Style="{StaticResource NavButtonStyle}" Content="工作台" Command="{Binding SelectSectionCommand}" CommandParameter="工作台" />
-                    <Button Style="{StaticResource NavButtonStyle}" Content="客户/订单" Command="{Binding SelectSectionCommand}" CommandParameter="客户/订单" />
-                    <Button Style="{StaticResource NavButtonStyle}" Content="话术库" Command="{Binding SelectSectionCommand}" CommandParameter="话术库" />
-                    <Button Style="{StaticResource NavButtonStyle}" Content="设置" Command="{Binding SelectSectionCommand}" CommandParameter="设置" />
+                    <Button x:Name="Tab_Dashboard" AutomationProperties.AutomationId="Tab_Dashboard" Style="{StaticResource NavButtonStyle}" Content="工作台" Command="{Binding SelectSectionCommand}" CommandParameter="工作台" />
+                    <Button x:Name="Tab_CustomerOrder" AutomationProperties.AutomationId="Tab_CustomerOrder" Style="{StaticResource NavButtonStyle}" Content="客户/订单" Command="{Binding SelectSectionCommand}" CommandParameter="客户/订单" />
+                    <Button x:Name="Tab_Scripts" AutomationProperties.AutomationId="Tab_Scripts" Style="{StaticResource NavButtonStyle}" Content="话术库" Command="{Binding SelectSectionCommand}" CommandParameter="话术库" />
+                    <Button x:Name="Tab_Settings" AutomationProperties.AutomationId="Tab_Settings" Style="{StaticResource NavButtonStyle}" Content="设置" Command="{Binding SelectSectionCommand}" CommandParameter="设置" />
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Bottom">
@@ -250,6 +251,8 @@
                     <TextBlock Text="客户、订单、跟进和快捷回复集中处理" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="AddCustomerButton" Content="+ 新增客户" Style="{StaticResource ToolbarPrimaryButtonStyle}" Click="AddCustomerButton_Click" AutomationProperties.AutomationId="Btn_AddCustomer" />
+                    <Button x:Name="AddOrderButton" Content="+ 创建订单" Style="{StaticResource ToolbarPrimaryButtonStyle}" Click="AddOrderButton_Click" AutomationProperties.AutomationId="Btn_AddOrder" />
                     <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="10,0,0,0" MinWidth="108">
                         <StackPanel>
                             <TextBlock Text="待处理" Style="{StaticResource CaptionTextStyle}" />
@@ -403,6 +406,70 @@
                                     <Button Content="新增改价" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding DataContext.AddPriceAdjustmentCommand, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.AutomationId="Btn_AddPriceAdjustment" />
                                     <Button Content="推进阶段" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding DataContext.ChangeDealStageCommand, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.AutomationId="Btn_ChangeDealStage" />
                                 </WrapPanel>
+                                <!-- 状态切换区：显示当前状态 + ComboBox 选择 + 操作按钮 -->
+                                <Border Background="#F8F6F0" CornerRadius="8" Padding="10,8" Margin="0,4,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="14" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <!-- 客户状态 -->
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="客户状态" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <WrapPanel>
+                                                <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="6" Padding="8,3" Margin="0,0,6,6">
+                                                    <TextBlock Text="{Binding CustomerStatusLabel, StringFormat=当前：{0}}" Foreground="{StaticResource AccentTextBrush}" FontSize="11" FontWeight="SemiBold" />
+                                                </Border>
+                                            </WrapPanel>
+                                            <DockPanel Margin="0,4,0,0">
+                                                <ComboBox x:Name="Input_CustomerStatus"
+                                                          AutomationProperties.AutomationId="Input_CustomerStatus"
+                                                          Width="120"
+                                                          Margin="0,0,6,0"
+                                                          ItemsSource="{Binding CustomerStatusOptions}"
+                                                          SelectedItem="{Binding SelectedCustomerStatusInput}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Converter={StaticResource EnumLabelConverter}}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <Button x:Name="Btn_ChangeCustomerStatus"
+                                                        AutomationProperties.AutomationId="Btn_ChangeCustomerStatus"
+                                                        Content="更新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="10,4" Margin="0"
+                                                        Command="{Binding ChangeCustomerStatusCommand}" />
+                                            </DockPanel>
+                                        </StackPanel>
+                                        <!-- 订单状态 -->
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="订单状态" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <WrapPanel>
+                                                <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="6" Padding="8,3" Margin="0,0,6,6">
+                                                    <TextBlock Text="{Binding SelectedOrderStatusText, StringFormat=当前：{0}}" Foreground="{StaticResource WarmTextBrush}" FontSize="11" FontWeight="SemiBold" />
+                                                </Border>
+                                            </WrapPanel>
+                                            <DockPanel Margin="0,4,0,0">
+                                                <ComboBox x:Name="Input_OrderStatus"
+                                                          AutomationProperties.AutomationId="Input_OrderStatus"
+                                                          Width="140"
+                                                          Margin="0,0,6,0"
+                                                          ItemsSource="{Binding OrderStatusOptions}"
+                                                          SelectedItem="{Binding SelectedOrderStatusInput}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Converter={StaticResource EnumLabelConverter}}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <Button x:Name="Btn_ChangeOrderStatus"
+                                                        AutomationProperties.AutomationId="Btn_ChangeOrderStatus"
+                                                        Content="更新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="10,4" Margin="0"
+                                                        Command="{Binding ChangeOrderStatusCommand}" />
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="24,0,0,0" VerticalAlignment="Top">
@@ -575,7 +642,7 @@
                                             </ListBox.Style>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border x:Name="DealItemCard" Style="{StaticResource ListItemBorderStyle}">
+                                                    <Border x:Name="DealItemCard" Style="{StaticResource ListItemBorderStyle}" AutomationProperties.AutomationId="{Binding RemoteId}">
                                                         <StackPanel>
                                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
                                                             <WrapPanel Margin="0,8,0,0">
@@ -631,7 +698,7 @@
                                             </ListBox.Style>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Style="{StaticResource ListItemBorderStyle}">
+                                                    <Border Style="{StaticResource ListItemBorderStyle}" AutomationProperties.AutomationId="{Binding RemoteId}">
                                                         <StackPanel>
                                                             <WrapPanel>
                                                                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,0,8,0" />
@@ -640,22 +707,40 @@
                                                                 </Border>
                                                             </WrapPanel>
                                                             <TextBlock Text="{Binding ScheduledAt, StringFormat=计划时间：{0:yyyy-MM-dd HH:mm}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,0" />
-                                                            <TextBlock Text="{Binding Content}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                             <TextBlock Text="{Binding Content}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20">
+                                                                 <TextBlock.Style>
+                                                                     <Style TargetType="TextBlock">
+                                                                         <Setter Property="Visibility" Value="Visible" />
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding Content}" Value="">
                                                                                 <Setter Property="Visibility" Value="Collapsed" />
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                        </StackPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
+                                                                     </Style>
+                                                                 </TextBlock.Style>
+                                                             </TextBlock>
+                                                             <WrapPanel x:Name="FollowUpActionPanel" Margin="0,10,0,0">
+                                                                 <Button AutomationProperties.AutomationId="FollowUp_Complete" Content="完成" Style="{StaticResource ToolbarSecondaryButtonStyle}" Command="{Binding DataContext.CompleteFollowUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,6,0" Padding="10,4" />
+                                                                 <Button AutomationProperties.AutomationId="FollowUp_Snooze" Content="延期" Style="{StaticResource ToolbarSecondaryButtonStyle}" Command="{Binding DataContext.SnoozeFollowUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,6,0" Padding="10,4" />
+                                                                 <Button AutomationProperties.AutomationId="FollowUp_Cancel" Content="取消" Style="{StaticResource ToolbarSecondaryButtonStyle}" Command="{Binding DataContext.CancelFollowUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="10,4" />
+                                                                 <WrapPanel.Style>
+                                                                     <Style TargetType="WrapPanel">
+                                                                         <Setter Property="Visibility" Value="Visible" />
+                                                                         <Style.Triggers>
+                                                                             <DataTrigger Binding="{Binding Status}" Value="Completed">
+                                                                                 <Setter Property="Visibility" Value="Collapsed" />
+                                                                             </DataTrigger>
+                                                                             <DataTrigger Binding="{Binding Status}" Value="Cancelled">
+                                                                                 <Setter Property="Visibility" Value="Collapsed" />
+                                                                             </DataTrigger>
+                                                                         </Style.Triggers>
+                                                                     </Style>
+                                                                 </WrapPanel.Style>
+                                                             </WrapPanel>
+                                                         </StackPanel>
+                                                     </Border>
+                                                 </DataTemplate>
+                                             </ListBox.ItemTemplate>
                                         </ListBox>
                                     </StackPanel>
                                 </Border>
@@ -873,25 +958,84 @@
 
                 <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
                     <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="330" />
+                            <ColumnDefinition Width="300" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel>
-                            <TextBlock Text="客户 / 订单" Style="{StaticResource SectionHeaderTextStyle}" />
-                            <TextBlock Text="保留现有数据源、选中联动和命令绑定，只对列表结构、信息层级和空态做展示收口。" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" TextWrapping="Wrap" />
-                            <WrapPanel Margin="0,12,0,0">
-                                <Border Style="{StaticResource CountBadgeBorderStyle}" Margin="0,0,8,0">
-                                    <TextBlock Text="{Binding CustomersCountText}" Style="{StaticResource CaptionTextStyle}" />
-                                </Border>
-                                <Border Style="{StaticResource CountBadgeBorderStyle}">
-                                    <TextBlock Text="{Binding OrdersCountText}" Style="{StaticResource CaptionTextStyle}" />
-                                </Border>
-                            </WrapPanel>
+                        <!-- 搜索 + 状态筛选 -->
+                        <StackPanel Grid.Row="0" Grid.Column="0">
+                            <DockPanel Margin="0,0,0,10">
+                                <TextBlock Text="客户 / 订单" Style="{StaticResource SectionHeaderTextStyle}" />
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Border Style="{StaticResource CountBadgeBorderStyle}" Margin="0,0,6,0">
+                                        <TextBlock Text="{Binding CustomersCountText}" Style="{StaticResource CaptionTextStyle}" />
+                                    </Border>
+                                    <Border Style="{StaticResource CountBadgeBorderStyle}">
+                                        <TextBlock Text="{Binding OrdersCountText}" Style="{StaticResource CaptionTextStyle}" />
+                                    </Border>
+                                </StackPanel>
+                            </DockPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBox DockPanel.Dock="Left"
+                                         Width="200"
+                                         Margin="0,0,8,0"
+                                         Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                         AutomationProperties.AutomationId="Input_SearchKeyword" />
+                                <ComboBox Width="200"
+                                          Margin="0,0,8,0"
+                                          ItemsSource="{Binding SearchFilterOptions}"
+                                          SelectedItem="{Binding SelectedStatusFilter}"
+                                          AutomationProperties.AutomationId="Combo_SearchFilter">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Label}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                    <ComboBox.ItemContainerStyle>
+                                        <Style TargetType="ComboBoxItem">
+                                            <Setter Property="AutomationProperties.AutomationId" Value="{Binding Kind, StringFormat=Filter_\{0\}}" />
+                                        </Style>
+                                    </ComboBox.ItemContainerStyle>
+                                </ComboBox>
+                                <Button x:Name="Btn_ClearFilters"
+                                        AutomationProperties.AutomationId="Btn_ClearFilters"
+                                        Content="清空" Style="{StaticResource ToolbarSecondaryButtonStyle}"
+                                        Padding="10,4" Margin="0,0,0,0"
+                                        Command="{Binding ClearSearchAndFiltersCommand}" />
+                            </DockPanel>
                         </StackPanel>
 
-                        <Border Grid.Column="1" Style="{StaticResource StatusPanelStyle}" Margin="18,0,0,0">
+                        <!-- 快捷筛选 Chip 行 -->
+                        <WrapPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,0">
+                            <TextBlock Text="快捷：" Foreground="{StaticResource MutedBrush}" FontSize="12"
+                                       VerticalAlignment="Center" Margin="0,0,6,6" />
+                            <Button Content="全部" Style="{StaticResource ChipButtonStyle}"
+                                    Click="QuickFilter_All_Click"
+                                    AutomationProperties.AutomationId="Chip_All" />
+                            <Button Content="今日跟进" Style="{StaticResource ChipButtonStyle}"
+                                    Click="QuickFilter_Today_Click"
+                                    AutomationProperties.AutomationId="Chip_TodayFollowUp" />
+                            <Button Content="逾期跟进" Style="{StaticResource ChipButtonStyle}"
+                                    Click="QuickFilter_Overdue_Click"
+                                    AutomationProperties.AutomationId="Chip_OverdueFollowUp" />
+                            <Button Content="明日跟进" Style="{StaticResource ChipButtonStyle}"
+                                    Click="QuickFilter_Tomorrow_Click"
+                                    AutomationProperties.AutomationId="Chip_TomorrowFollowUp" />
+                            <Button Content="待处理订单" Style="{StaticResource ChipButtonStyle}"
+                                    Click="QuickFilter_Pending_Click"
+                                    AutomationProperties.AutomationId="Chip_PendingOrders" />
+                            <Button Content="已成交订单" Style="{StaticResource ChipButtonStyle}"
+                                    Click="QuickFilter_Won_Click"
+                                    AutomationProperties.AutomationId="Chip_WonOrders" />
+                        </WrapPanel>
+
+                        <!-- 状态消息面板 -->
+                        <Border Grid.Row="0" Grid.Column="1" Grid.RowSpan="2" Style="{StaticResource StatusPanelStyle}" Margin="18,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="{Binding StatusMessageTitle}">
                                     <TextBlock.Style>
@@ -959,7 +1103,7 @@
                                 </ListBox.Style>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border x:Name="CustomerItemCard" Style="{StaticResource ListItemBorderStyle}">
+                                        <Border x:Name="CustomerItemCard" Style="{StaticResource ListItemBorderStyle}" AutomationProperties.AutomationId="{Binding RemoteId}">
                                             <StackPanel>
                                                 <DockPanel>
                                                     <TextBlock x:Name="CustomerNameText"
@@ -1107,7 +1251,7 @@
                                 </ListBox.Style>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border x:Name="OrderItemCard" Style="{StaticResource ListItemBorderStyle}">
+                                        <Border x:Name="OrderItemCard" Style="{StaticResource ListItemBorderStyle}" AutomationProperties.AutomationId="{Binding RemoteId}">
                                             <StackPanel>
                                                 <DockPanel>
                                                     <TextBlock Text="{Binding CustomerNameDisplay}"

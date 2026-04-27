@@ -7,5 +7,6 @@ public interface ICustomerService
     Task<IReadOnlyList<Customer>> GetCustomersAsync(CancellationToken cancellationToken = default);
     Task<Customer?> GetCustomerAsync(int id, CancellationToken cancellationToken = default);
     Task<Customer> SaveCustomerAsync(Customer customer, CancellationToken cancellationToken = default);
+    Task UpdateStatusAsync(int id, CustomerStatus status, CancellationToken cancellationToken = default);
     Task DeleteCustomerAsync(int id, CancellationToken cancellationToken = default);
 }

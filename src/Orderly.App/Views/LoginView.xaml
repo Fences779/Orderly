@@ -175,7 +175,7 @@
 
                     <Button x:Name="btnLogin" Content="登 录" Style="{StaticResource ApplePrimaryButton}" Click="BtnLogin_Click"/>
                     
-                    <Button Content="进入离线演示模式" Style="{StaticResource AppleGhostButton}" Margin="0,20,0,0" Foreground="#8E8E93" Click="BtnLocalMode_Click"/>
+                    <Button x:Name="BtnLocalMode" Content="进入离线演示模式" Style="{StaticResource AppleGhostButton}" Margin="0,20,0,0" Foreground="#8E8E93" Click="BtnLocalMode_Click" AutomationProperties.AutomationId="DemoModeButton"/>
                     
                     <!-- 优雅错误提示 -->
                     <TextBlock x:Name="txtError" Text="账号或密码不正确。" Foreground="#FF3B30" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,20,0,0" Visibility="Collapsed"/>

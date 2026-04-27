@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using Orderly.Core.Models;
 
 namespace Orderly.App.Views;
@@ -12,13 +13,17 @@ public partial class AddPriceAdjustmentDialog : Window
         var amountText = originalAmount.ToString("0.##", CultureInfo.CurrentCulture);
         OriginalAmountTextBox.Text = amountText;
         AdjustedAmountTextBox.Text = amountText;
+        
+        StatusComboBox.ItemsSource = System.Enum.GetValues(typeof(PriceAdjustmentStatus));
+        StatusComboBox.SelectedItem = PriceAdjustmentStatus.PendingApproval;
+        
         Loaded += (_, _) => AdjustedAmountTextBox.Focus();
     }
 
     public decimal OriginalAmount { get; private set; }
     public decimal AdjustedAmount { get; private set; }
     public string Reason { get; private set; } = string.Empty;
-    public PriceAdjustmentStatus Status { get; } = PriceAdjustmentStatus.PendingApproval;
+    public PriceAdjustmentStatus Status { get; private set; }
 
     private void ConfirmButton_Click(object sender, RoutedEventArgs e)
     {
@@ -47,6 +52,7 @@ public partial class AddPriceAdjustmentDialog : Window
         OriginalAmount = originalAmount;
         AdjustedAmount = adjustedAmount;
         Reason = reason;
+        Status = (PriceAdjustmentStatus)StatusComboBox.SelectedItem;
         DialogResult = true;
     }
 

@@ -15,6 +15,7 @@ public sealed class ActivityLog : EntityBase
     {
         ActivityType.CustomerCreated => "客户创建",
         ActivityType.CustomerUpdated => "客户更新",
+        ActivityType.CustomerStatusChanged => "客户状态变更",
         ActivityType.DealCreated => "成交机会创建",
         ActivityType.DealStageChanged => "成交阶段变更",
         ActivityType.FollowUpCreated => "新增跟进",
@@ -26,6 +27,8 @@ public sealed class ActivityLog : EntityBase
         ActivityType.PriceAdjustmentApproved => "改价通过",
         ActivityType.PriceAdjustmentRejected => "改价驳回",
         ActivityType.SyncCompleted => "同步完成",
+        ActivityType.FollowUpSnoozed => "跟进延期",
+        ActivityType.FollowUpCancelled => "跟进取消",
         _ => Type.ToString()
     };
 }

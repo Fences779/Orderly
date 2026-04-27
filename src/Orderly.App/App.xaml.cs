@@ -24,32 +24,45 @@ public partial class App : System.Windows.Application
     private MainViewModel? _mainViewModel;
     private FloatingWindowViewModel? _floatingViewModel;
     private bool _isLoginCompleted;
+    private string[] _startupArgs = [];
+    private SqliteConnectionFactory? _connectionFactory;
+    private string? _databasePath;
+    private bool _startupDataPrepared;
 
     public bool IsExiting { get; private set; }
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        _startupArgs = e.Args;
         Console.WriteLine("App starting");
 
-        var loginViewModel = new LoginViewModel();
-        var loginView = new LoginView(loginViewModel);
-
-        loginViewModel.LoginSucceeded += async (_, _) => await CompleteLoginAsync(loginView);
-        loginView.Closed += (_, _) =>
+        try
         {
-            if (!_isLoginCompleted && !IsExiting)
+            if (QaDataSeeder.IsRequested(_startupArgs))
             {
-                ExitApplication();
+                await EnsureDatabasePreparedAsync();
             }
-        };
 
-        Console.WriteLine("LoginView showing");
-        loginView.WindowState = WindowState.Normal;
-        loginView.ShowInTaskbar = true;
-        loginView.Opacity = 1;
-        loginView.Show();
-        loginView.Activate();
+            if (QaDataSeeder.IsQaMode(_startupArgs))
+            {
+                await InitializeWorkspaceAsync();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"启动失败：{ex.Message}",
+                "Orderly",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+
+            ExitApplication();
+            return;
+        }
+
+        ShowLoginView();
     }
 
     private async Task CompleteLoginAsync(LoginView loginView)
@@ -80,11 +93,8 @@ public partial class App : System.Windows.Application
 
     private async Task InitializeWorkspaceAsync()
     {
-        var databasePath = DatabasePaths.GetDefaultDatabasePath();
-        var connectionFactory = new SqliteConnectionFactory(databasePath);
-        var initializer = new DatabaseInitializer(connectionFactory);
-        await initializer.InitializeAsync();
-        Console.WriteLine("Database initialized");
+        var databasePath = await EnsureDatabasePreparedAsync();
+        var connectionFactory = _connectionFactory ?? throw new InvalidOperationException("Database connection factory is not initialized.");
 
         ICustomerRepository customerRepository = new CustomerRepository(connectionFactory);
         IOrderRepository orderRepository = new OrderRepository(connectionFactory);
@@ -97,6 +107,8 @@ public partial class App : System.Windows.Application
         IAppSettingRepository settingRepository = new AppSettingRepository(connectionFactory);
         IClipboardService clipboardService = new DesktopClipboardService();
 
+        ICustomerService customerService = new CustomerService(customerRepository, activityLogRepository);
+        IOrderService orderService = new OrderService(orderRepository, activityLogRepository);
         IDealService dealService = new DealService(dealRepository, activityLogRepository);
         IFollowUpService followUpService = new FollowUpService(followUpRepository, activityLogRepository);
         INoteService noteService = new NoteService(noteRepository, activityLogRepository);
@@ -108,6 +120,8 @@ public partial class App : System.Windows.Application
         _mainViewModel = new MainViewModel(
             customerRepository,
             orderRepository,
+            customerService,
+            orderService,
             dealService,
             followUpService,
             noteService,
@@ -162,6 +176,60 @@ public partial class App : System.Windows.Application
         {
             _floatingWindow.Show();
         }
+    }
+
+    private void ShowLoginView()
+    {
+        var loginViewModel = new LoginViewModel();
+        var loginView = new LoginView(loginViewModel);
+
+        loginViewModel.LoginSucceeded += async (_, _) => await CompleteLoginAsync(loginView);
+        loginView.Closed += (_, _) =>
+        {
+            if (!_isLoginCompleted && !IsExiting)
+            {
+                ExitApplication();
+            }
+        };
+
+        Console.WriteLine("LoginView showing");
+        loginView.WindowState = WindowState.Normal;
+        loginView.ShowInTaskbar = true;
+        loginView.Opacity = 1;
+        loginView.Show();
+        loginView.Activate();
+    }
+
+    private async Task<string> EnsureDatabasePreparedAsync()
+    {
+        if (_startupDataPrepared && !string.IsNullOrWhiteSpace(_databasePath) && _connectionFactory is not null)
+        {
+            return _databasePath;
+        }
+
+        _databasePath ??= DatabasePaths.GetDefaultDatabasePath();
+        _connectionFactory ??= new SqliteConnectionFactory(_databasePath);
+
+        var initializer = new DatabaseInitializer(_connectionFactory);
+        await initializer.InitializeAsync();
+        Console.WriteLine("Database initialized");
+
+        if (DemoDataSeeder.IsRequested(_startupArgs))
+        {
+            var demoDataSeeder = new DemoDataSeeder(_connectionFactory);
+            await demoDataSeeder.SeedIfNeededAsync();
+            Console.WriteLine("Demo data seeding checked");
+        }
+
+        if (QaDataSeeder.IsRequested(_startupArgs))
+        {
+            var qaDataSeeder = new QaDataSeeder(_connectionFactory);
+            var qaSeedResult = await qaDataSeeder.SeedIfNeededAsync();
+            Console.WriteLine($"QA data seeding checked: {qaSeedResult}");
+        }
+
+        _startupDataPrepared = true;
+        return _databasePath;
     }
 
     private void ShowMainWindow()

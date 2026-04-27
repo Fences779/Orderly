@@ -14,5 +14,8 @@ public enum ActivityType
     PriceAdjustmentRequested = 9,
     PriceAdjustmentApproved = 10,
     PriceAdjustmentRejected = 11,
-    SyncCompleted = 12
+    SyncCompleted = 12,
+    FollowUpSnoozed = 13,
+    FollowUpCancelled = 14,
+    CustomerStatusChanged = 15
 }

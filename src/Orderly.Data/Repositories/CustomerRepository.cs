@@ -55,6 +55,92 @@ public sealed class CustomerRepository : ICustomerRepository
         return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
     }
 
+    public async Task<Customer> CreateAsync(Customer customer, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.Now;
+        if (customer.CreatedAt == default)
+        {
+            customer.CreatedAt = now;
+        }
+
+        customer.UpdatedAt = now;
+        customer.DeletedAt = null;
+        customer.IsSynced = false;
+        customer.Version = Math.Max(1, customer.Version);
+
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO Customers (
+                Name, Status, Priority, SourcePlatform, Channel, ContactHandle, Phone, Remark, ExternalId, RawPayload,
+                LastContactAt, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+            )
+            VALUES (
+                $name, $status, $priority, $sourcePlatform, $channel, $contactHandle, $phone, $remark, $externalId, $rawPayload,
+                $lastContactAt, $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
+            );
+            SELECT last_insert_rowid();
+            """;
+        AddParameters(command, customer);
+        customer.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        return customer;
+    }
+
+    public async Task UpdateAsync(Customer customer, CancellationToken cancellationToken = default)
+    {
+        customer.UpdatedAt = DateTime.Now;
+        customer.IsSynced = false;
+        customer.Version = Math.Max(1, customer.Version + 1);
+
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE Customers
+            SET Name = $name,
+                Status = $status,
+                Priority = $priority,
+                SourcePlatform = $sourcePlatform,
+                Channel = $channel,
+                ContactHandle = $contactHandle,
+                Phone = $phone,
+                Remark = $remark,
+                ExternalId = $externalId,
+                RawPayload = $rawPayload,
+                LastContactAt = $lastContactAt,
+                UpdatedAt = $updatedAt,
+                DeletedAt = $deletedAt,
+                RemoteId = $remoteId,
+                IsSynced = $isSynced,
+                Version = $version
+            WHERE Id = $id AND DeletedAt IS NULL;
+            """;
+        AddParameters(command, customer);
+        command.Parameters.AddWithValue("$id", customer.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task SoftDeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.Now.ToString("O");
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE Customers
+            SET DeletedAt = $deletedAt,
+                UpdatedAt = $updatedAt,
+                IsSynced = 0,
+                Version = Version + 1
+            WHERE Id = $id AND DeletedAt IS NULL;
+            """;
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$deletedAt", now);
+        command.Parameters.AddWithValue("$updatedAt", now);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     internal static Customer Map(SqliteDataReader reader)
     {
         return Map(reader, 0);
@@ -83,5 +169,31 @@ public sealed class CustomerRepository : ICustomerRepository
             IsSynced = reader.GetInt32(offset + 16) == 1,
             Version = reader.GetInt32(offset + 17)
         };
+    }
+
+    private static void AddParameters(SqliteCommand command, Customer customer)
+    {
+        command.Parameters.AddWithValue("$name", customer.Name);
+        command.Parameters.AddWithValue("$status", (int)customer.Status);
+        command.Parameters.AddWithValue("$priority", (int)customer.Priority);
+        command.Parameters.AddWithValue("$sourcePlatform", customer.SourcePlatform);
+        command.Parameters.AddWithValue("$channel", customer.Channel);
+        command.Parameters.AddWithValue("$contactHandle", customer.ContactHandle);
+        command.Parameters.AddWithValue("$phone", customer.Phone);
+        command.Parameters.AddWithValue("$remark", customer.Remark);
+        command.Parameters.AddWithValue("$externalId", customer.ExternalId);
+        command.Parameters.AddWithValue("$rawPayload", customer.RawPayload);
+        command.Parameters.AddWithValue("$lastContactAt", ToDbDate(customer.LastContactAt));
+        command.Parameters.AddWithValue("$createdAt", customer.CreatedAt.ToString("O"));
+        command.Parameters.AddWithValue("$updatedAt", customer.UpdatedAt.ToString("O"));
+        command.Parameters.AddWithValue("$deletedAt", ToDbDate(customer.DeletedAt));
+        command.Parameters.AddWithValue("$remoteId", customer.RemoteId);
+        command.Parameters.AddWithValue("$isSynced", customer.IsSynced ? 1 : 0);
+        command.Parameters.AddWithValue("$version", customer.Version);
+    }
+
+    private static object ToDbDate(DateTime? value)
+    {
+        return value is null ? DBNull.Value : value.Value.ToString("O");
     }
 }

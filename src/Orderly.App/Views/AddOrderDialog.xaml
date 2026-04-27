@@ -1,0 +1,134 @@
+<Window x:Class="Orderly.App.Views.AddOrderDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="创建订单"
+        Width="520"
+        Height="540"
+        MinWidth="480"
+        MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource PageBackgroundBrush}"
+        AutomationProperties.AutomationId="AddOrderDialog">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 标题区 -->
+        <Border Grid.Row="0"
+                Background="#FFFDF8"
+                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="22,18,22,16">
+            <StackPanel>
+                <TextBlock Text="创建订单" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
+                <TextBlock Text="关联客户、填写订单基本信息后保存" Foreground="{StaticResource MutedBrush}" FontSize="12" />
+            </StackPanel>
+        </Border>
+
+        <!-- 内容区 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid Margin="22,18,22,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- 客户 -->
+                <TextBlock Grid.Row="0" Text="关联客户 *" Style="{StaticResource DialogFieldLabelStyle}" />
+                <ComboBox x:Name="CustomerComboBox"
+                          Grid.Row="1"
+                          Margin="0,0,0,14"
+                          DisplayMemberPath="Name"
+                          AutomationProperties.AutomationId="AddOrderDialog_Customer" />
+
+                <!-- 订单标题 -->
+                <TextBlock Grid.Row="2" Text="订单标题 *" Style="{StaticResource DialogFieldLabelStyle}" />
+                <TextBox x:Name="TitleTextBox"
+                         Grid.Row="3"
+                         Margin="0,0,0,14"
+                         AutomationProperties.AutomationId="AddOrderDialog_Title" />
+
+                <!-- 金额 + 状态 + 下次跟进 -->
+                <Grid Grid.Row="4" Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="订单金额（元）" Style="{StaticResource DialogFieldLabelStyle}" />
+                        <TextBox x:Name="AmountTextBox"
+                                 AutomationProperties.AutomationId="AddOrderDialog_Amount" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="初始状态" Style="{StaticResource DialogFieldLabelStyle}" />
+                        <ComboBox x:Name="StatusComboBox"
+                                  AutomationProperties.AutomationId="AddOrderDialog_Status" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="下次跟进时间" Style="{StaticResource DialogFieldLabelStyle}" />
+                        <TextBox x:Name="NextFollowUpTextBox"
+                                 AutomationProperties.AutomationId="AddOrderDialog_NextFollowUp" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- 需求摘要 -->
+                <TextBlock Grid.Row="5" Text="需求摘要" Style="{StaticResource DialogFieldLabelStyle}" />
+                <TextBox x:Name="RequirementTextBox"
+                         Grid.Row="6"
+                         Margin="0,0,0,14"
+                         MinHeight="70"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"
+                         VerticalContentAlignment="Top"
+                         AutomationProperties.AutomationId="AddOrderDialog_Requirement" />
+
+                <!-- 备注 -->
+                <TextBlock Grid.Row="7" Text="备注（可选）" Style="{StaticResource DialogFieldLabelStyle}" />
+                <TextBox x:Name="RemarkTextBox"
+                         Grid.Row="8"
+                         Margin="0,0,0,0"
+                         MinHeight="60"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"
+                         VerticalContentAlignment="Top"
+                         AutomationProperties.AutomationId="AddOrderDialog_Remark" />
+            </Grid>
+        </ScrollViewer>
+
+        <!-- 底部操作栏 -->
+        <Border Grid.Row="2"
+                Background="#FFFDF8"
+                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderThickness="0,1,0,0"
+                Padding="22,14">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="取消"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        IsCancel="True"
+                        Margin="0,0,10,0"
+                        AutomationProperties.AutomationId="AddOrderDialog_Cancel" />
+                <Button Content="确认创建"
+                        Style="{StaticResource DialogPrimaryButtonStyle}"
+                        IsDefault="True"
+                        Click="ConfirmButton_Click"
+                        AutomationProperties.AutomationId="AddOrderDialog_Confirm" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

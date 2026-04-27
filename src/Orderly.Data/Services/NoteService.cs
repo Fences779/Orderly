@@ -15,6 +15,11 @@ public sealed class NoteService : INoteService
         _activityLogRepository = activityLogRepository;
     }
 
+    public Task<IReadOnlyList<CustomerNote>> GetNotesAsync(CancellationToken cancellationToken = default)
+    {
+        return _noteRepository.ListAsync(cancellationToken);
+    }
+
     public Task<IReadOnlyList<CustomerNote>> GetCustomerNotesAsync(int customerId, CancellationToken cancellationToken = default)
     {
         return _noteRepository.ListByCustomerIdAsync(customerId, cancellationToken);
@@ -25,12 +30,12 @@ public sealed class NoteService : INoteService
         return _noteRepository.GetByIdAsync(id, cancellationToken);
     }
 
-    public async Task<CustomerNote> SaveNoteAsync(CustomerNote note, CancellationToken cancellationToken = default)
+    public async Task<CustomerNote> SaveNoteAsync(CustomerNote note, string activityMetadataJson = "", CancellationToken cancellationToken = default)
     {
         if (note.Id <= 0)
         {
             var created = await _noteRepository.CreateAsync(note, cancellationToken);
-            await AddActivityAsync(ActivityType.NoteCreated, created.CustomerId, created.DealId, created.OrderId, "新增客户备注", created.Content, cancellationToken);
+            await AddActivityAsync(ActivityType.NoteCreated, created.CustomerId, created.DealId, created.OrderId, "新增客户备注", created.Content, activityMetadataJson, cancellationToken);
             return created;
         }
 
@@ -43,7 +48,7 @@ public sealed class NoteService : INoteService
         return _noteRepository.SoftDeleteAsync(id, cancellationToken);
     }
 
-    private Task AddActivityAsync(ActivityType type, int? customerId, int? dealId, int? orderId, string title, string description, CancellationToken cancellationToken)
+    private Task AddActivityAsync(ActivityType type, int? customerId, int? dealId, int? orderId, string title, string description, string metadataJson, CancellationToken cancellationToken)
     {
         return _activityLogRepository.CreateAsync(new ActivityLog
         {
@@ -53,7 +58,8 @@ public sealed class NoteService : INoteService
             OrderId = orderId,
             Title = title,
             Description = description,
-            Operator = "local"
+            Operator = "local",
+            MetadataJson = metadataJson
         }, cancellationToken);
     }
 }

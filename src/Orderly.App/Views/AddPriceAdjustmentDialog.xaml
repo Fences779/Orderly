@@ -2,48 +2,99 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="新增改价"
-        Width="440"
-        Height="350"
-        MinWidth="400"
-        MinHeight="320"
+        Width="460"
+        Height="400"
+        MinWidth="420"
+        MinHeight="360"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
+        Background="{StaticResource PageBackgroundBrush}"
         AutomationProperties.AutomationId="AddPriceAdjustmentDialog">
-    <Grid Margin="18">
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TextBlock Text="原价" FontWeight="SemiBold" />
-        <TextBox x:Name="OriginalAmountTextBox" Grid.Row="1" Margin="0,8,0,14" />
+        <!-- 标题区 -->
+        <Border Grid.Row="0"
+                Background="#FFFDF8"
+                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="22,18,22,16">
+            <StackPanel>
+                <TextBlock Text="新增改价" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
+                <TextBlock Text="记录本次价格调整和调整原因" Foreground="{StaticResource MutedBrush}" FontSize="12" />
+            </StackPanel>
+        </Border>
 
-        <TextBlock Grid.Row="2" Text="调整后价格" FontWeight="SemiBold" />
-        <TextBox x:Name="AdjustedAmountTextBox" Grid.Row="3" Margin="0,8,0,14" />
-
-        <Grid Grid.Row="4">
+        <!-- 内容区 -->
+        <Grid Grid.Row="1" Margin="22,18,22,0">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <TextBlock Text="改价原因" FontWeight="SemiBold" />
-            <TextBox x:Name="ReasonTextBox"
-                     Grid.Row="1"
-                     Margin="0,8,0,0"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     VerticalScrollBarVisibility="Auto" />
+
+            <!-- 原价 + 调整后价格 -->
+            <Grid Grid.Row="0" Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="原价（元）" Style="{StaticResource DialogFieldLabelStyle}" />
+                    <TextBox x:Name="OriginalAmountTextBox"
+                             AutomationProperties.AutomationId="AddPriceAdjustmentDialog_Original" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="调整后价格（元）*" Style="{StaticResource DialogFieldLabelStyle}" />
+                    <TextBox x:Name="AdjustedAmountTextBox"
+                             AutomationProperties.AutomationId="AddPriceAdjustmentDialog_Adjusted" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 状态 -->
+            <TextBlock Grid.Row="1" Text="调整状态" Style="{StaticResource DialogFieldLabelStyle}" />
+            <ComboBox x:Name="StatusComboBox"
+                      Grid.Row="2"
+                      Margin="0,0,0,14"
+                      AutomationProperties.AutomationId="AddPriceAdjustmentDialog_Status" />
+
+            <!-- 改价原因 -->
+            <StackPanel Grid.Row="3">
+                <TextBlock Text="改价原因 *" Style="{StaticResource DialogFieldLabelStyle}" />
+                <TextBox x:Name="ReasonTextBox"
+                         MinHeight="90"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"
+                         VerticalContentAlignment="Top"
+                         AutomationProperties.AutomationId="AddPriceAdjustmentDialog_Reason" />
+            </StackPanel>
         </Grid>
 
-        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="取消" Width="78" Margin="0,0,8,0" IsCancel="True"
-                    AutomationProperties.AutomationId="AddPriceAdjustmentDialog_Cancel" />
-            <Button Content="确认" Width="78" IsDefault="True" Click="ConfirmButton_Click"
-                    AutomationProperties.AutomationId="AddPriceAdjustmentDialog_Confirm" />
-        </StackPanel>
+        <!-- 底部操作栏 -->
+        <Border Grid.Row="2"
+                Background="#FFFDF8"
+                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderThickness="0,1,0,0"
+                Padding="22,14">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="取消"
+                        Style="{StaticResource DialogSecondaryButtonStyle}"
+                        IsCancel="True"
+                        Margin="0,0,10,0"
+                        AutomationProperties.AutomationId="AddPriceAdjustmentDialog_Cancel" />
+                <Button Content="确认保存"
+                        Style="{StaticResource DialogPrimaryButtonStyle}"
+                        IsDefault="True"
+                        Click="ConfirmButton_Click"
+                        AutomationProperties.AutomationId="AddPriceAdjustmentDialog_Confirm" />
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

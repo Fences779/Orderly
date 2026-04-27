@@ -18,6 +18,8 @@ out/
 *.sqlite
 *.sqlite3
 *.mdb
+*.db-shm
+*.db-wal
 
 # Logs and temp files
 logs/
@@ -44,6 +46,9 @@ project.private.config.json
 artifacts/
 screenshots/
 *截图*/
+
+# Local scratch work
+scratch/
 
 # OS junk
 Thumbs.db

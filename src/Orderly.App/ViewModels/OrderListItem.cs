@@ -11,6 +11,7 @@ public sealed class OrderListItem
 
     public MerchantOrder Order { get; }
     public int Id => Order.Id;
+    public string RemoteId => Order.RemoteId;
     public string Title => Order.Title;
     public string TitleDisplay => string.IsNullOrWhiteSpace(Order.Title) ? "未命名订单" : Order.Title;
     public string CustomerName => Order.Customer?.Name ?? string.Empty;
