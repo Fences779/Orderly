@@ -1,0 +1,40 @@
+<Application x:Class="Orderly.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F7F5EF" />
+        <SolidColorBrush x:Key="PanelBrush" Color="#FFFDF8" />
+        <SolidColorBrush x:Key="MutedBrush" Color="#6F746F" />
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#1F7A5A" />
+        <SolidColorBrush x:Key="BorderBrushSoft" Color="#E6E1D6" />
+
+        <Style TargetType="Window">
+            <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" />
+            <Setter Property="TextElement.FontSize" Value="13" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style x:Key="NavButtonStyle" TargetType="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#36433D" />
+            <Setter Property="Margin" Value="0,4" />
+            <Setter Property="Padding" Value="14,10" />
+        </Style>
+
+        <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14" />
+        </Style>
+    </Application.Resources>
+</Application>

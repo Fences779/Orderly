@@ -1,0 +1,50 @@
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET / WPF build artifacts
+[Bb]in/
+[Oo]bj/
+TestResults/
+out/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*.mdb
+
+# Logs and temp files
+logs/
+log/
+*.log
+*.tmp
+*.temp
+*.cache
+*.bak
+*.pid
+
+# Local environment / secrets
+.env
+.env.*
+appsettings.Development.json
+secrets.json
+*.pfx
+*.snk
+
+# User-local config
+project.private.config.json
+
+# Acceptance artifacts / screenshots
+artifacts/
+screenshots/
+*截图*/
+
+# OS junk
+Thumbs.db
+Desktop.ini

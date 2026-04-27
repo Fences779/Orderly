@@ -1,0 +1,199 @@
+<Window x:Class="Orderly.App.Views.LoginView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="登录 - Orderly" 
+        Height="600" Width="900"
+        WindowStyle="None" 
+        AllowsTransparency="True" 
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        FontFamily="Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif">
+
+    <Window.Resources>
+        <!-- Apple 风格输入框：极致圆角、低对比度边框、大呼吸感 -->
+        <Style x:Key="AppleInputStyle" TargetType="Control">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Foreground" Value="#1D1D1F"/>
+            <Setter Property="Background" Value="#F5F5F7"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Padding" Value="16,14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Control">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="0" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter Property="BorderBrush" Value="#007AFF"/> <!-- Apple Blue -->
+                                <Setter Property="Background" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Apple Pro 风格主按钮 -->
+        <Style x:Key="ApplePrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#000000"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="12">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,14"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#1D1D1F"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#333336"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="BtnBorder" Property="Background" Value="#E5E5EA"/>
+                                <Setter Property="Foreground" Value="#8E8E93"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Apple 极简次级按钮 -->
+        <Style x:Key="AppleGhostButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#007AFF"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <!-- 悬浮主卡片 -->
+    <Border Background="#FFFFFF" CornerRadius="20" Margin="40">
+        <Border.Effect>
+            <!-- 类似 macOS 的大范围柔和阴影 -->
+            <DropShadowEffect BlurRadius="50" ShadowDepth="12" Opacity="0.12" Color="#000000" Direction="270"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="4.5*"/>
+                <ColumnDefinition Width="5.5*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧：Apple 风格流体渐变与品牌区 -->
+            <Border Grid.Column="0" CornerRadius="20,0,0,20" ClipToBounds="True">
+                <Border.Background>
+                    <!-- macOS Monterey 风格渐变 -->
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#F2F2F7" Offset="0.0"/>
+                        <GradientStop Color="#E5E5EA" Offset="1.0"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <!-- 模拟流体光晕 -->
+                    <Ellipse Width="400" Height="400" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-150,-100,0,0">
+                        <Ellipse.Fill>
+                            <RadialGradientBrush>
+                                <GradientStop Color="#40007AFF" Offset="0"/>
+                                <GradientStop Color="Transparent" Offset="1"/>
+                            </RadialGradientBrush>
+                        </Ellipse.Fill>
+                    </Ellipse>
+                    <Ellipse Width="350" Height="350" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-100,-150">
+                        <Ellipse.Fill>
+                            <RadialGradientBrush>
+                                <GradientStop Color="#30FF2D55" Offset="0"/>
+                                <GradientStop Color="Transparent" Offset="1"/>
+                            </RadialGradientBrush>
+                        </Ellipse.Fill>
+                    </Ellipse>
+
+                    <!-- 居中极简 Logo -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <!-- 可以替换为真实的矢量 Logo，这里用极简黑块代替 -->
+                        <Border Width="60" Height="60" Background="#1D1D1F" CornerRadius="16" Margin="0,0,0,20">
+                            <TextBlock Text="O" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Orderly" FontSize="28" FontWeight="SemiBold" Foreground="#1D1D1F" HorizontalAlignment="Center"/>
+                        <TextBlock Text="高效处理，一目了然。" FontSize="15" Foreground="#8E8E93" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 右侧：登录操作区 -->
+            <Grid Grid.Column="1" Background="Transparent">
+                
+                <!-- Windows 极简窗口控制 (保留原生感) -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Content="—" Width="30" Height="30" Foreground="#8E8E93" FontSize="14" Style="{StaticResource AppleGhostButton}" Click="BtnMinimize_Click"/>
+                    <Button Content="✕" Width="30" Height="30" Foreground="#8E8E93" FontSize="14" Style="{StaticResource AppleGhostButton}" Click="BtnClose_Click"/>
+                </StackPanel>
+
+                <!-- 登录表单 -->
+                <StackPanel VerticalAlignment="Center" Margin="70,0,70,0">
+                    <TextBlock Text="欢迎回来" FontSize="32" FontWeight="Bold" Foreground="#1D1D1F" Margin="0,0,0,40"/>
+
+                    <TextBox x:Name="txtAccount" Style="{StaticResource AppleInputStyle}" Height="50" Margin="0,0,0,20"/>
+                    
+                    <PasswordBox x:Name="txtPassword" Style="{StaticResource AppleInputStyle}" Height="50" KeyDown="TxtPassword_KeyDown"/>
+
+                    <Grid Margin="4,20,4,40">
+                        <CheckBox x:Name="chkRememberMe" Content="记住此设备" Foreground="#8E8E93" FontSize="14" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <CheckBox.LayoutTransform>
+                                <ScaleTransform ScaleX="1.1" ScaleY="1.1"/>
+                            </CheckBox.LayoutTransform>
+                        </CheckBox>
+                        <!-- 使用次级按钮代替复选框，更符合现代 UI -->
+                        <Button Content="忘记密码？" Style="{StaticResource AppleGhostButton}" HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <Button x:Name="btnLogin" Content="登 录" Style="{StaticResource ApplePrimaryButton}" Click="BtnLogin_Click"/>
+                    
+                    <Button Content="进入离线演示模式" Style="{StaticResource AppleGhostButton}" Margin="0,20,0,0" Foreground="#8E8E93" Click="BtnLocalMode_Click"/>
+                    
+                    <!-- 优雅错误提示 -->
+                    <TextBlock x:Name="txtError" Text="账号或密码不正确。" Foreground="#FF3B30" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,20,0,0" Visibility="Collapsed"/>
+                </StackPanel>
+
+                <!-- 磨砂质感 Loading 层 -->
+                <Border x:Name="gridLoading" Visibility="Collapsed" CornerRadius="0,20,20,0">
+                    <Border.Background>
+                        <SolidColorBrush Color="#FFFFFF" Opacity="0.85"/>
+                    </Border.Background>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <!-- 可以考虑加入一个系统的 ProgressRing -->
+                        <TextBlock Text="正在登录..." FontSize="18" FontWeight="SemiBold" Foreground="#1D1D1F" HorizontalAlignment="Center"/>
+                        <TextBlock Text="获取工作空间数据" FontSize="14" Foreground="#8E8E93" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
