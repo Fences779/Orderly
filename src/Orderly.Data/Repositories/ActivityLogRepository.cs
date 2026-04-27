@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
 using Orderly.Data.Sqlite;
+using Orderly.Data.Services;
 using System.Globalization;
 
 namespace Orderly.Data.Repositories;
@@ -30,6 +31,7 @@ public sealed class ActivityLogRepository : IActivityLogRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        activityLog.MetadataJson = await EnsureQaMetadataAsync(connection, activityLog, cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO ActivityLogs (
@@ -88,6 +90,7 @@ public sealed class ActivityLogRepository : IActivityLogRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        activityLog.MetadataJson = await EnsureQaMetadataAsync(connection, activityLog, cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE ActivityLogs
@@ -147,6 +150,50 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         }
 
         return rows;
+    }
+
+    private static async Task<string> EnsureQaMetadataAsync(SqliteConnection connection, ActivityLog activityLog, CancellationToken cancellationToken)
+    {
+        if (!await IsQaScopedAsync(connection, activityLog, cancellationToken))
+        {
+            return activityLog.MetadataJson;
+        }
+
+        return QaDataScope.EnsureActivityMetadataTagged(activityLog.MetadataJson, "runtime");
+    }
+
+    private static async Task<bool> IsQaScopedAsync(SqliteConnection connection, ActivityLog activityLog, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = $$"""
+            SELECT CASE
+                WHEN $orderId IS NOT NULL AND EXISTS (
+                    SELECT 1
+                    FROM Orders
+                    WHERE Id = $orderId
+                      AND {{QaDataScope.BuildOrderAssociationPredicate("Orders")}}
+                ) THEN 1
+                WHEN $dealId IS NOT NULL AND EXISTS (
+                    SELECT 1
+                    FROM Deals
+                    WHERE Id = $dealId
+                      AND {{QaDataScope.BuildDealAssociationPredicate("Deals")}}
+                ) THEN 1
+                WHEN $customerId IS NOT NULL AND EXISTS (
+                    SELECT 1
+                    FROM Customers
+                    WHERE Id = $customerId
+                      AND {{QaDataScope.BuildCustomerAssociationPredicate("Customers")}}
+                ) THEN 1
+                ELSE 0
+            END;
+            """;
+        command.Parameters.AddWithValue("$customerId", ToDbInt(activityLog.CustomerId));
+        command.Parameters.AddWithValue("$dealId", ToDbInt(activityLog.DealId));
+        command.Parameters.AddWithValue("$orderId", ToDbInt(activityLog.OrderId));
+        QaDataScope.AddScopeParameters(command);
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return Convert.ToInt32(result) == 1;
     }
 
     private const string SelectSql = """

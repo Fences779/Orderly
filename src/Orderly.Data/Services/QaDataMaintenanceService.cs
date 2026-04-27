@@ -5,8 +5,13 @@ namespace Orderly.Data.Services;
 
 public sealed class QaDataMaintenanceService
 {
-    private const string MarkerPatternParameterName = "$marker";
-    private static readonly string MarkerPattern = $"%{QaDataSeeder.QaMarker}%";
+    private static readonly string CustomerPredicate = QaDataScope.BuildCustomerScopePredicate();
+    private static readonly string DealPredicate = QaDataScope.BuildDealScopePredicate();
+    private static readonly string OrderPredicate = QaDataScope.BuildOrderScopePredicate();
+    private static readonly string FollowUpPredicate = QaDataScope.BuildFollowUpScopePredicate();
+    private static readonly string NotePredicate = QaDataScope.BuildNoteScopePredicate();
+    private static readonly string PriceAdjustmentPredicate = QaDataScope.BuildPriceAdjustmentScopePredicate();
+    private static readonly string ActivityLogPredicate = QaDataScope.BuildActivityLogScopePredicate();
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -66,9 +71,9 @@ public sealed class QaDataMaintenanceService
             PriceAdjustmentsDeleted = await DeleteAsync(connection, transaction, "PriceAdjustments", PriceAdjustmentPredicate, cancellationToken),
             NotesDeleted = await DeleteAsync(connection, transaction, "CustomerNotes", NotePredicate, cancellationToken),
             FollowUpsDeleted = await DeleteAsync(connection, transaction, "FollowUps", FollowUpPredicate, cancellationToken),
-            OrdersDeleted = await DeleteAsync(connection, transaction, "Orders", SafeOrderDeletePredicate, cancellationToken),
-            DealsDeleted = await DeleteAsync(connection, transaction, "Deals", SafeDealDeletePredicate, cancellationToken),
-            CustomersDeleted = await DeleteAsync(connection, transaction, "Customers", SafeCustomerDeletePredicate, cancellationToken)
+            OrdersDeleted = await DeleteAsync(connection, transaction, "Orders", OrderPredicate, cancellationToken),
+            DealsDeleted = await DeleteAsync(connection, transaction, "Deals", DealPredicate, cancellationToken),
+            CustomersDeleted = await DeleteAsync(connection, transaction, "Customers", CustomerPredicate, cancellationToken)
         };
 
         await transaction.CommitAsync(cancellationToken);
@@ -111,7 +116,7 @@ public sealed class QaDataMaintenanceService
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $"SELECT COUNT(1) FROM {table} WHERE {predicate};";
-        command.Parameters.AddWithValue(MarkerPatternParameterName, MarkerPattern);
+        QaDataScope.AddScopeParameters(command);
         var result = await command.ExecuteScalarAsync(cancellationToken);
         return Convert.ToInt32(result);
     }
@@ -126,82 +131,9 @@ public sealed class QaDataMaintenanceService
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $"DELETE FROM {table} WHERE {predicate};";
-        command.Parameters.AddWithValue(MarkerPatternParameterName, MarkerPattern);
+        QaDataScope.AddScopeParameters(command);
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }
-
-    private const string CustomerPredicate = """
-        Name LIKE $marker OR Remark LIKE $marker
-        """;
-
-    private const string DealPredicate = """
-        Title LIKE $marker OR Requirement LIKE $marker
-        """;
-
-    private const string OrderPredicate = """
-        Title LIKE $marker OR Requirement LIKE $marker
-        """;
-
-    private const string FollowUpPredicate = """
-        Title LIKE $marker OR Content LIKE $marker
-        """;
-
-    private const string NotePredicate = """
-        Content LIKE $marker
-        """;
-
-    private const string PriceAdjustmentPredicate = """
-        Reason LIKE $marker
-        """;
-
-    private const string ActivityLogPredicate = """
-        Title LIKE $marker OR Description LIKE $marker OR MetadataJson LIKE $marker
-        """;
-
-    private const string SafeOrderDeletePredicate = """
-        (Title LIKE $marker OR Requirement LIKE $marker)
-        AND Id NOT IN (
-            SELECT OrderId FROM FollowUps WHERE OrderId IS NOT NULL
-            UNION
-            SELECT OrderId FROM CustomerNotes WHERE OrderId IS NOT NULL
-            UNION
-            SELECT OrderId FROM PriceAdjustments WHERE OrderId IS NOT NULL
-            UNION
-            SELECT OrderId FROM ActivityLogs WHERE OrderId IS NOT NULL
-        )
-        """;
-
-    private const string SafeDealDeletePredicate = """
-        (Title LIKE $marker OR Requirement LIKE $marker)
-        AND Id NOT IN (
-            SELECT DealId FROM Orders WHERE DealId IS NOT NULL
-            UNION
-            SELECT DealId FROM FollowUps WHERE DealId IS NOT NULL
-            UNION
-            SELECT DealId FROM CustomerNotes WHERE DealId IS NOT NULL
-            UNION
-            SELECT DealId FROM PriceAdjustments WHERE DealId IS NOT NULL
-            UNION
-            SELECT DealId FROM ActivityLogs WHERE DealId IS NOT NULL
-        )
-        """;
-
-    private const string SafeCustomerDeletePredicate = """
-        (Name LIKE $marker OR Remark LIKE $marker)
-        AND Id NOT IN (
-            SELECT CustomerId FROM Orders WHERE CustomerId IS NOT NULL
-            UNION
-            SELECT CustomerId FROM Deals WHERE CustomerId IS NOT NULL
-            UNION
-            SELECT CustomerId FROM FollowUps WHERE CustomerId IS NOT NULL
-            UNION
-            SELECT CustomerId FROM CustomerNotes WHERE CustomerId IS NOT NULL
-            UNION
-            SELECT CustomerId FROM PriceAdjustments WHERE CustomerId IS NOT NULL
-            UNION
-            SELECT CustomerId FROM ActivityLogs WHERE CustomerId IS NOT NULL
-        )
-        """;
 
     public enum QaDataMaintenanceCommand
     {
@@ -260,11 +192,6 @@ public sealed class QaDataMaintenanceService
                 $"QA clear deleted activityLogs: {ActivityLogsDeleted}",
                 Status.ToString()
             };
-
-            if (Status.CustomersCount > 0 || Status.OrdersCount > 0 || Status.DealsCount > 0)
-            {
-                lines.Add("QA clear note: remaining QA parent records are still referenced by non-QA history/order data, so they were preserved to avoid touching non-QA records.");
-            }
 
             return string.Join(
                 Environment.NewLine,

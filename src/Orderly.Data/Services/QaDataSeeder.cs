@@ -6,7 +6,10 @@ namespace Orderly.Data.Services;
 
 public sealed class QaDataSeeder
 {
-    public const string QaMarker = "[P1.3_QA]";
+    public const string QaMarker = QaDataScope.CurrentDisplayMarker;
+    public const string QaRuntimeMarker = "[P1_QA_RUNTIME]";
+    public const string LegacyQaMarker = "[P1.4.1_QA]";
+    public const string LegacyCorruptedQaPrefix = "【P。3——QA";
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -107,18 +110,23 @@ public sealed class QaDataSeeder
         var existingId = await GetIdAsync(
             connection,
             transaction,
-            """
+            $"""
             SELECT Id
             FROM Customers
             WHERE DeletedAt IS NULL
-              AND Name = $name
-              AND Name LIKE $marker
+              AND (
+                    RemoteId = $remoteId
+                 OR ExternalId = $externalId
+                 OR (Name = $name AND {QaDataScope.BuildCustomerSelfPredicate()})
+              )
             LIMIT 1;
             """,
             command =>
             {
                 command.Parameters.AddWithValue("$name", customer.Name);
-                command.Parameters.AddWithValue("$marker", $"%{QaMarker}%");
+                command.Parameters.AddWithValue("$remoteId", customer.RemoteId);
+                command.Parameters.AddWithValue("$externalId", customer.ExternalId);
+                QaDataScope.AddScopeParameters(command);
             },
             cancellationToken);
 
@@ -183,18 +191,21 @@ public sealed class QaDataSeeder
         var existingId = await GetIdAsync(
             connection,
             transaction,
-            """
+            $"""
             SELECT Id
             FROM Deals
             WHERE DeletedAt IS NULL
-              AND Title = $title
-              AND (Title LIKE $marker OR Requirement LIKE $marker)
+              AND (
+                    RemoteId = $remoteId
+                 OR (Title = $title AND {QaDataScope.BuildDealSelfPredicate()})
+              )
             LIMIT 1;
             """,
             command =>
             {
                 command.Parameters.AddWithValue("$title", deal.Title);
-                command.Parameters.AddWithValue("$marker", $"%{QaMarker}%");
+                command.Parameters.AddWithValue("$remoteId", deal.RemoteId);
+                QaDataScope.AddScopeParameters(command);
             },
             cancellationToken);
 
@@ -260,18 +271,23 @@ public sealed class QaDataSeeder
         var existingId = await GetIdAsync(
             connection,
             transaction,
-            """
+            $"""
             SELECT Id
             FROM Orders
             WHERE DeletedAt IS NULL
-              AND Title = $title
-              AND (Title LIKE $marker OR Requirement LIKE $marker)
+              AND (
+                    RemoteId = $remoteId
+                 OR ExternalId = $externalId
+                 OR (Title = $title AND {QaDataScope.BuildOrderSelfPredicate()})
+              )
             LIMIT 1;
             """,
             command =>
             {
                 command.Parameters.AddWithValue("$title", order.Title);
-                command.Parameters.AddWithValue("$marker", $"%{QaMarker}%");
+                command.Parameters.AddWithValue("$remoteId", order.RemoteId);
+                command.Parameters.AddWithValue("$externalId", order.ExternalId);
+                QaDataScope.AddScopeParameters(command);
             },
             cancellationToken);
 
@@ -339,18 +355,21 @@ public sealed class QaDataSeeder
         var existingId = await GetIdAsync(
             connection,
             transaction,
-            """
+            $"""
             SELECT Id
             FROM FollowUps
             WHERE DeletedAt IS NULL
-              AND Title = $title
-              AND Title LIKE $marker
+              AND (
+                    RemoteId = $remoteId
+                 OR (Title = $title AND {QaDataScope.BuildFollowUpSelfPredicate()})
+              )
             LIMIT 1;
             """,
             command =>
             {
                 command.Parameters.AddWithValue("$title", followUp.Title);
-                command.Parameters.AddWithValue("$marker", $"%{QaMarker}%");
+                command.Parameters.AddWithValue("$remoteId", followUp.RemoteId);
+                QaDataScope.AddScopeParameters(command);
             },
             cancellationToken);
 
@@ -413,18 +432,21 @@ public sealed class QaDataSeeder
         var existingId = await GetIdAsync(
             connection,
             transaction,
-            """
+            $"""
             SELECT Id
             FROM CustomerNotes
             WHERE DeletedAt IS NULL
-              AND Content = $content
-              AND Content LIKE $marker
+              AND (
+                    RemoteId = $remoteId
+                 OR (Content = $content AND {QaDataScope.BuildNoteSelfPredicate()})
+              )
             LIMIT 1;
             """,
             command =>
             {
                 command.Parameters.AddWithValue("$content", note.Content);
-                command.Parameters.AddWithValue("$marker", $"%{QaMarker}%");
+                command.Parameters.AddWithValue("$remoteId", note.RemoteId);
+                QaDataScope.AddScopeParameters(command);
             },
             cancellationToken);
 
@@ -483,18 +505,21 @@ public sealed class QaDataSeeder
         var existingId = await GetIdAsync(
             connection,
             transaction,
-            """
+            $"""
             SELECT Id
             FROM PriceAdjustments
             WHERE DeletedAt IS NULL
-              AND Reason = $reason
-              AND Reason LIKE $marker
+              AND (
+                    RemoteId = $remoteId
+                 OR (Reason = $reason AND {QaDataScope.BuildPriceAdjustmentSelfPredicate()})
+              )
             LIMIT 1;
             """,
             command =>
             {
                 command.Parameters.AddWithValue("$reason", adjustment.Reason);
-                command.Parameters.AddWithValue("$marker", $"%{QaMarker}%");
+                command.Parameters.AddWithValue("$remoteId", adjustment.RemoteId);
+                QaDataScope.AddScopeParameters(command);
             },
             cancellationToken);
 
@@ -559,20 +584,22 @@ public sealed class QaDataSeeder
         var existingId = await GetIdAsync(
             connection,
             transaction,
-            """
+            $"""
             SELECT Id
             FROM ActivityLogs
             WHERE DeletedAt IS NULL
-              AND Title = $title
-              AND Description = $description
-              AND (Title LIKE $marker OR Description LIKE $marker)
+              AND (
+                    RemoteId = $remoteId
+                 OR (Title = $title AND Description = $description AND {QaDataScope.BuildActivityLogSelfPredicate()})
+              )
             LIMIT 1;
             """,
             command =>
             {
                 command.Parameters.AddWithValue("$title", activity.Title);
                 command.Parameters.AddWithValue("$description", activity.Description);
-                command.Parameters.AddWithValue("$marker", $"%{QaMarker}%");
+                command.Parameters.AddWithValue("$remoteId", activity.RemoteId);
+                QaDataScope.AddScopeParameters(command);
             },
             cancellationToken);
 
@@ -741,7 +768,7 @@ public sealed class QaDataSeeder
         command.Parameters.AddWithValue("$title", activity.Title);
         command.Parameters.AddWithValue("$description", activity.Description);
         command.Parameters.AddWithValue("$operator", "qa-seed");
-        command.Parameters.AddWithValue("$metadataJson", $$"""{"source":"{{QaMarker}} seed","key":"{{activity.RemoteId}}"}""");
+        command.Parameters.AddWithValue("$metadataJson", QaDataScope.BuildSeedActivityMetadataJson(activity.RemoteId));
         command.Parameters.AddWithValue("$createdAt", now.AddHours(activity.CreatedOffsetHours).ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", now.ToString("O"));
         command.Parameters.AddWithValue("$remoteId", activity.RemoteId);
