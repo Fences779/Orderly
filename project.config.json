@@ -1,0 +1,20 @@
+{
+  "description": "成交助手 Deal Assistant - 独立微信云开发小程序",
+  "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "compileType": "miniprogram",
+  "appid": "touristappid",
+  "projectname": "deal-assistant",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": false,
+    "newFeature": true,
+    "coverView": true,
+    "lazyloadPlaceholderEnable": false
+  },
+  "libVersion": "3.6.6",
+  "condition": {}
+}

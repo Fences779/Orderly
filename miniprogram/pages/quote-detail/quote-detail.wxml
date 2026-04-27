@@ -1,0 +1,32 @@
+<view class="page" wx:if="{{quote}}">
+  <view class="page-title">{{quote.quoteNo}}</view>
+  <view class="page-subtitle">{{deal.title}} · {{customer.name}}</view>
+
+  <glass-card>
+    <view class="row-between">
+      <view class="status">{{quote.quoteStatus}}</view>
+      <view class="muted">有效期 {{quote.validUntil}}</view>
+    </view>
+    <view wx:for="{{quote.items}}" wx:key="skuId" class="quote-item">
+      <text>{{item.name}} x{{item.qty}}</text>
+      <text>¥{{item.price}}</text>
+    </view>
+    <price-row label="基础金额" amount="{{quote.baseAmount}}"></price-row>
+    <price-row label="定制加价" amount="{{quote.customFee}}"></price-row>
+    <price-row label="工费" amount="{{quote.laborFee}}"></price-row>
+    <price-row label="运费" amount="{{quote.shippingFee}}"></price-row>
+    <price-row label="优惠" amount="{{quote.discountAmount}}"></price-row>
+    <price-row label="总价" amount="{{quote.totalAmount}}" strong></price-row>
+    <price-row label="定金" amount="{{quote.depositRequired}}"></price-row>
+    <view class="note">{{quote.quoteNote || '无备注'}}</view>
+    <view class="muted">创建 {{quote.createdAt}} · 更新 {{quote.updatedAt}}</view>
+  </glass-card>
+
+  <view class="actions">
+    <button class="secondary-btn" bindtap="copyText">复制报价</button>
+    <button class="secondary-btn" bindtap="edit">重新编辑</button>
+    <button class="primary-btn" data-status="accepted" bindtap="mark">已接受</button>
+    <button class="danger-btn" data-status="rejected" bindtap="mark">已拒绝</button>
+    <button class="ghost-btn" data-status="revision_requested" bindtap="mark">要修改</button>
+  </view>
+</view>

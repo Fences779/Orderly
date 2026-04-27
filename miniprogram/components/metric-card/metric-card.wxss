@@ -1,0 +1,32 @@
+.metric {
+  min-height: 154rpx;
+  padding: 22rpx;
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1rpx solid rgba(255, 255, 255, 0.74);
+  box-shadow: 0 14rpx 34rpx rgba(42, 67, 55, 0.07);
+}
+
+.label {
+  color: #64706a;
+  font-size: 22rpx;
+}
+
+.value {
+  margin-top: 14rpx;
+  color: #17211d;
+  font-size: 42rpx;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.hint {
+  margin-top: 10rpx;
+  color: #7a817c;
+  font-size: 21rpx;
+}
+
+.orange .value { color: #a45b19; }
+.red .value { color: #a13232; }
+.purple .value { color: #6a45a8; }
+.teal .value { color: #16707a; }

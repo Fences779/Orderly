@@ -1,0 +1,27 @@
+.sku-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14rpx;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid rgba(23, 33, 29, 0.06);
+}
+
+.name {
+  color: #17211d;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.row-actions {
+  display: flex;
+  gap: 10rpx;
+}
+
+.row-actions button {
+  min-width: 88rpx;
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  color: #1f7a5a;
+  background: rgba(31, 122, 90, 0.1);
+  font-size: 22rpx;
+}

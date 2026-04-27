@@ -1,0 +1,24 @@
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 30rpx 0 12rpx;
+}
+
+.title {
+  color: #17211d;
+  font-size: 31rpx;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin-top: 6rpx;
+  color: #7a817c;
+  font-size: 22rpx;
+}
+
+.action {
+  color: #1f7a5a;
+  font-size: 24rpx;
+  font-weight: 600;
+}

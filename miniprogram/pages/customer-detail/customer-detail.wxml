@@ -1,0 +1,19 @@
+<view class="page" wx:if="{{customer}}">
+  <view class="page-title">{{customer.name}}</view>
+  <view class="page-subtitle">{{customer.platform}} · 最近联系 {{customer.lastContactAt || '未记录'}}</view>
+
+  <glass-card>
+    <view class="grid-2">
+      <view class="metric"><text>成交次数</text><text>{{customer.totalOrders || 0}}</text></view>
+      <view class="metric"><text>累计消费</text><text>¥{{customer.totalSpent || 0}}</text></view>
+    </view>
+    <view class="field"><text class="field-label">偏好标签</text><input class="input" value="{{form.profileTags}}" data-field="profileTags" bindinput="onInput" /></view>
+    <view class="field"><text class="field-label">偏好备注</text><textarea class="textarea" value="{{form.preferenceNotes}}" data-field="preferenceNotes" bindinput="onInput"></textarea></view>
+    <view class="field"><text class="field-label">避雷点</text><textarea class="textarea" value="{{form.tabooNotes}}" data-field="tabooNotes" bindinput="onInput"></textarea></view>
+    <view class="field"><text class="field-label">风险备注</text><textarea class="textarea" value="{{form.riskNotes}}" data-field="riskNotes" bindinput="onInput"></textarea></view>
+    <button class="primary-btn" bindtap="save">保存长期档案</button>
+  </glass-card>
+
+  <section-header title="历史 deals" actionText="复购新建" bind:action="newDeal"></section-header>
+  <deal-card wx:for="{{deals}}" wx:key="_id" deal="{{item}}" bind:open="openDeal"></deal-card>
+</view>

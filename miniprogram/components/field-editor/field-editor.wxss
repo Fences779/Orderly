@@ -1,0 +1,26 @@
+.field {
+  margin-bottom: 22rpx;
+}
+
+.label {
+  display: block;
+  margin-bottom: 10rpx;
+  color: #46534d;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  min-height: 78rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  border: 1rpx solid rgba(23, 33, 29, 0.08);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.textarea {
+  min-height: 180rpx;
+  line-height: 1.5;
+}

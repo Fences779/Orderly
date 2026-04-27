@@ -1,0 +1,14 @@
+.price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 0;
+  color: #5f6963;
+  font-size: 25rpx;
+}
+
+.strong {
+  color: #17211d;
+  font-size: 31rpx;
+  font-weight: 800;
+}

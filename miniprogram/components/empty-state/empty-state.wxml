@@ -1,0 +1,6 @@
+<view class="empty">
+  <view class="mark">·</view>
+  <view class="title">{{title || '暂无数据'}}</view>
+  <view wx:if="{{desc}}" class="desc">{{desc}}</view>
+  <button wx:if="{{actionText}}" class="action" bindtap="onAction">{{actionText}}</button>
+</view>

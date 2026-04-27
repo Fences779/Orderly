@@ -1,0 +1,4 @@
+<view class="price-row {{strong ? 'strong' : ''}}">
+  <text>{{label}}</text>
+  <text>{{amountText}}</text>
+</view>

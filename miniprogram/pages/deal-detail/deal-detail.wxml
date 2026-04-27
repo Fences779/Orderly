@@ -1,0 +1,69 @@
+<view class="page" wx:if="{{deal}}">
+  <glass-card>
+    <view class="row-between">
+      <view>
+        <view class="title">{{deal.title}}</view>
+        <view class="meta">{{customer.name || '未关联客户'}} · {{deal.sourceEntry}} · 更新 {{deal.updatedAt}}</view>
+      </view>
+      <status-tag stage="{{deal.dealStage}}"></status-tag>
+    </view>
+    <view class="quick-actions">
+      <button bindtap="toggleEdit">编辑需求</button>
+      <button bindtap="changeStage">改状态</button>
+      <button bindtap="createQuote">报价</button>
+      <button bindtap="createManualTask">提醒</button>
+    </view>
+  </glass-card>
+
+  <section-header title="需求区" subtitle="可修正识别结果和长期沟通变化"></section-header>
+  <glass-card>
+    <block wx:if="{{!editMode}}">
+      <view class="summary">{{deal.demandSummary}}</view>
+      <view class="info-grid">
+        <view><text>品类</text><text>{{deal.intentCategory || '未填'}}</text></view>
+        <view><text>风格</text><text>{{styleTagsText}}</text></view>
+        <view><text>材质</text><text>{{materialTagsText}}</text></view>
+        <view><text>规格</text><text>{{deal.sizeSpec || '未填'}}</text></view>
+        <view><text>颜色</text><text>{{deal.colorPref || '未填'}}</text></view>
+        <view><text>预算</text><text>¥{{deal.budgetMin || 0}} - ¥{{deal.budgetMax || 0}}</text></view>
+        <view><text>截止</text><text>{{deal.deadlineAt || '未填'}}</text></view>
+        <view><text>紧急</text><text>{{deal.urgencyLevel || 'low'}}</text></view>
+      </view>
+      <view wx:if="{{riskText}}" class="risk">风险：{{riskText}}</view>
+    </block>
+    <block wx:else>
+      <view class="field"><text class="field-label">标题</text><input class="input" value="{{editForm.title}}" data-field="title" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">需求摘要</text><textarea class="textarea" value="{{editForm.demandSummary}}" data-field="demandSummary" bindinput="onInput"></textarea></view>
+      <view class="grid-2">
+        <view class="field"><text class="field-label">品类</text><input class="input" value="{{editForm.intentCategory}}" data-field="intentCategory" bindinput="onInput" /></view>
+        <view class="field"><text class="field-label">规格</text><input class="input" value="{{editForm.sizeSpec}}" data-field="sizeSpec" bindinput="onInput" /></view>
+        <view class="field"><text class="field-label">颜色</text><input class="input" value="{{editForm.colorPref}}" data-field="colorPref" bindinput="onInput" /></view>
+        <view class="field"><text class="field-label">预算上限</text><input class="input" type="number" value="{{editForm.budgetMax}}" data-field="budgetMax" bindinput="onInput" /></view>
+      </view>
+      <button class="primary-btn" bindtap="saveDemand">保存需求</button>
+    </block>
+  </glass-card>
+
+  <section-header title="报价区" actionText="新报价" bind:action="createQuote"></section-header>
+  <glass-card wx:if="{{latestQuote}}">
+    <view class="row-between">
+      <view class="quote-no">{{latestQuote.quoteNo}}</view>
+      <button class="ghost-btn quote-open" data-id="{{latestQuote._id}}" bindtap="openQuote">详情</button>
+    </view>
+    <price-row label="总价" amount="{{latestQuote.totalAmount}}" strong></price-row>
+    <price-row label="定金" amount="{{latestQuote.depositRequired}}"></price-row>
+    <view class="muted">状态 {{latestQuote.quoteStatus}} · 有效期 {{latestQuote.validUntil}}</view>
+  </glass-card>
+  <empty-state wx:else title="暂无报价" desc="创建报价后会自动关联 deal 并生成报价未回复任务。"></empty-state>
+
+  <section-header title="跟进区" subtitle="复制文案后回到微信发送"></section-header>
+  <task-card wx:for="{{followups}}" wx:key="_id" task="{{item}}" bind:copy="copyTask" bind:done="completeTask" bind:skip="skipTask"></task-card>
+  <empty-state wx:if="{{!followups.length}}" title="暂无未完成跟进"></empty-state>
+
+  <section-header title="时间轴"></section-header>
+  <glass-card>
+    <timeline-log logs="{{logs}}"></timeline-log>
+  </glass-card>
+
+  <button class="secondary-btn section-gap" bindtap="quickRepurchase">从当前客户再建新 deal</button>
+</view>

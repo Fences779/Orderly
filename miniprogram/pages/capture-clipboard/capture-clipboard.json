@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "粘贴板录入",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card",
+    "section-header": "../../components/section-header/section-header"
+  }
+}

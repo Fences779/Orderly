@@ -1,0 +1,27 @@
+<view class="page">
+  <view class="page-title">粘贴板录入</view>
+  <view class="page-subtitle">复制聊天内容后进入这里，也可以手动粘贴修改。</view>
+
+  <glass-card>
+    <view class="row-between">
+      <text class="field-label">原始文本</text>
+      <button class="ghost-small" bindtap="readClipboard">重新获取</button>
+    </view>
+    <textarea class="textarea raw" value="{{rawText}}" placeholder="粘贴咨询聊天内容，原文会保留到 capture 草稿。" bindinput="onInput"></textarea>
+    <view class="actions">
+      <button class="secondary-btn" bindtap="parse">解析文本</button>
+      <button class="primary-btn" bindtap="goConfirm">确认入库</button>
+    </view>
+  </glass-card>
+
+  <glass-card wx:if="{{parserResult}}">
+    <section-header title="解析摘要" subtitle="所有识别结果都可在下一步修正"></section-header>
+    <view class="confidence">可信度 {{confidenceScore}}</view>
+    <view class="summary">{{parserResult.demandSummary}}</view>
+    <view class="chip-row">
+      <text wx:for="{{parserResult.styleTags}}" wx:key="*this" class="chip">{{item}}</text>
+      <text wx:for="{{parserResult.materialTags}}" wx:key="*this" class="chip">{{item}}</text>
+      <text wx:for="{{parserResult.riskFlags}}" wx:key="key" class="chip">{{item.label}}</text>
+    </view>
+  </glass-card>
+</view>

@@ -1,0 +1,40 @@
+<view class="page">
+  <view class="page-title">草稿确认</view>
+  <view class="page-subtitle">识别结果必须确认后才会写入正式客户和 deal。</view>
+
+  <glass-card wx:if="{{capture}}">
+    <view class="field-label">原始文本 / OCR 文本</view>
+    <view class="raw">{{capture.rawText || capture.ocrText}}</view>
+    <view class="confidence">可信度 {{capture.confidenceScore || 0}}</view>
+  </glass-card>
+
+  <glass-card>
+    <view class="row-between">
+      <text class="field-label">客户匹配建议</text>
+      <button class="ghost-btn small" bindtap="useNewCustomer">新建客户</button>
+    </view>
+    <customer-chip wx:for="{{matches}}" wx:key="_id" customer="{{item}}" selected="{{selectedCustomerId === item._id}}" bind:select="selectCustomer"></customer-chip>
+    <view wx:if="{{!matches.length}}" class="muted empty-line">暂无明显重复客户，可直接新建。</view>
+  </glass-card>
+
+  <glass-card>
+    <view class="field"><text class="field-label">客户名</text><input class="input" value="{{form.customerName}}" data-field="customerName" bindinput="onInput" /></view>
+    <view class="field"><text class="field-label">联系线索</text><input class="input" value="{{form.contactHandle}}" data-field="contactHandle" bindinput="onInput" /></view>
+    <view class="field"><text class="field-label">Deal 标题</text><input class="input" value="{{form.title}}" data-field="title" bindinput="onInput" /></view>
+    <view class="field"><text class="field-label">需求摘要</text><textarea class="textarea" value="{{form.demandSummary}}" data-field="demandSummary" bindinput="onInput"></textarea></view>
+    <view class="grid-2">
+      <view class="field"><text class="field-label">意向品类</text><input class="input" value="{{form.intentCategory}}" data-field="intentCategory" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">推荐状态</text><input class="input" value="{{form.dealStage}}" data-field="dealStage" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">风格标签</text><input class="input" value="{{form.styleTags}}" data-field="styleTags" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">材质标签</text><input class="input" value="{{form.materialTags}}" data-field="materialTags" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">尺寸规格</text><input class="input" value="{{form.sizeSpec}}" data-field="sizeSpec" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">颜色偏好</text><input class="input" value="{{form.colorPref}}" data-field="colorPref" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">预算下限</text><input class="input" type="number" value="{{form.budgetMin}}" data-field="budgetMin" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">预算上限</text><input class="input" type="number" value="{{form.budgetMax}}" data-field="budgetMax" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">时间要求</text><input class="input" value="{{form.deadlineAt}}" data-field="deadlineAt" bindinput="onInput" /></view>
+      <view class="field"><text class="field-label">紧急程度</text><input class="input" value="{{form.urgencyLevel}}" data-field="urgencyLevel" bindinput="onInput" /></view>
+    </view>
+    <view class="field"><text class="field-label">风险词 / 犹豫信号</text><input class="input" value="{{form.riskFlags}}" data-field="riskFlags" bindinput="onInput" /></view>
+    <button class="primary-btn" bindtap="confirm">确认入库并查看 deal</button>
+  </glass-card>
+</view>

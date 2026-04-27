@@ -1,0 +1,38 @@
+.empty {
+  padding: 52rpx 28rpx;
+  text-align: center;
+  color: #7a817c;
+}
+
+.mark {
+  width: 84rpx;
+  height: 84rpx;
+  margin: 0 auto 18rpx;
+  border-radius: 50%;
+  color: #1f7a5a;
+  background: rgba(31, 122, 90, 0.12);
+  font-size: 72rpx;
+  line-height: 48rpx;
+}
+
+.title {
+  color: #17211d;
+  font-size: 29rpx;
+  font-weight: 700;
+}
+
+.desc {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.action {
+  display: inline-flex;
+  margin-top: 20rpx;
+  padding: 12rpx 22rpx;
+  border-radius: 999rpx;
+  color: #ffffff;
+  background: #1f7a5a;
+  font-size: 24rpx;
+}

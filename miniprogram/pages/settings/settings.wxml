@@ -1,0 +1,17 @@
+<view class="page">
+  <view class="page-title">设置</view>
+  <view class="page-subtitle">用于验收前初始化数据和手动触发规则扫描。</view>
+
+  <glass-card>
+    <view class="info-row"><text>工作区</text><text>{{appConfig.workspaceId}}</text></view>
+    <view class="info-row"><text>云环境</text><text>{{appConfig.cloudEnv || '使用当前默认环境'}}</text></view>
+    <view class="info-row"><text>OCR provider</text><text>{{appConfig.ocrProvider}}</text></view>
+    <button class="primary-btn section-gap" bindtap="initSeed">初始化演示数据</button>
+    <button class="secondary-btn section-gap" bindtap="scanFollowups">扫描跟进任务</button>
+  </glass-card>
+
+  <glass-card wx:if="{{initResult}}">
+    <view class="field-label">初始化结果</view>
+    <view class="result">{{initResult.message}}</view>
+  </glass-card>
+</view>

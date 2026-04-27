@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "客户详情",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card",
+    "deal-card": "../../components/deal-card/deal-card",
+    "section-header": "../../components/section-header/section-header"
+  }
+}

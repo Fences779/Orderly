@@ -1,0 +1,17 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 240rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.blue { color: #2360a5; background: rgba(71, 132, 204, 0.14); }
+.orange { color: #a45b19; background: rgba(218, 139, 46, 0.16); }
+.purple { color: #6a45a8; background: rgba(122, 90, 198, 0.14); }
+.green { color: #1f7a5a; background: rgba(31, 122, 90, 0.14); }
+.teal { color: #16707a; background: rgba(22, 112, 122, 0.14); }
+.red { color: #a13232; background: rgba(207, 75, 75, 0.14); }
+.gray { color: #5d655f; background: rgba(93, 101, 95, 0.12); }

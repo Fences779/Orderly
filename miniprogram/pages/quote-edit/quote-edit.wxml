@@ -1,0 +1,36 @@
+<view class="page">
+  <view class="page-title">编辑报价</view>
+  <view class="page-subtitle">{{deal.title || '当前 deal'}} · 报价独立存档，可多次修改。</view>
+
+  <glass-card>
+    <picker range="{{skus}}" range-key="name" bindchange="addSku">
+      <view class="secondary-btn">从 SKU 目录选择</view>
+    </picker>
+    <view wx:for="{{form.items}}" wx:key="skuId" class="item-row">
+      <input class="input" value="{{item.name}}" data-index="{{index}}" data-field="name" bindinput="updateItem" />
+      <view class="item-grid">
+        <input class="input" type="number" value="{{item.qty}}" data-index="{{index}}" data-field="qty" bindinput="updateItem" />
+        <input class="input" type="number" value="{{item.price}}" data-index="{{index}}" data-field="price" bindinput="updateItem" />
+        <button class="danger-btn mini" data-index="{{index}}" bindtap="removeItem">删除</button>
+      </view>
+    </view>
+  </glass-card>
+
+  <glass-card>
+    <view class="grid-2">
+      <view class="field"><text class="field-label">基础金额</text><input class="input" type="number" value="{{form.baseAmount}}" data-field="baseAmount" bindinput="onMoneyInput" /></view>
+      <view class="field"><text class="field-label">定制加价</text><input class="input" type="number" value="{{form.customFee}}" data-field="customFee" bindinput="onMoneyInput" /></view>
+      <view class="field"><text class="field-label">工费</text><input class="input" type="number" value="{{form.laborFee}}" data-field="laborFee" bindinput="onMoneyInput" /></view>
+      <view class="field"><text class="field-label">运费</text><input class="input" type="number" value="{{form.shippingFee}}" data-field="shippingFee" bindinput="onMoneyInput" /></view>
+      <view class="field"><text class="field-label">优惠</text><input class="input" type="number" value="{{form.discountAmount}}" data-field="discountAmount" bindinput="onMoneyInput" /></view>
+      <view class="field"><text class="field-label">定金</text><input class="input" type="number" value="{{form.depositRequired}}" data-field="depositRequired" bindinput="onMoneyInput" /></view>
+    </view>
+    <price-row label="总价" amount="{{form.totalAmount}}" strong></price-row>
+    <view class="field"><text class="field-label">有效期</text><input class="input" value="{{form.validUntil}}" data-field="validUntil" bindinput="onTextInput" /></view>
+    <view class="field"><text class="field-label">报价备注</text><textarea class="textarea" value="{{form.quoteNote}}" data-field="quoteNote" bindinput="onTextInput"></textarea></view>
+    <view class="actions">
+      <button class="secondary-btn" bindtap="saveDraft">保存草稿</button>
+      <button class="primary-btn" bindtap="sendQuote">发送报价</button>
+    </view>
+  </glass-card>
+</view>

@@ -1,0 +1,5 @@
+<view class="field">
+  <text class="label">{{label}}</text>
+  <textarea wx:if="{{multiline}}" class="textarea" value="{{value}}" placeholder="{{placeholder}}" bindinput="onInput"></textarea>
+  <input wx:else class="input" type="{{type}}" value="{{value}}" placeholder="{{placeholder}}" bindinput="onInput" />
+</view>

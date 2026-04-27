@@ -1,0 +1,19 @@
+.metric {
+  padding: 22rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.metric text:first-child {
+  display: block;
+  color: #7a817c;
+  font-size: 22rpx;
+}
+
+.metric text:last-child {
+  display: block;
+  margin-top: 8rpx;
+  color: #17211d;
+  font-size: 34rpx;
+  font-weight: 800;
+}

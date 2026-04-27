@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "极速新建",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card"
+  }
+}

@@ -1,0 +1,46 @@
+<view class="page">
+  <view class="page-title">极速新建</view>
+  <view class="page-subtitle">只填最少字段，先把咨询落库。</view>
+
+  <glass-card>
+    <view class="field">
+      <text class="field-label">客户名</text>
+      <input class="input" value="{{form.customerName}}" data-field="customerName" placeholder="例如：小林 / 闲鱼买家A" bindinput="onInput" />
+    </view>
+    <view class="field">
+      <text class="field-label">来源平台</text>
+      <picker range="{{platforms}}" range-key="label" data-field="platform" data-list="platforms" bindchange="onPick">
+        <view class="picker-box">{{form.platform}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <text class="field-label">一句话需求</text>
+      <textarea class="textarea" value="{{form.demandSummary}}" data-field="demandSummary" placeholder="例如：想定制一条简约珍珠项链，预算 300 以内" bindinput="onInput"></textarea>
+    </view>
+    <view class="grid-2">
+      <view class="field">
+        <text class="field-label">当前状态</text>
+        <picker range="{{stages}}" range-key="label" data-field="dealStage" data-list="stages" bindchange="onPick">
+          <view class="picker-box">{{form.dealStage}}</view>
+        </picker>
+      </view>
+      <view class="field">
+        <text class="field-label">预算上限</text>
+        <input class="input" type="number" value="{{form.budgetMax}}" data-field="budgetMax" placeholder="可选" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">紧急程度</text>
+        <picker range="{{urgencyOptions}}" range-key="label" data-field="urgencyLevel" data-list="urgencyOptions" bindchange="onPick">
+          <view class="picker-box">{{form.urgencyLevel}}</view>
+        </picker>
+      </view>
+      <view class="field">
+        <text class="field-label">优先级</text>
+        <picker range="{{priorityOptions}}" range-key="label" data-field="priorityLevel" data-list="priorityOptions" bindchange="onPick">
+          <view class="picker-box">{{form.priorityLevel}}</view>
+        </picker>
+      </view>
+    </view>
+    <button class="primary-btn" bindtap="save">保存并查看 deal</button>
+  </glass-card>
+</view>

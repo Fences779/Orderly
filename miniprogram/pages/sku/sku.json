@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "SKU 管理",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card",
+    "empty-state": "../../components/empty-state/empty-state"
+  }
+}

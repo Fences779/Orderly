@@ -1,0 +1,45 @@
+.template {
+  margin-bottom: 16rpx;
+  padding: 22rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.use {
+  color: #7a817c;
+  font-size: 21rpx;
+}
+
+.content {
+  margin-top: 12rpx;
+  color: #46534d;
+  font-size: 24rpx;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.actions button {
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  color: #1f7a5a;
+  background: rgba(31, 122, 90, 0.1);
+  font-size: 22rpx;
+}

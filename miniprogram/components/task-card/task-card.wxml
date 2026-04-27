@@ -1,0 +1,16 @@
+<view class="task">
+  <view class="row-between" bindtap="onOpen">
+    <view>
+      <view class="title">{{task.customerName || '客户'}} · {{typeText}}</view>
+      <view class="meta">{{dueText}} · 优先级 {{task.priorityScore || 0}}</view>
+    </view>
+    <view class="score">{{task.priorityScore || 0}}</view>
+  </view>
+  <view class="text">{{task.suggestedText || '暂无推荐文案'}}</view>
+  <view class="actions">
+    <button bindtap="onCopy">复制</button>
+    <button bindtap="onDone">完成</button>
+    <button bindtap="onDelay">延期</button>
+    <button bindtap="onSkip">跳过</button>
+  </view>
+</view>

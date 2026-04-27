@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "成交看板",
+  "usingComponents": {
+    "deal-card": "../../components/deal-card/deal-card",
+    "section-header": "../../components/section-header/section-header",
+    "empty-state": "../../components/empty-state/empty-state"
+  }
+}

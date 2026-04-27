@@ -1,0 +1,33 @@
+<view class="page">
+  <view class="row-between hero">
+    <view>
+      <view class="page-title">成交助手</view>
+      <view class="page-subtitle">今天该跟谁、哪单要报价、哪单要推进，一屏看清。</view>
+    </view>
+    <button class="scan-btn" bindtap="scanFollowups">扫描</button>
+  </view>
+
+  <view class="metrics">
+    <metric-card title="今日新增" value="{{metrics.newDeals}}" hint="咨询" tone="green"></metric-card>
+    <metric-card title="待跟进" value="{{metrics.pendingFollowups}}" hint="到期任务" tone="orange"></metric-card>
+    <metric-card title="已报价" value="{{metrics.quotedDeals}}" hint="今日" tone="purple"></metric-card>
+    <metric-card title="成交" value="{{metrics.wonDeals}}" hint="已排期+" tone="green"></metric-card>
+    <metric-card title="流失" value="{{metrics.lostDeals}}" hint="今日" tone="red"></metric-card>
+    <metric-card title="待复购" value="{{metrics.repurchaseDue}}" hint="任务数" tone="teal"></metric-card>
+  </view>
+
+  <section-header title="快捷入口" subtitle="低成本录入优先"></section-header>
+  <view class="action-grid">
+    <button wx:for="{{actions}}" wx:key="title" class="action-card pressable" data-index="{{index}}" bindtap="nav">{{item.title}}</button>
+  </view>
+
+  <section-header title="高优先级跟进" actionText="全部" bind:action="navToFollowups"></section-header>
+  <glass-card wx:if="{{priorityTasks.length}}" tight>
+    <task-card wx:for="{{priorityTasks}}" wx:key="_id" task="{{item}}" bind:copy="copyTask" bind:done="completeTask" bind:open="openTask"></task-card>
+  </glass-card>
+  <empty-state wx:else title="暂无到期任务" desc="报价、收货、复购规则会在扫描后生成任务。"></empty-state>
+
+  <section-header title="最近成交机会" actionText="看板" bind:action="goBoard"></section-header>
+  <deal-card wx:for="{{recentDeals}}" wx:key="_id" deal="{{item}}" bind:open="openDeal"></deal-card>
+  <empty-state wx:if="{{!recentDeals.length}}" title="还没有 deal" desc="先从极速新建或粘贴板录入开始。"></empty-state>
+</view>

@@ -1,0 +1,21 @@
+<view class="page">
+  <view class="page-title">模板管理</view>
+  <view class="page-subtitle">支持变量：customerName、productName、quoteAmount、deadline、lastPurchaseDate。</view>
+
+  <glass-card>
+    <view class="field"><text class="field-label">场景</text><input class="input" value="{{form.sceneType}}" data-field="sceneType" bindinput="onInput" /></view>
+    <view class="field"><text class="field-label">标题</text><input class="input" value="{{form.title}}" data-field="title" bindinput="onInput" /></view>
+    <view class="field"><text class="field-label">内容</text><textarea class="textarea" value="{{form.content}}" data-field="content" bindinput="onInput"></textarea></view>
+    <view class="field"><text class="field-label">语气</text><input class="input" value="{{form.toneStyle}}" data-field="toneStyle" bindinput="onInput" /></view>
+    <button class="primary-btn" bindtap="save">保存模板</button>
+  </glass-card>
+
+  <picker range="{{scenes}}" range-key="label" bindchange="pickScene">
+    <view class="filter">{{sceneType || '全部场景'}}</view>
+  </picker>
+
+  <glass-card>
+    <template-preview wx:for="{{templates}}" wx:key="_id" template="{{item}}" preview="{{item.previewText || item.content}}" bind:copy="copy" bind:edit="edit"></template-preview>
+    <empty-state wx:if="{{!templates.length}}" title="暂无模板"></empty-state>
+  </glass-card>
+</view>

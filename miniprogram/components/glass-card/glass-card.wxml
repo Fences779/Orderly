@@ -1,0 +1,3 @@
+<view class="glass-card {{tight ? 'tight' : ''}}">
+  <slot></slot>
+</view>

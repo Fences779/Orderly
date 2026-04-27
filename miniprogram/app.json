@@ -1,0 +1,57 @@
+{
+  "pages": [
+    "pages/dashboard/dashboard",
+    "pages/quick-create/quick-create",
+    "pages/capture-clipboard/capture-clipboard",
+    "pages/capture-ocr/capture-ocr",
+    "pages/capture-confirm/capture-confirm",
+    "pages/deals-board/deals-board",
+    "pages/deal-detail/deal-detail",
+    "pages/customers/customers",
+    "pages/customer-detail/customer-detail",
+    "pages/quote-edit/quote-edit",
+    "pages/quote-detail/quote-detail",
+    "pages/followups/followups",
+    "pages/stats/stats",
+    "pages/sku/sku",
+    "pages/templates/templates",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "navigationBarTitleText": "成交助手",
+    "navigationBarBackgroundColor": "#F7F5EF",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F7F5EF",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#6F746F",
+    "selectedColor": "#1F7A5A",
+    "backgroundColor": "#FBFAF6",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/dashboard/dashboard",
+        "text": "工作台"
+      },
+      {
+        "pagePath": "pages/deals-board/deals-board",
+        "text": "看板"
+      },
+      {
+        "pagePath": "pages/followups/followups",
+        "text": "跟进"
+      },
+      {
+        "pagePath": "pages/customers/customers",
+        "text": "客户"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

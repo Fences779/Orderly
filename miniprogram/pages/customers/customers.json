@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "客户",
+  "usingComponents": {
+    "customer-chip": "../../components/customer-chip/customer-chip",
+    "empty-state": "../../components/empty-state/empty-state"
+  }
+}

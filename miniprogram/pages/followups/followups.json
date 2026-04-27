@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "跟进任务",
+  "usingComponents": {
+    "task-card": "../../components/task-card/task-card",
+    "empty-state": "../../components/empty-state/empty-state"
+  }
+}

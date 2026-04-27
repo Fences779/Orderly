@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "成交助手",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card",
+    "section-header": "../../components/section-header/section-header",
+    "metric-card": "../../components/metric-card/metric-card",
+    "deal-card": "../../components/deal-card/deal-card",
+    "task-card": "../../components/task-card/task-card",
+    "empty-state": "../../components/empty-state/empty-state"
+  }
+}

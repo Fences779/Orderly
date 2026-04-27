@@ -1,0 +1,54 @@
+.timeline {
+  padding-left: 8rpx;
+}
+
+.item {
+  display: flex;
+  gap: 16rpx;
+  padding-bottom: 22rpx;
+}
+
+.dot {
+  width: 14rpx;
+  height: 14rpx;
+  margin-top: 10rpx;
+  border-radius: 50%;
+  background: #1f7a5a;
+  box-shadow: 0 0 0 8rpx rgba(31, 122, 90, 0.12);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.action {
+  color: #17211d;
+  font-size: 25rpx;
+  font-weight: 700;
+}
+
+.time {
+  color: #8a908b;
+  font-size: 20rpx;
+}
+
+.note {
+  margin-top: 6rpx;
+  color: #5f6963;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.empty {
+  padding: 24rpx 0;
+  color: #8a908b;
+  text-align: center;
+}

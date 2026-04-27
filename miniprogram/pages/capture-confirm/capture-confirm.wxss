@@ -1,0 +1,27 @@
+.raw {
+  max-height: 260rpx;
+  padding: 18rpx;
+  border-radius: 18rpx;
+  color: #46534d;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 24rpx;
+  line-height: 1.55;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.confidence {
+  margin-top: 14rpx;
+  color: #1f7a5a;
+  font-weight: 800;
+}
+
+.small {
+  min-height: 56rpx;
+  padding: 0 18rpx;
+  font-size: 22rpx;
+}
+
+.empty-line {
+  padding: 18rpx 0;
+}

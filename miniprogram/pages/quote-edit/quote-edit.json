@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "编辑报价",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card",
+    "price-row": "../../components/price-row/price-row"
+  }
+}

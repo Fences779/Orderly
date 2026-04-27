@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "OCR 录入",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card"
+  }
+}

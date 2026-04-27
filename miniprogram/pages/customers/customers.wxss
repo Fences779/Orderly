@@ -1,0 +1,20 @@
+.search-row {
+  display: grid;
+  grid-template-columns: 1fr 160rpx;
+  gap: 14rpx;
+  margin: 22rpx 0;
+}
+
+.search {
+  min-height: 76rpx;
+}
+
+.filter {
+  min-height: 76rpx;
+  padding: 20rpx 18rpx;
+  border-radius: 20rpx;
+  color: #1f7a5a;
+  background: rgba(31, 122, 90, 0.1);
+  font-size: 24rpx;
+  text-align: center;
+}

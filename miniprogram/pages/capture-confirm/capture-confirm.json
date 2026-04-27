@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "草稿确认",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card",
+    "customer-chip": "../../components/customer-chip/customer-chip"
+  }
+}

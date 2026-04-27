@@ -1,0 +1,13 @@
+.glass-card {
+  margin-top: 18rpx;
+  padding: 26rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.74);
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: 0 18rpx 46rpx rgba(42, 67, 55, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.tight {
+  padding: 18rpx;
+}

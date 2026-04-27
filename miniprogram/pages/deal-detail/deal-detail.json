@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "Deal 详情",
+  "usingComponents": {
+    "glass-card": "../../components/glass-card/glass-card",
+    "status-tag": "../../components/status-tag/status-tag",
+    "section-header": "../../components/section-header/section-header",
+    "price-row": "../../components/price-row/price-row",
+    "task-card": "../../components/task-card/task-card",
+    "timeline-log": "../../components/timeline-log/timeline-log",
+    "empty-state": "../../components/empty-state/empty-state"
+  }
+}

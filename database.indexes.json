@@ -1,0 +1,25 @@
+{
+  "customers": [
+    { "name": "idx_platform_externalUid", "keys": { "platform": 1, "externalUid": 1 } },
+    { "name": "idx_contactHandle", "keys": { "contactHandle": 1 } },
+    { "name": "idx_updatedAt", "keys": { "updatedAt": -1 } }
+  ],
+  "deals": [
+    { "name": "idx_customer_createdAt", "keys": { "customerId": 1, "createdAt": -1 } },
+    { "name": "idx_stage_updatedAt", "keys": { "dealStage": 1, "updatedAt": -1 } },
+    { "name": "idx_createdAt", "keys": { "createdAt": -1 } }
+  ],
+  "quotes": [
+    { "name": "idx_deal_createdAt", "keys": { "dealId": 1, "createdAt": -1 } }
+  ],
+  "followup_tasks": [
+    { "name": "idx_status_dueAt", "keys": { "taskStatus": 1, "dueAt": 1 } },
+    { "name": "idx_dedupeKey", "keys": { "dedupeKey": 1 } }
+  ],
+  "captures": [
+    { "name": "idx_status_createdAt", "keys": { "confirmStatus": 1, "createdAt": -1 } }
+  ],
+  "activity_logs": [
+    { "name": "idx_entity_createdAt", "keys": { "entityType": 1, "entityId": 1, "createdAt": -1 } }
+  ]
+}

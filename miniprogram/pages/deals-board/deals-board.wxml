@@ -1,0 +1,24 @@
+<view class="page">
+  <view class="page-title">成交看板</view>
+  <view class="page-subtitle">以 dealStage 单一状态源驱动，每张卡都能进入详情或快捷推进。</view>
+
+  <view class="toolbar">
+    <picker range="{{platforms}}" range-key="label" bindchange="pickPlatform">
+      <view class="tool">{{filters.platform || '全部平台'}}</view>
+    </picker>
+    <button class="tool {{filters.highPriority ? 'active' : ''}}" bindtap="toggleHighPriority">高优先级</button>
+  </view>
+
+  <scroll-view class="board" scroll-x enhanced>
+    <view class="columns">
+      <view wx:for="{{columns}}" wx:key="key" class="column">
+        <view class="column-head">
+          <text>{{item.title}}</text>
+          <text>{{item.deals.length}}</text>
+        </view>
+        <deal-card wx:for="{{item.deals}}" wx:for-item="deal" wx:key="_id" deal="{{deal}}" bind:open="openDeal" bind:advance="advanceDeal"></deal-card>
+        <empty-state wx:if="{{!item.deals.length}}" title="暂无卡片"></empty-state>
+      </view>
+    </view>
+  </scroll-view>
+</view>

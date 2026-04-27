@@ -1,0 +1,16 @@
+<view class="page">
+  <view class="row-between">
+    <view>
+      <view class="page-title">跟进任务</view>
+      <view class="page-subtitle">按优先级分排序，先处理最该跟的客户。</view>
+    </view>
+    <button class="scan-btn" bindtap="scan">扫描</button>
+  </view>
+
+  <picker range="{{filters}}" range-key="label" bindchange="pickType">
+    <view class="filter">{{triggerType || '全部类型'}}</view>
+  </picker>
+
+  <task-card wx:for="{{tasks}}" wx:key="_id" task="{{item}}" bind:copy="copy" bind:done="done" bind:skip="skip" bind:delay="delay" bind:open="open"></task-card>
+  <empty-state wx:if="{{!tasks.length}}" title="暂无待处理任务" desc="发送报价、收货或完成订单后会自动产生任务。"></empty-state>
+</view>

@@ -1,0 +1,11 @@
+.filter {
+  display: inline-flex;
+  min-height: 68rpx;
+  margin: 22rpx 0 4rpx;
+  padding: 18rpx 24rpx;
+  border-radius: 999rpx;
+  color: #1f7a5a;
+  background: rgba(31, 122, 90, 0.1);
+  font-size: 24rpx;
+  font-weight: 700;
+}

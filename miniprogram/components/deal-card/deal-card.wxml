@@ -1,0 +1,16 @@
+<view class="deal-card pressable" bindtap="onOpen">
+  <view class="row-between">
+    <view class="title">{{deal.title || '未命名需求'}}</view>
+    <status-tag stage="{{deal.dealStage}}"></status-tag>
+  </view>
+  <view class="summary">{{deal.demandSummary || '暂无需求摘要'}}</view>
+  <view class="meta">
+    <text>{{platformText}}</text>
+    <text>{{deal.intentCategory || '未分类'}}</text>
+    <text>{{budgetText}}</text>
+  </view>
+  <view class="row-between footer">
+    <text class="time">{{updatedText}}</text>
+    <button class="mini-btn" catchtap="onAdvance">推进</button>
+  </view>
+</view>

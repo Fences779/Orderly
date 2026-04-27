@@ -1,0 +1,49 @@
+<view class="page">
+  <view class="row-between">
+    <view>
+      <view class="page-title">统计</view>
+      <view class="page-subtitle">成交数口径：周期内进入 scheduled 及之后阶段的唯一 deal。</view>
+    </view>
+    <picker range="{{periods}}" range-key="label" bindchange="pickPeriod">
+      <view class="period">{{period}}</view>
+    </picker>
+  </view>
+
+  <view class="metrics">
+    <metric-card title="新增咨询" value="{{summary.newDeals || 0}}"></metric-card>
+    <metric-card title="已报价" value="{{summary.quotedDeals || 0}}" tone="purple"></metric-card>
+    <metric-card title="成交数" value="{{summary.wonDeals || 0}}" tone="green"></metric-card>
+    <metric-card title="成交率" value="{{summary.winRateText || '0%'}}" tone="teal"></metric-card>
+    <metric-card title="流失数" value="{{summary.lostDeals || 0}}" tone="red"></metric-card>
+    <metric-card title="待跟进" value="{{summary.pendingFollowups || 0}}" tone="orange"></metric-card>
+    <metric-card title="待复购" value="{{summary.repurchaseDue || 0}}" tone="teal"></metric-card>
+  </view>
+
+  <glass-card>
+    <view class="block-title">来源平台分布</view>
+    <view wx:for="{{platformDistribution}}" wx:key="platform" class="bar-row">
+      <text>{{item.platform}}</text>
+      <view class="bar"><view style="width: {{item.percent}}%;"></view></view>
+      <text>{{item.count}}</text>
+    </view>
+    <empty-state wx:if="{{!platformDistribution.length}}" title="暂无平台数据"></empty-state>
+  </glass-card>
+
+  <glass-card>
+    <view class="block-title">模板使用 Top</view>
+    <view wx:for="{{templateTop}}" wx:key="_id" class="rank-row">
+      <text>{{item.title}}</text>
+      <text>{{item.useCount}}</text>
+    </view>
+    <empty-state wx:if="{{!templateTop.length}}" title="暂无模板使用"></empty-state>
+  </glass-card>
+
+  <glass-card>
+    <view class="block-title">高风险流失原因</view>
+    <view wx:for="{{riskReasons}}" wx:key="label" class="rank-row">
+      <text>{{item.label}}</text>
+      <text>{{item.count}}</text>
+    </view>
+    <empty-state wx:if="{{!riskReasons.length}}" title="暂无风险信号"></empty-state>
+  </glass-card>
+</view>

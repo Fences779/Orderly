@@ -1,0 +1,41 @@
+.customer {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 18rpx;
+  border: 1rpx solid rgba(23, 33, 29, 0.08);
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.selected {
+  border-color: #1f7a5a;
+  background: rgba(31, 122, 90, 0.1);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66rpx;
+  height: 66rpx;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #1f7a5a;
+  font-weight: 700;
+}
+
+.body {
+  min-width: 0;
+}
+
+.name {
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.meta {
+  margin-top: 6rpx;
+  color: #7a817c;
+  font-size: 22rpx;
+}

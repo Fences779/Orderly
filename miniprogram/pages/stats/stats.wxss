@@ -1,0 +1,51 @@
+.period {
+  min-width: 128rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 999rpx;
+  color: #1f7a5a;
+  background: rgba(31, 122, 90, 0.1);
+  font-size: 24rpx;
+  text-align: center;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14rpx;
+  margin-top: 22rpx;
+}
+
+.block-title {
+  margin-bottom: 18rpx;
+  color: #17211d;
+  font-size: 29rpx;
+  font-weight: 800;
+}
+
+.bar-row,
+.rank-row {
+  display: grid;
+  grid-template-columns: 150rpx 1fr 70rpx;
+  gap: 14rpx;
+  align-items: center;
+  padding: 12rpx 0;
+  color: #46534d;
+  font-size: 24rpx;
+}
+
+.rank-row {
+  grid-template-columns: 1fr 90rpx;
+}
+
+.bar {
+  height: 16rpx;
+  border-radius: 999rpx;
+  background: rgba(31, 122, 90, 0.1);
+  overflow: hidden;
+}
+
+.bar view {
+  height: 100%;
+  border-radius: 999rpx;
+  background: #1f7a5a;
+}

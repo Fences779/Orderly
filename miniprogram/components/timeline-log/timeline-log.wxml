@@ -1,0 +1,13 @@
+<view class="timeline">
+  <view wx:for="{{viewLogs}}" wx:key="_id" class="item">
+    <view class="dot"></view>
+    <view class="body">
+      <view class="row">
+        <text class="action">{{item.actionType}}</text>
+        <text class="time">{{item.timeText}}</text>
+      </view>
+      <view wx:if="{{item.note}}" class="note">{{item.note}}</view>
+    </view>
+  </view>
+  <view wx:if="{{!viewLogs.length}}" class="empty">暂无留痕</view>
+</view>
