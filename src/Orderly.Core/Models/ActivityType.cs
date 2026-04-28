@@ -24,5 +24,7 @@ public enum ActivityType
     OcrTaskCompleted = 19,
     OcrTaskFailed = 20,
     AutoReplyDraftPrepared = 21,
-    SyncFailed = 22
+    SyncFailed = 22,
+    AiSuggestionAccepted = 23,
+    AiSuggestionRejected = 24
 }

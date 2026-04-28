@@ -71,6 +71,7 @@ public partial class MainViewModel
             var followUps = await _followUpService.GetCustomerFollowUpsAsync(customer.Id);
             var notes = await _noteService.GetCustomerNotesAsync(customer.Id);
             var messages = await LoadConversationMessagesAsync(customer);
+            var suggestions = await LoadAiSuggestionsAsync(customer);
             var adjustments = await _priceAdjustmentService.GetCustomerAdjustmentsAsync(customer.Id);
             var activities = await _activityLogService.GetCustomerActivitiesAsync(customer.Id);
 
@@ -83,10 +84,13 @@ public partial class MainViewModel
             ReplaceCollection(FollowUps, followUps.OrderByDescending(followUp => followUp.ScheduledAt));
             ReplaceCollection(CustomerNotes, notes.OrderByDescending(note => note.CreatedAt));
             ReplaceCollection(ConversationMessages, messages);
+            var selectedSuggestionId = SelectedAiSuggestion?.Id;
+            ReplaceCollection(AiSuggestions, suggestions);
             ReplaceCollection(PriceAdjustments, adjustments.OrderByDescending(adjustment => adjustment.CreatedAt));
             ReplaceCollection(ActivityLogs, activities.OrderByDescending(activity => activity.CreatedAt));
 
             SelectedDeal = Deals.FirstOrDefault(deal => deal.Id == SelectedOrder?.DealId) ?? Deals.FirstOrDefault();
+            SelectedAiSuggestion = AiSuggestions.FirstOrDefault(item => item.Id == selectedSuggestionId) ?? AiSuggestions.FirstOrDefault();
             OnDetailStateChanged();
         }
         catch (Exception ex)
@@ -142,5 +146,26 @@ public partial class MainViewModel
             .ThenByDescending(message => message.Id)
             .Take(8)
             .Select(message => new ConversationMessageListItem(message));
+    }
+
+    private async Task<IEnumerable<AiSuggestionListItem>> LoadAiSuggestionsAsync(Customer customer)
+    {
+        var order = SelectedOrder;
+        IReadOnlyList<AiSuggestion> suggestions;
+
+        if (order is not null && order.CustomerId == customer.Id)
+        {
+            suggestions = await _aiAssistantService.ListSuggestionsAsync(customer.Id, order.Id);
+        }
+        else
+        {
+            suggestions = await _aiAssistantService.ListSuggestionsAsync(customer.Id);
+        }
+
+        return suggestions
+            .OrderByDescending(suggestion => suggestion.CreatedAt)
+            .ThenByDescending(suggestion => suggestion.Id)
+            .Take(8)
+            .Select(suggestion => new AiSuggestionListItem(suggestion));
     }
 }

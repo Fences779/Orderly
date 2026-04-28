@@ -16,6 +16,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IFollowUpService _followUpService;
     private readonly INoteService _noteService;
     private readonly IConversationService _conversationService;
+    private readonly IAiAssistantService _aiAssistantService;
     private readonly IActivityLogService _activityLogService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
@@ -31,6 +32,7 @@ public partial class MainViewModel : ObservableObject
         IFollowUpService followUpService,
         INoteService noteService,
         IConversationService conversationService,
+        IAiAssistantService aiAssistantService,
         IActivityLogService activityLogService,
         IPriceAdjustmentService priceAdjustmentService,
         IReplyTemplateRepository replyTemplateRepository,
@@ -46,6 +48,7 @@ public partial class MainViewModel : ObservableObject
         _followUpService = followUpService;
         _noteService = noteService;
         _conversationService = conversationService;
+        _aiAssistantService = aiAssistantService;
         _activityLogService = activityLogService;
         _priceAdjustmentService = priceAdjustmentService;
         _replyTemplateRepository = replyTemplateRepository;
@@ -61,6 +64,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<FollowUp> FollowUps { get; } = new();
     public ObservableCollection<CustomerNote> CustomerNotes { get; } = new();
     public ObservableCollection<ConversationMessageListItem> ConversationMessages { get; } = new();
+    public ObservableCollection<AiSuggestionListItem> AiSuggestions { get; } = new();
     public ObservableCollection<PriceAdjustment> PriceAdjustments { get; } = new();
     public ObservableCollection<ActivityLog> ActivityLogs { get; } = new();
     public ObservableCollection<ReplyTemplate> ReplyTemplates { get; } = new();
@@ -113,6 +117,7 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SelectedConversationContextText))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeOrderStatusCommand))]
     private OrderListItem? selectedOrderItem;
@@ -129,6 +134,7 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeDealStageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AdvanceDealStageCommand))]
@@ -138,6 +144,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentDealStage))]
     private Deal? selectedDeal;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
+    private AiSuggestionListItem? selectedAiSuggestion;
 
     [ObservableProperty]
     private AppPreferences preferences = new();
@@ -169,6 +180,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(CompleteFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(SnoozeFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(CancelFollowUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
     private bool isLoading;
 
     [ObservableProperty]
@@ -190,7 +204,31 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(CompleteFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(SnoozeFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(CancelFollowUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
     private bool isSaving;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsBusy))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ChangeDealStageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AdvanceDealStageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ChangeCustomerStatusCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ChangeOrderStatusCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CompleteFollowUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SnoozeFollowUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CancelFollowUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
+    private bool isGeneratingAiSuggestion;
 
     private bool _isSynchronizingSelection;
     private int _detailLoadVersion;

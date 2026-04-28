@@ -51,6 +51,7 @@ public partial class MainViewModel
     public bool HasFollowUps => FollowUps.Count > 0;
     public bool HasCustomerNotes => CustomerNotes.Count > 0;
     public bool HasConversationMessages => ConversationMessages.Count > 0;
+    public bool HasAiSuggestions => AiSuggestions.Count > 0;
     public bool HasPriceAdjustments => PriceAdjustments.Count > 0;
     public bool HasActivityLogs => ActivityLogs.Count > 0;
     public bool HasCustomers => Customers.Count > 0;
@@ -59,9 +60,10 @@ public partial class MainViewModel
     public int FollowUpsCount => FollowUps.Count;
     public int CustomerNotesCount => CustomerNotes.Count;
     public int ConversationMessagesCount => ConversationMessages.Count;
+    public int AiSuggestionsCount => AiSuggestions.Count;
     public int PriceAdjustmentsCount => PriceAdjustments.Count;
     public int ActivityLogsCount => ActivityLogs.Count;
-    public bool IsBusy => IsLoading || IsSaving;
+    public bool IsBusy => IsLoading || IsSaving || IsGeneratingAiSuggestion;
     public string OrderDetailsEmptyMessage => SelectedCustomer is null ? "请选择订单或客户" : "当前客户暂无关联订单";
     public int PendingCount => _allOrders.Count(item => FollowUpDateHelper.IsPendingOrder(item.Order.Status));
     public int WonCount => _allOrders.Count(item => item.Order.Status == OrderStatus.Won);
@@ -81,9 +83,11 @@ public partial class MainViewModel
         FollowUps.Clear();
         CustomerNotes.Clear();
         ConversationMessages.Clear();
+        AiSuggestions.Clear();
         PriceAdjustments.Clear();
         ActivityLogs.Clear();
         SelectedDeal = null;
+        SelectedAiSuggestion = null;
         OnDetailStateChanged();
     }
 
@@ -108,13 +112,16 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasFollowUps));
         OnPropertyChanged(nameof(HasCustomerNotes));
         OnPropertyChanged(nameof(HasConversationMessages));
+        OnPropertyChanged(nameof(HasAiSuggestions));
         OnPropertyChanged(nameof(HasPriceAdjustments));
         OnPropertyChanged(nameof(HasActivityLogs));
         OnPropertyChanged(nameof(DealsCount));
         OnPropertyChanged(nameof(FollowUpsCount));
         OnPropertyChanged(nameof(CustomerNotesCount));
         OnPropertyChanged(nameof(ConversationMessagesCount));
+        OnPropertyChanged(nameof(AiSuggestionsCount));
         OnPropertyChanged(nameof(PriceAdjustmentsCount));
         OnPropertyChanged(nameof(ActivityLogsCount));
+        NotifyAiSuggestionCommandStateChanged();
     }
 }
