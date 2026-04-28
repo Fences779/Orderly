@@ -133,6 +133,7 @@ public partial class App : System.Windows.Application
         INoteService noteService = new NoteService(noteRepository, activityLogRepository);
         IConversationService conversationService = new ConversationService(conversationMessageRepository, activityLogRepository);
         IAiAssistantService aiAssistantService = new LocalAiAssistantService(conversationMessageRepository, aiSuggestionRepository, activityLogRepository);
+        IAutoReplyService autoReplyService = new LocalAutoReplyService(aiSuggestionRepository, orderRepository, activityLogRepository);
         IActivityLogService activityLogService = new ActivityLogService(activityLogRepository);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
 
@@ -148,6 +149,7 @@ public partial class App : System.Windows.Application
             noteService,
             conversationService,
             aiAssistantService,
+            autoReplyService,
             activityLogService,
             priceAdjustmentService,
             replyTemplateRepository,

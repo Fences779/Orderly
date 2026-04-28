@@ -38,6 +38,8 @@ public sealed class ActivityLog : EntityBase
         ActivityType.OcrTaskFailed => "OCR 失败",
         ActivityType.AutoReplyDraftPrepared => "生成回复草稿",
         ActivityType.SyncFailed => "同步失败",
+        ActivityType.AutoReplySent => "标记回复已发送",
+        ActivityType.AutoReplyDraftRejected => "拒绝回复草稿",
         _ => Type.ToString()
     };
 }

@@ -123,5 +123,6 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(PriceAdjustmentsCount));
         OnPropertyChanged(nameof(ActivityLogsCount));
         NotifyAiSuggestionCommandStateChanged();
+        NotifyAutoReplyCommandStateChanged();
     }
 }

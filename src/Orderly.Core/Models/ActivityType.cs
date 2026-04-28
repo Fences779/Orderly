@@ -26,5 +26,7 @@ public enum ActivityType
     AutoReplyDraftPrepared = 21,
     SyncFailed = 22,
     AiSuggestionAccepted = 23,
-    AiSuggestionRejected = 24
+    AiSuggestionRejected = 24,
+    AutoReplySent = 25,
+    AutoReplyDraftRejected = 26
 }

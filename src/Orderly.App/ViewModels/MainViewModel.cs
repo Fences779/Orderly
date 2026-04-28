@@ -17,6 +17,7 @@ public partial class MainViewModel : ObservableObject
     private readonly INoteService _noteService;
     private readonly IConversationService _conversationService;
     private readonly IAiAssistantService _aiAssistantService;
+    private readonly IAutoReplyService _autoReplyService;
     private readonly IActivityLogService _activityLogService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
@@ -33,6 +34,7 @@ public partial class MainViewModel : ObservableObject
         INoteService noteService,
         IConversationService conversationService,
         IAiAssistantService aiAssistantService,
+        IAutoReplyService autoReplyService,
         IActivityLogService activityLogService,
         IPriceAdjustmentService priceAdjustmentService,
         IReplyTemplateRepository replyTemplateRepository,
@@ -49,6 +51,7 @@ public partial class MainViewModel : ObservableObject
         _noteService = noteService;
         _conversationService = conversationService;
         _aiAssistantService = aiAssistantService;
+        _autoReplyService = autoReplyService;
         _activityLogService = activityLogService;
         _priceAdjustmentService = priceAdjustmentService;
         _replyTemplateRepository = replyTemplateRepository;
@@ -148,6 +151,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PrepareAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private AiSuggestionListItem? selectedAiSuggestion;
 
     [ObservableProperty]
@@ -183,6 +189,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PrepareAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private bool isLoading;
 
     [ObservableProperty]
@@ -207,6 +216,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PrepareAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private bool isSaving;
 
     [ObservableProperty]
@@ -228,6 +240,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PrepareAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private bool isGeneratingAiSuggestion;
 
     private bool _isSynchronizingSelection;
