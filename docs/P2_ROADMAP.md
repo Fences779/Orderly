@@ -118,11 +118,32 @@ P2.5 当前明确未做：
 - 未做同步。
 - 未改订单主链路和大结构。
 
-## P2.6: 自动回复半自动化
+## P2.6: 人工确认发送闭环 / 复制发送辅助
 
-- 人工确认后发送
-- 发送记录留痕
-- 平台边界与权限控制
+- 基于现有 `AI 建议 / 回复草稿` 增加“复制草稿 -> 手动粘贴发送 -> 标记已发送”闭环
+- 复制动作只写系统剪贴板，不执行任何外部发送
+- `AiSuggestionStatus` 继续复用 `DraftPrepared / Sent`，不新增 `Copied` 状态枚举
+- `MetadataJson.autoReply` 补充 `copiedAt / copiedBy / sentAt / sentBy / deliveryMode`
+- `ActivityLog` 补充草稿复制与手动确认发送留痕
+- 新增 `tools/qa/run-p2-6-manual-send-smoke.ps1`
+
+P2.6 当前落地范围：
+- 已在 `工作台 -> 右侧详情栏 -> AI 建议` 区块增加 `复制草稿` 按钮。
+- 已明确限制为手动复制发送：本软件不会自动发送、不会控制微信 / 闲鱼窗口。
+- 已要求先复制草稿，再允许点击 `标记已发送`，避免直接跳过人工发送步骤。
+- 已复用 `AiSuggestion` / `IAutoReplyService` / `LocalAutoReplyService` / `ActivityLog`，没有新增独立发送表。
+- 已补充 `tools/qa/run-p2-6-manual-send-smoke.ps1`，覆盖复制、metadata、`ActivityLog`、标记已发送、`reset-qa-data` 恢复。
+
+P2.6 当前明确未做：
+- 未接真实外部发送。
+- 未控制微信 / 闲鱼 / 平台窗口。
+- 未监听平台回执。
+- 未接平台 API。
+- 未做自动同步。
+- 未做自动截屏。
+- 未做复杂发送历史页。
+- 未做全局快捷键监听。
+- 未改订单主链路和大结构。
 
 ## P2.7: 云同步 / 备份
 

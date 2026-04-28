@@ -11,15 +11,18 @@ public sealed class LocalAutoReplyService : IAutoReplyService
     private readonly IAiSuggestionRepository _suggestionRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly IActivityLogRepository _activityLogRepository;
+    private readonly IClipboardService _clipboardService;
 
     public LocalAutoReplyService(
         IAiSuggestionRepository suggestionRepository,
         IOrderRepository orderRepository,
-        IActivityLogRepository activityLogRepository)
+        IActivityLogRepository activityLogRepository,
+        IClipboardService clipboardService)
     {
         _suggestionRepository = suggestionRepository;
         _orderRepository = orderRepository;
         _activityLogRepository = activityLogRepository;
+        _clipboardService = clipboardService;
     }
 
     public async Task<AiSuggestion?> PrepareReplyAsync(int suggestionId, CancellationToken cancellationToken = default)
@@ -41,7 +44,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
         }
 
         suggestion.Status = AiSuggestionStatus.DraftPrepared;
-        suggestion.SuggestionText = EnsureDraftPrefix(suggestion.SuggestionText);
+        suggestion.SuggestionText = AutoReplyDraftText.EnsurePrefix(suggestion.SuggestionText);
         suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, "prepared");
         await _suggestionRepository.UpdateAsync(suggestion, cancellationToken);
 
@@ -60,6 +63,37 @@ public sealed class LocalAutoReplyService : IAutoReplyService
         return suggestion;
     }
 
+    public async Task CopyReplyDraftAsync(int suggestionId, CancellationToken cancellationToken = default)
+    {
+        var suggestion = await _suggestionRepository.GetByIdAsync(suggestionId, cancellationToken);
+        if (suggestion is null)
+        {
+            return;
+        }
+
+        if (suggestion.Status != AiSuggestionStatus.DraftPrepared)
+        {
+            throw new InvalidOperationException("Only prepared local reply drafts can be copied.");
+        }
+
+        _clipboardService.SetText(AutoReplyDraftText.StripPrefix(suggestion.SuggestionText));
+
+        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, "copied");
+        await _suggestionRepository.UpdateAsync(suggestion, cancellationToken);
+
+        await _activityLogRepository.CreateAsync(new ActivityLog
+        {
+            Type = ActivityType.AutoReplyDraftCopied,
+            CustomerId = suggestion.CustomerId,
+            DealId = await ResolveDealIdAsync(suggestion, cancellationToken),
+            OrderId = suggestion.OrderId,
+            Title = "复制回复草稿",
+            Description = "该回复草稿已复制到系统剪贴板，请手动粘贴到微信/闲鱼等目标平台发送；本软件不会自动发送。",
+            Operator = "local-user",
+            MetadataJson = BuildActivityMetadata(suggestion, "copied")
+        }, cancellationToken);
+    }
+
     public async Task MarkReplySentAsync(int suggestionId, CancellationToken cancellationToken = default)
     {
         var suggestion = await _suggestionRepository.GetByIdAsync(suggestionId, cancellationToken);
@@ -68,9 +102,9 @@ public sealed class LocalAutoReplyService : IAutoReplyService
             return;
         }
 
-        if (suggestion.Status != AiSuggestionStatus.DraftPrepared)
+        if (suggestion.Status != AiSuggestionStatus.DraftPrepared || !IsCopiedDraft(suggestion))
         {
-            throw new InvalidOperationException("Only prepared local reply drafts can be marked as sent.");
+            throw new InvalidOperationException("Only copied local reply drafts can be marked as sent.");
         }
 
         suggestion.Status = AiSuggestionStatus.Sent;
@@ -136,34 +170,54 @@ public sealed class LocalAutoReplyService : IAutoReplyService
         return suggestion.Status == AiSuggestionStatus.Rejected && HasAutoReplyMetadata(suggestion.MetadataJson);
     }
 
+    private static bool IsCopiedDraft(AiSuggestion suggestion)
+    {
+        return string.Equals(ReadAutoReplyState(suggestion.MetadataJson), "copied", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool HasAutoReplyMetadata(string metadataJson)
     {
         var root = ParseMetadata(metadataJson);
         return root["autoReply"] is JsonObject;
     }
 
-    private static string EnsureDraftPrefix(string suggestionText)
-    {
-        const string prefix = "【本地草稿 / 未发送】";
-        if (string.IsNullOrWhiteSpace(suggestionText))
-        {
-            return prefix;
-        }
-
-        return suggestionText.StartsWith(prefix, StringComparison.Ordinal)
-            ? suggestionText
-            : $"{prefix}{suggestionText}";
-    }
-
     private static string UpdateAutoReplyMetadata(string metadataJson, string state)
     {
+        var now = DateTime.Now.ToString("O");
         var root = ParseMetadata(metadataJson);
         var autoReply = root["autoReply"] as JsonObject ?? new JsonObject();
         autoReply["mode"] = "local-draft";
         autoReply["state"] = state;
         autoReply["localOnly"] = true;
         autoReply["externalSendExecuted"] = false;
-        autoReply["updatedAt"] = DateTime.Now.ToString("O");
+        autoReply["updatedAt"] = now;
+
+        if (state == "prepared" && autoReply["preparedAt"] is null)
+        {
+            autoReply["preparedAt"] = now;
+        }
+
+        if (state is "copied" or "sent")
+        {
+            autoReply["deliveryMode"] = "manual-copy";
+            if (autoReply["externalPlatform"] is null)
+            {
+                autoReply["externalPlatform"] = "manual";
+            }
+        }
+
+        if (state == "copied")
+        {
+            autoReply["copiedAt"] = now;
+            autoReply["copiedBy"] = "p2.6";
+        }
+
+        if (state == "sent")
+        {
+            autoReply["sentAt"] = now;
+            autoReply["sentBy"] = "manual-confirm";
+        }
+
         root["autoReply"] = autoReply;
         return root.ToJsonString();
     }
@@ -190,14 +244,38 @@ public sealed class LocalAutoReplyService : IAutoReplyService
 
     private static string BuildActivityMetadata(AiSuggestion suggestion, string state)
     {
-        return JsonSerializer.Serialize(new
+        var autoReply = ParseMetadata(suggestion.MetadataJson)["autoReply"] as JsonObject;
+        var metadata = new JsonObject
         {
-            suggestionId = suggestion.Id,
-            suggestionStatus = suggestion.Status.ToString(),
-            suggestion.MessageId,
-            autoReplyState = state,
-            localOnly = true,
-            externalSendExecuted = false
-        });
+            ["suggestionId"] = suggestion.Id,
+            ["suggestionStatus"] = suggestion.Status.ToString(),
+            ["messageId"] = suggestion.MessageId,
+            ["autoReplyState"] = state,
+            ["localOnly"] = true,
+            ["externalSendExecuted"] = false
+        };
+
+        CopyJsonProperty(autoReply, metadata, "deliveryMode");
+        CopyJsonProperty(autoReply, metadata, "externalPlatform");
+        CopyJsonProperty(autoReply, metadata, "copiedAt");
+        CopyJsonProperty(autoReply, metadata, "copiedBy");
+        CopyJsonProperty(autoReply, metadata, "sentAt");
+        CopyJsonProperty(autoReply, metadata, "sentBy");
+
+        return metadata.ToJsonString();
+    }
+
+    private static string? ReadAutoReplyState(string metadataJson)
+    {
+        var autoReply = ParseMetadata(metadataJson)["autoReply"] as JsonObject;
+        return autoReply?["state"]?.GetValue<string>();
+    }
+
+    private static void CopyJsonProperty(JsonObject? source, JsonObject target, string propertyName)
+    {
+        if (source?[propertyName] is JsonNode value)
+        {
+            target[propertyName] = value.DeepClone();
+        }
     }
 }

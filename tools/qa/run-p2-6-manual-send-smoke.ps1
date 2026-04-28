@@ -125,9 +125,9 @@ function New-AutoReplyServiceContext {
         MessageRepository = $messageRepository
         SuggestionRepository = $suggestionRepository
         ActivityRepository = $activityRepository
+        ClipboardService = $clipboardService
         AiAssistantService = $aiAssistantService
         AutoReplyService = $autoReplyService
-        ClipboardService = $clipboardService
     }
 }
 
@@ -168,8 +168,18 @@ function Get-QaAutoReplyContext {
     }
 }
 
+function Get-AutoReplyMetadata {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$MetadataJson
+    )
+
+    $metadata = $MetadataJson | ConvertFrom-Json -AsHashtable
+    return $metadata['autoReply']
+}
+
 Assert-NoRunningOrderlyProcess
-Write-Step "Starting P2.3 auto reply smoke"
+Write-Step "Starting P2.6 manual send smoke"
 Write-Step "Repo root: $(Get-RepoRoot)"
 
 if (-not $SkipReset) {
@@ -186,7 +196,7 @@ $baselineActivityCount = Get-CountFromStatus -Output $baselineStatus.StdOut -Lab
 Write-Step "Baseline AiSuggestions count: $baselineSuggestionCount"
 Write-Step "Baseline ActivityLogs count: $baselineActivityCount"
 
-Write-Step "Step 3/7: generate and prepare a local auto reply draft"
+Write-Step "Step 3/7: generate and prepare a local reply draft"
 Import-OrderlyAssemblies
 $providerOptions = [Orderly.Data.Services.AiProviderOptions]::new('local', $null, $null, $null, 15)
 $serviceContext = New-AutoReplyServiceContext -ProviderOptions $providerOptions
@@ -198,107 +208,92 @@ $draftSource = $serviceContext.AiAssistantService.GenerateAndSaveReplySuggestion
     $qaContext.Message.Id).GetAwaiter().GetResult()
 
 $prepared = $serviceContext.AutoReplyService.PrepareReplyAsync($draftSource.Id).GetAwaiter().GetResult()
-if ($null -eq $prepared) {
-    throw 'PrepareReplyAsync did not return a persisted draft.'
-}
-
-if ($prepared.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::DraftPrepared) {
-    throw 'Prepared suggestion did not transition to DraftPrepared.'
-}
-
-if (-not $prepared.SuggestionText.Contains('本地草稿')) {
-    throw 'Prepared draft did not include the expected local draft marker.'
-}
-
-if (-not $prepared.MetadataJson.Contains('"state":"prepared"')) {
-    throw 'Prepared draft metadata did not include the expected prepared state.'
-}
-
-$preparedReadBack = $serviceContext.SuggestionRepository.GetByIdAsync($prepared.Id).GetAwaiter().GetResult()
-if ($null -eq $preparedReadBack -or $preparedReadBack.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::DraftPrepared) {
-    throw 'Prepared draft could not be read back from repository.'
+if ($null -eq $prepared -or $prepared.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::DraftPrepared) {
+    throw 'PrepareReplyAsync did not create a DraftPrepared suggestion.'
 }
 
 Write-Step "Prepared draft suggestion Id: $($prepared.Id)"
 
-Write-Step "Step 4/7: copy the prepared local draft and then mark it as sent"
+Write-Step "Step 4/7: copy the prepared draft and verify clipboard, metadata, ActivityLog"
 $serviceContext.AutoReplyService.CopyReplyDraftAsync($prepared.Id).GetAwaiter().GetResult()
 $copied = $serviceContext.SuggestionRepository.GetByIdAsync($prepared.Id).GetAwaiter().GetResult()
-if (-not $copied.MetadataJson.Contains('"state":"copied"')) {
-    throw 'Copied draft metadata did not include the expected copied state.'
+if ($null -eq $copied -or $copied.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::DraftPrepared) {
+    throw 'Copied draft did not remain in DraftPrepared state.'
 }
 
 $clipboardText = $serviceContext.ClipboardService.LastText
-if ([string]::IsNullOrWhiteSpace($clipboardText) -or $clipboardText.Contains('本地草稿 / 未发送')) {
-    throw 'Copied draft text was not written to the in-memory clipboard as expected.'
+if ([string]::IsNullOrWhiteSpace($clipboardText)) {
+    throw 'Copied draft text was not written to the in-memory clipboard.'
 }
 
+if ($clipboardText.Contains('本地草稿 / 未发送')) {
+    throw 'Clipboard text still contains the internal local draft prefix.'
+}
+
+$copiedMetadata = Get-AutoReplyMetadata -MetadataJson $copied.MetadataJson
+if ($copiedMetadata['state'] -ne 'copied') {
+    throw 'Copied draft metadata missing state=copied.'
+}
+
+if ([string]::IsNullOrWhiteSpace([string]$copiedMetadata['copiedAt'])) {
+    throw 'Copied draft metadata missing copiedAt.'
+}
+
+if ($copiedMetadata['deliveryMode'] -ne 'manual-copy') {
+    throw 'Copied draft metadata missing deliveryMode=manual-copy.'
+}
+
+if ($copiedMetadata['copiedBy'] -ne 'p2.6') {
+    throw 'Copied draft metadata missing copiedBy=p2.6.'
+}
+
+$activities = $serviceContext.ActivityRepository.ListByCustomerIdAsync($qaContext.Customer.Id).GetAwaiter().GetResult()
+$copiedNeedle = '"suggestionId":' + $prepared.Id
+$copiedActivities = @($activities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::AutoReplyDraftCopied -and $_.MetadataJson.Contains($copiedNeedle) })
+if ($copiedActivities.Count -lt 1) {
+    throw 'Missing copied draft ActivityLog entry.'
+}
+
+Write-Step "Copied draft suggestion Id: $($prepared.Id)"
+
+Write-Step "Step 5/7: mark the copied draft as sent and verify state, metadata, ActivityLog"
 $serviceContext.AutoReplyService.MarkReplySentAsync($prepared.Id).GetAwaiter().GetResult()
 $sent = $serviceContext.SuggestionRepository.GetByIdAsync($prepared.Id).GetAwaiter().GetResult()
 if ($null -eq $sent -or $sent.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::Sent) {
-    throw 'Prepared draft did not transition to Sent.'
+    throw 'Copied draft did not transition to Sent.'
 }
 
-if (-not $sent.MetadataJson.Contains('"state":"sent"')) {
-    throw 'Sent draft metadata did not include the expected sent state.'
+$sentMetadata = Get-AutoReplyMetadata -MetadataJson $sent.MetadataJson
+if ($sentMetadata['state'] -ne 'sent') {
+    throw 'Sent draft metadata missing state=sent.'
+}
+
+if ([string]::IsNullOrWhiteSpace([string]$sentMetadata['sentAt'])) {
+    throw 'Sent draft metadata missing sentAt.'
+}
+
+if ($sentMetadata['sentBy'] -ne 'manual-confirm') {
+    throw 'Sent draft metadata missing sentBy=manual-confirm.'
+}
+
+$sentActivities = @($serviceContext.ActivityRepository.ListByCustomerIdAsync($qaContext.Customer.Id).GetAwaiter().GetResult() | Where-Object {
+    $_.Type -eq [Orderly.Core.Models.ActivityType]::AutoReplySent -and $_.MetadataJson.Contains($copiedNeedle)
+})
+if ($sentActivities.Count -lt 1) {
+    throw 'Missing sent draft ActivityLog entry.'
 }
 
 Write-Step "Sent draft suggestion Id: $($prepared.Id)"
 
-Write-Step "Step 5/7: prepare another draft and reject it"
-$rejectedSource = $serviceContext.AiAssistantService.GenerateAndSaveReplySuggestionAsync(
-    $qaContext.Customer.Id,
-    $qaContext.Order.Id,
-    $qaContext.Order.DealId,
-    $qaContext.Message.Id).GetAwaiter().GetResult()
-
-$rejectedPrepared = $serviceContext.AutoReplyService.PrepareReplyAsync($rejectedSource.Id).GetAwaiter().GetResult()
-$serviceContext.AutoReplyService.MarkReplyRejectedAsync($rejectedPrepared.Id).GetAwaiter().GetResult()
-$rejected = $serviceContext.SuggestionRepository.GetByIdAsync($rejectedPrepared.Id).GetAwaiter().GetResult()
-if ($null -eq $rejected -or $rejected.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::Rejected) {
-    throw 'Prepared draft did not transition to Rejected.'
-}
-
-if (-not $rejected.MetadataJson.Contains('"state":"rejected"')) {
-    throw 'Rejected draft metadata did not include the expected rejected state.'
-}
-
-Write-Step "Rejected draft suggestion Id: $($rejected.Id)"
-
-Write-Step "Step 6/7: verify ActivityLog records and QA status deltas"
-$activities = $serviceContext.ActivityRepository.ListByCustomerIdAsync($qaContext.Customer.Id).GetAwaiter().GetResult()
-$sentNeedle = '"suggestionId":' + $prepared.Id
-$rejectedNeedle = '"suggestionId":' + $rejected.Id
-$preparedActivities = @($activities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::AutoReplyDraftPrepared -and $_.MetadataJson.Contains($sentNeedle) })
-$copiedActivities = @($activities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::AutoReplyDraftCopied -and $_.MetadataJson.Contains($sentNeedle) })
-$sentActivities = @($activities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::AutoReplySent -and $_.MetadataJson.Contains($sentNeedle) })
-$rejectedPreparedActivities = @($activities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::AutoReplyDraftPrepared -and $_.MetadataJson.Contains($rejectedNeedle) })
-$rejectedActivities = @($activities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::AutoReplyDraftRejected -and $_.MetadataJson.Contains($rejectedNeedle) })
-
-if ($preparedActivities.Count -lt 1 -or $rejectedPreparedActivities.Count -lt 1) {
-    throw 'Missing prepared draft activity log entry.'
-}
-
-if ($sentActivities.Count -lt 1) {
-    throw 'Missing sent draft activity log entry.'
-}
-
-if ($copiedActivities.Count -lt 1) {
-    throw 'Missing copied draft activity log entry.'
-}
-
-if ($rejectedActivities.Count -lt 1) {
-    throw 'Missing rejected draft activity log entry.'
-}
-
+Write-Step "Step 6/7: verify QA status deltas"
 $afterWriteStatus = Invoke-OrderlyAppCommandOrThrow -ArgumentList @('--qa-data-status')
 $afterWriteSuggestionCount = Get-CountFromStatus -Output $afterWriteStatus.StdOut -Label 'QA AiSuggestions count:'
 $afterWriteActivityCount = Get-CountFromStatus -Output $afterWriteStatus.StdOut -Label 'QA ActivityLogs count:'
-if ($afterWriteSuggestionCount -lt ($baselineSuggestionCount + 2)) {
+if ($afterWriteSuggestionCount -lt ($baselineSuggestionCount + 1)) {
     throw "AiSuggestions count did not increase as expected. Baseline=$baselineSuggestionCount, AfterWrite=$afterWriteSuggestionCount"
 }
 
-if ($afterWriteActivityCount -lt ($baselineActivityCount + 7)) {
+if ($afterWriteActivityCount -lt ($baselineActivityCount + 4)) {
     throw "ActivityLogs count did not increase as expected. Baseline=$baselineActivityCount, AfterWrite=$afterWriteActivityCount"
 }
 
@@ -320,4 +315,4 @@ if ($finalActivityCount -ne $baselineActivityCount) {
 
 Write-Step "Final AiSuggestions count restored to: $finalSuggestionCount"
 Write-Step "Final ActivityLogs count restored to: $finalActivityCount"
-Write-Step "P2.3 auto reply smoke completed"
+Write-Step "P2.6 manual send smoke completed"

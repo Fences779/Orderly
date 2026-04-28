@@ -750,7 +750,7 @@
                                                 <TextBlock Text="{Binding AiSuggestionsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
                                             </Border>
                                         </DockPanel>
-                                        <TextBlock Text="默认使用 Local Stub；已预留 DeepSeek / OpenAI-compatible Provider；失败会自动 fallback，本轮仍不自动发送。"
+                                        <TextBlock Text="默认使用 Local Stub；已预留 DeepSeek / OpenAI-compatible Provider；复制草稿只写入系统剪贴板，本软件不会自动发送，请手动粘贴到微信/闲鱼等平台。"
                                                    Foreground="{StaticResource SecondaryTextBrush}"
                                                    TextWrapping="Wrap"
                                                    LineHeight="20" />
@@ -831,12 +831,20 @@
                                                                         IsEnabled="{Binding CanReview}"
                                                                         Margin="8,0,0,0" />
                                                                 <Button Content="准备回复草稿"
-                                                                        Command="{Binding DataContext.PrepareAutoReplyDraftCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                         Command="{Binding DataContext.PrepareAutoReplyDraftCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                         CommandParameter="{Binding}"
+                                                                         Style="{StaticResource ToolbarSecondaryButtonStyle}"
+                                                                         IsEnabled="{Binding CanPrepareDraft}"
+                                                                         Margin="8,0,0,0" />
+                                                                <Button Content="复制草稿"
+                                                                        AutomationProperties.AutomationId="Btn_CopyAutoReplyDraft"
+                                                                        Command="{Binding DataContext.CopyAutoReplyDraftCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                         CommandParameter="{Binding}"
                                                                         Style="{StaticResource ToolbarSecondaryButtonStyle}"
-                                                                        IsEnabled="{Binding CanPrepareDraft}"
+                                                                        IsEnabled="{Binding CanCopyDraft}"
                                                                         Margin="8,0,0,0" />
                                                                 <Button Content="标记已发送"
+                                                                        AutomationProperties.AutomationId="Btn_MarkAutoReplySent"
                                                                         Command="{Binding DataContext.MarkAutoReplySentCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                                         CommandParameter="{Binding}"
                                                                         Style="{StaticResource ToolbarSecondaryButtonStyle}"

@@ -40,6 +40,17 @@ public partial class MainViewModel
             });
     }
 
+    [RelayCommand(CanExecute = nameof(CanCopyAutoReplyDraft))]
+    private async Task CopyAutoReplyDraftAsync(AiSuggestionListItem? suggestionItem)
+    {
+        await UpdateAutoReplyDraftAsync(
+            suggestionItem,
+            busyMessage: "正在复制回复草稿...",
+            successMessage: "草稿已复制到剪贴板，请手动粘贴到目标平台发送",
+            errorPrefix: "复制回复草稿失败",
+            async target => await _autoReplyService.CopyReplyDraftAsync(target.Id));
+    }
+
     [RelayCommand(CanExecute = nameof(CanMarkAutoReplySent))]
     private async Task MarkAutoReplySentAsync(AiSuggestionListItem? suggestionItem)
     {
@@ -112,6 +123,14 @@ public partial class MainViewModel
             && !IsBusy;
     }
 
+    private bool CanCopyAutoReplyDraft(AiSuggestionListItem? suggestionItem)
+    {
+        var target = suggestionItem ?? SelectedAiSuggestion;
+        return target is not null
+            && target.CanCopyDraft
+            && !IsBusy;
+    }
+
     private bool CanRejectAutoReplyDraft(AiSuggestionListItem? suggestionItem)
     {
         var target = suggestionItem ?? SelectedAiSuggestion;
@@ -123,6 +142,7 @@ public partial class MainViewModel
     private void NotifyAutoReplyCommandStateChanged()
     {
         PrepareAutoReplyDraftCommand.NotifyCanExecuteChanged();
+        CopyAutoReplyDraftCommand.NotifyCanExecuteChanged();
         MarkAutoReplySentCommand.NotifyCanExecuteChanged();
         RejectAutoReplyDraftCommand.NotifyCanExecuteChanged();
     }

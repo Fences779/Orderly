@@ -146,7 +146,7 @@ public partial class App : System.Windows.Application
             primaryAiSuggestionProvider,
             localAiSuggestionProvider,
             aiProviderOptions);
-        IAutoReplyService autoReplyService = new LocalAutoReplyService(aiSuggestionRepository, orderRepository, activityLogRepository);
+        IAutoReplyService autoReplyService = new LocalAutoReplyService(aiSuggestionRepository, orderRepository, activityLogRepository, clipboardService);
         IActivityLogService activityLogService = new ActivityLogService(activityLogRepository);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
 

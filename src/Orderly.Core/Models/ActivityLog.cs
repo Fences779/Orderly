@@ -40,6 +40,7 @@ public sealed class ActivityLog : EntityBase
         ActivityType.SyncFailed => "同步失败",
         ActivityType.AutoReplySent => "标记回复已发送",
         ActivityType.AutoReplyDraftRejected => "拒绝回复草稿",
+        ActivityType.AutoReplyDraftCopied => "复制回复草稿",
         _ => Type.ToString()
     };
 }

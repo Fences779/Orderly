@@ -159,6 +159,7 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(PrepareAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private AiSuggestionListItem? selectedAiSuggestion;
@@ -211,6 +212,7 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(PrepareAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private bool isLoading;
@@ -240,6 +242,7 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(PrepareAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private bool isSaving;
@@ -266,6 +269,7 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AcceptAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAiSuggestionCommand))]
     [NotifyCanExecuteChangedFor(nameof(PrepareAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private bool isGeneratingAiSuggestion;
