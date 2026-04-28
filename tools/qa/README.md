@@ -26,12 +26,31 @@
 - `run-p1-smoke.ps1`
   - 默认执行 `reset-qa-data -> run-qa-data-status -> run-uia-smoke --qa-mode -SkipReset -> run-qa-data-status`。
   - 可传 `-SkipReset` 跳过最外层 reset。
+- `run-p2-1-message-smoke.ps1`
+  - 覆盖手工录入沟通记录、按订单回读、QA reset 恢复。
+- `run-p2-2-ai-suggestion-smoke.ps1`
+  - 覆盖 AI 建议生成、接受、拒绝、`ActivityLog` 留痕、QA reset 恢复。
+- `run-p2-3-auto-reply-smoke.ps1`
+  - 覆盖回复草稿准备、复制、标记已发送、拒绝、`ActivityLog` 留痕、QA reset 恢复。
 - `run-p2-4-ai-provider-smoke.ps1`
   - 覆盖本地 stub、缺配置、DeepSeek 缺 key、Provider 失败 fallback。
+- `run-p2-5-ocr-smoke.ps1`
+  - 覆盖 OCR task 创建、fallback 文本、转沟通记录、metadata、`ActivityLog` 留痕、QA reset 恢复。
+- `run-p2-6-manual-send-smoke.ps1`
+  - 覆盖草稿复制、剪贴板写入、手工确认已发送、metadata、`ActivityLog` 留痕、QA reset 恢复。
+- `run-p2-7-backup-smoke.ps1`
+  - 覆盖本地备份导出、校验、篡改备份失败、`SyncRecord(local-backup)`、`ActivityLog` 留痕、QA reset 恢复。
+- `run-p2-8-restore-smoke.ps1`
+  - 覆盖空库恢复、QA-only 受控恢复、非空生产库拒绝、非法 JSON/错误 checksum 拒绝、恢复审计与基线恢复。
+- `run-p2-9-restore-preview-smoke.ps1`
+  - 覆盖恢复预览摘要、ViewModel 门控、风险确认重置，并串跑 P2.8 restore smoke。
+- `run-p2-full-regression.ps1`
+  - 顺序编排 `run-p2-1-message-smoke.ps1` 到 `run-p2-9-restore-preview-smoke.ps1`，失败即停，输出清晰 PASS/FAILED。
 - `run-p2-5-deepseek-live-smoke.ps1`
   - 读取用户环境变量里的 `DEEPSEEK_API_KEY / ORDERLY_AI_PROVIDER / ORDERLY_AI_MODEL`。
   - 发起一次真实 DeepSeek 联网请求，仅校验返回内容非空。
   - 输出脱敏摘要，并把结果写入 `artifacts\qa-smoke\<timestamp>\deepseek-live-smoke-report.json`。
+  - 该脚本不属于默认 closeout 回归，也不被 `run-p2-full-regression.ps1` 调用。
 
 ## 常用命令
 
@@ -41,7 +60,16 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\reset-qa-data.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\clear-qa-data.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-uia-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-1-message-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-2-ai-suggestion-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-3-auto-reply-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-4-ai-provider-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-5-ocr-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-6-manual-send-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-7-backup-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-8-restore-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-9-restore-preview-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-5-deepseek-live-smoke.ps1
 ```
 
@@ -56,13 +84,14 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-5-deepseek-live-smoke
   - smoke 结束后恢复 QA 基线。
 - 额外说明：
   - P2.0 已纳入 QA 数据状态/清理/重置的表级维护范围：`ConversationMessages / AiSuggestions / OcrResults / SyncRecords`。
-  - `run-p1-smoke.ps1` 仍然只承担 P1 回归保护，不证明 P2.0 功能通过。
+- `run-p1-smoke.ps1` 仍然只承担 P1 回归保护，不证明 P2.0 功能通过。
+- `run-p2-full-regression.ps1` 只串行编排本地 smoke，不调用真实 AI API、不依赖公网。
 - 不覆盖：
   - 登录流程。
   - 搜索 / 筛选、FollowUp 完成 / 延期 / 取消、Deal 推进、状态切换的完整端到端动作。
   - 托盘、快捷键、悬浮窗。
   - 视觉比对、125% 缩放。
-  - P2.0 新表的 CRUD、Stub 状态迁移、真实 AI/OCR/同步能力。
+  - 真实 AI/OCR/同步/外部发送能力。
 
 ## 失败排查
 

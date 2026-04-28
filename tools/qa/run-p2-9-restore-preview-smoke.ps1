@@ -340,7 +340,7 @@ $vm = New-MainViewModel -DatabasePath $vmTargetPath
 $vm.SelectedBackupPath = $backupPath
 if ($vm.RestoreBackupCommand.CanExecute($null)) { throw 'Restore command must be disabled before preview.' }
 
-$vm.ValidateBackupCommand.ExecuteAsync($null).GetAwaiter().GetResult()
+[void]$vm.ValidateBackupCommand.ExecuteAsync($null).GetAwaiter().GetResult()
 if ($null -eq $vm.RestorePreview) { throw 'ViewModel did not store preview result.' }
 if (-not $vm.RestorePreview.CanRestore) { throw "ViewModel preview should allow restore on empty target: $($vm.RestorePreview.RefuseReason)" }
 if ($vm.IsRestoreRiskConfirmed) { throw 'Confirmation should be cleared after preview generation.' }
@@ -355,9 +355,9 @@ if ($null -ne $vm.RestorePreview) { throw 'Switching backup file should clear pr
 if ($vm.RestoreBackupCommand.CanExecute($null)) { throw 'Restore command must disable after file switch.' }
 
 $vm.SelectedBackupPath = $backupPath
-$vm.ValidateBackupCommand.ExecuteAsync($null).GetAwaiter().GetResult()
+[void]$vm.ValidateBackupCommand.ExecuteAsync($null).GetAwaiter().GetResult()
 $vm.IsRestoreRiskConfirmed = $true
-$vm.ValidateBackupCommand.ExecuteAsync($null).GetAwaiter().GetResult()
+[void]$vm.ValidateBackupCommand.ExecuteAsync($null).GetAwaiter().GetResult()
 if ($vm.IsRestoreRiskConfirmed) { throw 'Re-running preview should clear confirmation state.' }
 if ($vm.RestoreBackupCommand.CanExecute($null)) { throw 'Restore command must stay disabled after re-preview until re-confirmed.' }
 

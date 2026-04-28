@@ -49,6 +49,8 @@ screenshots/
 
 # Local scratch work
 scratch/
+backup/
+orderly-backup-*.json
 
 # OS junk
 Thumbs.db

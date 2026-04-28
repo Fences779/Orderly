@@ -215,7 +215,7 @@ if ($null -eq $prepared -or $prepared.Status -ne [Orderly.Core.Models.AiSuggesti
 Write-Step "Prepared draft suggestion Id: $($prepared.Id)"
 
 Write-Step "Step 4/7: copy the prepared draft and verify clipboard, metadata, ActivityLog"
-$serviceContext.AutoReplyService.CopyReplyDraftAsync($prepared.Id).GetAwaiter().GetResult()
+[void]$serviceContext.AutoReplyService.CopyReplyDraftAsync($prepared.Id).GetAwaiter().GetResult()
 $copied = $serviceContext.SuggestionRepository.GetByIdAsync($prepared.Id).GetAwaiter().GetResult()
 if ($null -eq $copied -or $copied.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::DraftPrepared) {
     throw 'Copied draft did not remain in DraftPrepared state.'
@@ -257,7 +257,7 @@ if ($copiedActivities.Count -lt 1) {
 Write-Step "Copied draft suggestion Id: $($prepared.Id)"
 
 Write-Step "Step 5/7: mark the copied draft as sent and verify state, metadata, ActivityLog"
-$serviceContext.AutoReplyService.MarkReplySentAsync($prepared.Id).GetAwaiter().GetResult()
+[void]$serviceContext.AutoReplyService.MarkReplySentAsync($prepared.Id).GetAwaiter().GetResult()
 $sent = $serviceContext.SuggestionRepository.GetByIdAsync($prepared.Id).GetAwaiter().GetResult()
 if ($null -eq $sent -or $sent.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::Sent) {
     throw 'Copied draft did not transition to Sent.'

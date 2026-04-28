@@ -1,5 +1,20 @@
 # P2 Roadmap
 
+## 状态
+
+- P2 已完成，closeout 以 `docs/P2_CLOSEOUT_SUMMARY.md` 为准。
+- P2 阶段提交：
+  - `17ee4bf` P2.0 assistant foundation
+  - `6976bd1` P2.1 message entry
+  - `4983f50` P2.2 ai suggestion flow
+  - `fca2e15` P2.3 auto reply draft flow
+  - `6cf8ff0` P2.4 ai provider fallback
+  - `0ad86b4` P2.5 ocr message entry
+  - `548e9e1` P2.6 manual send flow
+  - `2b3012c` P2.7 local backup boundary
+  - `6654dd5` P2.8 controlled restore
+  - `d0f8b11` P2.9 restore preview gate
+
 ## P2.0: 底座骨架
 
 - 会话消息模型
@@ -278,7 +293,8 @@ P2.9 当前明确未做：
 
 ## 边界声明
 
-- AI 不是 P2.0 真实实现。
-- OCR 不是 P2.0 真实实现。
-- 自动回复不是 P2.0 真实实现。
-- 云同步不是 P2.0 真实实现。
+- AI 不是生产级真实实现。
+- OCR 不是生产级真实实现。
+- 自动回复不是外部平台真实发送实现。
+- 云同步不是 P2 目标。
+- 非空生产库覆盖恢复不是 P2 目标。

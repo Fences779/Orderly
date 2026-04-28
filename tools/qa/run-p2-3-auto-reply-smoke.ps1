@@ -222,7 +222,7 @@ if ($null -eq $preparedReadBack -or $preparedReadBack.Status -ne [Orderly.Core.M
 Write-Step "Prepared draft suggestion Id: $($prepared.Id)"
 
 Write-Step "Step 4/7: copy the prepared local draft and then mark it as sent"
-$serviceContext.AutoReplyService.CopyReplyDraftAsync($prepared.Id).GetAwaiter().GetResult()
+[void]$serviceContext.AutoReplyService.CopyReplyDraftAsync($prepared.Id).GetAwaiter().GetResult()
 $copied = $serviceContext.SuggestionRepository.GetByIdAsync($prepared.Id).GetAwaiter().GetResult()
 if (-not $copied.MetadataJson.Contains('"state":"copied"')) {
     throw 'Copied draft metadata did not include the expected copied state.'
@@ -233,7 +233,7 @@ if ([string]::IsNullOrWhiteSpace($clipboardText) -or $clipboardText.Contains('æœ
     throw 'Copied draft text was not written to the in-memory clipboard as expected.'
 }
 
-$serviceContext.AutoReplyService.MarkReplySentAsync($prepared.Id).GetAwaiter().GetResult()
+[void]$serviceContext.AutoReplyService.MarkReplySentAsync($prepared.Id).GetAwaiter().GetResult()
 $sent = $serviceContext.SuggestionRepository.GetByIdAsync($prepared.Id).GetAwaiter().GetResult()
 if ($null -eq $sent -or $sent.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::Sent) {
     throw 'Prepared draft did not transition to Sent.'
@@ -253,7 +253,7 @@ $rejectedSource = $serviceContext.AiAssistantService.GenerateAndSaveReplySuggest
     $qaContext.Message.Id).GetAwaiter().GetResult()
 
 $rejectedPrepared = $serviceContext.AutoReplyService.PrepareReplyAsync($rejectedSource.Id).GetAwaiter().GetResult()
-$serviceContext.AutoReplyService.MarkReplyRejectedAsync($rejectedPrepared.Id).GetAwaiter().GetResult()
+[void]$serviceContext.AutoReplyService.MarkReplyRejectedAsync($rejectedPrepared.Id).GetAwaiter().GetResult()
 $rejected = $serviceContext.SuggestionRepository.GetByIdAsync($rejectedPrepared.Id).GetAwaiter().GetResult()
 if ($null -eq $rejected -or $rejected.Status -ne [Orderly.Core.Models.AiSuggestionStatus]::Rejected) {
     throw 'Prepared draft did not transition to Rejected.'
