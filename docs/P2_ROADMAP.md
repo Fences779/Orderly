@@ -173,6 +173,70 @@ P2.7 当前明确未做：
 - 未开放生产库覆盖恢复。
 - 未改订单主链路和大 UI 结构。
 
+## P2.8: 受控恢复 / 空库或 QA 库恢复
+
+- 设置页 `本地备份` 区增加：
+  - `选择备份文件`
+  - `校验备份`
+  - `恢复到空库/QA库`
+  - `恢复状态`
+- 继续复用 `IBackupService / LocalBackupService`，不新增第二套导入系统。
+- 恢复前预检查固定包含：
+  - JSON 可解析
+  - `schemaVersion` 受支持
+  - `checksum` 通过
+  - `counts` 与 `tables` 一致
+  - 恢复所需关键表存在
+  - 目标库状态属于 `空库` 或 `QA/测试库`
+- 恢复策略固定为：
+  - 空库：允许直接恢复
+  - QA/测试库：必须先清理 QA 数据，再恢复
+  - 非空生产库：明确拒绝
+- 恢复范围：
+  - `Customers`
+  - `Deals`
+  - `Orders`
+  - `FollowUps`
+  - `CustomerNotes`
+  - `PriceAdjustments`
+  - `ActivityLogs`
+  - `ConversationMessages`
+  - `AiSuggestions`
+  - `OcrResults`
+- 恢复写入顺序：
+  - `Customers`
+  - `Deals`
+  - `Orders`
+  - `FollowUps`
+  - `CustomerNotes`
+  - `PriceAdjustments`
+  - `ActivityLogs`
+  - `ConversationMessages`
+  - `AiSuggestions`
+  - `OcrResults`
+- 恢复完成写：
+  - `SyncRecord(local-restore)`
+  - `ActivityLog.BackupRestoreStarted`
+  - `ActivityLog.BackupRestoreSucceeded`
+  - 失败时写 `ActivityLog.BackupRestoreFailed`
+- 新增 `tools/qa/run-p2-8-restore-smoke.ps1`
+
+P2.8 当前落地范围：
+- 已支持空库恢复。
+- 已支持 QA-only 目标库先清理再恢复。
+- 已拒绝非空生产库覆盖恢复。
+- 已把目标库判定收口在 service 层，UI 只做最小操作入口。
+- 已补充 `docs/P2_8_CONTROLLED_RESTORE_SUMMARY.md` 与 `tools/qa/run-p2-8-restore-smoke.ps1`。
+
+P2.8 当前明确未做：
+- 未开放生产库覆盖恢复。
+- 未做云同步。
+- 未做多设备同步。
+- 未做冲突合并。
+- 未做自动导入。
+- 未接微信 / 闲鱼 / 平台。
+- 未改订单主链路和大 UI 结构。
+
 ## 边界声明
 
 - AI 不是 P2.0 真实实现。

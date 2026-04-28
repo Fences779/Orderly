@@ -187,6 +187,17 @@ public partial class MainViewModel : ObservableObject
     private string recentBackupDetailText = "导出后会在这里显示最近一次本地备份状态。";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ValidateBackupCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RestoreBackupCommand))]
+    private string selectedBackupPath = string.Empty;
+
+    [ObservableProperty]
+    private string restoreStatusText = "未选择恢复备份";
+
+    [ObservableProperty]
+    private string restoreDetailText = "先选择备份文件，再执行校验或恢复。";
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStatusError))]
     [NotifyPropertyChangedFor(nameof(StatusMessageTitle))]
     [NotifyPropertyChangedFor(nameof(CustomersEmptyStateText))]
@@ -202,8 +213,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectBackupFileCommand))]
     [NotifyCanExecuteChangedFor(nameof(ExportBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(ValidateBackupCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RestoreBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
@@ -234,8 +247,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectBackupFileCommand))]
     [NotifyCanExecuteChangedFor(nameof(ExportBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(ValidateBackupCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RestoreBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
@@ -263,8 +278,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectBackupFileCommand))]
     [NotifyCanExecuteChangedFor(nameof(ExportBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(ValidateBackupCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RestoreBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]

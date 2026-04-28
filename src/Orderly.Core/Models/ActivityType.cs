@@ -32,5 +32,8 @@ public enum ActivityType
     AutoReplyDraftCopied = 27,
     BackupExported = 28,
     BackupValidationSucceeded = 29,
-    BackupValidationFailed = 30
+    BackupValidationFailed = 30,
+    BackupRestoreStarted = 31,
+    BackupRestoreSucceeded = 32,
+    BackupRestoreFailed = 33
 }

@@ -1162,24 +1162,40 @@
                     <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="0,18,0,0">
                         <StackPanel>
                             <TextBlock Text="本地备份" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
-                            <TextBlock Text="仅支持本地 JSON 导出 / 校验；不接云端、不接平台同步。" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                            <TextBlock Text="仅支持本地 JSON 导出 / 校验 / 受控恢复；不接云端、不接平台同步。" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
                             <WrapPanel Margin="0,12,0,0">
                                 <Button x:Name="Btn_ExportBackup"
                                         AutomationProperties.AutomationId="Btn_ExportBackup"
                                         Content="导出备份"
                                         Style="{StaticResource ToolbarPrimaryButtonStyle}"
                                         Command="{Binding ExportBackupCommand}" />
+                                <Button x:Name="Btn_SelectBackupFile"
+                                        AutomationProperties.AutomationId="Btn_SelectBackupFile"
+                                        Content="选择备份文件"
+                                        Style="{StaticResource ToolbarSecondaryButtonStyle}"
+                                        Margin="10,0,0,0"
+                                        Command="{Binding SelectBackupFileCommand}" />
                                 <Button x:Name="Btn_ValidateBackup"
                                         AutomationProperties.AutomationId="Btn_ValidateBackup"
                                         Content="校验备份"
                                         Style="{StaticResource ToolbarSecondaryButtonStyle}"
                                         Margin="10,0,0,0"
                                         Command="{Binding ValidateBackupCommand}" />
+                                <Button x:Name="Btn_RestoreBackup"
+                                        AutomationProperties.AutomationId="Btn_RestoreBackup"
+                                        Content="恢复到空库/QA库"
+                                        Style="{StaticResource ToolbarSecondaryButtonStyle}"
+                                        Margin="10,0,0,0"
+                                        Command="{Binding RestoreBackupCommand}" />
                             </WrapPanel>
+                            <TextBlock Text="仅支持空库或测试库恢复，不覆盖已有生产数据。" Foreground="{StaticResource WarmTextBrush}" TextWrapping="Wrap" Margin="0,14,0,0" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding SelectedBackupPath, StringFormat=已选备份：{0}}" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,10,0,0" />
+                            <TextBlock Text="恢复状态" FontWeight="SemiBold" Margin="0,16,0,0" />
+                            <TextBlock Text="{Binding RestoreStatusText}" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                            <TextBlock Text="{Binding RestoreDetailText}" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
                             <TextBlock Text="最近备份状态" FontWeight="SemiBold" Margin="0,16,0,0" />
                             <TextBlock Text="{Binding RecentBackupStatusText}" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
                             <TextBlock Text="{Binding RecentBackupDetailText}" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
-                            <TextBlock Text="恢复未在本轮开放；如需恢复，先在 QA / 空库做受控恢复。" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,10,0,0" />
                         </StackPanel>
                     </Border>
                     <TextBlock Text="扩展位：AI 助手、微信/闲鱼同步、OCR、自动回复已保留接口，第一版不接真实后端。" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,18,0,0" />

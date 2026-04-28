@@ -69,6 +69,18 @@ public sealed class QaDataMaintenanceService
         await connection.OpenAsync(cancellationToken);
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
 
+        var result = await ClearAsync(connection, transaction, cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+        result.Status = await GetStatusAsync(connection, transaction: null, cancellationToken);
+        return result;
+    }
+
+    public async Task<QaDataClearResult> ClearAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken = default)
+    {
         var result = new QaDataClearResult
         {
             SyncRecordsDeleted = await DeleteAsync(connection, transaction, "SyncRecords", SyncRecordPredicate, cancellationToken),
@@ -84,8 +96,7 @@ public sealed class QaDataMaintenanceService
             CustomersDeleted = await DeleteAsync(connection, transaction, "Customers", CustomerPredicate, cancellationToken)
         };
 
-        await transaction.CommitAsync(cancellationToken);
-        result.Status = await GetStatusAsync(cancellationToken);
+        result.Status = await GetStatusAsync(connection, transaction, cancellationToken);
         return result;
     }
 

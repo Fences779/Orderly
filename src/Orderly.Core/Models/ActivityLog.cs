@@ -44,6 +44,9 @@ public sealed class ActivityLog : EntityBase
         ActivityType.BackupExported => "导出本地备份",
         ActivityType.BackupValidationSucceeded => "校验备份成功",
         ActivityType.BackupValidationFailed => "校验备份失败",
+        ActivityType.BackupRestoreStarted => "开始恢复本地备份",
+        ActivityType.BackupRestoreSucceeded => "恢复本地备份成功",
+        ActivityType.BackupRestoreFailed => "恢复本地备份失败",
         _ => Type.ToString()
     };
 }
