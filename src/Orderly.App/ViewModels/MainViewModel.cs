@@ -16,6 +16,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IFollowUpService _followUpService;
     private readonly INoteService _noteService;
     private readonly IConversationService _conversationService;
+    private readonly IOcrService _ocrService;
     private readonly IAiAssistantService _aiAssistantService;
     private readonly IAutoReplyService _autoReplyService;
     private readonly IActivityLogService _activityLogService;
@@ -33,6 +34,7 @@ public partial class MainViewModel : ObservableObject
         IFollowUpService followUpService,
         INoteService noteService,
         IConversationService conversationService,
+        IOcrService ocrService,
         IAiAssistantService aiAssistantService,
         IAutoReplyService autoReplyService,
         IActivityLogService activityLogService,
@@ -50,6 +52,7 @@ public partial class MainViewModel : ObservableObject
         _followUpService = followUpService;
         _noteService = noteService;
         _conversationService = conversationService;
+        _ocrService = ocrService;
         _aiAssistantService = aiAssistantService;
         _autoReplyService = autoReplyService;
         _activityLogService = activityLogService;
@@ -118,6 +121,8 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SelectedChannelText))]
     [NotifyPropertyChangedFor(nameof(SelectedExternalIdText))]
     [NotifyPropertyChangedFor(nameof(SelectedConversationContextText))]
+    [NotifyCanExecuteChangedFor(nameof(SelectOcrImageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConvertOcrToConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(GenerateAiSuggestionCommand))]
@@ -133,6 +138,8 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SelectedCustomerNameText))]
     [NotifyPropertyChangedFor(nameof(CustomerRemarkText))]
     [NotifyPropertyChangedFor(nameof(SelectedConversationContextText))]
+    [NotifyCanExecuteChangedFor(nameof(SelectOcrImageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConvertOcrToConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
@@ -157,6 +164,16 @@ public partial class MainViewModel : ObservableObject
     private AiSuggestionListItem? selectedAiSuggestion;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCurrentOcrResult))]
+    [NotifyPropertyChangedFor(nameof(CurrentOcrFileNameText))]
+    [NotifyPropertyChangedFor(nameof(CurrentOcrStatusText))]
+    [NotifyPropertyChangedFor(nameof(CurrentOcrPreviewText))]
+    [NotifyPropertyChangedFor(nameof(CurrentOcrHintText))]
+    [NotifyPropertyChangedFor(nameof(IsCurrentOcrConverted))]
+    [NotifyCanExecuteChangedFor(nameof(ConvertOcrToConversationMessageCommand))]
+    private OcrResult? currentOcrResult;
+
+    [ObservableProperty]
     private AppPreferences preferences = new();
 
     [ObservableProperty]
@@ -168,6 +185,8 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectOcrImageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConvertOcrToConversationMessageCommand))]
     private string conversationMessageInput = string.Empty;
 
     [ObservableProperty]
@@ -178,6 +197,8 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectOcrImageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConvertOcrToConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeDealStageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AdvanceDealStageCommand))]
@@ -205,6 +226,8 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectOcrImageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConvertOcrToConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeDealStageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AdvanceDealStageCommand))]
@@ -229,6 +252,8 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectOcrImageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConvertOcrToConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeDealStageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AdvanceDealStageCommand))]

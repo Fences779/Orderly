@@ -119,6 +119,7 @@ public partial class App : System.Windows.Application
         IFollowUpRepository followUpRepository = new FollowUpRepository(connectionFactory);
         ICustomerNoteRepository noteRepository = new CustomerNoteRepository(connectionFactory);
         IConversationMessageRepository conversationMessageRepository = new ConversationMessageRepository(connectionFactory);
+        IOcrResultRepository ocrResultRepository = new OcrResultRepository(connectionFactory);
         IAiSuggestionRepository aiSuggestionRepository = new AiSuggestionRepository(connectionFactory);
         IActivityLogRepository activityLogRepository = new ActivityLogRepository(connectionFactory);
         IPriceAdjustmentRepository priceAdjustmentRepository = new PriceAdjustmentRepository(connectionFactory);
@@ -135,6 +136,7 @@ public partial class App : System.Windows.Application
         IFollowUpService followUpService = new FollowUpService(followUpRepository, activityLogRepository);
         INoteService noteService = new NoteService(noteRepository, activityLogRepository);
         IConversationService conversationService = new ConversationService(conversationMessageRepository, activityLogRepository);
+        IOcrService ocrService = new LocalOcrService(ocrResultRepository, activityLogRepository, conversationService, conversationMessageRepository);
         IAiAssistantService aiAssistantService = new LocalAiAssistantService(
             customerRepository,
             orderRepository,
@@ -159,6 +161,7 @@ public partial class App : System.Windows.Application
             followUpService,
             noteService,
             conversationService,
+            ocrService,
             aiAssistantService,
             autoReplyService,
             activityLogService,

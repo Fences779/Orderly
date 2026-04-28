@@ -91,9 +91,32 @@ P2.3 当前明确未做：
 
 ## P2.5: OCR 截图识别
 
-- 接入真实 OCR
-- 支持截图 / 文件导入
-- 回填识别文本与失败原因
+- 手动选择图片 / 导入截图
+- 创建 `OcrResults`
+- 无真实 OCR 时走 `Local fallback`
+- UI 展示 OCR 状态和文本
+- 支持转为 `ConversationMessages`
+- 写 `ActivityLog`
+- 新增 `tools/qa/run-p2-5-ocr-smoke.ps1`
+
+P2.5 当前落地范围：
+- 已在主工作台右侧详情栏 `消息 / 沟通记录` 附近增加最小 OCR 入口。
+- 已支持按 `SelectedCustomer` + 当前订单上下文创建 `OcrResult`。
+- 已支持本地 fallback 文本：`【本地OCR占位】请人工确认截图内容后转为沟通记录。`
+- 已支持 `Pending / Completed / Failed` 状态展示。
+- 已支持将已完成且非空的 OCR 文本转为 `ConversationMessages`，并刷新消息列表。
+- 已支持 `OcrTaskCreated / OcrTaskCompleted / OcrTaskFailed / ConversationMessageAdded` 留痕。
+- 已通过 `convertedToMessageId` + `SourceMessageId=ocr-result:{id}` 尽量避免重复转换。
+- 已补充 `tools/qa/run-p2-5-ocr-smoke.ps1`，覆盖创建、fallback、回读、转消息、`ActivityLog`、`metadata`、`reset-qa-data` 恢复。
+
+P2.5 当前明确未做：
+- 未做自动截屏。
+- 未监听微信 / 闲鱼 / 任何平台窗口。
+- 未接真实 OCR API 或本地 OCR 引擎。
+- 未做批量导入、拖拽、图片预览、复杂视觉美化。
+- 未做自动发送。
+- 未做同步。
+- 未改订单主链路和大结构。
 
 ## P2.6: 自动回复半自动化
 

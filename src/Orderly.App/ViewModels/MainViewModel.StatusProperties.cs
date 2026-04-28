@@ -51,11 +51,39 @@ public partial class MainViewModel
     public bool HasFollowUps => FollowUps.Count > 0;
     public bool HasCustomerNotes => CustomerNotes.Count > 0;
     public bool HasConversationMessages => ConversationMessages.Count > 0;
+    public bool HasCurrentOcrResult => CurrentOcrResult is not null;
     public bool HasAiSuggestions => AiSuggestions.Count > 0;
     public bool HasPriceAdjustments => PriceAdjustments.Count > 0;
     public bool HasActivityLogs => ActivityLogs.Count > 0;
     public bool HasCustomers => Customers.Count > 0;
     public bool HasOrders => Orders.Count > 0;
+    public string CurrentOcrFileNameText => string.IsNullOrWhiteSpace(CurrentOcrResult?.SourceName) ? "未选择图片" : CurrentOcrResult.SourceName;
+    public string CurrentOcrStatusText => CurrentOcrResult is null
+        ? "未开始"
+        : CurrentOcrResult.Status switch
+        {
+            OcrStatus.Pending => "Pending",
+            OcrStatus.Completed => "Completed",
+            OcrStatus.Failed => "Failed",
+            _ => CurrentOcrResult.Status.ToString()
+        };
+    public string CurrentOcrPreviewText => CurrentOcrResult is null
+        ? "还没有 OCR 结果。"
+        : !string.IsNullOrWhiteSpace(CurrentOcrResult.ExtractedText)
+            ? CurrentOcrResult.ExtractedText
+            : CurrentOcrResult.Status == OcrStatus.Failed
+                ? (string.IsNullOrWhiteSpace(CurrentOcrResult.ErrorMessage) ? "OCR 执行失败。" : CurrentOcrResult.ErrorMessage)
+                : "OCR 尚未产出文本。";
+    public string CurrentOcrHintText => CurrentOcrResult is null
+        ? "请选择图片或截图后执行 OCR。"
+        : CurrentOcrResult.Status == OcrStatus.Pending
+            ? "OCR 处理中，请等待结果返回。"
+            : CurrentOcrResult.Status == OcrStatus.Failed
+                ? "OCR 失败，请重新选择图片。"
+                : IsCurrentOcrConverted
+                    ? "当前 OCR 结果已转为沟通记录。"
+                    : "OCR 文本确认无误后，可转为沟通记录。";
+    public bool IsCurrentOcrConverted => TryGetCurrentOcrConvertedMessageId() is int convertedMessageId && convertedMessageId > 0;
     public int DealsCount => Deals.Count;
     public int FollowUpsCount => FollowUps.Count;
     public int CustomerNotesCount => CustomerNotes.Count;
@@ -83,6 +111,7 @@ public partial class MainViewModel
         FollowUps.Clear();
         CustomerNotes.Clear();
         ConversationMessages.Clear();
+        CurrentOcrResult = null;
         AiSuggestions.Clear();
         PriceAdjustments.Clear();
         ActivityLogs.Clear();
@@ -112,6 +141,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasFollowUps));
         OnPropertyChanged(nameof(HasCustomerNotes));
         OnPropertyChanged(nameof(HasConversationMessages));
+        OnPropertyChanged(nameof(HasCurrentOcrResult));
         OnPropertyChanged(nameof(HasAiSuggestions));
         OnPropertyChanged(nameof(HasPriceAdjustments));
         OnPropertyChanged(nameof(HasActivityLogs));

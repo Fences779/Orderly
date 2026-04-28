@@ -98,6 +98,26 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
     }
 
+    public async Task<ConversationMessage?> GetBySourceMessageIdAsync(string sourceMessageId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT
+                Id, CustomerId, OrderId, DealId, Direction, Channel, SenderName, Content, MessageTime, SourceMessageId, MetadataJson,
+                CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+            FROM ConversationMessages
+            WHERE SourceMessageId = $sourceMessageId AND DeletedAt IS NULL
+            ORDER BY Id DESC
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$sourceMessageId", sourceMessageId);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+    }
+
     public Task<IReadOnlyList<ConversationMessage>> ListByCustomerIdAsync(int customerId, CancellationToken cancellationToken = default)
     {
         return QueryAsync(

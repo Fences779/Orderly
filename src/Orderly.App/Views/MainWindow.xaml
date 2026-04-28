@@ -649,10 +649,39 @@
                                                 <TextBlock Text="{Binding ConversationMessagesCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
                                             </Border>
                                         </DockPanel>
-                                        <TextBlock Text="最小入口：默认按客户来消息手工录入，仅用于沉淀上下文，不连接真实 AI / OCR / 自动发送。"
+                                        <TextBlock Text="最小入口：支持手工录入消息和手动导入图片做本地 OCR fallback，仅用于沉淀上下文，不连接真实自动发送。"
                                                    Foreground="{StaticResource SecondaryTextBrush}"
                                                    TextWrapping="Wrap"
                                                    LineHeight="20" />
+                                        <Border Background="#F8F6F0" CornerRadius="8" Padding="10" Margin="0,10,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="手动 OCR 入口" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding SelectedConversationContextText}" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" />
+                                                <Button x:Name="Btn_SelectOcrImage"
+                                                        AutomationProperties.AutomationId="Btn_SelectOcrImage"
+                                                        Content="选择图片 / 导入截图"
+                                                        Command="{Binding SelectOcrImageCommand}"
+                                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
+                                                        Margin="0,10,0,0" />
+                                                <TextBlock Text="{Binding CurrentOcrFileNameText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding CurrentOcrStatusText, StringFormat=OCR 状态：{0}}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" Margin="0,6,0,0" />
+                                                <TextBlock Text="{Binding CurrentOcrHintText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="18" />
+                                                <TextBox x:Name="Output_OcrTextPreview"
+                                                         AutomationProperties.AutomationId="Output_OcrTextPreview"
+                                                         Margin="0,8,0,0"
+                                                         MinHeight="72"
+                                                         IsReadOnly="True"
+                                                         TextWrapping="Wrap"
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         Text="{Binding CurrentOcrPreviewText, Mode=OneWay}" />
+                                                <Button x:Name="Btn_ConvertOcrToConversationMessage"
+                                                        AutomationProperties.AutomationId="Btn_ConvertOcrToConversationMessage"
+                                                        Content="转为沟通记录"
+                                                        Command="{Binding ConvertOcrToConversationMessageCommand}"
+                                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
+                                                        Margin="0,10,0,0" />
+                                            </StackPanel>
+                                        </Border>
                                         <Border Background="#F8F6F0" CornerRadius="8" Padding="10" Margin="0,10,0,0">
                                             <StackPanel>
                                                 <TextBlock Text="{Binding SelectedConversationContextText}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />

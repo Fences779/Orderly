@@ -71,6 +71,7 @@ public partial class MainViewModel
             var followUps = await _followUpService.GetCustomerFollowUpsAsync(customer.Id);
             var notes = await _noteService.GetCustomerNotesAsync(customer.Id);
             var messages = await LoadConversationMessagesAsync(customer);
+            var currentOcrResult = await LoadCurrentOcrResultAsync(customer);
             var suggestions = await LoadAiSuggestionsAsync(customer);
             var adjustments = await _priceAdjustmentService.GetCustomerAdjustmentsAsync(customer.Id);
             var activities = await _activityLogService.GetCustomerActivitiesAsync(customer.Id);
@@ -84,6 +85,7 @@ public partial class MainViewModel
             ReplaceCollection(FollowUps, followUps.OrderByDescending(followUp => followUp.ScheduledAt));
             ReplaceCollection(CustomerNotes, notes.OrderByDescending(note => note.CreatedAt));
             ReplaceCollection(ConversationMessages, messages);
+            CurrentOcrResult = currentOcrResult;
             var selectedSuggestionId = SelectedAiSuggestion?.Id;
             ReplaceCollection(AiSuggestions, suggestions);
             ReplaceCollection(PriceAdjustments, adjustments.OrderByDescending(adjustment => adjustment.CreatedAt));
@@ -167,5 +169,19 @@ public partial class MainViewModel
             .ThenByDescending(suggestion => suggestion.Id)
             .Take(8)
             .Select(suggestion => new AiSuggestionListItem(suggestion));
+    }
+
+    private async Task<OcrResult?> LoadCurrentOcrResultAsync(Customer customer)
+    {
+        var results = await _ocrService.ListByCustomerAsync(customer.Id);
+        var order = SelectedOrder;
+
+        if (order is not null && order.CustomerId == customer.Id)
+        {
+            return results.FirstOrDefault(item => item.OrderId == order.Id)
+                ?? results.FirstOrDefault(item => item.OrderId is null);
+        }
+
+        return results.FirstOrDefault();
     }
 }
