@@ -721,7 +721,7 @@
                                                 <TextBlock Text="{Binding AiSuggestionsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
                                             </Border>
                                         </DockPanel>
-                                        <TextBlock Text="仅生成本地 Stub 建议，明确不接真实 AI、不自动发送。"
+                                        <TextBlock Text="默认使用 Local Stub；配置 OpenAI-compatible Provider 后可用；失败会自动 fallback，本轮仍不自动发送。"
                                                    Foreground="{StaticResource SecondaryTextBrush}"
                                                    TextWrapping="Wrap"
                                                    LineHeight="20" />
@@ -772,6 +772,9 @@
                                                                 <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
                                                                 <TextBlock DockPanel.Dock="Right" Text="{Binding CreatedAtText}" Foreground="{StaticResource SecondaryTextBrush}" />
                                                             </DockPanel>
+                                                            <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2" Margin="0,8,0,0" HorizontalAlignment="Left">
+                                                                <TextBlock Text="{Binding ProviderBadgeText}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                                                            </Border>
                                                             <TextBlock Text="{Binding SuggestionText}" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20" />
                                                             <TextBlock Text="{Binding Reason}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="18" />
                                                             <TextBlock Text="{Binding DraftStateHint}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="18">

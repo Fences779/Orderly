@@ -80,11 +80,14 @@ P2.3 当前明确未做：
 - 未做平台同步。
 - 未改订单主链路和大结构。
 
-## P2.4: AI 建议真实接入
+## P2.4: AI Provider 架构 + OpenAI-compatible 接入 + Local Stub fallback
 
-- 接入真实 AI Provider
-- 补 prompt / 上下文裁剪
-- 补 provider 错误态、超时和降级策略
+- 保留 `IAiAssistantService` 业务入口
+- 新增 Provider 层抽象与 `OpenAI-compatible` 最小实现
+- 默认 `Local Stub`
+- Provider 缺配置 / 超时 / HTTP 错误 / JSON 解析失败 / 空文本时自动 fallback
+- 补最小上下文裁剪与 metadata 留痕
+- 新增 `tools/qa/run-p2-4-ai-provider-smoke.ps1`
 
 ## P2.5: OCR 截图识别
 

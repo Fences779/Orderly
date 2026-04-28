@@ -92,6 +92,11 @@ public static class QaNativeLoader
 }
 
 function New-AiSuggestionServiceContext {
+    param(
+        [Parameter(Mandatory = $true)]
+        [Orderly.Data.Services.AiProviderOptions]$ProviderOptions
+    )
+
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
     $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
@@ -99,7 +104,17 @@ function New-AiSuggestionServiceContext {
     $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
     $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
     $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
-    $aiAssistantService = [Orderly.Data.Services.LocalAiAssistantService]::new($messageRepository, $suggestionRepository, $activityRepository)
+    $localProvider = [Orderly.Data.Services.LocalAiSuggestionProvider]::new()
+    $primaryProvider = [Orderly.Data.Services.AiSuggestionProviderFactory]::CreatePrimaryProvider($ProviderOptions, $localProvider)
+    $aiAssistantService = [Orderly.Data.Services.LocalAiAssistantService]::new(
+        $customerRepository,
+        $orderRepository,
+        $messageRepository,
+        $suggestionRepository,
+        $activityRepository,
+        $primaryProvider,
+        $localProvider,
+        $ProviderOptions)
 
     return [pscustomobject]@{
         CustomerRepository = $customerRepository
@@ -168,7 +183,8 @@ Write-Step "Baseline ActivityLogs count: $baselineActivityCount"
 
 Write-Step "Step 3/7: generate a draft AI suggestion from existing conversation context"
 Import-OrderlyAssemblies
-$serviceContext = New-AiSuggestionServiceContext
+$providerOptions = [Orderly.Data.Services.AiProviderOptions]::new('local', $null, $null, $null, 15)
+$serviceContext = New-AiSuggestionServiceContext -ProviderOptions $providerOptions
 $qaContext = Get-QaAiContext -Context $serviceContext
 $generated = $serviceContext.AiAssistantService.GenerateAndSaveReplySuggestionAsync(
     $qaContext.Customer.Id,

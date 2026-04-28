@@ -92,6 +92,11 @@ public static class QaNativeLoader
 }
 
 function New-AutoReplyServiceContext {
+    param(
+        [Parameter(Mandatory = $true)]
+        [Orderly.Data.Services.AiProviderOptions]$ProviderOptions
+    )
+
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
     $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
@@ -99,7 +104,17 @@ function New-AutoReplyServiceContext {
     $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
     $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
     $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
-    $aiAssistantService = [Orderly.Data.Services.LocalAiAssistantService]::new($messageRepository, $suggestionRepository, $activityRepository)
+    $localProvider = [Orderly.Data.Services.LocalAiSuggestionProvider]::new()
+    $primaryProvider = [Orderly.Data.Services.AiSuggestionProviderFactory]::CreatePrimaryProvider($ProviderOptions, $localProvider)
+    $aiAssistantService = [Orderly.Data.Services.LocalAiAssistantService]::new(
+        $customerRepository,
+        $orderRepository,
+        $messageRepository,
+        $suggestionRepository,
+        $activityRepository,
+        $primaryProvider,
+        $localProvider,
+        $ProviderOptions)
     $autoReplyService = [Orderly.Data.Services.LocalAutoReplyService]::new($suggestionRepository, $orderRepository, $activityRepository)
 
     return [pscustomobject]@{
@@ -170,7 +185,8 @@ Write-Step "Baseline ActivityLogs count: $baselineActivityCount"
 
 Write-Step "Step 3/7: generate and prepare a local auto reply draft"
 Import-OrderlyAssemblies
-$serviceContext = New-AutoReplyServiceContext
+$providerOptions = [Orderly.Data.Services.AiProviderOptions]::new('local', $null, $null, $null, 15)
+$serviceContext = New-AutoReplyServiceContext -ProviderOptions $providerOptions
 $qaContext = Get-QaAutoReplyContext -Context $serviceContext
 $draftSource = $serviceContext.AiAssistantService.GenerateAndSaveReplySuggestionAsync(
     $qaContext.Customer.Id,

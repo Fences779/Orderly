@@ -125,6 +125,9 @@ public partial class App : System.Windows.Application
         IReplyTemplateRepository replyTemplateRepository = new ReplyTemplateRepository(connectionFactory);
         IAppSettingRepository settingRepository = new AppSettingRepository(connectionFactory);
         IClipboardService clipboardService = new DesktopClipboardService();
+        var aiProviderOptions = AiProviderOptions.FromEnvironment();
+        IAiSuggestionProvider localAiSuggestionProvider = new LocalAiSuggestionProvider();
+        var primaryAiSuggestionProvider = AiSuggestionProviderFactory.CreatePrimaryProvider(aiProviderOptions, localAiSuggestionProvider);
 
         ICustomerService customerService = new CustomerService(customerRepository, activityLogRepository);
         IOrderService orderService = new OrderService(orderRepository, activityLogRepository);
@@ -132,7 +135,15 @@ public partial class App : System.Windows.Application
         IFollowUpService followUpService = new FollowUpService(followUpRepository, activityLogRepository);
         INoteService noteService = new NoteService(noteRepository, activityLogRepository);
         IConversationService conversationService = new ConversationService(conversationMessageRepository, activityLogRepository);
-        IAiAssistantService aiAssistantService = new LocalAiAssistantService(conversationMessageRepository, aiSuggestionRepository, activityLogRepository);
+        IAiAssistantService aiAssistantService = new LocalAiAssistantService(
+            customerRepository,
+            orderRepository,
+            conversationMessageRepository,
+            aiSuggestionRepository,
+            activityLogRepository,
+            primaryAiSuggestionProvider,
+            localAiSuggestionProvider,
+            aiProviderOptions);
         IAutoReplyService autoReplyService = new LocalAutoReplyService(aiSuggestionRepository, orderRepository, activityLogRepository);
         IActivityLogService activityLogService = new ActivityLogService(activityLogRepository);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);

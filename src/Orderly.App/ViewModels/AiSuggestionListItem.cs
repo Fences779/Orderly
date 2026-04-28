@@ -6,11 +6,13 @@ namespace Orderly.App.ViewModels;
 public sealed class AiSuggestionListItem
 {
     private readonly string? _autoReplyState;
+    private readonly string _providerBadgeText;
 
     public AiSuggestionListItem(AiSuggestion suggestion)
     {
         Suggestion = suggestion;
         _autoReplyState = ReadAutoReplyState(suggestion.MetadataJson);
+        _providerBadgeText = ReadProviderBadgeText(suggestion.MetadataJson);
     }
 
     public AiSuggestion Suggestion { get; }
@@ -25,6 +27,7 @@ public sealed class AiSuggestionListItem
     public bool CanMarkSent => Suggestion.Status == AiSuggestionStatus.DraftPrepared;
     public bool CanRejectDraft => Suggestion.Status == AiSuggestionStatus.DraftPrepared;
     public string DraftStateHint => GetDraftStateHint();
+    public string ProviderBadgeText => _providerBadgeText;
 
     private string GetStatusText()
     {
@@ -76,6 +79,39 @@ public sealed class AiSuggestionListItem
         catch (JsonException)
         {
             return null;
+        }
+    }
+
+    private static string ReadProviderBadgeText(string metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return "Local Stub";
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            var provider = document.RootElement.TryGetProperty("provider", out var providerElement)
+                ? providerElement.GetString()
+                : null;
+            var usedFallback = document.RootElement.TryGetProperty("usedFallback", out var fallbackElement)
+                && fallbackElement.ValueKind is JsonValueKind.True or JsonValueKind.False
+                && fallbackElement.GetBoolean();
+
+            var label = provider switch
+            {
+                "openai-compatible" => "OpenAI-compatible",
+                "local-stub" => "Local Stub",
+                _ when !string.IsNullOrWhiteSpace(provider) => provider!,
+                _ => "Local Stub"
+            };
+
+            return usedFallback ? $"{label} · Fallback" : label;
+        }
+        catch (JsonException)
+        {
+            return "Local Stub";
         }
     }
 }
