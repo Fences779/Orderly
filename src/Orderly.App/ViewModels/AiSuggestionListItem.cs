@@ -102,6 +102,7 @@ public sealed class AiSuggestionListItem
             var label = provider switch
             {
                 "openai-compatible" => "OpenAI-compatible",
+                "deepseek" => "DeepSeek",
                 "local-stub" => "Local Stub",
                 _ when !string.IsNullOrWhiteSpace(provider) => provider!,
                 _ => "Local Stub"

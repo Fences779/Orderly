@@ -26,6 +26,12 @@
 - `run-p1-smoke.ps1`
   - 默认执行 `reset-qa-data -> run-qa-data-status -> run-uia-smoke --qa-mode -SkipReset -> run-qa-data-status`。
   - 可传 `-SkipReset` 跳过最外层 reset。
+- `run-p2-4-ai-provider-smoke.ps1`
+  - 覆盖本地 stub、缺配置、DeepSeek 缺 key、Provider 失败 fallback。
+- `run-p2-5-deepseek-live-smoke.ps1`
+  - 读取用户环境变量里的 `DEEPSEEK_API_KEY / ORDERLY_AI_PROVIDER / ORDERLY_AI_MODEL`。
+  - 发起一次真实 DeepSeek 联网请求，仅校验返回内容非空。
+  - 输出脱敏摘要，并把结果写入 `artifacts\qa-smoke\<timestamp>\deepseek-live-smoke-report.json`。
 
 ## 常用命令
 
@@ -35,6 +41,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\reset-qa-data.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\clear-qa-data.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-uia-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-4-ai-provider-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-5-deepseek-live-smoke.ps1
 ```
 
 ## 当前覆盖范围

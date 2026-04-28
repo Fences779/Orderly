@@ -180,6 +180,7 @@ function Get-PreviousAiEnv {
         Provider = $env:ORDERLY_AI_PROVIDER
         BaseUrl = $env:ORDERLY_AI_BASE_URL
         ApiKey = $env:ORDERLY_AI_API_KEY
+        DeepSeekApiKey = $env:DEEPSEEK_API_KEY
         Model = $env:ORDERLY_AI_MODEL
         TimeoutSeconds = $env:ORDERLY_AI_TIMEOUT_SECONDS
     }
@@ -190,6 +191,7 @@ function Set-AiEnv {
         [string]$Provider,
         [string]$BaseUrl,
         [string]$ApiKey,
+        [string]$DeepSeekApiKey,
         [string]$Model,
         [string]$TimeoutSeconds
     )
@@ -197,6 +199,7 @@ function Set-AiEnv {
     $env:ORDERLY_AI_PROVIDER = $Provider
     $env:ORDERLY_AI_BASE_URL = $BaseUrl
     $env:ORDERLY_AI_API_KEY = $ApiKey
+    $env:DEEPSEEK_API_KEY = $DeepSeekApiKey
     $env:ORDERLY_AI_MODEL = $Model
     $env:ORDERLY_AI_TIMEOUT_SECONDS = $TimeoutSeconds
 }
@@ -210,6 +213,7 @@ function Restore-AiEnv {
     $env:ORDERLY_AI_PROVIDER = $Snapshot.Provider
     $env:ORDERLY_AI_BASE_URL = $Snapshot.BaseUrl
     $env:ORDERLY_AI_API_KEY = $Snapshot.ApiKey
+    $env:DEEPSEEK_API_KEY = $Snapshot.DeepSeekApiKey
     $env:ORDERLY_AI_MODEL = $Snapshot.Model
     $env:ORDERLY_AI_TIMEOUT_SECONDS = $Snapshot.TimeoutSeconds
 }
@@ -222,22 +226,22 @@ $previousEnv = Get-PreviousAiEnv
 
 try {
     if (-not $SkipReset) {
-        Write-Step "Step 1/7: reset QA data"
+        Write-Step "Step 1/8: reset QA data"
         Invoke-QaScript -Path $resetScript
     } else {
-        Write-Step "Step 1/7: skip QA data reset"
+        Write-Step "Step 1/8: skip QA data reset"
     }
 
-    Write-Step "Step 2/7: baseline QA status"
+    Write-Step "Step 2/8: baseline QA status"
     $baselineStatus = Invoke-OrderlyAppCommandOrThrow -ArgumentList @('--qa-data-status')
     $baselineSuggestionCount = Get-CountFromStatus -Output $baselineStatus.StdOut -Label 'QA AiSuggestions count:'
     $baselineActivityCount = Get-CountFromStatus -Output $baselineStatus.StdOut -Label 'QA ActivityLogs count:'
     Write-Step "Baseline AiSuggestions count: $baselineSuggestionCount"
     Write-Step "Baseline ActivityLogs count: $baselineActivityCount"
 
-    Write-Step "Step 3/7: no environment variables should use Local Stub"
+    Write-Step "Step 3/8: no environment variables should use Local Stub"
     Import-OrderlyAssemblies
-    Set-AiEnv -Provider '' -BaseUrl '' -ApiKey '' -Model '' -TimeoutSeconds ''
+    Set-AiEnv -Provider '' -BaseUrl '' -ApiKey '' -DeepSeekApiKey '' -Model '' -TimeoutSeconds ''
     $localOptions = [Orderly.Data.Services.AiProviderOptions]::FromEnvironment()
     $localContext = New-AiSuggestionServiceContext -ProviderOptions $localOptions
     $qaContext = Get-QaAiContext -Context $localContext
@@ -257,8 +261,8 @@ try {
 
     Write-Step "Local Stub suggestion Id: $($localSuggestion.Id)"
 
-    Write-Step "Step 4/7: missing provider configuration should fallback without crashing"
-    Set-AiEnv -Provider 'openai-compatible' -BaseUrl '' -ApiKey '' -Model '' -TimeoutSeconds '15'
+    Write-Step "Step 4/8: missing OpenAI-compatible configuration should fallback without crashing"
+    Set-AiEnv -Provider 'openai-compatible' -BaseUrl '' -ApiKey '' -DeepSeekApiKey '' -Model '' -TimeoutSeconds '15'
     $missingConfigOptions = [Orderly.Data.Services.AiProviderOptions]::FromEnvironment()
     $missingConfigContext = New-AiSuggestionServiceContext -ProviderOptions $missingConfigOptions
     $missingConfigSuggestion = $missingConfigContext.AiAssistantService.GenerateAndSaveReplySuggestionAsync(
@@ -281,8 +285,33 @@ try {
 
     Write-Step "Missing-config fallback suggestion Id: $($missingConfigSuggestion.Id)"
 
-    Write-Step "Step 5/7: simulated provider failure should fallback to Local Stub"
-    Set-AiEnv -Provider 'openai-compatible' -BaseUrl 'http://127.0.0.1:9/v1' -ApiKey 'placeholder-key' -Model 'placeholder-model' -TimeoutSeconds '1'
+    Write-Step "Step 5/8: missing DeepSeek key should fallback without crashing"
+    Set-AiEnv -Provider 'deepseek' -BaseUrl '' -ApiKey '' -DeepSeekApiKey '' -Model '' -TimeoutSeconds '15'
+    $missingDeepSeekOptions = [Orderly.Data.Services.AiProviderOptions]::FromEnvironment()
+    $missingDeepSeekContext = New-AiSuggestionServiceContext -ProviderOptions $missingDeepSeekOptions
+    $missingDeepSeekSuggestion = $missingDeepSeekContext.AiAssistantService.GenerateAndSaveReplySuggestionAsync(
+        $qaContext.Customer.Id,
+        $qaContext.Order.Id,
+        $qaContext.Order.DealId,
+        $qaContext.Message.Id).GetAwaiter().GetResult()
+
+    if ((Get-MetadataValue -MetadataJson $missingDeepSeekSuggestion.MetadataJson -Key 'provider') -ne 'local-stub') {
+        throw 'Missing DeepSeek key did not fallback to local-stub.'
+    }
+
+    if (-not [bool](Get-MetadataValue -MetadataJson $missingDeepSeekSuggestion.MetadataJson -Key 'usedFallback')) {
+        throw 'Missing DeepSeek key should mark usedFallback=true.'
+    }
+
+    $deepSeekErrorSummary = [string](Get-MetadataValue -MetadataJson $missingDeepSeekSuggestion.MetadataJson -Key 'errorSummary')
+    if ([string]::IsNullOrWhiteSpace($deepSeekErrorSummary) -or -not $deepSeekErrorSummary.Contains('DEEPSEEK_API_KEY')) {
+        throw 'Missing DeepSeek key did not capture DEEPSEEK_API_KEY errorSummary.'
+    }
+
+    Write-Step "DeepSeek missing-key fallback suggestion Id: $($missingDeepSeekSuggestion.Id)"
+
+    Write-Step "Step 6/8: simulated provider failure should fallback to Local Stub"
+    Set-AiEnv -Provider 'openai-compatible' -BaseUrl 'http://127.0.0.1:9/v1' -ApiKey 'placeholder-key' -DeepSeekApiKey '' -Model 'placeholder-model' -TimeoutSeconds '1'
     $failingOptions = [Orderly.Data.Services.AiProviderOptions]::FromEnvironment()
     $failingContext = New-AiSuggestionServiceContext -ProviderOptions $failingOptions
     $failingSuggestion = $failingContext.AiAssistantService.GenerateAndSaveReplySuggestionAsync(
@@ -309,7 +338,7 @@ try {
 
     Write-Step "Failure-fallback suggestion Id: $($failingSuggestion.Id)"
 
-    Write-Step "Step 6/7: verify AiSuggestion readback and ActivityLog records"
+    Write-Step "Step 7/8: verify AiSuggestion readback and ActivityLog records"
     $readBackSuggestions = $failingContext.AiAssistantService.ListSuggestionsAsync($qaContext.Customer.Id, $qaContext.Order.Id).GetAwaiter().GetResult()
     if (@($readBackSuggestions | Where-Object { $_.Id -eq $failingSuggestion.Id }).Count -lt 1) {
         throw 'Fallback suggestion could not be read back from ListSuggestionsAsync.'
@@ -318,33 +347,34 @@ try {
     $activities = $failingContext.ActivityRepository.ListByCustomerIdAsync($qaContext.Customer.Id).GetAwaiter().GetResult()
     $localNeedle = '"suggestionId":' + $localSuggestion.Id
     $missingConfigNeedle = '"suggestionId":' + $missingConfigSuggestion.Id
+    $missingDeepSeekNeedle = '"suggestionId":' + $missingDeepSeekSuggestion.Id
     $failingNeedle = '"suggestionId":' + $failingSuggestion.Id
     $generatedActivities = @(
         $activities | Where-Object {
             $_.Type -eq [Orderly.Core.Models.ActivityType]::AiSuggestionGenerated `
-                -and ($_.MetadataJson.Contains($localNeedle) -or $_.MetadataJson.Contains($missingConfigNeedle) -or $_.MetadataJson.Contains($failingNeedle))
+                -and ($_.MetadataJson.Contains($localNeedle) -or $_.MetadataJson.Contains($missingConfigNeedle) -or $_.MetadataJson.Contains($missingDeepSeekNeedle) -or $_.MetadataJson.Contains($failingNeedle))
         }
     )
 
-    if ($generatedActivities.Count -lt 3) {
-        throw 'Missing AiSuggestionGenerated activity log entries for P2.4 scenarios.'
+    if ($generatedActivities.Count -lt 4) {
+        throw 'Missing AiSuggestionGenerated activity log entries for provider smoke scenarios.'
     }
 
     $afterWriteStatus = Invoke-OrderlyAppCommandOrThrow -ArgumentList @('--qa-data-status')
     $afterWriteSuggestionCount = Get-CountFromStatus -Output $afterWriteStatus.StdOut -Label 'QA AiSuggestions count:'
     $afterWriteActivityCount = Get-CountFromStatus -Output $afterWriteStatus.StdOut -Label 'QA ActivityLogs count:'
-    if ($afterWriteSuggestionCount -lt ($baselineSuggestionCount + 3)) {
+    if ($afterWriteSuggestionCount -lt ($baselineSuggestionCount + 4)) {
         throw "AiSuggestions count did not increase as expected. Baseline=$baselineSuggestionCount, AfterWrite=$afterWriteSuggestionCount"
     }
 
-    if ($afterWriteActivityCount -lt ($baselineActivityCount + 3)) {
+    if ($afterWriteActivityCount -lt ($baselineActivityCount + 4)) {
         throw "ActivityLogs count did not increase as expected. Baseline=$baselineActivityCount, AfterWrite=$afterWriteActivityCount"
     }
 
     Write-Step "After-write AiSuggestions count: $afterWriteSuggestionCount"
     Write-Step "After-write ActivityLogs count: $afterWriteActivityCount"
 
-    Write-Step "Step 7/7: reset QA data again and verify baseline is restored"
+    Write-Step "Step 8/8: reset QA data again and verify baseline is restored"
     Invoke-QaScript -Path $resetScript
     $finalStatus = Invoke-OrderlyAppCommandOrThrow -ArgumentList @('--qa-data-status')
     $finalSuggestionCount = Get-CountFromStatus -Output $finalStatus.StdOut -Label 'QA AiSuggestions count:'

@@ -340,9 +340,9 @@ public sealed class LocalAiAssistantService : IAiAssistantService
             return "远程 Provider 不可用，已自动回退到 Local Stub，程序继续保持离线可运行。";
         }
 
-        return string.Equals(execution.Result.Provider, "openai-compatible", StringComparison.OrdinalIgnoreCase)
-            ? "已基于最近沟通上下文生成回复建议；当前只生成建议，不自动发送。"
-            : "本地 Stub 依据最近沟通上下文生成，未调用外部 AI。";
+        return string.Equals(execution.Result.Provider, "local-stub", StringComparison.OrdinalIgnoreCase)
+            ? "本地 Stub 依据最近沟通上下文生成，未调用外部 AI。"
+            : $"已通过 {GetProviderDisplayName(execution.Result.Provider)} 生成回复建议；当前只生成建议，不自动发送。";
     }
 
     private static string BuildGeneratedDescription(string metadataJson)
@@ -352,9 +352,10 @@ public sealed class LocalAiAssistantService : IAiAssistantService
             return "远程 AI Provider 不可用，已自动回退到 Local Stub 生成建议，未执行自动发送。";
         }
 
-        return string.Equals(ReadProviderName(metadataJson), "openai-compatible", StringComparison.OrdinalIgnoreCase)
-            ? "已通过 OpenAI-compatible Provider 生成回复建议，未执行自动发送。"
-            : "本地 Stub 已生成回复建议，未调用外部 AI，也未执行自动发送。";
+        var provider = ReadProviderName(metadataJson);
+        return string.Equals(provider, "local-stub", StringComparison.OrdinalIgnoreCase)
+            ? "本地 Stub 已生成回复建议，未调用外部 AI，也未执行自动发送。"
+            : $"已通过 {GetProviderDisplayName(provider)} 生成回复建议，未执行自动发送。";
     }
 
     private static string ReadProviderName(string metadataJson)
@@ -427,6 +428,17 @@ public sealed class LocalAiAssistantService : IAiAssistantService
                 usedFallback = suggestionMetadata?["usedFallback"]?.GetValue<bool>()
             })
         }, cancellationToken);
+    }
+
+    private static string GetProviderDisplayName(string provider)
+    {
+        return provider switch
+        {
+            "openai-compatible" => "OpenAI-compatible Provider",
+            "deepseek" => "DeepSeek Provider",
+            "local-stub" => "Local Stub",
+            _ => provider
+        };
     }
 
     private sealed record ProviderExecution(

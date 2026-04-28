@@ -2,6 +2,12 @@ namespace Orderly.Data.Services;
 
 public sealed class AiProviderOptions
 {
+    public const string LocalProviderName = "local";
+    public const string OpenAiCompatibleProviderName = "openai-compatible";
+    public const string DeepSeekProviderName = "deepseek";
+    public const string DeepSeekBaseUrl = "https://api.deepseek.com";
+    public const string DeepSeekDefaultModel = "deepseek-chat";
+    public const string DeepSeekApiKeyEnvironmentVariableName = "DEEPSEEK_API_KEY";
     public const int DefaultTimeoutSeconds = 15;
 
     public AiProviderOptions(
@@ -30,14 +36,30 @@ public sealed class AiProviderOptions
 
     public static AiProviderOptions FromEnvironment()
     {
+        var requestedProvider = NormalizeProvider(Environment.GetEnvironmentVariable("ORDERLY_AI_PROVIDER"));
         var timeoutRaw = Environment.GetEnvironmentVariable("ORDERLY_AI_TIMEOUT_SECONDS");
         _ = int.TryParse(timeoutRaw, out var timeoutSeconds);
 
+        var baseUrl = Environment.GetEnvironmentVariable("ORDERLY_AI_BASE_URL");
+        var apiKey = Environment.GetEnvironmentVariable("ORDERLY_AI_API_KEY");
+        var model = Environment.GetEnvironmentVariable("ORDERLY_AI_MODEL");
+
+        if (string.Equals(requestedProvider, DeepSeekProviderName, StringComparison.Ordinal))
+        {
+            baseUrl = DeepSeekBaseUrl;
+            apiKey = Environment.GetEnvironmentVariable(DeepSeekApiKeyEnvironmentVariableName);
+
+            if (string.IsNullOrWhiteSpace(model))
+            {
+                model = DeepSeekDefaultModel;
+            }
+        }
+
         return new AiProviderOptions(
-            Environment.GetEnvironmentVariable("ORDERLY_AI_PROVIDER"),
-            Environment.GetEnvironmentVariable("ORDERLY_AI_BASE_URL"),
-            Environment.GetEnvironmentVariable("ORDERLY_AI_API_KEY"),
-            Environment.GetEnvironmentVariable("ORDERLY_AI_MODEL"),
+            requestedProvider,
+            baseUrl,
+            apiKey,
+            model,
             timeoutSeconds);
     }
 
@@ -50,8 +72,9 @@ public sealed class AiProviderOptions
 
         return provider.Trim().ToLowerInvariant() switch
         {
-            "local" => "local",
-            "openai-compatible" => "openai-compatible",
+            LocalProviderName => LocalProviderName,
+            OpenAiCompatibleProviderName => OpenAiCompatibleProviderName,
+            DeepSeekProviderName => DeepSeekProviderName,
             _ => provider.Trim().ToLowerInvariant()
         };
     }

@@ -12,7 +12,8 @@ public static class AiSuggestionProviderFactory
 
         return options.RequestedProvider switch
         {
-            "openai-compatible" => new OpenAiCompatibleSuggestionProvider(CreateHttpClient(options), options),
+            AiProviderOptions.OpenAiCompatibleProviderName => new OpenAiCompatibleSuggestionProvider(CreateHttpClient(options), options),
+            AiProviderOptions.DeepSeekProviderName => new DeepSeekSuggestionProvider(CreateHttpClient(options), options),
             _ => localProvider
         };
     }

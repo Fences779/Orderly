@@ -721,7 +721,7 @@
                                                 <TextBlock Text="{Binding AiSuggestionsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
                                             </Border>
                                         </DockPanel>
-                                        <TextBlock Text="默认使用 Local Stub；配置 OpenAI-compatible Provider 后可用；失败会自动 fallback，本轮仍不自动发送。"
+                                        <TextBlock Text="默认使用 Local Stub；已预留 DeepSeek / OpenAI-compatible Provider；失败会自动 fallback，本轮仍不自动发送。"
                                                    Foreground="{StaticResource SecondaryTextBrush}"
                                                    TextWrapping="Wrap"
                                                    LineHeight="20" />
