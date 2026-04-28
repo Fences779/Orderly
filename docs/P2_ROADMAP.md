@@ -145,11 +145,33 @@ P2.6 当前明确未做：
 - 未做全局快捷键监听。
 - 未改订单主链路和大结构。
 
-## P2.7: 云同步 / 备份
+## P2.7: 本地备份 / 恢复 / 同步边界
 
-- 本地到云端备份
-- 最小冲突处理
-- 恢复与状态可见性
+- 设置页低频区新增 `导出备份 / 校验备份 / 最近备份状态`
+- 新增 `IBackupService / LocalBackupService`
+- 本地导出 `JSON` 备份，不接云端、不接平台同步
+- 备份覆盖核心业务表：`Customers / Deals / Orders / FollowUps / CustomerNotes / PriceAdjustments / ActivityLogs / ConversationMessages / AiSuggestions / OcrResults`
+- 导出成功写 `SyncRecord(local-backup)` 与 `ActivityLog(BackupExported)`
+- 校验成功 / 失败写 `ActivityLog(BackupValidationSucceeded / BackupValidationFailed)`
+- 新增 `tools/qa/run-p2-7-backup-smoke.ps1`
+
+P2.7 当前落地范围：
+- 已在 `设置` 中增加本地备份最小入口，避免进入订单主成交流。
+- 已支持用户手动导出 `orderly-backup-yyyyMMdd-HHmmss.json`。
+- 已支持校验 JSON 结构、关键表、counts、checksum。
+- 已支持从最近一次 `SyncRecord(local-backup)` 读取最近备份状态。
+- 已明确限制为本地文件导出 / 校验，不做云同步、平台同步、多设备同步。
+- 已补充 `docs/P2_7_LOCAL_BACKUP_SUMMARY.md` 与 `tools/qa/run-p2-7-backup-smoke.ps1`。
+
+P2.7 当前明确未做：
+- 未做云端备份。
+- 未做微信 / 闲鱼 / 任何平台同步。
+- 未做多设备实时同步。
+- 未做账号体系。
+- 未做复杂冲突解决。
+- 未做自动上传。
+- 未开放生产库覆盖恢复。
+- 未改订单主链路和大 UI 结构。
 
 ## 边界声明
 

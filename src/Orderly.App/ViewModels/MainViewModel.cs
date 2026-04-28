@@ -20,6 +20,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IAiAssistantService _aiAssistantService;
     private readonly IAutoReplyService _autoReplyService;
     private readonly IActivityLogService _activityLogService;
+    private readonly IBackupService _backupService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
     private readonly IAppSettingRepository _settingRepository;
@@ -38,6 +39,7 @@ public partial class MainViewModel : ObservableObject
         IAiAssistantService aiAssistantService,
         IAutoReplyService autoReplyService,
         IActivityLogService activityLogService,
+        IBackupService backupService,
         IPriceAdjustmentService priceAdjustmentService,
         IReplyTemplateRepository replyTemplateRepository,
         IAppSettingRepository settingRepository,
@@ -56,6 +58,7 @@ public partial class MainViewModel : ObservableObject
         _aiAssistantService = aiAssistantService;
         _autoReplyService = autoReplyService;
         _activityLogService = activityLogService;
+        _backupService = backupService;
         _priceAdjustmentService = priceAdjustmentService;
         _replyTemplateRepository = replyTemplateRepository;
         _settingRepository = settingRepository;
@@ -178,6 +181,12 @@ public partial class MainViewModel : ObservableObject
     private AppPreferences preferences = new();
 
     [ObservableProperty]
+    private string recentBackupStatusText = "暂无本地备份";
+
+    [ObservableProperty]
+    private string recentBackupDetailText = "导出后会在这里显示最近一次本地备份状态。";
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStatusError))]
     [NotifyPropertyChangedFor(nameof(StatusMessageTitle))]
     [NotifyPropertyChangedFor(nameof(CustomersEmptyStateText))]
@@ -193,6 +202,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportBackupCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ValidateBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
@@ -223,6 +234,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportBackupCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ValidateBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
@@ -250,6 +263,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportBackupCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ValidateBackupCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]

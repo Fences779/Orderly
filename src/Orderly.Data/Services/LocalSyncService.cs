@@ -15,15 +15,20 @@ public sealed class LocalSyncService : ISyncService
         _activityLogRepository = activityLogRepository;
     }
 
-    public async Task<SyncRecord> MarkPendingAsync(string entityType, int entityId, CancellationToken cancellationToken = default)
+    public async Task<SyncRecord> MarkPendingAsync(string entityType, int entityId, string? metadataJson = null, CancellationToken cancellationToken = default)
     {
         var record = await GetOrCreateAsync(entityType, entityId, cancellationToken);
         record.SyncStatus = SyncStatus.Pending;
         record.ErrorMessage = string.Empty;
+        if (metadataJson is not null)
+        {
+            record.MetadataJson = metadataJson;
+        }
+
         return await SaveAsync(record, cancellationToken);
     }
 
-    public async Task<SyncRecord> MarkSyncedAsync(string entityType, int entityId, string? remoteId = null, CancellationToken cancellationToken = default)
+    public async Task<SyncRecord> MarkSyncedAsync(string entityType, int entityId, string? remoteId = null, string? metadataJson = null, CancellationToken cancellationToken = default)
     {
         var record = await GetOrCreateAsync(entityType, entityId, cancellationToken);
         record.SyncStatus = SyncStatus.Synced;
@@ -34,15 +39,25 @@ public sealed class LocalSyncService : ISyncService
             record.RemoteId = remoteId;
         }
 
+        if (metadataJson is not null)
+        {
+            record.MetadataJson = metadataJson;
+        }
+
         return await SaveAsync(record, cancellationToken);
     }
 
-    public async Task<SyncRecord> MarkFailedAsync(string entityType, int entityId, string errorMessage, CancellationToken cancellationToken = default)
+    public async Task<SyncRecord> MarkFailedAsync(string entityType, int entityId, string errorMessage, string? metadataJson = null, CancellationToken cancellationToken = default)
     {
         var record = await GetOrCreateAsync(entityType, entityId, cancellationToken);
         record.SyncStatus = SyncStatus.Failed;
         record.ErrorMessage = errorMessage;
         record.LastSyncedAt = null;
+        if (metadataJson is not null)
+        {
+            record.MetadataJson = metadataJson;
+        }
+
         var saved = await SaveAsync(record, cancellationToken);
 
         await _activityLogRepository.CreateAsync(new ActivityLog
@@ -50,7 +65,8 @@ public sealed class LocalSyncService : ISyncService
             Type = ActivityType.SyncFailed,
             Title = "同步失败",
             Description = $"{entityType}#{entityId}: {errorMessage}",
-            Operator = "local-stub"
+            Operator = "local-stub",
+            MetadataJson = metadataJson ?? string.Empty
         }, cancellationToken);
 
         return saved;

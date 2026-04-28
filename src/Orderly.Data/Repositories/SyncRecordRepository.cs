@@ -115,6 +115,26 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
     }
 
+    public async Task<SyncRecord?> GetLatestByEntityTypeAsync(string entityType, CancellationToken cancellationToken = default)
+    {
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT
+                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, MetadataJson,
+                CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
+            FROM SyncRecords
+            WHERE EntityType = $entityType AND DeletedAt IS NULL
+            ORDER BY UpdatedAt DESC, Id DESC
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$entityType", entityType);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+    }
+
     public async Task<IReadOnlyList<SyncRecord>> ListPendingAsync(CancellationToken cancellationToken = default)
     {
         await using var connection = _connectionFactory.CreateConnection();

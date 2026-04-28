@@ -20,6 +20,7 @@ public partial class MainViewModel
             var followUps = await _followUpService.GetFollowUpsAsync(cancellationToken);
             var notes = await _noteService.GetNotesAsync(cancellationToken);
             var templates = await _replyTemplateRepository.GetAllAsync(cancellationToken);
+            await LoadRecentBackupStatusAsync(cancellationToken);
 
             _allCustomers = customers.ToList();
             _allOrders = orders.Select(order => new OrderListItem(order)).ToList();

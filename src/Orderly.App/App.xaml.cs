@@ -122,10 +122,12 @@ public partial class App : System.Windows.Application
         IOcrResultRepository ocrResultRepository = new OcrResultRepository(connectionFactory);
         IAiSuggestionRepository aiSuggestionRepository = new AiSuggestionRepository(connectionFactory);
         IActivityLogRepository activityLogRepository = new ActivityLogRepository(connectionFactory);
+        ISyncRecordRepository syncRecordRepository = new SyncRecordRepository(connectionFactory);
         IPriceAdjustmentRepository priceAdjustmentRepository = new PriceAdjustmentRepository(connectionFactory);
         IReplyTemplateRepository replyTemplateRepository = new ReplyTemplateRepository(connectionFactory);
         IAppSettingRepository settingRepository = new AppSettingRepository(connectionFactory);
         IClipboardService clipboardService = new DesktopClipboardService();
+        ISyncService syncService = new LocalSyncService(syncRecordRepository, activityLogRepository);
         var aiProviderOptions = AiProviderOptions.FromEnvironment();
         IAiSuggestionProvider localAiSuggestionProvider = new LocalAiSuggestionProvider();
         var primaryAiSuggestionProvider = AiSuggestionProviderFactory.CreatePrimaryProvider(aiProviderOptions, localAiSuggestionProvider);
@@ -148,6 +150,7 @@ public partial class App : System.Windows.Application
             aiProviderOptions);
         IAutoReplyService autoReplyService = new LocalAutoReplyService(aiSuggestionRepository, orderRepository, activityLogRepository, clipboardService);
         IActivityLogService activityLogService = new ActivityLogService(activityLogRepository);
+        IBackupService backupService = new LocalBackupService(connectionFactory, syncService, syncRecordRepository, activityLogRepository);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
 
         var preferences = await settingRepository.GetPreferencesAsync();
@@ -165,6 +168,7 @@ public partial class App : System.Windows.Application
             aiAssistantService,
             autoReplyService,
             activityLogService,
+            backupService,
             priceAdjustmentService,
             replyTemplateRepository,
             settingRepository,

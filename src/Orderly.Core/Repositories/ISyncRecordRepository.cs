@@ -8,5 +8,6 @@ public interface ISyncRecordRepository
     Task UpdateAsync(SyncRecord record, CancellationToken cancellationToken = default);
     Task<SyncRecord?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<SyncRecord?> GetByEntityAsync(string entityType, int entityId, CancellationToken cancellationToken = default);
+    Task<SyncRecord?> GetLatestByEntityTypeAsync(string entityType, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SyncRecord>> ListPendingAsync(CancellationToken cancellationToken = default);
 }

@@ -29,5 +29,8 @@ public enum ActivityType
     AiSuggestionRejected = 24,
     AutoReplySent = 25,
     AutoReplyDraftRejected = 26,
-    AutoReplyDraftCopied = 27
+    AutoReplyDraftCopied = 27,
+    BackupExported = 28,
+    BackupValidationSucceeded = 29,
+    BackupValidationFailed = 30
 }

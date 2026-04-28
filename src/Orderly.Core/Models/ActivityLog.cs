@@ -41,6 +41,9 @@ public sealed class ActivityLog : EntityBase
         ActivityType.AutoReplySent => "标记回复已发送",
         ActivityType.AutoReplyDraftRejected => "拒绝回复草稿",
         ActivityType.AutoReplyDraftCopied => "复制回复草稿",
+        ActivityType.BackupExported => "导出本地备份",
+        ActivityType.BackupValidationSucceeded => "校验备份成功",
+        ActivityType.BackupValidationFailed => "校验备份失败",
         _ => Type.ToString()
     };
 }
