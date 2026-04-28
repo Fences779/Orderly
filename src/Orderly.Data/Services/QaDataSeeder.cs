@@ -39,6 +39,7 @@ public sealed class QaDataSeeder
         var customerIds = new Dictionary<string, int>(StringComparer.Ordinal);
         var dealIds = new Dictionary<string, int>(StringComparer.Ordinal);
         var orderIds = new Dictionary<string, int>(StringComparer.Ordinal);
+        var messageIds = new Dictionary<string, int>(StringComparer.Ordinal);
 
         foreach (var customer in QaCustomers)
         {
@@ -87,6 +88,40 @@ public sealed class QaDataSeeder
             int? orderId = string.IsNullOrWhiteSpace(activity.OrderTitle) ? null : orderIds[activity.OrderTitle];
             int? dealId = string.IsNullOrWhiteSpace(activity.DealTitle) ? null : dealIds[activity.DealTitle];
             await UpsertActivityLogAsync(connection, transaction, activity, customerId, orderId, dealId, now, result, cancellationToken);
+        }
+
+        foreach (var message in QaConversationMessages)
+        {
+            var customerId = customerIds[message.CustomerName];
+            int? orderId = string.IsNullOrWhiteSpace(message.OrderTitle) ? null : orderIds[message.OrderTitle];
+            int? dealId = string.IsNullOrWhiteSpace(message.DealTitle) ? null : dealIds[message.DealTitle];
+            messageIds[message.RemoteId] = await UpsertConversationMessageAsync(connection, transaction, message, customerId, orderId, dealId, now, result, cancellationToken);
+        }
+
+        foreach (var suggestion in QaAiSuggestions)
+        {
+            var customerId = customerIds[suggestion.CustomerName];
+            int? orderId = string.IsNullOrWhiteSpace(suggestion.OrderTitle) ? null : orderIds[suggestion.OrderTitle];
+            int? messageId = string.IsNullOrWhiteSpace(suggestion.MessageRemoteId) ? null : messageIds[suggestion.MessageRemoteId];
+            await UpsertAiSuggestionAsync(connection, transaction, suggestion, customerId, orderId, messageId, now, result, cancellationToken);
+        }
+
+        foreach (var ocrResult in QaOcrResults)
+        {
+            int? customerId = string.IsNullOrWhiteSpace(ocrResult.CustomerName) ? null : customerIds[ocrResult.CustomerName];
+            int? orderId = string.IsNullOrWhiteSpace(ocrResult.OrderTitle) ? null : orderIds[ocrResult.OrderTitle];
+            await UpsertOcrResultAsync(connection, transaction, ocrResult, customerId, orderId, now, result, cancellationToken);
+        }
+
+        foreach (var syncRecord in QaSyncRecords)
+        {
+            int entityId = syncRecord.EntityType switch
+            {
+                "ConversationMessage" => messageIds[syncRecord.EntityRemoteId],
+                _ => throw new InvalidOperationException($"Unsupported QA sync entity type: {syncRecord.EntityType}")
+            };
+
+            await UpsertSyncRecordAsync(connection, transaction, syncRecord, entityId, now, result, cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -648,6 +683,316 @@ public sealed class QaDataSeeder
         result.ActivityLogsInserted++;
     }
 
+    private static async Task<int> UpsertConversationMessageAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        QaConversationMessage message,
+        int customerId,
+        int? orderId,
+        int? dealId,
+        DateTime now,
+        QaSeedResult result,
+        CancellationToken cancellationToken)
+    {
+        var existingId = await GetIdAsync(
+            connection,
+            transaction,
+            $"""
+            SELECT Id
+            FROM ConversationMessages
+            WHERE DeletedAt IS NULL
+              AND (
+                    RemoteId = $remoteId
+                 OR SourceMessageId = $sourceMessageId
+                 OR (Content = $content AND {QaDataScope.BuildConversationMessageSelfPredicate()})
+              )
+            LIMIT 1;
+            """,
+            command =>
+            {
+                command.Parameters.AddWithValue("$remoteId", message.RemoteId);
+                command.Parameters.AddWithValue("$sourceMessageId", message.SourceMessageId);
+                command.Parameters.AddWithValue("$content", message.Content);
+                QaDataScope.AddScopeParameters(command);
+            },
+            cancellationToken);
+
+        if (existingId is int messageId)
+        {
+            await using var update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = """
+                UPDATE ConversationMessages
+                SET CustomerId = $customerId,
+                    OrderId = $orderId,
+                    DealId = $dealId,
+                    Direction = $direction,
+                    Channel = $channel,
+                    SenderName = $senderName,
+                    Content = $content,
+                    MessageTime = $messageTime,
+                    SourceMessageId = $sourceMessageId,
+                    MetadataJson = $metadataJson,
+                    UpdatedAt = $updatedAt,
+                    DeletedAt = NULL,
+                    RemoteId = $remoteId,
+                    IsSynced = 0,
+                    Version = CASE WHEN Version < 1 THEN 1 ELSE Version + 1 END
+                WHERE Id = $id;
+                """;
+            AddConversationMessageParameters(update, message, customerId, orderId, dealId, now);
+            update.Parameters.AddWithValue("$id", messageId);
+            await update.ExecuteNonQueryAsync(cancellationToken);
+            result.ConversationMessagesUpdated++;
+            return messageId;
+        }
+
+        await using var insert = connection.CreateCommand();
+        insert.Transaction = transaction;
+        insert.CommandText = """
+            INSERT INTO ConversationMessages (
+                CustomerId, OrderId, DealId, Direction, Channel, SenderName, Content, MessageTime, SourceMessageId, MetadataJson,
+                CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+            )
+            VALUES (
+                $customerId, $orderId, $dealId, $direction, $channel, $senderName, $content, $messageTime, $sourceMessageId, $metadataJson,
+                $createdAt, $updatedAt, NULL, $remoteId, 0, 1
+            );
+            SELECT last_insert_rowid();
+            """;
+        AddConversationMessageParameters(insert, message, customerId, orderId, dealId, now);
+        var insertedId = Convert.ToInt32(await insert.ExecuteScalarAsync(cancellationToken));
+        result.ConversationMessagesInserted++;
+        return insertedId;
+    }
+
+    private static async Task UpsertAiSuggestionAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        QaAiSuggestion suggestion,
+        int customerId,
+        int? orderId,
+        int? messageId,
+        DateTime now,
+        QaSeedResult result,
+        CancellationToken cancellationToken)
+    {
+        var existingId = await GetIdAsync(
+            connection,
+            transaction,
+            $"""
+            SELECT Id
+            FROM AiSuggestions
+            WHERE DeletedAt IS NULL
+              AND (
+                    RemoteId = $remoteId
+                 OR (SuggestionText = $suggestionText AND {QaDataScope.BuildAiSuggestionSelfPredicate()})
+              )
+            LIMIT 1;
+            """,
+            command =>
+            {
+                command.Parameters.AddWithValue("$remoteId", suggestion.RemoteId);
+                command.Parameters.AddWithValue("$suggestionText", suggestion.SuggestionText);
+                QaDataScope.AddScopeParameters(command);
+            },
+            cancellationToken);
+
+        if (existingId is int suggestionId)
+        {
+            await using var update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = """
+                UPDATE AiSuggestions
+                SET CustomerId = $customerId,
+                    OrderId = $orderId,
+                    MessageId = $messageId,
+                    SuggestionText = $suggestionText,
+                    Reason = $reason,
+                    Confidence = $confidence,
+                    Status = $status,
+                    MetadataJson = $metadataJson,
+                    UpdatedAt = $updatedAt,
+                    DeletedAt = NULL,
+                    RemoteId = $remoteId,
+                    IsSynced = 0,
+                    Version = CASE WHEN Version < 1 THEN 1 ELSE Version + 1 END
+                WHERE Id = $id;
+                """;
+            AddAiSuggestionParameters(update, suggestion, customerId, orderId, messageId, now);
+            update.Parameters.AddWithValue("$id", suggestionId);
+            await update.ExecuteNonQueryAsync(cancellationToken);
+            result.AiSuggestionsUpdated++;
+            return;
+        }
+
+        await using var insert = connection.CreateCommand();
+        insert.Transaction = transaction;
+        insert.CommandText = """
+            INSERT INTO AiSuggestions (
+                CustomerId, OrderId, MessageId, SuggestionText, Reason, Confidence, Status, MetadataJson,
+                CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+            )
+            VALUES (
+                $customerId, $orderId, $messageId, $suggestionText, $reason, $confidence, $status, $metadataJson,
+                $createdAt, $updatedAt, NULL, $remoteId, 0, 1
+            );
+            """;
+        AddAiSuggestionParameters(insert, suggestion, customerId, orderId, messageId, now);
+        await insert.ExecuteNonQueryAsync(cancellationToken);
+        result.AiSuggestionsInserted++;
+    }
+
+    private static async Task UpsertOcrResultAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        QaOcrResult ocrResult,
+        int? customerId,
+        int? orderId,
+        DateTime now,
+        QaSeedResult result,
+        CancellationToken cancellationToken)
+    {
+        var existingId = await GetIdAsync(
+            connection,
+            transaction,
+            $"""
+            SELECT Id
+            FROM OcrResults
+            WHERE DeletedAt IS NULL
+              AND (
+                    RemoteId = $remoteId
+                 OR (SourceName = $sourceName AND {QaDataScope.BuildOcrResultSelfPredicate()})
+              )
+            LIMIT 1;
+            """,
+            command =>
+            {
+                command.Parameters.AddWithValue("$remoteId", ocrResult.RemoteId);
+                command.Parameters.AddWithValue("$sourceName", ocrResult.SourceName);
+                QaDataScope.AddScopeParameters(command);
+            },
+            cancellationToken);
+
+        if (existingId is int ocrResultId)
+        {
+            await using var update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = """
+                UPDATE OcrResults
+                SET CustomerId = $customerId,
+                    OrderId = $orderId,
+                    SourcePath = $sourcePath,
+                    SourceName = $sourceName,
+                    ExtractedText = $extractedText,
+                    Status = $status,
+                    ErrorMessage = $errorMessage,
+                    MetadataJson = $metadataJson,
+                    UpdatedAt = $updatedAt,
+                    DeletedAt = NULL,
+                    RemoteId = $remoteId,
+                    IsSynced = 0,
+                    Version = CASE WHEN Version < 1 THEN 1 ELSE Version + 1 END
+                WHERE Id = $id;
+                """;
+            AddOcrResultParameters(update, ocrResult, customerId, orderId, now);
+            update.Parameters.AddWithValue("$id", ocrResultId);
+            await update.ExecuteNonQueryAsync(cancellationToken);
+            result.OcrResultsUpdated++;
+            return;
+        }
+
+        await using var insert = connection.CreateCommand();
+        insert.Transaction = transaction;
+        insert.CommandText = """
+            INSERT INTO OcrResults (
+                CustomerId, OrderId, SourcePath, SourceName, ExtractedText, Status, ErrorMessage, MetadataJson,
+                CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+            )
+            VALUES (
+                $customerId, $orderId, $sourcePath, $sourceName, $extractedText, $status, $errorMessage, $metadataJson,
+                $createdAt, $updatedAt, NULL, $remoteId, 0, 1
+            );
+            """;
+        AddOcrResultParameters(insert, ocrResult, customerId, orderId, now);
+        await insert.ExecuteNonQueryAsync(cancellationToken);
+        result.OcrResultsInserted++;
+    }
+
+    private static async Task UpsertSyncRecordAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        QaSyncRecord syncRecord,
+        int entityId,
+        DateTime now,
+        QaSeedResult result,
+        CancellationToken cancellationToken)
+    {
+        var existingId = await GetIdAsync(
+            connection,
+            transaction,
+            $"""
+            SELECT Id
+            FROM SyncRecords
+            WHERE DeletedAt IS NULL
+              AND (
+                    (EntityType = $entityType AND EntityId = $entityId)
+                 OR (MetadataJson = $metadataJson AND {QaDataScope.BuildSyncRecordSelfPredicate()})
+              )
+            LIMIT 1;
+            """,
+            command =>
+            {
+                command.Parameters.AddWithValue("$entityType", syncRecord.EntityType);
+                command.Parameters.AddWithValue("$entityId", entityId);
+                command.Parameters.AddWithValue("$metadataJson", BuildQaMetadata(syncRecord.RemoteId));
+                QaDataScope.AddScopeParameters(command);
+            },
+            cancellationToken);
+
+        if (existingId is int syncRecordId)
+        {
+            await using var update = connection.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = """
+                UPDATE SyncRecords
+                SET EntityType = $entityType,
+                    EntityId = $entityId,
+                    RemoteId = '',
+                    SyncStatus = $syncStatus,
+                    LastSyncedAt = $lastSyncedAt,
+                    ErrorMessage = $errorMessage,
+                    MetadataJson = $metadataJson,
+                    UpdatedAt = $updatedAt,
+                    DeletedAt = NULL,
+                    IsSynced = $isSynced,
+                    Version = CASE WHEN Version < 1 THEN 1 ELSE Version + 1 END
+                WHERE Id = $id;
+                """;
+            AddSyncRecordParameters(update, syncRecord, entityId, now);
+            update.Parameters.AddWithValue("$id", syncRecordId);
+            await update.ExecuteNonQueryAsync(cancellationToken);
+            result.SyncRecordsUpdated++;
+            return;
+        }
+
+        await using var insert = connection.CreateCommand();
+        insert.Transaction = transaction;
+        insert.CommandText = """
+            INSERT INTO SyncRecords (
+                EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, MetadataJson,
+                CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
+            )
+            VALUES (
+                $entityType, $entityId, '', $syncStatus, $lastSyncedAt, $errorMessage, $metadataJson,
+                $createdAt, $updatedAt, NULL, $isSynced, 1
+            );
+            """;
+        AddSyncRecordParameters(insert, syncRecord, entityId, now);
+        await insert.ExecuteNonQueryAsync(cancellationToken);
+        result.SyncRecordsInserted++;
+    }
+
     private static void AddCustomerParameters(SqliteCommand command, QaCustomer customer, DateTime now)
     {
         command.Parameters.AddWithValue("$name", customer.Name);
@@ -774,6 +1119,66 @@ public sealed class QaDataSeeder
         command.Parameters.AddWithValue("$remoteId", activity.RemoteId);
     }
 
+    private static void AddConversationMessageParameters(SqliteCommand command, QaConversationMessage message, int customerId, int? orderId, int? dealId, DateTime now)
+    {
+        command.Parameters.AddWithValue("$customerId", customerId);
+        command.Parameters.AddWithValue("$orderId", ToDbInt(orderId));
+        command.Parameters.AddWithValue("$dealId", ToDbInt(dealId));
+        command.Parameters.AddWithValue("$direction", (int)message.Direction);
+        command.Parameters.AddWithValue("$channel", (int)message.Channel);
+        command.Parameters.AddWithValue("$senderName", message.SenderName);
+        command.Parameters.AddWithValue("$content", message.Content);
+        command.Parameters.AddWithValue("$messageTime", now.AddHours(message.MessageOffsetHours).ToString("O"));
+        command.Parameters.AddWithValue("$sourceMessageId", message.SourceMessageId);
+        command.Parameters.AddWithValue("$metadataJson", BuildQaMetadata(message.RemoteId));
+        command.Parameters.AddWithValue("$createdAt", now.AddHours(message.CreatedOffsetHours).ToString("O"));
+        command.Parameters.AddWithValue("$updatedAt", now.ToString("O"));
+        command.Parameters.AddWithValue("$remoteId", message.RemoteId);
+    }
+
+    private static void AddAiSuggestionParameters(SqliteCommand command, QaAiSuggestion suggestion, int customerId, int? orderId, int? messageId, DateTime now)
+    {
+        command.Parameters.AddWithValue("$customerId", customerId);
+        command.Parameters.AddWithValue("$orderId", ToDbInt(orderId));
+        command.Parameters.AddWithValue("$messageId", ToDbInt(messageId));
+        command.Parameters.AddWithValue("$suggestionText", suggestion.SuggestionText);
+        command.Parameters.AddWithValue("$reason", suggestion.Reason);
+        command.Parameters.AddWithValue("$confidence", DBNull.Value);
+        command.Parameters.AddWithValue("$status", (int)suggestion.Status);
+        command.Parameters.AddWithValue("$metadataJson", BuildQaMetadata(suggestion.RemoteId));
+        command.Parameters.AddWithValue("$createdAt", now.AddHours(suggestion.CreatedOffsetHours).ToString("O"));
+        command.Parameters.AddWithValue("$updatedAt", now.ToString("O"));
+        command.Parameters.AddWithValue("$remoteId", suggestion.RemoteId);
+    }
+
+    private static void AddOcrResultParameters(SqliteCommand command, QaOcrResult ocrResult, int? customerId, int? orderId, DateTime now)
+    {
+        command.Parameters.AddWithValue("$customerId", ToDbInt(customerId));
+        command.Parameters.AddWithValue("$orderId", ToDbInt(orderId));
+        command.Parameters.AddWithValue("$sourcePath", ocrResult.SourcePath);
+        command.Parameters.AddWithValue("$sourceName", ocrResult.SourceName);
+        command.Parameters.AddWithValue("$extractedText", ocrResult.ExtractedText);
+        command.Parameters.AddWithValue("$status", (int)ocrResult.Status);
+        command.Parameters.AddWithValue("$errorMessage", ocrResult.ErrorMessage);
+        command.Parameters.AddWithValue("$metadataJson", BuildQaMetadata(ocrResult.RemoteId));
+        command.Parameters.AddWithValue("$createdAt", now.AddHours(ocrResult.CreatedOffsetHours).ToString("O"));
+        command.Parameters.AddWithValue("$updatedAt", now.ToString("O"));
+        command.Parameters.AddWithValue("$remoteId", ocrResult.RemoteId);
+    }
+
+    private static void AddSyncRecordParameters(SqliteCommand command, QaSyncRecord syncRecord, int entityId, DateTime now)
+    {
+        command.Parameters.AddWithValue("$entityType", syncRecord.EntityType);
+        command.Parameters.AddWithValue("$entityId", entityId);
+        command.Parameters.AddWithValue("$syncStatus", (int)syncRecord.Status);
+        command.Parameters.AddWithValue("$lastSyncedAt", syncRecord.Status == SyncStatus.Synced ? now.ToString("O") : DBNull.Value);
+        command.Parameters.AddWithValue("$errorMessage", syncRecord.ErrorMessage);
+        command.Parameters.AddWithValue("$metadataJson", BuildQaMetadata(syncRecord.RemoteId));
+        command.Parameters.AddWithValue("$createdAt", now.AddHours(syncRecord.CreatedOffsetHours).ToString("O"));
+        command.Parameters.AddWithValue("$updatedAt", now.ToString("O"));
+        command.Parameters.AddWithValue("$isSynced", syncRecord.Status == SyncStatus.Synced ? 1 : 0);
+    }
+
     private static async Task<int?> GetIdAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
@@ -799,6 +1204,11 @@ public sealed class QaDataSeeder
         return value is null ? DBNull.Value : value.Value.ToString("O");
     }
 
+    private static string BuildQaMetadata(string key)
+    {
+        return QaDataScope.EnsureActivityMetadataTagged(string.Empty, "seed", key);
+    }
+
     public sealed class QaSeedResult
     {
         public int CustomersInserted { get; internal set; }
@@ -815,10 +1225,18 @@ public sealed class QaDataSeeder
         public int PriceAdjustmentsUpdated { get; internal set; }
         public int ActivityLogsInserted { get; internal set; }
         public int ActivityLogsUpdated { get; internal set; }
+        public int ConversationMessagesInserted { get; internal set; }
+        public int ConversationMessagesUpdated { get; internal set; }
+        public int AiSuggestionsInserted { get; internal set; }
+        public int AiSuggestionsUpdated { get; internal set; }
+        public int OcrResultsInserted { get; internal set; }
+        public int OcrResultsUpdated { get; internal set; }
+        public int SyncRecordsInserted { get; internal set; }
+        public int SyncRecordsUpdated { get; internal set; }
 
         public override string ToString()
         {
-            return $"customers +{CustomersInserted}/~{CustomersUpdated}, deals +{DealsInserted}/~{DealsUpdated}, orders +{OrdersInserted}/~{OrdersUpdated}, followUps +{FollowUpsInserted}/~{FollowUpsUpdated}, notes +{NotesInserted}/~{NotesUpdated}, priceAdjustments +{PriceAdjustmentsInserted}/~{PriceAdjustmentsUpdated}, activityLogs +{ActivityLogsInserted}/~{ActivityLogsUpdated}";
+            return $"customers +{CustomersInserted}/~{CustomersUpdated}, deals +{DealsInserted}/~{DealsUpdated}, orders +{OrdersInserted}/~{OrdersUpdated}, followUps +{FollowUpsInserted}/~{FollowUpsUpdated}, notes +{NotesInserted}/~{NotesUpdated}, priceAdjustments +{PriceAdjustmentsInserted}/~{PriceAdjustmentsUpdated}, activityLogs +{ActivityLogsInserted}/~{ActivityLogsUpdated}, conversationMessages +{ConversationMessagesInserted}/~{ConversationMessagesUpdated}, aiSuggestions +{AiSuggestionsInserted}/~{AiSuggestionsUpdated}, ocrResults +{OcrResultsInserted}/~{OcrResultsUpdated}, syncRecords +{SyncRecordsInserted}/~{SyncRecordsUpdated}";
         }
     }
 
@@ -905,6 +1323,48 @@ public sealed class QaDataSeeder
         string Description,
         int CreatedOffsetHours);
 
+    private sealed record QaConversationMessage(
+        string RemoteId,
+        string SourceMessageId,
+        string CustomerName,
+        string? OrderTitle,
+        string? DealTitle,
+        MessageDirection Direction,
+        MessageChannel Channel,
+        string SenderName,
+        string Content,
+        int CreatedOffsetHours,
+        int MessageOffsetHours);
+
+    private sealed record QaAiSuggestion(
+        string RemoteId,
+        string CustomerName,
+        string? OrderTitle,
+        string MessageRemoteId,
+        string SuggestionText,
+        string Reason,
+        AiSuggestionStatus Status,
+        int CreatedOffsetHours);
+
+    private sealed record QaOcrResult(
+        string RemoteId,
+        string? CustomerName,
+        string? OrderTitle,
+        string SourcePath,
+        string SourceName,
+        string ExtractedText,
+        OcrStatus Status,
+        string ErrorMessage,
+        int CreatedOffsetHours);
+
+    private sealed record QaSyncRecord(
+        string RemoteId,
+        string EntityType,
+        string EntityRemoteId,
+        SyncStatus Status,
+        string ErrorMessage,
+        int CreatedOffsetHours);
+
     private static readonly QaCustomer[] QaCustomers =
     [
         new("p13qa-customer-a", "p13qa-customer-a", $"{QaMarker} 客户-A", CustomerStatus.Active, CustomerPriority.High, "微信", "私域咨询", "p13qa_customer_a", "13800130001", $"{QaMarker} 用于验证 FollowUp 完成/延期/取消、状态切换和备注模板。", -7, 10),
@@ -957,5 +1417,25 @@ public sealed class QaDataSeeder
         new("p13qa-activity-008", $"{QaMarker} 客户-A", $"{QaMarker} 订单-待处理", $"{QaMarker} Deal-当前推进", ActivityType.DealStageChanged, $"{QaMarker} Deal 阶段变化", $"{QaMarker} Deal-当前推进已切换到 Negotiating。", -16),
         new("p13qa-activity-009", $"{QaMarker} 客户-A", $"{QaMarker} 订单-需跟进", $"{QaMarker} Deal-当前推进", ActivityType.FollowUpSnoozed, $"{QaMarker} 跟进延期", $"{QaMarker} 逾期跟进已从昨天延后到今日。", -14),
         new("p13qa-activity-010", $"{QaMarker} 客户-B", $"{QaMarker} 订单-已成交", $"{QaMarker} Deal-已成交", ActivityType.FollowUpCompleted, $"{QaMarker} 跟进完成", $"{QaMarker} 已完成跟进进入终态。", -12)
+    ];
+
+    private static readonly QaConversationMessage[] QaConversationMessages =
+    [
+        new("p2qa-message-001", "p2qa-source-message-001", $"{QaMarker} 客户-A", $"{QaMarker} 订单-待处理", $"{QaMarker} Deal-当前推进", MessageDirection.Incoming, MessageChannel.Manual, $"{QaDataScope.P2DisplayMarker} 客户-A", $"{QaDataScope.P2DisplayMarker} 你好，我想先确认尺寸和交付时间。", -8, -8)
+    ];
+
+    private static readonly QaAiSuggestion[] QaAiSuggestions =
+    [
+        new("p2qa-suggestion-001", $"{QaMarker} 客户-A", $"{QaMarker} 订单-待处理", "p2qa-message-001", $"{QaDataScope.P2DisplayMarker} 【Local Stub】这是本地模拟回复建议，后续将接入真实 AI。", $"{QaDataScope.P2DisplayMarker} 本地 Stub 建议，仅用于 QA 验证。", AiSuggestionStatus.Draft, -7)
+    ];
+
+    private static readonly QaOcrResult[] QaOcrResults =
+    [
+        new("p2qa-ocr-001", $"{QaMarker} 客户-A", $"{QaMarker} 订单-待处理", "qa/p2qa/sample-ocr.png", $"{QaDataScope.P2DisplayMarker} OCR 样本", string.Empty, OcrStatus.Pending, string.Empty, -6)
+    ];
+
+    private static readonly QaSyncRecord[] QaSyncRecords =
+    [
+        new("p2qa-sync-001", "ConversationMessage", "p2qa-message-001", SyncStatus.Pending, string.Empty, -5)
     ];
 }

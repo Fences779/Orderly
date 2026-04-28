@@ -12,6 +12,10 @@ public sealed class QaDataMaintenanceService
     private static readonly string NotePredicate = QaDataScope.BuildNoteScopePredicate();
     private static readonly string PriceAdjustmentPredicate = QaDataScope.BuildPriceAdjustmentScopePredicate();
     private static readonly string ActivityLogPredicate = QaDataScope.BuildActivityLogScopePredicate();
+    private static readonly string ConversationMessagePredicate = QaDataScope.BuildConversationMessageScopePredicate();
+    private static readonly string AiSuggestionPredicate = QaDataScope.BuildAiSuggestionScopePredicate();
+    private static readonly string OcrResultPredicate = QaDataScope.BuildOcrResultScopePredicate();
+    private static readonly string SyncRecordPredicate = QaDataScope.BuildSyncRecordScopePredicate();
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -67,6 +71,10 @@ public sealed class QaDataMaintenanceService
 
         var result = new QaDataClearResult
         {
+            SyncRecordsDeleted = await DeleteAsync(connection, transaction, "SyncRecords", SyncRecordPredicate, cancellationToken),
+            AiSuggestionsDeleted = await DeleteAsync(connection, transaction, "AiSuggestions", AiSuggestionPredicate, cancellationToken),
+            OcrResultsDeleted = await DeleteAsync(connection, transaction, "OcrResults", OcrResultPredicate, cancellationToken),
+            ConversationMessagesDeleted = await DeleteAsync(connection, transaction, "ConversationMessages", ConversationMessagePredicate, cancellationToken),
             ActivityLogsDeleted = await DeleteAsync(connection, transaction, "ActivityLogs", ActivityLogPredicate, cancellationToken),
             PriceAdjustmentsDeleted = await DeleteAsync(connection, transaction, "PriceAdjustments", PriceAdjustmentPredicate, cancellationToken),
             NotesDeleted = await DeleteAsync(connection, transaction, "CustomerNotes", NotePredicate, cancellationToken),
@@ -103,7 +111,11 @@ public sealed class QaDataMaintenanceService
             await CountAsync(connection, transaction, "FollowUps", FollowUpPredicate, cancellationToken),
             await CountAsync(connection, transaction, "CustomerNotes", NotePredicate, cancellationToken),
             await CountAsync(connection, transaction, "PriceAdjustments", PriceAdjustmentPredicate, cancellationToken),
-            await CountAsync(connection, transaction, "ActivityLogs", ActivityLogPredicate, cancellationToken));
+            await CountAsync(connection, transaction, "ActivityLogs", ActivityLogPredicate, cancellationToken),
+            await CountAsync(connection, transaction, "ConversationMessages", ConversationMessagePredicate, cancellationToken),
+            await CountAsync(connection, transaction, "AiSuggestions", AiSuggestionPredicate, cancellationToken),
+            await CountAsync(connection, transaction, "OcrResults", OcrResultPredicate, cancellationToken),
+            await CountAsync(connection, transaction, "SyncRecords", SyncRecordPredicate, cancellationToken));
     }
 
     private static async Task<int> CountAsync(
@@ -150,7 +162,11 @@ public sealed class QaDataMaintenanceService
         int FollowUpsCount,
         int NotesCount,
         int PriceAdjustmentsCount,
-        int ActivityLogsCount)
+        int ActivityLogsCount,
+        int ConversationMessagesCount,
+        int AiSuggestionsCount,
+        int OcrResultsCount,
+        int SyncRecordsCount)
     {
         public override string ToString()
         {
@@ -163,7 +179,11 @@ public sealed class QaDataMaintenanceService
                     $"QA FollowUps count: {FollowUpsCount}",
                     $"QA Notes count: {NotesCount}",
                     $"QA PriceAdjustments count: {PriceAdjustmentsCount}",
-                    $"QA ActivityLogs count: {ActivityLogsCount}"
+                    $"QA ActivityLogs count: {ActivityLogsCount}",
+                    $"QA ConversationMessages count: {ConversationMessagesCount}",
+                    $"QA AiSuggestions count: {AiSuggestionsCount}",
+                    $"QA OcrResults count: {OcrResultsCount}",
+                    $"QA SyncRecords count: {SyncRecordsCount}"
                 ]);
         }
     }
@@ -177,12 +197,20 @@ public sealed class QaDataMaintenanceService
         public int NotesDeleted { get; init; }
         public int PriceAdjustmentsDeleted { get; init; }
         public int ActivityLogsDeleted { get; init; }
-        public QaDataStatus Status { get; set; } = new(0, 0, 0, 0, 0, 0, 0);
+        public int ConversationMessagesDeleted { get; init; }
+        public int AiSuggestionsDeleted { get; init; }
+        public int OcrResultsDeleted { get; init; }
+        public int SyncRecordsDeleted { get; init; }
+        public QaDataStatus Status { get; set; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
         public override string ToString()
         {
             var lines = new List<string>
             {
+                $"QA clear deleted syncRecords: {SyncRecordsDeleted}",
+                $"QA clear deleted aiSuggestions: {AiSuggestionsDeleted}",
+                $"QA clear deleted ocrResults: {OcrResultsDeleted}",
+                $"QA clear deleted conversationMessages: {ConversationMessagesDeleted}",
                 $"QA clear deleted customers: {CustomersDeleted}",
                 $"QA clear deleted orders: {OrdersDeleted}",
                 $"QA clear deleted deals: {DealsDeleted}",

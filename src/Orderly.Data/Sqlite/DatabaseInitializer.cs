@@ -163,6 +163,94 @@ public sealed class DatabaseInitializer
             """, cancellationToken);
 
         await ExecuteAsync(connection, """
+            CREATE TABLE IF NOT EXISTS ConversationMessages (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                CustomerId INTEGER NOT NULL,
+                OrderId INTEGER NULL,
+                DealId INTEGER NULL,
+                Direction INTEGER NOT NULL,
+                Channel INTEGER NOT NULL,
+                SenderName TEXT NOT NULL DEFAULT '',
+                Content TEXT NOT NULL DEFAULT '',
+                MessageTime TEXT NOT NULL,
+                SourceMessageId TEXT NOT NULL DEFAULT '',
+                MetadataJson TEXT NOT NULL DEFAULT '',
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                DeletedAt TEXT NULL,
+                RemoteId TEXT NOT NULL DEFAULT '',
+                IsSynced INTEGER NOT NULL DEFAULT 0,
+                Version INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY (CustomerId) REFERENCES Customers(Id) ON DELETE CASCADE,
+                FOREIGN KEY (OrderId) REFERENCES Orders(Id) ON DELETE SET NULL,
+                FOREIGN KEY (DealId) REFERENCES Deals(Id) ON DELETE SET NULL
+            );
+            """, cancellationToken);
+
+        await ExecuteAsync(connection, """
+            CREATE TABLE IF NOT EXISTS AiSuggestions (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                CustomerId INTEGER NOT NULL,
+                OrderId INTEGER NULL,
+                MessageId INTEGER NULL,
+                SuggestionText TEXT NOT NULL DEFAULT '',
+                Reason TEXT NOT NULL DEFAULT '',
+                Confidence REAL NULL,
+                Status INTEGER NOT NULL,
+                MetadataJson TEXT NOT NULL DEFAULT '',
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                DeletedAt TEXT NULL,
+                RemoteId TEXT NOT NULL DEFAULT '',
+                IsSynced INTEGER NOT NULL DEFAULT 0,
+                Version INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY (CustomerId) REFERENCES Customers(Id) ON DELETE CASCADE,
+                FOREIGN KEY (OrderId) REFERENCES Orders(Id) ON DELETE SET NULL,
+                FOREIGN KEY (MessageId) REFERENCES ConversationMessages(Id) ON DELETE SET NULL
+            );
+            """, cancellationToken);
+
+        await ExecuteAsync(connection, """
+            CREATE TABLE IF NOT EXISTS OcrResults (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                CustomerId INTEGER NULL,
+                OrderId INTEGER NULL,
+                SourcePath TEXT NOT NULL DEFAULT '',
+                SourceName TEXT NOT NULL DEFAULT '',
+                ExtractedText TEXT NOT NULL DEFAULT '',
+                Status INTEGER NOT NULL,
+                ErrorMessage TEXT NOT NULL DEFAULT '',
+                MetadataJson TEXT NOT NULL DEFAULT '',
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                DeletedAt TEXT NULL,
+                RemoteId TEXT NOT NULL DEFAULT '',
+                IsSynced INTEGER NOT NULL DEFAULT 0,
+                Version INTEGER NOT NULL DEFAULT 1,
+                FOREIGN KEY (CustomerId) REFERENCES Customers(Id) ON DELETE SET NULL,
+                FOREIGN KEY (OrderId) REFERENCES Orders(Id) ON DELETE SET NULL
+            );
+            """, cancellationToken);
+
+        await ExecuteAsync(connection, """
+            CREATE TABLE IF NOT EXISTS SyncRecords (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                EntityType TEXT NOT NULL DEFAULT '',
+                EntityId INTEGER NOT NULL,
+                RemoteId TEXT NOT NULL DEFAULT '',
+                SyncStatus INTEGER NOT NULL,
+                LastSyncedAt TEXT NULL,
+                ErrorMessage TEXT NOT NULL DEFAULT '',
+                MetadataJson TEXT NOT NULL DEFAULT '',
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                DeletedAt TEXT NULL,
+                IsSynced INTEGER NOT NULL DEFAULT 0,
+                Version INTEGER NOT NULL DEFAULT 1
+            );
+            """, cancellationToken);
+
+        await ExecuteAsync(connection, """
             CREATE TABLE IF NOT EXISTS PriceAdjustments (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 CustomerId INTEGER NOT NULL,

@@ -17,5 +17,12 @@ public enum ActivityType
     SyncCompleted = 12,
     FollowUpSnoozed = 13,
     FollowUpCancelled = 14,
-    CustomerStatusChanged = 15
+    CustomerStatusChanged = 15,
+    ConversationMessageAdded = 16,
+    AiSuggestionGenerated = 17,
+    OcrTaskCreated = 18,
+    OcrTaskCompleted = 19,
+    OcrTaskFailed = 20,
+    AutoReplyDraftPrepared = 21,
+    SyncFailed = 22
 }

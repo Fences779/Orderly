@@ -29,6 +29,13 @@ public sealed class ActivityLog : EntityBase
         ActivityType.SyncCompleted => "同步完成",
         ActivityType.FollowUpSnoozed => "跟进延期",
         ActivityType.FollowUpCancelled => "跟进取消",
+        ActivityType.ConversationMessageAdded => "新增会话消息",
+        ActivityType.AiSuggestionGenerated => "生成 AI 建议",
+        ActivityType.OcrTaskCreated => "创建 OCR 任务",
+        ActivityType.OcrTaskCompleted => "OCR 完成",
+        ActivityType.OcrTaskFailed => "OCR 失败",
+        ActivityType.AutoReplyDraftPrepared => "生成回复草稿",
+        ActivityType.SyncFailed => "同步失败",
         _ => Type.ToString()
     };
 }

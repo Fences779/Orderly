@@ -46,11 +46,15 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
   - AddNote 模板插入后真实保存。
   - SQLite 中订单、备注、运行态 ActivityLog 回读。
   - smoke 结束后恢复 QA 基线。
+- 额外说明：
+  - P2.0 已纳入 QA 数据状态/清理/重置的表级维护范围：`ConversationMessages / AiSuggestions / OcrResults / SyncRecords`。
+  - `run-p1-smoke.ps1` 仍然只承担 P1 回归保护，不证明 P2.0 功能通过。
 - 不覆盖：
   - 登录流程。
   - 搜索 / 筛选、FollowUp 完成 / 延期 / 取消、Deal 推进、状态切换的完整端到端动作。
   - 托盘、快捷键、悬浮窗。
   - 视觉比对、125% 缩放。
+  - P2.0 新表的 CRUD、Stub 状态迁移、真实 AI/OCR/同步能力。
 
 ## 失败排查
 

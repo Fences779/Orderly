@@ -8,12 +8,14 @@ internal static class QaDataScope
 {
     public const string CurrentTag = "p13qa";
     public const string CurrentDisplayMarker = "[P1.3_QA]";
+    public const string P2DisplayMarker = "[P2_QA]";
 
-    private static readonly string[] QaRemoteIdPrefixes = ["p13qa-"];
-    private static readonly string[] QaExternalIdPrefixes = ["p13qa-"];
+    private static readonly string[] QaRemoteIdPrefixes = ["p13qa-", "p2qa-"];
+    private static readonly string[] QaExternalIdPrefixes = ["p13qa-", "p2qa-"];
     private static readonly string[] LegacyTextMarkers =
     [
         CurrentDisplayMarker,
+        P2DisplayMarker,
         "[P1.4.1_QA]",
         "[P1_QA_RUNTIME]",
         "【P。3——QA"
@@ -78,6 +80,49 @@ internal static class QaDataScope
             BuildMetadataClause(Qualify(alias, "MetadataJson")));
     }
 
+    public static string BuildConversationMessageSelfPredicate(string alias = "")
+    {
+        return BuildAny(
+            BuildGlobClause(Qualify(alias, "RemoteId"), "$qaRemotePattern", QaRemoteIdPrefixes.Length),
+            BuildMarkerClause(Qualify(alias, "SenderName")),
+            BuildMarkerClause(Qualify(alias, "Content")),
+            BuildMarkerClause(Qualify(alias, "SourceMessageId")),
+            BuildMarkerClause(Qualify(alias, "MetadataJson")),
+            BuildMetadataClause(Qualify(alias, "MetadataJson")));
+    }
+
+    public static string BuildAiSuggestionSelfPredicate(string alias = "")
+    {
+        return BuildAny(
+            BuildGlobClause(Qualify(alias, "RemoteId"), "$qaRemotePattern", QaRemoteIdPrefixes.Length),
+            BuildMarkerClause(Qualify(alias, "SuggestionText")),
+            BuildMarkerClause(Qualify(alias, "Reason")),
+            BuildMarkerClause(Qualify(alias, "MetadataJson")),
+            BuildMetadataClause(Qualify(alias, "MetadataJson")));
+    }
+
+    public static string BuildOcrResultSelfPredicate(string alias = "")
+    {
+        return BuildAny(
+            BuildGlobClause(Qualify(alias, "RemoteId"), "$qaRemotePattern", QaRemoteIdPrefixes.Length),
+            BuildMarkerClause(Qualify(alias, "SourcePath")),
+            BuildMarkerClause(Qualify(alias, "SourceName")),
+            BuildMarkerClause(Qualify(alias, "ExtractedText")),
+            BuildMarkerClause(Qualify(alias, "ErrorMessage")),
+            BuildMarkerClause(Qualify(alias, "MetadataJson")),
+            BuildMetadataClause(Qualify(alias, "MetadataJson")));
+    }
+
+    public static string BuildSyncRecordSelfPredicate(string alias = "")
+    {
+        return BuildAny(
+            BuildGlobClause(Qualify(alias, "RemoteId"), "$qaRemotePattern", QaRemoteIdPrefixes.Length),
+            BuildMarkerClause(Qualify(alias, "EntityType")),
+            BuildMarkerClause(Qualify(alias, "ErrorMessage")),
+            BuildMarkerClause(Qualify(alias, "MetadataJson")),
+            BuildMetadataClause(Qualify(alias, "MetadataJson")));
+    }
+
     public static string BuildCustomerScopePredicate(string alias = "")
     {
         return BuildCustomerSelfPredicate(alias);
@@ -111,6 +156,44 @@ internal static class QaDataScope
     public static string BuildActivityLogScopePredicate(string alias = "")
     {
         return BuildActivityLogSelfPredicate(alias);
+    }
+
+    public static string BuildConversationMessageScopePredicate(string alias = "")
+    {
+        return BuildAny(
+            BuildConversationMessageSelfPredicate(alias),
+            $"{Qualify(alias, "CustomerId")} IN ({BuildQaCustomerIdSet()})",
+            $"{Qualify(alias, "DealId")} IN ({BuildQaDealIdSet()})",
+            $"{Qualify(alias, "OrderId")} IN ({BuildQaOrderIdSet()})");
+    }
+
+    public static string BuildAiSuggestionScopePredicate(string alias = "")
+    {
+        return BuildAny(
+            BuildAiSuggestionSelfPredicate(alias),
+            $"{Qualify(alias, "CustomerId")} IN ({BuildQaCustomerIdSet()})",
+            $"{Qualify(alias, "OrderId")} IN ({BuildQaOrderIdSet()})",
+            $"{Qualify(alias, "MessageId")} IN ({BuildQaConversationMessageIdSet()})");
+    }
+
+    public static string BuildOcrResultScopePredicate(string alias = "")
+    {
+        return BuildAny(
+            BuildOcrResultSelfPredicate(alias),
+            $"{Qualify(alias, "CustomerId")} IN ({BuildQaCustomerIdSet()})",
+            $"{Qualify(alias, "OrderId")} IN ({BuildQaOrderIdSet()})");
+    }
+
+    public static string BuildSyncRecordScopePredicate(string alias = "")
+    {
+        return BuildAny(
+            BuildSyncRecordSelfPredicate(alias),
+            BuildEntityAssociationClause(alias, "Customer", BuildQaCustomerIdSet()),
+            BuildEntityAssociationClause(alias, "Deal", BuildQaDealIdSet()),
+            BuildEntityAssociationClause(alias, "Order", BuildQaOrderIdSet()),
+            BuildEntityAssociationClause(alias, "ConversationMessage", BuildQaConversationMessageIdSet()),
+            BuildEntityAssociationClause(alias, "AiSuggestion", BuildQaAiSuggestionIdSet()),
+            BuildEntityAssociationClause(alias, "OcrResult", BuildQaOcrResultIdSet()));
     }
 
     public static string BuildCustomerAssociationPredicate(string alias = "")
@@ -219,6 +302,21 @@ internal static class QaDataScope
         return $"SELECT Id FROM Orders WHERE {BuildOrderSelfPredicate("Orders")} OR Orders.CustomerId IN ({BuildQaCustomerIdSet()}) OR Orders.DealId IN ({BuildQaDealIdSet()})";
     }
 
+    private static string BuildQaConversationMessageIdSet()
+    {
+        return $"SELECT Id FROM ConversationMessages WHERE {BuildConversationMessageScopePredicate("ConversationMessages")}";
+    }
+
+    private static string BuildQaAiSuggestionIdSet()
+    {
+        return $"SELECT Id FROM AiSuggestions WHERE {BuildAiSuggestionScopePredicate("AiSuggestions")}";
+    }
+
+    private static string BuildQaOcrResultIdSet()
+    {
+        return $"SELECT Id FROM OcrResults WHERE {BuildOcrResultScopePredicate("OcrResults")}";
+    }
+
     private static string BuildGlobClause(string column, string parameterBase, int count)
     {
         return BuildJoinedClause(column, parameterBase, count, parameterName => $"ifnull({column}, '') GLOB {parameterName}");
@@ -261,6 +359,11 @@ internal static class QaDataScope
     private static string BuildAny(params string[] clauses)
     {
         return $"({string.Join(" OR ", clauses.Where(static clause => !string.IsNullOrWhiteSpace(clause)))})";
+    }
+
+    private static string BuildEntityAssociationClause(string alias, string entityType, string idSet)
+    {
+        return $"({Qualify(alias, "EntityType")} = '{entityType}' AND {Qualify(alias, "EntityId")} IN ({idSet}))";
     }
 
     private static string Qualify(string alias, string column)

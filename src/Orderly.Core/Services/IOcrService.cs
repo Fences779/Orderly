@@ -1,6 +1,11 @@
+using Orderly.Core.Models;
+
 namespace Orderly.Core.Services;
 
 public interface IOcrService
 {
-    Task<string> RecognizeAsync(string filePath, CancellationToken cancellationToken = default);
+    Task<OcrResult> CreateOcrTaskAsync(OcrResult result, CancellationToken cancellationToken = default);
+    Task<OcrResult?> CompleteOcrTaskAsync(int id, string extractedText, CancellationToken cancellationToken = default);
+    Task<OcrResult?> FailOcrTaskAsync(int id, string errorMessage, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OcrResult>> ListByCustomerAsync(int customerId, CancellationToken cancellationToken = default);
 }
