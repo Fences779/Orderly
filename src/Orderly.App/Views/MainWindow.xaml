@@ -644,6 +644,78 @@
                                 <Border Style="{StaticResource SectionBlockBorderStyle}">
                                     <StackPanel>
                                         <DockPanel Margin="0,0,0,10">
+                                            <TextBlock Text="消息 / 沟通记录" Style="{StaticResource SectionHeaderTextStyle}" />
+                                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
+                                                <TextBlock Text="{Binding ConversationMessagesCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
+                                            </Border>
+                                        </DockPanel>
+                                        <TextBlock Text="最小入口：默认按客户来消息手工录入，仅用于沉淀上下文，不连接真实 AI / OCR / 自动发送。"
+                                                   Foreground="{StaticResource SecondaryTextBrush}"
+                                                   TextWrapping="Wrap"
+                                                   LineHeight="20" />
+                                        <Border Background="#F8F6F0" CornerRadius="8" Padding="10" Margin="0,10,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding SelectedConversationContextText}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
+                                                <TextBox x:Name="Input_ConversationMessage"
+                                                         AutomationProperties.AutomationId="Input_ConversationMessage"
+                                                         Margin="0,8,0,0"
+                                                         MinHeight="80"
+                                                         AcceptsReturn="True"
+                                                         TextWrapping="Wrap"
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         Text="{Binding ConversationMessageInput, UpdateSourceTrigger=PropertyChanged}" />
+                                                <Button x:Name="Btn_AddConversationMessage"
+                                                        AutomationProperties.AutomationId="Btn_AddConversationMessage"
+                                                        Content="保存沟通记录"
+                                                        Command="{Binding AddConversationMessageCommand}"
+                                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
+                                                        Margin="0,10,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                        <TextBlock Text="当前上下文还没有沟通记录" Margin="0,12,0,6">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasConversationMessages}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <ListBox ItemsSource="{Binding ConversationMessages}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
+                                            <ListBox.Style>
+                                                <Style TargetType="ListBox">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasConversationMessages}" Value="False">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ListBox.Style>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource ListItemBorderStyle}">
+                                                        <StackPanel>
+                                                            <DockPanel>
+                                                                <TextBlock Text="{Binding SenderName}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                                                <TextBlock DockPanel.Dock="Right" Text="{Binding MessageTimeText}" Foreground="{StaticResource SecondaryTextBrush}" />
+                                                            </DockPanel>
+                                                            <TextBlock Text="{Binding MetaText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0" />
+                                                            <TextBlock Text="{Binding Content}" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource SectionBlockBorderStyle}">
+                                    <StackPanel>
+                                        <DockPanel Margin="0,0,0,10">
                                             <TextBlock Text="ActivityLog" Style="{StaticResource SectionHeaderTextStyle}" />
                                             <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
                                                 <TextBlock Text="{Binding ActivityLogsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />

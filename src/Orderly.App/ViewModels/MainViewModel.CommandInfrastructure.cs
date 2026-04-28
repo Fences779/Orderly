@@ -94,6 +94,13 @@ public partial class MainViewModel
         return SelectedCustomer is not null && SelectedOrder is not null && !IsBusy;
     }
 
+    private bool CanAddConversationMessage()
+    {
+        return SelectedCustomer is not null
+            && !IsBusy
+            && !string.IsNullOrWhiteSpace(ConversationMessageInput);
+    }
+
     private bool CanChangeDealStage()
     {
         return SelectedCustomer is not null && !IsBusy;

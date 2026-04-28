@@ -33,6 +33,11 @@ public partial class MainViewModel
     public string SelectedExternalIdText => string.IsNullOrWhiteSpace(SelectedOrder?.ExternalId)
         ? "未关联外部ID"
         : SelectedOrder.ExternalId;
+    public string SelectedConversationContextText => SelectedOrder is not null
+        ? $"当前订单：{SelectedOrder.Title}"
+        : SelectedCustomer is not null
+            ? $"当前客户：{SelectedCustomer.Name}"
+            : "请先选择客户或订单";
     public string CustomerRemarkText => string.IsNullOrWhiteSpace(SelectedCustomer?.Remark)
         ? "暂无客户备注"
         : SelectedCustomer.Remark;
@@ -45,6 +50,7 @@ public partial class MainViewModel
     public bool HasDeals => Deals.Count > 0;
     public bool HasFollowUps => FollowUps.Count > 0;
     public bool HasCustomerNotes => CustomerNotes.Count > 0;
+    public bool HasConversationMessages => ConversationMessages.Count > 0;
     public bool HasPriceAdjustments => PriceAdjustments.Count > 0;
     public bool HasActivityLogs => ActivityLogs.Count > 0;
     public bool HasCustomers => Customers.Count > 0;
@@ -52,6 +58,7 @@ public partial class MainViewModel
     public int DealsCount => Deals.Count;
     public int FollowUpsCount => FollowUps.Count;
     public int CustomerNotesCount => CustomerNotes.Count;
+    public int ConversationMessagesCount => ConversationMessages.Count;
     public int PriceAdjustmentsCount => PriceAdjustments.Count;
     public int ActivityLogsCount => ActivityLogs.Count;
     public bool IsBusy => IsLoading || IsSaving;
@@ -73,6 +80,7 @@ public partial class MainViewModel
         Deals.Clear();
         FollowUps.Clear();
         CustomerNotes.Clear();
+        ConversationMessages.Clear();
         PriceAdjustments.Clear();
         ActivityLogs.Clear();
         SelectedDeal = null;
@@ -99,11 +107,13 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasDeals));
         OnPropertyChanged(nameof(HasFollowUps));
         OnPropertyChanged(nameof(HasCustomerNotes));
+        OnPropertyChanged(nameof(HasConversationMessages));
         OnPropertyChanged(nameof(HasPriceAdjustments));
         OnPropertyChanged(nameof(HasActivityLogs));
         OnPropertyChanged(nameof(DealsCount));
         OnPropertyChanged(nameof(FollowUpsCount));
         OnPropertyChanged(nameof(CustomerNotesCount));
+        OnPropertyChanged(nameof(ConversationMessagesCount));
         OnPropertyChanged(nameof(PriceAdjustmentsCount));
         OnPropertyChanged(nameof(ActivityLogsCount));
     }

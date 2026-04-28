@@ -70,6 +70,7 @@ public partial class MainViewModel
             var deals = await _dealService.GetCustomerDealsAsync(customer.Id);
             var followUps = await _followUpService.GetCustomerFollowUpsAsync(customer.Id);
             var notes = await _noteService.GetCustomerNotesAsync(customer.Id);
+            var messages = await LoadConversationMessagesAsync(customer);
             var adjustments = await _priceAdjustmentService.GetCustomerAdjustmentsAsync(customer.Id);
             var activities = await _activityLogService.GetCustomerActivitiesAsync(customer.Id);
 
@@ -81,6 +82,7 @@ public partial class MainViewModel
             ReplaceCollection(Deals, deals);
             ReplaceCollection(FollowUps, followUps.OrderByDescending(followUp => followUp.ScheduledAt));
             ReplaceCollection(CustomerNotes, notes.OrderByDescending(note => note.CreatedAt));
+            ReplaceCollection(ConversationMessages, messages);
             ReplaceCollection(PriceAdjustments, adjustments.OrderByDescending(adjustment => adjustment.CreatedAt));
             ReplaceCollection(ActivityLogs, activities.OrderByDescending(activity => activity.CreatedAt));
 
@@ -119,5 +121,26 @@ public partial class MainViewModel
     private Task ReloadSelectedCustomerDetailsAsync(Customer? customer = null)
     {
         return LoadSelectedCustomerDetailsAsync(customer ?? SelectedCustomer);
+    }
+
+    private async Task<IEnumerable<ConversationMessageListItem>> LoadConversationMessagesAsync(Customer customer)
+    {
+        var order = SelectedOrder;
+        IReadOnlyList<ConversationMessage> messages;
+
+        if (order is not null && order.CustomerId == customer.Id)
+        {
+            messages = await _conversationService.ListByOrderAsync(order.Id);
+        }
+        else
+        {
+            messages = await _conversationService.ListByCustomerAsync(customer.Id);
+        }
+
+        return messages
+            .OrderByDescending(message => message.MessageTime)
+            .ThenByDescending(message => message.Id)
+            .Take(8)
+            .Select(message => new ConversationMessageListItem(message));
     }
 }

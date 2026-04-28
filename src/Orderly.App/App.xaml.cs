@@ -118,6 +118,7 @@ public partial class App : System.Windows.Application
         IDealRepository dealRepository = new DealRepository(connectionFactory);
         IFollowUpRepository followUpRepository = new FollowUpRepository(connectionFactory);
         ICustomerNoteRepository noteRepository = new CustomerNoteRepository(connectionFactory);
+        IConversationMessageRepository conversationMessageRepository = new ConversationMessageRepository(connectionFactory);
         IActivityLogRepository activityLogRepository = new ActivityLogRepository(connectionFactory);
         IPriceAdjustmentRepository priceAdjustmentRepository = new PriceAdjustmentRepository(connectionFactory);
         IReplyTemplateRepository replyTemplateRepository = new ReplyTemplateRepository(connectionFactory);
@@ -129,6 +130,7 @@ public partial class App : System.Windows.Application
         IDealService dealService = new DealService(dealRepository, activityLogRepository);
         IFollowUpService followUpService = new FollowUpService(followUpRepository, activityLogRepository);
         INoteService noteService = new NoteService(noteRepository, activityLogRepository);
+        IConversationService conversationService = new ConversationService(conversationMessageRepository, activityLogRepository);
         IActivityLogService activityLogService = new ActivityLogService(activityLogRepository);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
 
@@ -142,6 +144,7 @@ public partial class App : System.Windows.Application
             dealService,
             followUpService,
             noteService,
+            conversationService,
             activityLogService,
             priceAdjustmentService,
             replyTemplateRepository,

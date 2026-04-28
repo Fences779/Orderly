@@ -15,6 +15,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IDealService _dealService;
     private readonly IFollowUpService _followUpService;
     private readonly INoteService _noteService;
+    private readonly IConversationService _conversationService;
     private readonly IActivityLogService _activityLogService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
@@ -29,6 +30,7 @@ public partial class MainViewModel : ObservableObject
         IDealService dealService,
         IFollowUpService followUpService,
         INoteService noteService,
+        IConversationService conversationService,
         IActivityLogService activityLogService,
         IPriceAdjustmentService priceAdjustmentService,
         IReplyTemplateRepository replyTemplateRepository,
@@ -43,6 +45,7 @@ public partial class MainViewModel : ObservableObject
         _dealService = dealService;
         _followUpService = followUpService;
         _noteService = noteService;
+        _conversationService = conversationService;
         _activityLogService = activityLogService;
         _priceAdjustmentService = priceAdjustmentService;
         _replyTemplateRepository = replyTemplateRepository;
@@ -57,6 +60,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<Deal> Deals { get; } = new();
     public ObservableCollection<FollowUp> FollowUps { get; } = new();
     public ObservableCollection<CustomerNote> CustomerNotes { get; } = new();
+    public ObservableCollection<ConversationMessageListItem> ConversationMessages { get; } = new();
     public ObservableCollection<PriceAdjustment> PriceAdjustments { get; } = new();
     public ObservableCollection<ActivityLog> ActivityLogs { get; } = new();
     public ObservableCollection<ReplyTemplate> ReplyTemplates { get; } = new();
@@ -106,7 +110,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(SelectedSourcePlatformText))]
     [NotifyPropertyChangedFor(nameof(SelectedChannelText))]
     [NotifyPropertyChangedFor(nameof(SelectedExternalIdText))]
+    [NotifyPropertyChangedFor(nameof(SelectedConversationContextText))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeOrderStatusCommand))]
     private OrderListItem? selectedOrderItem;
@@ -118,9 +124,11 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(OrderDetailsEmptyMessage))]
     [NotifyPropertyChangedFor(nameof(SelectedCustomerNameText))]
     [NotifyPropertyChangedFor(nameof(CustomerRemarkText))]
+    [NotifyPropertyChangedFor(nameof(SelectedConversationContextText))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeDealStageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AdvanceDealStageCommand))]
@@ -142,12 +150,17 @@ public partial class MainViewModel : ObservableObject
     private string statusMessage = "准备就绪";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
+    private string conversationMessageInput = string.Empty;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddNoteCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeDealStageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AdvanceDealStageCommand))]
@@ -168,6 +181,7 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AddFollowUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddCustomerCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddConversationMessageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddPriceAdjustmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(ChangeDealStageCommand))]
     [NotifyCanExecuteChangedFor(nameof(AdvanceDealStageCommand))]
