@@ -557,6 +557,9 @@ public sealed class LocalBackupService : IBackupService
             IsValid = errors.Count == 0,
             Manifest = manifest,
             ActualChecksum = actualChecksum,
+            IsChecksumValid = manifest is not null
+                && !string.IsNullOrWhiteSpace(manifest.Checksum)
+                && string.Equals(manifest.Checksum, actualChecksum, StringComparison.OrdinalIgnoreCase),
             Errors = errors
         };
     }
@@ -788,12 +791,21 @@ public sealed class LocalBackupService : IBackupService
         TargetInspectionResult inspection)
     {
         var errors = new List<string>(validation.Errors);
-        var requiresQaDataClear = inspection.TargetState == BackupRestoreTargetState.QaDatabase;
+        var willClearQaData = inspection.TargetState == BackupRestoreTargetState.QaDatabase;
 
         if (inspection.TargetState == BackupRestoreTargetState.NonEmptyProductionDatabase)
         {
             errors.Add("目标库包含非 QA 生产数据，禁止覆盖恢复。");
         }
+
+        if (validation.IsValid && inspection.TargetState == BackupRestoreTargetState.Unknown)
+        {
+            errors.Add("目标库状态未知，已停止恢复。");
+        }
+
+        var refuseReason = errors.Count > 0
+            ? string.Join("；", errors.Distinct(StringComparer.Ordinal))
+            : string.Empty;
 
         var summary = validation.IsValid
             ? inspection.TargetState switch
@@ -805,15 +817,27 @@ public sealed class LocalBackupService : IBackupService
             }
             : $"备份校验失败：{string.Join("；", validation.Errors)}";
 
+        var canRestore = validation.IsValid
+            && (inspection.TargetState == BackupRestoreTargetState.EmptyDatabase
+                || inspection.TargetState == BackupRestoreTargetState.QaDatabase);
+
         return new BackupRestorePreviewResult
         {
             BackupPath = backupPath,
+            FileName = Path.GetFileName(backupPath),
+            ExportedAt = validation.Manifest?.ExportedAt,
+            SchemaVersion = validation.Manifest?.SchemaVersion,
+            Checksum = validation.Manifest?.Checksum ?? string.Empty,
+            IsChecksumValid = validation.IsChecksumValid,
+            Counts = validation.Manifest?.Counts ?? new Dictionary<string, int>(StringComparer.Ordinal),
             Validation = validation,
             TargetState = inspection.TargetState,
             TargetCounts = inspection.Counts,
-            RequiresQaDataClear = requiresQaDataClear,
+            WillClearQaData = willClearQaData,
+            RequiresQaDataClear = willClearQaData,
             IsQaTaggedBackup = IsQaTaggedBackup(validation.Manifest),
-            CanRestore = validation.IsValid && inspection.TargetState != BackupRestoreTargetState.NonEmptyProductionDatabase,
+            CanRestore = canRestore,
+            RefuseReason = refuseReason,
             Summary = summary,
             Errors = errors
         };

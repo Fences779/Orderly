@@ -26,8 +26,6 @@ public partial class MainViewModel
         }
 
         SelectedBackupPath = dialog.FileName;
-        RestoreStatusText = $"已选择：{Path.GetFileName(dialog.FileName)}";
-        RestoreDetailText = $"文件：{dialog.FileName}";
         StatusMessage = "已选择恢复备份文件";
     }
 
@@ -66,14 +64,14 @@ public partial class MainViewModel
     private async Task ValidateBackupAsync()
     {
         await ExecuteSaveActionAsync(
-            busyMessage: "正在校验恢复备份...",
-            successMessage: "备份校验完成",
-            errorTitle: "校验备份失败",
-            errorStatusPrefix: "校验备份失败",
+            busyMessage: "正在生成恢复预览...",
+            successMessage: "恢复预览已更新",
+            errorTitle: "生成恢复预览失败",
+            errorStatusPrefix: "生成恢复预览失败",
             action: async () =>
             {
-                var preview = await _backupService.PreviewRestoreAsync(SelectedBackupPath);
-                UpdateRestorePreviewStatus(preview);
+                var preview = await _backupService.PreviewRestoreAsync(SelectedBackupPath, createdBy: "p2.9");
+                ApplyRestorePreview(preview, updateStatusText: true, resetConfirmation: true);
             });
     }
 
@@ -85,59 +83,74 @@ public partial class MainViewModel
             return;
         }
 
+        var preview = RestorePreview;
+        if (preview is null || !string.Equals(preview.BackupPath, SelectedBackupPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("请先为当前备份生成恢复预览。");
+        }
+
+        if (!preview.CanRestore)
+        {
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(preview.RefuseReason)
+                ? "当前预览不允许恢复。"
+                : preview.RefuseReason);
+        }
+
+        if (!IsRestoreRiskConfirmed)
+        {
+            throw new InvalidOperationException("请先勾选恢复风险确认。");
+        }
+
         try
         {
             IsSaving = true;
-            StatusMessage = "正在校验恢复条件...";
-
-            var preview = await _backupService.PreviewRestoreAsync(SelectedBackupPath);
-            UpdateRestorePreviewStatus(preview);
-
-            if (!preview.Validation.IsValid)
-            {
-                throw new InvalidOperationException(string.Join("；", preview.Validation.Errors));
-            }
-
-            if (!preview.CanRestore)
-            {
-                throw new InvalidOperationException(preview.Errors.Count > 0
-                    ? string.Join("；", preview.Errors)
-                    : "当前目标库不满足恢复条件。");
-            }
-
-            var confirmation = System.Windows.MessageBox.Show(
-                GetDialogOwner(),
-                preview.RequiresQaDataClear
-                    ? "将先清理当前 QA/测试数据，再按备份覆盖恢复。仅支持空库或测试库恢复，不覆盖已有生产数据。是否继续？"
-                    : "将按所选备份恢复当前空库。仅支持空库或测试库恢复，不覆盖已有生产数据。是否继续？",
-                "确认恢复备份",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Warning);
-
-            if (confirmation != System.Windows.MessageBoxResult.Yes)
-            {
-                StatusMessage = "已取消恢复备份";
-                return;
-            }
-
             StatusMessage = "正在执行受控恢复...";
+
             var result = await _backupService.RestoreBackupAsync(
                 SelectedBackupPath,
-                clearQaDataIfNeeded: preview.RequiresQaDataClear);
+                clearQaDataIfNeeded: preview.WillClearQaData,
+                createdBy: "p2.9");
 
             await LoadAsync();
             UpdateRestoreResultStatus(result);
+            await RefreshRestoreRuntimeStatusAsync(updateStatusText: false);
             StatusMessage = "备份恢复完成";
         }
         catch (Exception ex)
         {
             StatusMessage = $"恢复备份失败：{ex.Message}";
+            await RefreshRestoreRuntimeStatusAsync(updateStatusText: false);
             ShowErrorMessage("恢复备份失败", ex);
         }
         finally
         {
             IsSaving = false;
         }
+    }
+
+    partial void OnSelectedBackupPathChanged(string value)
+    {
+        ApplyRestorePreview(preview: null, updateStatusText: false, resetConfirmation: true);
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            RestoreStatusText = "未选择恢复备份";
+            RestoreDetailText = "先选择备份文件，再生成恢复预览。";
+            return;
+        }
+
+        RestoreStatusText = $"已选择：{Path.GetFileName(value)}";
+        RestoreDetailText = "已切换备份文件，请先生成恢复预览；旧确认状态已清空。";
+    }
+
+    partial void OnRestorePreviewChanged(BackupRestorePreviewResult? value)
+    {
+        NotifyRestorePreviewStateChanged();
+    }
+
+    partial void OnIsRestoreRiskConfirmedChanged(bool value)
+    {
+        NotifyRestorePreviewStateChanged();
     }
 
     private bool CanManageBackup()
@@ -152,7 +165,11 @@ public partial class MainViewModel
 
     private bool CanRestoreBackup()
     {
-        return !IsBusy && !string.IsNullOrWhiteSpace(SelectedBackupPath);
+        return !IsBusy
+            && !string.IsNullOrWhiteSpace(SelectedBackupPath)
+            && RestorePreview is not null
+            && string.Equals(RestorePreview.BackupPath, SelectedBackupPath, StringComparison.OrdinalIgnoreCase)
+            && CanRestoreWithConfirmation;
     }
 
     private async Task LoadRecentBackupStatusAsync(CancellationToken cancellationToken = default)
@@ -166,6 +183,33 @@ public partial class MainViewModel
         }
 
         UpdateRecentBackupStatus(latest);
+    }
+
+    private async Task RefreshRestoreRuntimeStatusAsync(bool updateStatusText)
+    {
+        await LoadRecentBackupStatusAsync();
+
+        if (string.IsNullOrWhiteSpace(SelectedBackupPath))
+        {
+            ApplyRestorePreview(preview: null, updateStatusText: updateStatusText, resetConfirmation: true);
+            return;
+        }
+
+        try
+        {
+            var preview = await _backupService.PreviewRestoreAsync(SelectedBackupPath, createdBy: "p2.9");
+            ApplyRestorePreview(preview, updateStatusText, resetConfirmation: true);
+        }
+        catch
+        {
+            ApplyRestorePreview(preview: null, updateStatusText: false, resetConfirmation: true);
+
+            if (updateStatusText)
+            {
+                RestoreStatusText = "恢复预览刷新失败";
+                RestoreDetailText = "当前文件的恢复预览未能刷新，请重新生成恢复预览。";
+            }
+        }
     }
 
     private void UpdateRecentBackupStatus(BackupResult result)
@@ -195,38 +239,50 @@ public partial class MainViewModel
             : $"文件：{result.BackupPath}\n原因：{result.ErrorSummary}";
     }
 
+    private void ApplyRestorePreview(BackupRestorePreviewResult? preview, bool updateStatusText, bool resetConfirmation)
+    {
+        if (resetConfirmation)
+        {
+            IsRestoreRiskConfirmed = false;
+        }
+
+        RestorePreview = preview;
+
+        if (!updateStatusText)
+        {
+            return;
+        }
+
+        if (preview is null)
+        {
+            RestoreStatusText = string.IsNullOrWhiteSpace(SelectedBackupPath)
+                ? "未选择恢复备份"
+                : $"已选择：{Path.GetFileName(SelectedBackupPath)}";
+            RestoreDetailText = string.IsNullOrWhiteSpace(SelectedBackupPath)
+                ? "先选择备份文件，再生成恢复预览。"
+                : "已切换备份文件，请先生成恢复预览。";
+            return;
+        }
+
+        UpdateRestorePreviewStatus(preview);
+    }
+
     private void UpdateRestorePreviewStatus(BackupRestorePreviewResult preview)
     {
-        var fileName = string.IsNullOrWhiteSpace(preview.BackupPath)
-            ? "未选择文件"
-            : Path.GetFileName(preview.BackupPath);
-        var backupCounts = preview.Validation.Manifest?.Counts ?? new Dictionary<string, int>(StringComparer.Ordinal);
-        var targetCountsText = FormatBackupCounts(preview.TargetCounts);
-        var backupCountsText = FormatBackupCounts(backupCounts);
-
-        RestoreStatusText = preview.Validation.IsValid
-            ? $"校验完成：{fileName}"
-            : $"校验失败：{fileName}";
+        RestoreStatusText = preview.CanRestore
+            ? $"恢复预览已就绪：{preview.FileName}"
+            : $"恢复预览已拒绝：{preview.FileName}";
 
         var detailLines = new List<string>
         {
-            $"文件：{preview.BackupPath}",
+            $"目标状态：{GetRestoreTargetCode(preview.TargetState)} / {GetRestoreTargetLabel(preview.TargetState)}",
+            $"是否允许恢复：{(preview.CanRestore ? "是" : "否")}",
             $"结果：{preview.Summary}"
         };
 
-        if (!string.IsNullOrWhiteSpace(backupCountsText))
+        if (!string.IsNullOrWhiteSpace(preview.RefuseReason))
         {
-            detailLines.Add($"备份范围：{backupCountsText}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(targetCountsText))
-        {
-            detailLines.Add($"目标库现状：{targetCountsText}");
-        }
-
-        if (preview.Errors.Count > 0)
-        {
-            detailLines.Add($"问题：{string.Join("；", preview.Errors)}");
+            detailLines.Add($"拒绝原因：{preview.RefuseReason}");
         }
 
         RestoreDetailText = string.Join("\n", detailLines);
@@ -247,7 +303,7 @@ public partial class MainViewModel
         var detailLines = new List<string>
         {
             $"文件：{result.BackupPath}",
-            $"目标：{GetRestoreTargetLabel(result.TargetState)}"
+            $"目标：{GetRestoreTargetCode(result.TargetState)} / {GetRestoreTargetLabel(result.TargetState)}"
         };
 
         if (!string.IsNullOrWhiteSpace(countsText))
@@ -261,6 +317,28 @@ public partial class MainViewModel
         }
 
         RestoreDetailText = string.Join("\n", detailLines);
+    }
+
+    private void NotifyRestorePreviewStateChanged()
+    {
+        OnPropertyChanged(nameof(HasRestorePreview));
+        OnPropertyChanged(nameof(CanConfirmRestoreRisk));
+        OnPropertyChanged(nameof(RestorePreviewFileName));
+        OnPropertyChanged(nameof(RestorePreviewExportedAtText));
+        OnPropertyChanged(nameof(RestorePreviewSchemaVersionText));
+        OnPropertyChanged(nameof(RestorePreviewChecksumText));
+        OnPropertyChanged(nameof(RestorePreviewChecksumStatusText));
+        OnPropertyChanged(nameof(RestorePreviewCountsText));
+        OnPropertyChanged(nameof(RestorePreviewTargetCountsText));
+        OnPropertyChanged(nameof(RestorePreviewTargetStateCodeText));
+        OnPropertyChanged(nameof(RestorePreviewTargetStateText));
+        OnPropertyChanged(nameof(RestorePreviewWillClearQaDataText));
+        OnPropertyChanged(nameof(RestorePreviewCanRestoreText));
+        OnPropertyChanged(nameof(RestorePreviewRefuseReasonText));
+        OnPropertyChanged(nameof(RestoreRiskPromptText));
+        OnPropertyChanged(nameof(RestoreRiskConfirmationText));
+        OnPropertyChanged(nameof(CanRestoreWithConfirmation));
+        RestoreBackupCommand.NotifyCanExecuteChanged();
     }
 
     private static string GetDefaultBackupDirectory()
@@ -284,8 +362,11 @@ public partial class MainViewModel
         var prioritizedKeys = new[]
         {
             "Customers",
-            "Orders",
             "Deals",
+            "Orders",
+            "FollowUps",
+            "CustomerNotes",
+            "PriceAdjustments",
             "ConversationMessages",
             "AiSuggestions",
             "OcrResults",
@@ -303,6 +384,17 @@ public partial class MainViewModel
         }
 
         return string.Join(" / ", parts);
+    }
+
+    private static string GetRestoreTargetCode(BackupRestoreTargetState targetState)
+    {
+        return targetState switch
+        {
+            BackupRestoreTargetState.EmptyDatabase => "Empty",
+            BackupRestoreTargetState.QaDatabase => "QaOnly",
+            BackupRestoreTargetState.NonEmptyProductionDatabase => "ProductionNonEmpty",
+            _ => "Unknown"
+        };
     }
 
     private static string GetRestoreTargetLabel(BackupRestoreTargetState targetState)

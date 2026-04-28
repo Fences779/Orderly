@@ -237,6 +237,45 @@ P2.8 当前明确未做：
 - 未接微信 / 闲鱼 / 平台。
 - 未改订单主链路和大 UI 结构。
 
+## P2.9: 恢复前摘要确认层
+
+- 继续复用 `IBackupService / LocalBackupService / PreviewRestoreAsync / RestoreBackupAsync`
+- 在 `设置 -> 本地备份` 增加 `恢复预览` 区域，不新增恢复向导
+- 恢复前固定展示：
+  - 备份文件名
+  - `exportedAt`
+  - `schemaVersion`
+  - `checksum` 与校验状态
+  - 备份表数量摘要
+  - 目标库状态：`Empty / QaOnly / ProductionNonEmpty / Unknown`
+  - 目标库数量摘要
+  - 是否会清理 QA 数据
+  - 是否允许恢复
+  - 拒绝原因
+- 恢复按钮固定受以下两层门控控制：
+  - `Preview.CanRestore`
+  - 用户风险确认勾选
+- 切换备份文件或重新生成 preview 时，旧确认状态必须清空
+- 实际恢复仍只复用 P2.8 `RestoreBackupAsync`
+- 新增 `tools/qa/run-p2-9-restore-preview-smoke.ps1`
+
+P2.9 当前落地范围：
+- 已把恢复前允许 / 拒绝规则统一收口到 `BackupRestorePreviewResult`。
+- 已在 ViewModel 增加 preview 状态、风险确认、按钮可用性控制。
+- 已在设置页增加最小 `恢复预览` 区块，展示摘要、风险提示和确认勾选框。
+- 已补充 service 级 preview QA、ViewModel 门控 QA，并串跑 P2.8 restore smoke。
+- 已保持 P2.8 恢复核心逻辑和生产库拒绝边界不变。
+
+P2.9 当前明确未做：
+- 未开放生产库覆盖恢复。
+- 未做 merge 恢复。
+- 未做云同步。
+- 未做多设备同步。
+- 未做自动导入。
+- 未接微信 / 闲鱼 / 平台。
+- 未新增按钮级 UIA。
+- 未改订单主链路和大 UI 结构。
+
 ## 边界声明
 
 - AI 不是 P2.0 真实实现。
