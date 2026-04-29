@@ -12,10 +12,18 @@ public sealed class WorkbenchTaskListItem
 
     public WorkbenchTask Task { get; }
     public string Id => Task.Id;
+    public string DedupeKey => Task.DedupeKey;
     public WorkbenchTaskType Type => Task.Type;
     public WorkbenchTaskPriority Priority => Task.Priority;
     public int? CustomerId => Task.CustomerId;
     public int? OrderId => Task.OrderId;
+    public int? DealId => Task.DealId;
+    public int? MessageId => Task.MessageId;
+    public int? AiSuggestionId => Task.AiSuggestionId;
+    public int? OcrResultId => Task.OcrResultId;
+    public int? FollowUpId => Task.FollowUpId;
+    public string TargetSection => Task.TargetSection;
+    public string ActionHint => Task.ActionHint;
     public string Title => Task.Title;
     public string Summary => Task.Summary;
     public string CustomerNameDisplay => string.IsNullOrWhiteSpace(Task.CustomerName) ? "未定位客户" : Task.CustomerName;

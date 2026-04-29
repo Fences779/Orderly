@@ -292,17 +292,17 @@ Write-Step 'Scope: local-only resolver, no schema mutation, no real AI API'
 Write-Step "Repo root: $(Get-RepoRoot)"
 
 if (-not $SkipReset) {
-    Write-Step 'Step 1/9: reset QA data'
+Write-Step 'Step 1/10: reset QA data'
     Invoke-QaScript -Path $resetScript
 } else {
-    Write-Step 'Step 1/9: skip QA data reset'
+    Write-Step 'Step 1/10: skip QA data reset'
 }
 
-Write-Step 'Step 2/9: import assemblies and prepare resolver context'
+Write-Step 'Step 2/10: import assemblies and prepare resolver context'
 Import-OrderlyAssemblies
 $context = New-PipelineContext
 
-Write-Step 'Step 3/9: create pipeline stage scenarios'
+Write-Step 'Step 3/10: create pipeline stage scenarios'
 $newCustomer = New-P3Customer -Context $context -Key 'p13qa-p3-new-001' -NameSuffix 'New'
 $fallbackCustomer = New-P3Customer -Context $context -Key 'p13qa-p3-fallback-001' -NameSuffix 'Fallback'
 $null = New-P3Order -Context $context -Customer $fallbackCustomer -Deal $null -Key 'p13qa-p3-fallback-order-001' -Status ([Orderly.Core.Models.OrderStatus]::PendingCommunication)
@@ -338,11 +338,14 @@ $fulfilledCustomer = New-P3Customer -Context $context -Key 'p13qa-p3-fulfilled-0
 $fulfilledDeal = New-P3Deal -Context $context -Customer $fulfilledCustomer -Key 'p13qa-p3-fulfilled-deal-001' -Stage ([Orderly.Core.Models.DealStage]::Won)
 $fulfilledOrder = New-P3Order -Context $context -Customer $fulfilledCustomer -Deal $fulfilledDeal -Key 'p13qa-p3-fulfilled-order-001' -Status ([Orderly.Core.Models.OrderStatus]::Closed)
 
+$closedFallbackCustomer = New-P3Customer -Context $context -Key 'p13qa-p3-closed-fallback-001' -NameSuffix 'ClosedFallback'
+$closedFallbackOrder = New-P3Order -Context $context -Customer $closedFallbackCustomer -Deal $null -Key 'p13qa-p3-closed-fallback-order-001' -Status ([Orderly.Core.Models.OrderStatus]::Closed)
+
 $lostCustomer = New-P3Customer -Context $context -Key 'p13qa-p3-lost-001' -NameSuffix 'Lost'
 $lostDeal = New-P3Deal -Context $context -Customer $lostCustomer -Key 'p13qa-p3-lost-deal-001' -Stage ([Orderly.Core.Models.DealStage]::Lost)
 $lostOrder = New-P3Order -Context $context -Customer $lostCustomer -Deal $lostDeal -Key 'p13qa-p3-lost-order-001' -Status ([Orderly.Core.Models.OrderStatus]::PendingCommunication)
 
-Write-Step 'Step 4/9: resolve pipeline stages'
+Write-Step 'Step 4/10: resolve pipeline stages'
 $snapshotNew = $context.Resolver.ResolveAsync($newCustomer.Id).GetAwaiter().GetResult()
 $snapshotFallback = $context.Resolver.ResolveAsync($fallbackCustomer.Id).GetAwaiter().GetResult()
 $snapshotContact = $context.Resolver.ResolveAsync($contactCustomer.Id, $contactOrder.Id).GetAwaiter().GetResult()
@@ -352,9 +355,11 @@ $snapshotDraft = $context.Resolver.ResolveAsync($draftCustomer.Id, $draftOrder.I
 $snapshotWaiting = $context.Resolver.ResolveAsync($waitingCustomer.Id, $waitingOrder.Id).GetAwaiter().GetResult()
 $snapshotPaid = $context.Resolver.ResolveAsync($paidCustomer.Id, $paidOrder.Id).GetAwaiter().GetResult()
 $snapshotFulfilled = $context.Resolver.ResolveAsync($fulfilledCustomer.Id, $fulfilledOrder.Id).GetAwaiter().GetResult()
+$snapshotClosedFallback = $context.Resolver.ResolveAsync($closedFallbackCustomer.Id, $closedFallbackOrder.Id).GetAwaiter().GetResult()
 $snapshotLost = $context.Resolver.ResolveAsync($lostCustomer.Id, $lostOrder.Id).GetAwaiter().GetResult()
+$snapshotMissingCustomer = $context.Resolver.ResolveAsync(999999).GetAwaiter().GetResult()
 
-Write-Step 'Step 5/9: assert expected stages and fallback'
+Write-Step 'Step 5/10: assert expected stages and fallback'
 Assert-Stage -Snapshot $snapshotNew -Expected 'New'
 Assert-Stage -Snapshot $snapshotFallback -Expected 'New'
 if (-not $snapshotFallback.UsedFallback) {
@@ -365,11 +370,22 @@ Assert-Stage -Snapshot $snapshotInterested -Expected 'Interested'
 Assert-Stage -Snapshot $snapshotQuoted -Expected 'Quoted'
 Assert-Stage -Snapshot $snapshotDraft -Expected 'DraftPrepared'
 Assert-Stage -Snapshot $snapshotWaiting -Expected 'WaitingPayment'
+if (-not $snapshotWaiting.UsedFallback) {
+    throw 'WaitingPayment scenario should be marked as fallback when inferred only from local sent signals.'
+}
 Assert-Stage -Snapshot $snapshotPaid -Expected 'Paid'
 Assert-Stage -Snapshot $snapshotFulfilled -Expected 'Fulfilled'
+Assert-Stage -Snapshot $snapshotClosedFallback -Expected 'Lost'
+if (-not $snapshotClosedFallback.UsedFallback) {
+    throw 'Closed fallback scenario should mark UsedFallback = true.'
+}
 Assert-Stage -Snapshot $snapshotLost -Expected 'Lost'
+Assert-Stage -Snapshot $snapshotMissingCustomer -Expected 'New'
+if (-not $snapshotMissingCustomer.UsedFallback) {
+    throw 'Missing customer scenario should mark UsedFallback = true.'
+}
 
-Write-Step 'Step 6/9: assert pipeline stage is not persisted to schema'
+Write-Step 'Step 6/10: assert pipeline stage is not persisted to schema'
 $connection = $context.ConnectionFactory.CreateConnection()
 $connection.Open()
 try {
@@ -394,7 +410,7 @@ finally {
     $connection.Dispose()
 }
 
-Write-Step 'Step 7/9: assert resolver does not mutate OrderStatus / DealStage'
+Write-Step 'Step 7/10: assert resolver does not mutate OrderStatus / DealStage'
 $paidOrderAfter = $context.OrderRepository.GetByIdAsync($paidOrder.Id).GetAwaiter().GetResult()
 $paidDealAfter = $context.DealRepository.GetByIdAsync($paidDeal.Id).GetAwaiter().GetResult()
 $fulfilledOrderAfter = $context.OrderRepository.GetByIdAsync($fulfilledOrder.Id).GetAwaiter().GetResult()
@@ -412,11 +428,22 @@ if ($fulfilledOrderAfter.Status -ne [Orderly.Core.Models.OrderStatus]::Closed) {
 if ($lostDealAfter.Stage -ne [Orderly.Core.Models.DealStage]::Lost) {
     throw 'Lost scenario deal stage changed unexpectedly.'
 }
+$closedFallbackOrderAfter = $context.OrderRepository.GetByIdAsync($closedFallbackOrder.Id).GetAwaiter().GetResult()
+if ($closedFallbackOrderAfter.Status -ne [Orderly.Core.Models.OrderStatus]::Closed) {
+    throw 'Closed fallback scenario order status changed unexpectedly.'
+}
 
-Write-Step 'Step 8/9: reset QA data'
+Write-Step 'Step 8/10: assert fallback reasons are non-empty'
+foreach ($snapshot in @($snapshotFallback, $snapshotWaiting, $snapshotClosedFallback, $snapshotMissingCustomer)) {
+    if ([string]::IsNullOrWhiteSpace($snapshot.Reason)) {
+        throw 'Fallback snapshot reason should not be empty.'
+    }
+}
+
+Write-Step 'Step 9/10: reset QA data'
 Invoke-QaScript -Path $resetScript
 
-Write-Step 'Step 9/9: final pass'
+Write-Step 'Step 10/10: final pass'
 Write-Host ''
 Write-Host 'P3.2 PIPELINE SMOKE: PASS'
 Write-Host ('Resolved stages: ' + (@(
@@ -429,4 +456,5 @@ Write-Host ('Resolved stages: ' + (@(
             $snapshotWaiting.Stage,
             $snapshotPaid.Stage,
             $snapshotFulfilled.Stage,
+            $snapshotClosedFallback.Stage,
             $snapshotLost.Stage) -join ', '))

@@ -250,6 +250,27 @@ Assert-ContainsTaskType -Tasks $tasks -TypeName 'OcrNotConverted'
 Assert-ContainsTaskType -Tasks $tasks -TypeName 'FollowUpToday'
 Assert-ContainsTaskType -Tasks $tasks -TypeName 'FollowUpOverdue'
 
+$draftTask = $tasks | Where-Object { $_.Type.ToString() -eq 'DraftNotSent' -and $_.AiSuggestionId -eq $draftSuggestion.Id } | Select-Object -First 1
+if ($null -eq $draftTask) {
+    throw 'DraftNotSent task for copied draft was not projected.'
+}
+if ($draftTask.TargetSection -ne 'AiSuggestion' -or $draftTask.ActionHint -ne 'ReplyToCustomer') {
+    throw "DraftNotSent task deep-link fields are unexpected. Section=$($draftTask.TargetSection), ActionHint=$($draftTask.ActionHint)"
+}
+
+$ocrTask = $tasks | Where-Object { $_.Type.ToString() -eq 'OcrNotConverted' -and $_.OcrResultId -eq $target.OcrResult.Id } | Select-Object -First 1
+if ($null -eq $ocrTask) {
+    throw 'OcrNotConverted task for completed OCR result was not projected.'
+}
+if ($ocrTask.TargetSection -ne 'Ocr' -or $ocrTask.ActionHint -ne 'ConvertOcr') {
+    throw "OcrNotConverted task deep-link fields are unexpected. Section=$($ocrTask.TargetSection), ActionHint=$($ocrTask.ActionHint)"
+}
+
+$followUpTasks = @($tasks | Where-Object { $_.Type.ToString() -in @('FollowUpToday', 'FollowUpOverdue') })
+if ($followUpTasks.Count -eq 0 -or @($followUpTasks | Where-Object { -not ($_.FollowUpId -gt 0) }).Count -gt 0) {
+    throw 'FollowUp tasks are missing FollowUpId deep-link fields.'
+}
+
 $taskTypeOrder = @($tasks | Select-Object -ExpandProperty Type | ForEach-Object { $_.ToString() })
 $expectedRelativeOrder = @('FollowUpOverdue', 'DraftNotSent', 'ReplyNeeded', 'AiSuggestionPending', 'OcrNotConverted', 'FollowUpToday')
 for ($index = 0; $index -lt $expectedRelativeOrder.Count - 1; $index++) {

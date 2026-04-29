@@ -29,7 +29,7 @@ Write-Step "Repo root: $(Get-RepoRoot)"
 $executed = New-Object System.Collections.Generic.List[string]
 
 try {
-    Write-Step 'Step 1/6: dotnet build Orderly.sln -c Debug'
+    Write-Step 'Step 1/7: dotnet build Orderly.sln -c Debug'
     Push-Location (Get-RepoRoot)
     try {
         dotnet build Orderly.sln -c Debug
@@ -51,13 +51,14 @@ try {
         'run-p1-smoke.ps1',
         'run-p2-full-regression.ps1',
         'run-p3-1-workbench-smoke.ps1',
-        'run-p3-2-pipeline-smoke.ps1'
+        'run-p3-2-pipeline-smoke.ps1',
+        'run-p3-4-workbench-logic-smoke.ps1'
     )
 
     for ($index = 0; $index -lt $steps.Count; $index++) {
         $scriptName = $steps[$index]
         $scriptPath = Join-Path $PSScriptRoot $scriptName
-        Write-Step ("Step {0}/6: {1}" -f ($index + 2), $scriptName)
+        Write-Step ("Step {0}/7: {1}" -f ($index + 2), $scriptName)
         Invoke-QaScript -Path $scriptPath
         $executed.Add($scriptName)
         Write-Step ("PASS {0}" -f $scriptName)

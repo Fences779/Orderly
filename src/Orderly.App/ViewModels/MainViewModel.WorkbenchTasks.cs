@@ -17,9 +17,10 @@ public partial class MainViewModel
     [RelayCommand(CanExecute = nameof(CanRefreshWorkbenchTasks))]
     private async Task RefreshWorkbenchTasksAsync()
     {
+        var previousSelection = SelectedWorkbenchTask;
         var tasks = await _workbenchTaskService.GetTasksAsync();
         ReplaceCollection(WorkbenchTasks, tasks.Select(task => new WorkbenchTaskListItem(task)));
-        SelectedWorkbenchTask ??= WorkbenchTasks.FirstOrDefault();
+        SelectedWorkbenchTask = ResolveWorkbenchTaskSelection(previousSelection);
         StatusMessage = $"今日行动已刷新，共 {WorkbenchTasks.Count} 项";
         OnPropertyChanged(nameof(HasWorkbenchTasks));
     }
@@ -71,6 +72,7 @@ public partial class MainViewModel
             {
                 SelectedCustomer = customer;
                 await ReloadSelectedCustomerDetailsAsync(customer);
+                await SyncWorkbenchTaskSelectionAsync(target, customer.Id);
             }
         }
 
@@ -85,5 +87,44 @@ public partial class MainViewModel
     private bool CanOpenWorkbenchTask()
     {
         return SelectedWorkbenchTask is not null && !IsBusy;
+    }
+
+    private WorkbenchTaskListItem? ResolveWorkbenchTaskSelection(
+        WorkbenchTaskListItem? previousSelection,
+        int? preferredCustomerId = null,
+        int? preferredOrderId = null)
+    {
+        var previousId = previousSelection?.Id;
+        var previousDedupeKey = previousSelection?.DedupeKey;
+        var previousType = previousSelection?.Type;
+        var customerId = preferredCustomerId ?? previousSelection?.CustomerId ?? SelectedCustomer?.Id;
+        var orderId = preferredOrderId ?? previousSelection?.OrderId ?? SelectedOrder?.Id;
+
+        return WorkbenchTasks.FirstOrDefault(item => !string.IsNullOrWhiteSpace(previousId) && item.Id == previousId)
+            ?? WorkbenchTasks.FirstOrDefault(item => !string.IsNullOrWhiteSpace(previousDedupeKey) && item.DedupeKey == previousDedupeKey)
+            ?? WorkbenchTasks.FirstOrDefault(item => item.CustomerId == customerId && item.OrderId == orderId && item.Type == previousType)
+            ?? WorkbenchTasks.FirstOrDefault(item => item.CustomerId == customerId && item.OrderId == orderId)
+            ?? WorkbenchTasks.FirstOrDefault(item => item.CustomerId == customerId)
+            ?? WorkbenchTasks.FirstOrDefault();
+    }
+
+    private async Task SyncWorkbenchTaskSelectionAsync(WorkbenchTaskListItem target, int customerId)
+    {
+        if (target.AiSuggestionId is int aiSuggestionId)
+        {
+            SelectedAiSuggestion = AiSuggestions.FirstOrDefault(item => item.Id == aiSuggestionId) ?? SelectedAiSuggestion;
+        }
+
+        if (target.OcrResultId is not int ocrResultId || CurrentOcrResult?.Id == ocrResultId)
+        {
+            return;
+        }
+
+        var ocrResults = await _ocrService.ListByCustomerAsync(customerId);
+        var matched = ocrResults.FirstOrDefault(item => item.Id == ocrResultId);
+        if (matched is not null)
+        {
+            CurrentOcrResult = matched;
+        }
     }
 }

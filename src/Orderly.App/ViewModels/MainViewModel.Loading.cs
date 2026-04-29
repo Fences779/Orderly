@@ -113,6 +113,7 @@ public partial class MainViewModel
 
     private async Task ReloadListDataAsync(int? selectedCustomerId = null, int? selectedOrderId = null)
     {
+        var previousSelection = SelectedWorkbenchTask;
         var customers = await _customerRepository.GetAllAsync();
         var orders = await _orderRepository.GetRecentAsync();
         var deals = await _dealService.GetDealsAsync();
@@ -127,9 +128,7 @@ public partial class MainViewModel
         _allCustomerNotes = notes.ToList();
         ReplaceCollection(WorkbenchTasks, workbenchTasks.Select(task => new WorkbenchTaskListItem(task)));
         ApplyFilters(selectedCustomerId ?? SelectedCustomer?.Id, selectedOrderId ?? SelectedOrder?.Id);
-        SelectedWorkbenchTask = WorkbenchTasks.FirstOrDefault(item => item.CustomerId == (selectedCustomerId ?? SelectedCustomer?.Id) && item.OrderId == (selectedOrderId ?? SelectedOrder?.Id))
-            ?? WorkbenchTasks.FirstOrDefault(item => item.CustomerId == (selectedCustomerId ?? SelectedCustomer?.Id))
-            ?? SelectedWorkbenchTask;
+        SelectedWorkbenchTask = ResolveWorkbenchTaskSelection(previousSelection, selectedCustomerId, selectedOrderId);
         AddOrderCommand.NotifyCanExecuteChanged();
     }
 

@@ -6,15 +6,29 @@ namespace Orderly.Data.Services;
 
 public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
 {
-    private static readonly WorkbenchTaskType[] SortOrder =
+    private const int RecentlyActiveWindowDays = 7;
+    private const int RecentlyActiveLimit = 5;
+
+    private const string TargetSectionCustomer = "Customer";
+    private const string TargetSectionConversation = "Conversation";
+    private const string TargetSectionAiSuggestion = "AiSuggestion";
+    private const string TargetSectionOcr = "Ocr";
+    private const string TargetSectionFollowUp = "FollowUp";
+
+    private const string ActionHintReviewDraft = "ReviewDraft";
+    private const string ActionHintReviewSuggestion = "ReviewSuggestion";
+    private const string ActionHintConvertOcr = "ConvertOcr";
+    private const string ActionHintCompleteFollowUp = "CompleteFollowUp";
+    private const string ActionHintReplyToCustomer = "ReplyToCustomer";
+
+    private static readonly HashSet<WorkbenchTaskType> RecentlyActiveBlockedTypes =
     [
         WorkbenchTaskType.FollowUpOverdue,
         WorkbenchTaskType.DraftNotSent,
         WorkbenchTaskType.ReplyNeeded,
         WorkbenchTaskType.AiSuggestionPending,
         WorkbenchTaskType.OcrNotConverted,
-        WorkbenchTaskType.FollowUpToday,
-        WorkbenchTaskType.RecentlyActiveCustomer
+        WorkbenchTaskType.FollowUpToday
     ];
 
     private readonly ICustomerRepository _customerRepository;
@@ -51,33 +65,67 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
 
     public async Task<IReadOnlyList<WorkbenchTask>> GetTasksAsync(CancellationToken cancellationToken = default)
     {
-        var customers = await _customerRepository.GetAllAsync(cancellationToken);
-        var orders = await _orderRepository.GetRecentAsync(cancellationToken);
-        var deals = await _dealRepository.ListAsync(cancellationToken);
-        var followUps = await _followUpRepository.ListAsync(cancellationToken);
-        var messages = await _messageRepository.ListAsync(cancellationToken);
-        var suggestions = await _suggestionRepository.ListAsync(cancellationToken);
-        var ocrResults = await _ocrResultRepository.ListAsync(cancellationToken);
-        var activities = await _activityLogRepository.ListAsync(cancellationToken);
-        var priceAdjustments = await _priceAdjustmentRepository.ListAsync(cancellationToken);
+        var customers = (await _customerRepository.GetAllAsync(cancellationToken)).ToList();
+        var orders = (await _orderRepository.GetRecentAsync(cancellationToken)).ToList();
+        var deals = (await _dealRepository.ListAsync(cancellationToken)).ToList();
+        var followUps = (await _followUpRepository.ListAsync(cancellationToken)).ToList();
+        var messages = (await _messageRepository.ListAsync(cancellationToken)).ToList();
+        var suggestions = (await _suggestionRepository.ListAsync(cancellationToken)).ToList();
+        var ocrResults = (await _ocrResultRepository.ListAsync(cancellationToken)).ToList();
+        var activities = (await _activityLogRepository.ListAsync(cancellationToken)).ToList();
+        var priceAdjustments = (await _priceAdjustmentRepository.ListAsync(cancellationToken)).ToList();
 
-        var tasks = new List<WorkbenchTask>();
         var customerMap = customers.ToDictionary(customer => customer.Id);
         var orderMap = orders.ToDictionary(order => order.Id);
         var today = DateTime.Today;
 
+        var tasks = new List<WorkbenchTask>();
         tasks.AddRange(BuildFollowUpTasks(followUps, customerMap, orderMap, today));
         tasks.AddRange(BuildDraftTasks(suggestions, customerMap, orderMap));
         tasks.AddRange(BuildReplyNeededTasks(messages, suggestions, activities, customerMap, orderMap));
         tasks.AddRange(BuildAiSuggestionPendingTasks(suggestions, customerMap, orderMap));
         tasks.AddRange(BuildOcrTasks(ocrResults, customerMap, orderMap));
-        tasks.AddRange(BuildRecentlyActiveTasks(customers, orders, messages, activities, tasks.Select(task => task.CustomerId).OfType<int>().ToHashSet(), today));
+
+        var customersWithBlockingTasks = tasks
+            .Where(task => task.CustomerId is int && SuppressesRecentlyActive(task.Type))
+            .Select(task => task.CustomerId!.Value)
+            .ToHashSet();
+        tasks.AddRange(BuildRecentlyActiveTasks(customers, messages, activities, orderMap, customersWithBlockingTasks, today));
 
         ApplyPipelineStages(tasks, customerMap, orders, deals, followUps, messages, suggestions, activities, priceAdjustments);
+        return FinalizeTasks(tasks);
+    }
 
-        return tasks
-            .OrderBy(task => task.SortKey)
-            .ThenBy(task => task.Id, StringComparer.Ordinal)
+    private static IReadOnlyList<WorkbenchTask> FinalizeTasks(IEnumerable<WorkbenchTask> tasks)
+    {
+        var deduped = tasks
+            .GroupBy(task => string.IsNullOrWhiteSpace(task.DedupeKey) ? task.Id : task.DedupeKey, StringComparer.Ordinal)
+            .Select(group => group.OrderBy(task => task, WorkbenchTaskComparer.Instance).First())
+            .ToList();
+
+        var customersWithBlockingTasks = deduped
+            .Where(task => task.CustomerId is int && SuppressesRecentlyActive(task.Type))
+            .Select(task => task.CustomerId!.Value)
+            .ToHashSet();
+
+        deduped.RemoveAll(task =>
+            task.Type == WorkbenchTaskType.RecentlyActiveCustomer &&
+            task.CustomerId is int customerId &&
+            customersWithBlockingTasks.Contains(customerId));
+
+        var keepRecentIds = deduped
+            .Where(task => task.Type == WorkbenchTaskType.RecentlyActiveCustomer)
+            .OrderBy(task => task, WorkbenchTaskComparer.Instance)
+            .Take(RecentlyActiveLimit)
+            .Select(task => task.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        deduped.RemoveAll(task =>
+            task.Type == WorkbenchTaskType.RecentlyActiveCustomer &&
+            !keepRecentIds.Contains(task.Id));
+
+        return deduped
+            .OrderBy(task => task, WorkbenchTaskComparer.Instance)
             .ToList();
     }
 
@@ -128,7 +176,12 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 order: order,
                 relatedEntityType: nameof(FollowUp),
                 relatedEntityId: followUp.Id,
-                occurredAt: followUp.ScheduledAt);
+                occurredAt: followUp.ScheduledAt,
+                dealId: followUp.DealId,
+                followUpId: followUp.Id,
+                targetSection: TargetSectionFollowUp,
+                actionHint: ActionHintCompleteFollowUp,
+                dedupeKey: $"followup-{type}-{followUp.Id}");
         }
     }
 
@@ -175,7 +228,12 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 relatedEntityType: nameof(AiSuggestion),
                 relatedEntityId: suggestion.Id,
                 occurredAt: suggestion.UpdatedAt,
-                draftState: isCopiedDraft ? "copied" : "prepared");
+                dealId: order?.DealId,
+                messageId: suggestion.MessageId,
+                aiSuggestionId: suggestion.Id,
+                targetSection: TargetSectionAiSuggestion,
+                actionHint: isCopiedDraft ? ActionHintReplyToCustomer : ActionHintReviewDraft,
+                dedupeKey: $"draft-{suggestion.Id}");
         }
     }
 
@@ -251,7 +309,12 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 order: order,
                 relatedEntityType: nameof(ConversationMessage),
                 relatedEntityId: latestIncoming.Id,
-                occurredAt: latestIncoming.MessageTime);
+                occurredAt: latestIncoming.MessageTime,
+                dealId: latestIncoming.DealId ?? order?.DealId,
+                messageId: latestIncoming.Id,
+                targetSection: TargetSectionConversation,
+                actionHint: ActionHintReplyToCustomer,
+                dedupeKey: $"reply-{group.Key.CustomerId}-{group.Key.OrderId?.ToString() ?? "none"}");
         }
     }
 
@@ -279,7 +342,13 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 order: order,
                 relatedEntityType: nameof(AiSuggestion),
                 relatedEntityId: suggestion.Id,
-                occurredAt: suggestion.CreatedAt);
+                occurredAt: suggestion.CreatedAt,
+                dealId: order?.DealId,
+                messageId: suggestion.MessageId,
+                aiSuggestionId: suggestion.Id,
+                targetSection: TargetSectionAiSuggestion,
+                actionHint: ActionHintReviewSuggestion,
+                dedupeKey: $"ai-pending-{suggestion.Id}");
         }
     }
 
@@ -319,72 +388,93 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 order: order,
                 relatedEntityType: nameof(OcrResult),
                 relatedEntityId: ocrResult.Id,
-                occurredAt: ocrResult.UpdatedAt);
+                occurredAt: ocrResult.UpdatedAt,
+                dealId: order?.DealId,
+                ocrResultId: ocrResult.Id,
+                targetSection: TargetSectionOcr,
+                actionHint: ActionHintConvertOcr,
+                dedupeKey: $"ocr-{ocrResult.Id}");
         }
     }
 
     private static IEnumerable<WorkbenchTask> BuildRecentlyActiveTasks(
         IEnumerable<Customer> customers,
-        IEnumerable<MerchantOrder> orders,
         IEnumerable<ConversationMessage> messages,
         IEnumerable<ActivityLog> activities,
-        ISet<int> customersWithExistingTasks,
+        IReadOnlyDictionary<int, MerchantOrder> orderMap,
+        ISet<int> customersWithBlockingTasks,
         DateTime today)
     {
-        var threshold = today.AddDays(-7);
+        var threshold = today.AddDays(-RecentlyActiveWindowDays);
 
         foreach (var customer in customers)
         {
-            if (customersWithExistingTasks.Contains(customer.Id))
+            if (customersWithBlockingTasks.Contains(customer.Id))
             {
                 continue;
             }
 
-            var recentOrder = orders
-                .Where(order => order.CustomerId == customer.Id)
-                .OrderByDescending(order => order.UpdatedAt)
-                .ThenByDescending(order => order.Id)
-                .FirstOrDefault();
             var recentMessage = messages
-                .Where(message => message.CustomerId == customer.Id)
+                .Where(message => message.CustomerId == customer.Id && message.MessageTime >= threshold)
                 .OrderByDescending(message => message.MessageTime)
                 .ThenByDescending(message => message.Id)
                 .FirstOrDefault();
+
             var recentActivity = activities
-                .Where(activity => activity.CustomerId == customer.Id)
+                .Where(activity => activity.CustomerId == customer.Id && activity.CreatedAt >= threshold)
                 .OrderByDescending(activity => activity.CreatedAt)
                 .ThenByDescending(activity => activity.Id)
                 .FirstOrDefault();
 
-            var candidates = new List<(DateTime OccurredAt, string Summary, MerchantOrder? Order)>
-            {
-                (customer.UpdatedAt, "客户资料最近有更新", recentOrder)
-            };
+            var candidates = new List<RecentSignalCandidate>();
 
-            if (customer.LastContactAt is DateTime lastContactAt)
+            if (recentActivity is not null)
             {
-                candidates.Add((lastContactAt, "客户最近有联系记录", recentOrder));
-            }
-
-            if (recentOrder is not null)
-            {
-                candidates.Add((recentOrder.UpdatedAt, $"订单最近更新：{GetTitleOrDefault(recentOrder.Title, "未命名订单")}", recentOrder));
+                candidates.Add(new RecentSignalCandidate(
+                    OccurredAt: recentActivity.CreatedAt,
+                    Summary: $"最近动态：{TrimPreview(GetTitleOrDefault(recentActivity.Title, recentActivity.Description))}",
+                    Order: ResolveOrder(orderMap, recentActivity.OrderId),
+                    RelatedEntityType: nameof(ActivityLog),
+                    RelatedEntityId: recentActivity.Id,
+                    MessageId: null,
+                    TargetSection: recentActivity.Type == ActivityType.ConversationMessageAdded ? TargetSectionConversation : TargetSectionCustomer,
+                    ActionHint: recentActivity.Type == ActivityType.ConversationMessageAdded ? ActionHintReplyToCustomer : string.Empty,
+                    SignalRank: 1));
             }
 
             if (recentMessage is not null)
             {
-                candidates.Add((recentMessage.MessageTime, $"最近消息：{TrimPreview(recentMessage.Content)}", recentOrder));
+                candidates.Add(new RecentSignalCandidate(
+                    OccurredAt: recentMessage.MessageTime,
+                    Summary: $"最近消息：{TrimPreview(recentMessage.Content)}",
+                    Order: ResolveOrder(orderMap, recentMessage.OrderId),
+                    RelatedEntityType: nameof(ConversationMessage),
+                    RelatedEntityId: recentMessage.Id,
+                    MessageId: recentMessage.Id,
+                    TargetSection: TargetSectionConversation,
+                    ActionHint: ActionHintReplyToCustomer,
+                    SignalRank: 2));
             }
 
-            if (recentActivity is not null)
+            if (customer.UpdatedAt >= threshold)
             {
-                candidates.Add((recentActivity.CreatedAt, $"最近动态：{TrimPreview(recentActivity.Title)}", recentOrder));
+                candidates.Add(new RecentSignalCandidate(
+                    OccurredAt: customer.UpdatedAt,
+                    Summary: "客户资料最近有更新",
+                    Order: null,
+                    RelatedEntityType: nameof(Customer),
+                    RelatedEntityId: customer.Id,
+                    MessageId: null,
+                    TargetSection: TargetSectionCustomer,
+                    ActionHint: string.Empty,
+                    SignalRank: 3));
             }
 
             var latest = candidates
-                .Where(candidate => candidate.OccurredAt >= threshold)
                 .OrderByDescending(candidate => candidate.OccurredAt)
+                .ThenBy(candidate => candidate.SignalRank)
                 .FirstOrDefault();
+
             if (latest == default)
             {
                 continue;
@@ -398,9 +488,14 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 summary: latest.Summary,
                 customer: customer,
                 order: latest.Order,
-                relatedEntityType: nameof(Customer),
-                relatedEntityId: customer.Id,
-                occurredAt: latest.OccurredAt);
+                relatedEntityType: latest.RelatedEntityType,
+                relatedEntityId: latest.RelatedEntityId,
+                occurredAt: latest.OccurredAt,
+                dealId: latest.Order?.DealId,
+                messageId: latest.MessageId,
+                targetSection: latest.TargetSection,
+                actionHint: latest.ActionHint,
+                dedupeKey: $"recent-{customer.Id}");
         }
     }
 
@@ -415,10 +510,16 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         string relatedEntityType,
         int? relatedEntityId,
         DateTime occurredAt,
-        string? draftState = null)
+        int? dealId = null,
+        int? messageId = null,
+        int? aiSuggestionId = null,
+        int? ocrResultId = null,
+        int? followUpId = null,
+        string targetSection = "",
+        string actionHint = "",
+        string? dedupeKey = null)
     {
-        var sortRank = GetSortRank(type, draftState);
-        return new WorkbenchTask
+        var task = new WorkbenchTask
         {
             Id = id,
             Type = type,
@@ -429,11 +530,45 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
             CustomerName = customer?.Name ?? order?.Customer?.Name ?? string.Empty,
             OrderId = order?.Id,
             OrderDisplay = order?.Title ?? string.Empty,
+            DealId = dealId ?? order?.DealId,
             RelatedEntityType = relatedEntityType,
             RelatedEntityId = relatedEntityId,
-            OccurredAt = occurredAt,
-            SortKey = BuildSortKey(sortRank, occurredAt)
+            MessageId = messageId,
+            AiSuggestionId = aiSuggestionId,
+            OcrResultId = ocrResultId,
+            FollowUpId = followUpId,
+            TargetSection = targetSection,
+            ActionHint = actionHint,
+            OccurredAt = occurredAt
         };
+
+        task.DedupeKey = string.IsNullOrWhiteSpace(dedupeKey)
+            ? BuildDefaultDedupeKey(task)
+            : dedupeKey;
+        task.SortKey = BuildSortKey(task);
+        return task;
+    }
+
+    private static MerchantOrder? ResolveOrder(IReadOnlyDictionary<int, MerchantOrder> orderMap, int? orderId)
+    {
+        if (orderId is not int resolvedOrderId)
+        {
+            return null;
+        }
+
+        return orderMap.TryGetValue(resolvedOrderId, out var order)
+            ? order
+            : null;
+    }
+
+    private static string BuildDefaultDedupeKey(WorkbenchTask task)
+    {
+        if (!string.IsNullOrWhiteSpace(task.RelatedEntityType) && task.RelatedEntityId is int relatedEntityId)
+        {
+            return $"{task.Type}:{task.RelatedEntityType}:{relatedEntityId}";
+        }
+
+        return $"{task.Type}:{task.CustomerId?.ToString() ?? "none"}:{task.OrderId?.ToString() ?? "none"}";
     }
 
     private static bool IsOpenFollowUp(FollowUp followUp)
@@ -447,27 +582,33 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         return leftTime > rightTime || leftTime == rightTime && leftId > rightId;
     }
 
-    private static int GetSortRank(WorkbenchTaskType type, string? draftState)
+    private static bool SuppressesRecentlyActive(WorkbenchTaskType type)
     {
-        return type switch
+        return RecentlyActiveBlockedTypes.Contains(type);
+    }
+
+    private static int GetSortRank(WorkbenchTask task)
+    {
+        return task.Type switch
         {
             WorkbenchTaskType.FollowUpOverdue => 1,
-            WorkbenchTaskType.DraftNotSent when string.Equals(draftState, "copied", StringComparison.OrdinalIgnoreCase) => 2,
+            WorkbenchTaskType.DraftNotSent when string.Equals(task.ActionHint, ActionHintReplyToCustomer, StringComparison.Ordinal) => 2,
             WorkbenchTaskType.ReplyNeeded => 3,
             WorkbenchTaskType.DraftNotSent => 4,
             WorkbenchTaskType.AiSuggestionPending => 5,
             WorkbenchTaskType.OcrNotConverted => 6,
             WorkbenchTaskType.FollowUpToday => 7,
             WorkbenchTaskType.RecentlyActiveCustomer => 8,
-            _ => Array.IndexOf(SortOrder, type) + 1
+            _ => 99
         };
     }
 
-    private static long BuildSortKey(int sortRank, DateTime occurredAt)
+    private static long BuildSortKey(WorkbenchTask task)
     {
-        var epochSeconds = new DateTimeOffset(occurredAt).ToUnixTimeSeconds();
+        var rank = GetSortRank(task);
+        var epochSeconds = new DateTimeOffset(task.OccurredAt).ToUnixTimeSeconds();
         var reverseSeconds = 9_999_999_999L - Math.Clamp(epochSeconds, 0L, 9_999_999_999L);
-        return (sortRank * 10_000_000_000L) + reverseSeconds;
+        return (rank * 10_000_000_000L) + reverseSeconds;
     }
 
     private static string GetTitleOrDefault(string? value, string? fallback)
@@ -544,5 +685,82 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         }
     }
 
+    private sealed class WorkbenchTaskComparer : IComparer<WorkbenchTask>
+    {
+        public static WorkbenchTaskComparer Instance { get; } = new();
+
+        public int Compare(WorkbenchTask? left, WorkbenchTask? right)
+        {
+            if (ReferenceEquals(left, right))
+            {
+                return 0;
+            }
+
+            if (left is null)
+            {
+                return 1;
+            }
+
+            if (right is null)
+            {
+                return -1;
+            }
+
+            var rankComparison = GetSortRank(left).CompareTo(GetSortRank(right));
+            if (rankComparison != 0)
+            {
+                return rankComparison;
+            }
+
+            var occurredAtComparison = right.OccurredAt.CompareTo(left.OccurredAt);
+            if (occurredAtComparison != 0)
+            {
+                return occurredAtComparison;
+            }
+
+            var priorityComparison = right.Priority.CompareTo(left.Priority);
+            if (priorityComparison != 0)
+            {
+                return priorityComparison;
+            }
+
+            var customerComparison = CompareNullableDescending(left.CustomerId, right.CustomerId);
+            if (customerComparison != 0)
+            {
+                return customerComparison;
+            }
+
+            var orderComparison = CompareNullableDescending(left.OrderId, right.OrderId);
+            if (orderComparison != 0)
+            {
+                return orderComparison;
+            }
+
+            var relatedEntityComparison = CompareNullableDescending(left.RelatedEntityId, right.RelatedEntityId);
+            if (relatedEntityComparison != 0)
+            {
+                return relatedEntityComparison;
+            }
+
+            return StringComparer.Ordinal.Compare(left.Id, right.Id);
+        }
+
+        private static int CompareNullableDescending(int? left, int? right)
+        {
+            return Nullable.Compare(right, left);
+        }
+    }
+
     private readonly record struct ConversationScopeKey(int CustomerId, int? OrderId);
+
+    private readonly record struct RecentSignalCandidate(
+        DateTime OccurredAt,
+        string Summary,
+        MerchantOrder? Order,
+        string RelatedEntityType,
+        int? RelatedEntityId,
+        int? MessageId,
+        string TargetSection,
+        string ActionHint,
+        int SignalRank);
 }
