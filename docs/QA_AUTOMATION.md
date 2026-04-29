@@ -7,12 +7,19 @@
 ## 2026-04-29 已执行结果
 
 - `dotnet build Orderly.sln -c Debug`：PASS
-- `run-p1-smoke.ps1`：PASS
 - `run-p2-full-regression.ps1`：PASS
 - `run-p3-1-workbench-smoke.ps1`：PASS
 - `run-p3-2-pipeline-smoke.ps1`：PASS
+- `run-p3-4-workbench-logic-smoke.ps1`：PASS
 - `run-p3-5-search-smoke.ps1`：PASS
-- `run-p3-full-regression.ps1`：PASS
+- `run-p3-6-navigation-smoke.ps1`：PASS
+- `run-p1-smoke.ps1`：FAIL
+- `run-p3-full-regression.ps1`：FAIL
+
+失败原因：
+
+- 两者都在既有 UIA `SendWait` 上失败。
+- 当前失败点不在本轮路由逻辑或 build。
 
 ## 常用命令
 
@@ -22,7 +29,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-1-workbench-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-2-pipeline-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-4-workbench-logic-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-5-search-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-6-navigation-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 ```
 
@@ -49,8 +58,14 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
   - 验证搜索排序稳定
   - 验证 `WorkbenchTaskFilter / WorkbenchTaskQuery`
   - 验证 QuickAction 只投影不触发副作用
+- `run-p3-6-navigation-smoke.ps1`
+  - 验证统一路由模型和 route service
+  - 验证 `TargetSection / ActionHint` 收口
+  - 验证 disabled QuickAction、未知 ActionHint、缺失实体 fallback
+  - 验证高风险动作只返回 `RequiresUserAction`
+  - 验证 `OpenSearchResultCommand / OpenWorkbenchTaskCommand` 只定位不副作用
 - `run-p3-full-regression.ps1`
-  - `build -> P1 -> P2 full -> P3.1 -> P3.2 -> P3.4 -> P3.5`
+  - `build -> P1 -> P2 full -> P3.1 -> P3.2 -> P3.4 -> P3.5 -> P3.6`
   - 失败即停，输出 `PASS / FAILED`
 
 ## 边界
@@ -60,10 +75,12 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 - 不调用真实 AI API
 - 不验证平台发送
 - 不覆盖最终 UI / XAML 视觉表现
+- 不覆盖最终 UI 路由焦点视觉表现
 - `artifacts/` 是运行产物，不提交
 
 ## 已知未覆盖
 
 - 任务卡片的最终视觉 polish
 - 搜索框与筛选栏的最终 UI 接入
+- `run-uia-smoke.ps1` 的 `SendWait` 环境稳定性
 - 真实外部平台回执

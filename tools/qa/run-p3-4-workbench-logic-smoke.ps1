@@ -441,7 +441,7 @@ if ($null -eq $draftTask) {
     throw 'DraftNotSent task for copied draft was not projected.'
 }
 Assert-TaskField -Task $draftTask -FieldName 'TargetSection' -Expected 'AiSuggestion'
-Assert-TaskField -Task $draftTask -FieldName 'ActionHint' -Expected 'ReplyToCustomer'
+Assert-TaskField -Task $draftTask -FieldName 'ActionHint' -Expected 'ReviewDraft'
 Assert-TaskField -Task $draftTask -FieldName 'AiSuggestionId' -Expected $draftSuggestion.Id
 
 $ocrTask = $tasks | Where-Object { $_.Type.ToString() -eq 'OcrNotConverted' -and $_.OcrResultId -eq $ocrResult.Id } | Select-Object -First 1
@@ -449,7 +449,7 @@ if ($null -eq $ocrTask) {
     throw 'OcrNotConverted task for completed OCR result was not projected.'
 }
 Assert-TaskField -Task $ocrTask -FieldName 'TargetSection' -Expected 'Ocr'
-Assert-TaskField -Task $ocrTask -FieldName 'ActionHint' -Expected 'ConvertOcr'
+Assert-TaskField -Task $ocrTask -FieldName 'ActionHint' -Expected 'ConvertOcrToMessage'
 Assert-TaskField -Task $ocrTask -FieldName 'OcrResultId' -Expected $ocrResult.Id
 
 $followUpTodayTasks = @($tasks | Where-Object { $_.Type.ToString() -eq 'FollowUpToday' })

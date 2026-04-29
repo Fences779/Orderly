@@ -236,7 +236,7 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 messageId: suggestion.MessageId,
                 aiSuggestionId: suggestion.Id,
                 targetSection: ProjectionTargetSections.AiSuggestion,
-                actionHint: isCopiedDraft ? ProjectionActionHints.ReplyToCustomer : ProjectionActionHints.ReviewDraft,
+                actionHint: ProjectionActionHints.ReviewDraft,
                 dedupeKey: $"draft-{suggestion.Id}");
         }
     }
@@ -396,7 +396,7 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 dealId: order?.DealId,
                 ocrResultId: ocrResult.Id,
                 targetSection: ProjectionTargetSections.Ocr,
-                actionHint: ProjectionActionHints.ConvertOcr,
+                actionHint: ProjectionActionHints.ConvertOcrToMessage,
                 dedupeKey: $"ocr-{ocrResult.Id}");
         }
     }
@@ -442,7 +442,7 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                     RelatedEntityId: recentActivity.Id,
                     MessageId: null,
                     TargetSection: recentActivity.Type == ActivityType.ConversationMessageAdded ? ProjectionTargetSections.Conversation : ProjectionTargetSections.Customer,
-                    ActionHint: recentActivity.Type == ActivityType.ConversationMessageAdded ? ProjectionActionHints.ReplyToCustomer : string.Empty,
+                    ActionHint: recentActivity.Type == ActivityType.ConversationMessageAdded ? ProjectionActionHints.ReplyToCustomer : ProjectionActionHints.OpenCustomer,
                     SignalRank: 1));
             }
 
@@ -470,7 +470,7 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                     RelatedEntityId: customer.Id,
                     MessageId: null,
                     TargetSection: ProjectionTargetSections.Customer,
-                    ActionHint: string.Empty,
+                    ActionHint: ProjectionActionHints.OpenCustomer,
                     SignalRank: 3));
             }
 
@@ -596,7 +596,7 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         return task.Type switch
         {
             WorkbenchTaskType.FollowUpOverdue => 1,
-            WorkbenchTaskType.DraftNotSent when string.Equals(task.ActionHint, ProjectionActionHints.ReplyToCustomer, StringComparison.Ordinal) => 2,
+            WorkbenchTaskType.DraftNotSent when task.Priority == WorkbenchTaskPriority.Critical => 2,
             WorkbenchTaskType.ReplyNeeded => 3,
             WorkbenchTaskType.DraftNotSent => 4,
             WorkbenchTaskType.AiSuggestionPending => 5,

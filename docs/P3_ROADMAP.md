@@ -8,6 +8,7 @@
 - P3.2 `Pipeline 只读阶段推导`
 - P3.4 `Workbench 非 UI 逻辑加固`
 - P3.5 `非 UI 搜索 / 筛选 / 快捷动作数据能力`
+- P3.6 `命令路由一致性 / 深链 QA 加固`
 - P3 QA / 回归总控
 
 本轮明确不做：
@@ -30,12 +31,18 @@
   - `WorkbenchTaskPriority`
   - `PipelineStage`
   - `PipelineStageSnapshot`
+  - `NavigationTarget`
+  - `NavigationTargetSection`
+  - `NavigationActionHint`
+  - `NavigationRouteResult`
 - Core Services
   - `IWorkbenchTaskService`
   - `IPipelineStageResolver`
+  - `INavigationRouteService`
 - Data Services
   - `LocalWorkbenchTaskService`
   - `LocalGlobalSearchService`
+  - `LocalNavigationRouteService`
   - `PipelineStageResolver`
   - `PipelineStageRuleEngine`
 - App 接入
@@ -68,9 +75,28 @@
   - `Fulfilled / Lost` 对 `Closed` 订单的回退条件更明确
   - 缺失客户/订单上下文时安全回退到 `New`
 
+## P3.6 路由加固
+
+- 统一 `SearchResult / WorkbenchTask / QuickAction` 的 `TargetSection / ActionHint` 语义。
+- `DraftNotSent` 统一为 `AiSuggestion / ReviewDraft`。
+- `Ocr` 统一为 `ConvertOcrToMessage`，旧 `ConvertOcr` 只保留兼容解析。
+- `ActivityLog` 搜索结果统一使用 `TargetSection = ActivityLog`。
+- `QuickAction` 现在携带：
+  - `Type / TargetSection / ActionHint`
+  - `IsEnabled / DisabledReason`
+  - `CustomerId / OrderId / RelatedEntityType / RelatedEntityId`
+  - `RequiresUserAction`
+- 高风险动作只返回 `RequiresUserAction = true`：
+  - `CopyDraft`
+  - `MarkSent`
+  - `ConvertOcrToMessage`
+  - `CompleteFollowUp`
+  - `SnoozeFollowUp`
+- `MainViewModel` 统一先走 route service，只做安全定位，不触发副作用。
+
 ## QA 状态
 
-2026-04-29 已执行并通过：
+2026-04-29 已执行：
 
 ```powershell
 dotnet build Orderly.sln -c Debug
@@ -79,14 +105,32 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-1-workbench-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-2-pipeline-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-4-workbench-logic-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-5-search-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-6-navigation-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 ```
+
+- `dotnet build Orderly.sln -c Debug`：PASS
+- `run-p2-full-regression.ps1`：PASS
+- `run-p3-1-workbench-smoke.ps1`：PASS
+- `run-p3-2-pipeline-smoke.ps1`：PASS
+- `run-p3-4-workbench-logic-smoke.ps1`：PASS
+- `run-p3-5-search-smoke.ps1`：PASS
+- `run-p3-6-navigation-smoke.ps1`：PASS
+- `run-p1-smoke.ps1`：FAIL
+- `run-p3-full-regression.ps1`：FAIL
+
+失败原因：
+
+- 两者都被既有 `run-uia-smoke.ps1` 的 `SendWait` 异常阻塞。
+- 当前 P3 逻辑 smoke 已单独验证通过。
 
 ## 当前限制
 
 - 本轮只准备数据和 ViewModel 状态，不处理 UI/XAML。
 - `OpenWorkbenchTaskCommand` 不触发发送、OCR 转换、跟进完成等副作用。
 - `PipelineStage` 仍然是只读 projection，不写回 `Orders / Deals`。
+- 最终 UI 仍未消费 `NavigationTarget / NavigationRouteResult` 的全部焦点态。
 
 ## P3.5 搜索 / 筛选 / 快捷动作
 
@@ -138,4 +182,4 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 
 - UI 留待最终阶段统一处理。
 - 后续如果做界面接入，只消费本轮新增的深链字段和 ViewModel 状态，不反向推动 schema 变更。
-- 下一步更适合继续做 P3 逻辑闭环，而不是提前处理 UI。
+- 下一步更适合先 close out P3，并优先修掉 P1 UIA `SendWait` 稳定性，再统一做最终 UI 接入。

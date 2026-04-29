@@ -319,7 +319,7 @@ public sealed class LocalGlobalSearchService : IGlobalSearchService
                 Score = match.Score,
                 Priority = SearchResultPriority.Medium,
                 TargetSection = ProjectionTargetSections.Ocr,
-                ActionHint = ProjectionActionHints.ConvertOcr
+                ActionHint = ProjectionActionHints.ConvertOcrToMessage
             };
         }
     }
@@ -418,7 +418,7 @@ public sealed class LocalGlobalSearchService : IGlobalSearchService
                 MatchedField = match.FieldName,
                 Score = match.Score,
                 Priority = SearchResultPriority.Low,
-                TargetSection = ResolveActivityTargetSection(activity),
+                TargetSection = ProjectionTargetSections.ActivityLog,
                 ActionHint = ResolveActivityActionHint(activity)
             };
         }
@@ -476,23 +476,6 @@ public sealed class LocalGlobalSearchService : IGlobalSearchService
             : ProjectionActionHints.ReviewSuggestion;
     }
 
-    private static string ResolveActivityTargetSection(ActivityLog activity)
-    {
-        return activity.Type switch
-        {
-            ActivityType.ConversationMessageAdded => ProjectionTargetSections.Conversation,
-            ActivityType.AiSuggestionGenerated or ActivityType.AiSuggestionAccepted or ActivityType.AiSuggestionRejected
-                or ActivityType.AutoReplyDraftPrepared or ActivityType.AutoReplyDraftCopied or ActivityType.AutoReplyDraftRejected or ActivityType.AutoReplySent
-                => ProjectionTargetSections.AiSuggestion,
-            ActivityType.OcrTaskCreated or ActivityType.OcrTaskCompleted or ActivityType.OcrTaskFailed => ProjectionTargetSections.Ocr,
-            ActivityType.FollowUpCreated or ActivityType.FollowUpCompleted or ActivityType.FollowUpSnoozed or ActivityType.FollowUpCancelled
-                => ProjectionTargetSections.FollowUp,
-            ActivityType.OrderCreated or ActivityType.OrderStatusChanged or ActivityType.PriceAdjustmentRequested or ActivityType.PriceAdjustmentApproved or ActivityType.PriceAdjustmentRejected
-                => ProjectionTargetSections.Order,
-            _ => ProjectionTargetSections.Customer
-        };
-    }
-
     private static string ResolveActivityActionHint(ActivityLog activity)
     {
         return activity.Type switch
@@ -501,7 +484,7 @@ public sealed class LocalGlobalSearchService : IGlobalSearchService
             ActivityType.AiSuggestionGenerated or ActivityType.AiSuggestionAccepted or ActivityType.AiSuggestionRejected => ProjectionActionHints.ReviewSuggestion,
             ActivityType.AutoReplyDraftPrepared or ActivityType.AutoReplyDraftCopied or ActivityType.AutoReplyDraftRejected or ActivityType.AutoReplySent
                 => ProjectionActionHints.ReviewDraft,
-            ActivityType.OcrTaskCreated or ActivityType.OcrTaskCompleted or ActivityType.OcrTaskFailed => ProjectionActionHints.ConvertOcr,
+            ActivityType.OcrTaskCreated or ActivityType.OcrTaskCompleted or ActivityType.OcrTaskFailed => ProjectionActionHints.ConvertOcrToMessage,
             ActivityType.FollowUpCreated or ActivityType.FollowUpCompleted or ActivityType.FollowUpSnoozed or ActivityType.FollowUpCancelled
                 => ProjectionActionHints.CompleteFollowUp,
             ActivityType.OrderCreated or ActivityType.OrderStatusChanged or ActivityType.PriceAdjustmentRequested or ActivityType.PriceAdjustmentApproved or ActivityType.PriceAdjustmentRejected

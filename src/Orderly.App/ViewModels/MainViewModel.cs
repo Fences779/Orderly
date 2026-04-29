@@ -22,6 +22,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IActivityLogService _activityLogService;
     private readonly IWorkbenchTaskService _workbenchTaskService;
     private readonly IGlobalSearchService _globalSearchService;
+    private readonly INavigationRouteService _navigationRouteService;
     private readonly IBackupService _backupService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
@@ -62,6 +63,7 @@ public partial class MainViewModel : ObservableObject
             activityLogService,
             EmptyWorkbenchTaskService.Instance,
             EmptyGlobalSearchService.Instance,
+            EmptyNavigationRouteService.Instance,
             backupService,
             priceAdjustmentService,
             replyTemplateRepository,
@@ -86,6 +88,7 @@ public partial class MainViewModel : ObservableObject
         IActivityLogService activityLogService,
         IWorkbenchTaskService workbenchTaskService,
         IGlobalSearchService globalSearchService,
+        INavigationRouteService navigationRouteService,
         IBackupService backupService,
         IPriceAdjustmentService priceAdjustmentService,
         IReplyTemplateRepository replyTemplateRepository,
@@ -107,6 +110,7 @@ public partial class MainViewModel : ObservableObject
         _activityLogService = activityLogService;
         _workbenchTaskService = workbenchTaskService;
         _globalSearchService = globalSearchService;
+        _navigationRouteService = navigationRouteService;
         _backupService = backupService;
         _priceAdjustmentService = priceAdjustmentService;
         _replyTemplateRepository = replyTemplateRepository;
@@ -233,6 +237,15 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private WorkbenchTaskFilter workbenchTaskFilter = new();
+
+    [ObservableProperty]
+    private NavigationTarget? currentNavigationTarget;
+
+    [ObservableProperty]
+    private string lastNavigationStatus = string.Empty;
+
+    [ObservableProperty]
+    private string lastNavigationError = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCurrentOcrResult))]
@@ -485,6 +498,41 @@ public partial class MainViewModel : ObservableObject
                 Limit = request?.Limit ?? 50,
                 TotalCount = 0,
                 Items = []
+            });
+        }
+    }
+
+    private sealed class EmptyNavigationRouteService : INavigationRouteService
+    {
+        public static EmptyNavigationRouteService Instance { get; } = new();
+
+        public Task<NavigationRouteResult> ResolveAsync(SearchResultItem item, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new NavigationRouteResult
+            {
+                CanNavigate = false,
+                DisabledReason = "Navigation route service is not configured.",
+                StatusMessage = "Navigation route service is not configured."
+            });
+        }
+
+        public Task<NavigationRouteResult> ResolveAsync(WorkbenchTask task, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new NavigationRouteResult
+            {
+                CanNavigate = false,
+                DisabledReason = "Navigation route service is not configured.",
+                StatusMessage = "Navigation route service is not configured."
+            });
+        }
+
+        public Task<NavigationRouteResult> ResolveAsync(QuickAction action, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new NavigationRouteResult
+            {
+                CanNavigate = false,
+                DisabledReason = "Navigation route service is not configured.",
+                StatusMessage = "Navigation route service is not configured."
             });
         }
     }

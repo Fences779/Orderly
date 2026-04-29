@@ -179,6 +179,14 @@ public partial class App : System.Windows.Application
             ocrResultRepository,
             activityLogRepository,
             priceAdjustmentRepository);
+        INavigationRouteService navigationRouteService = new LocalNavigationRouteService(
+            customerRepository,
+            orderRepository,
+            conversationMessageRepository,
+            aiSuggestionRepository,
+            ocrResultRepository,
+            followUpRepository,
+            activityLogRepository);
         IBackupService backupService = new LocalBackupService(connectionFactory, syncService, syncRecordRepository, activityLogRepository);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
 
@@ -199,6 +207,7 @@ public partial class App : System.Windows.Application
             activityLogService,
             workbenchTaskService,
             globalSearchService,
+            navigationRouteService,
             backupService,
             priceAdjustmentService,
             replyTemplateRepository,

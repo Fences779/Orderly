@@ -254,7 +254,7 @@ $draftTask = $tasks | Where-Object { $_.Type.ToString() -eq 'DraftNotSent' -and 
 if ($null -eq $draftTask) {
     throw 'DraftNotSent task for copied draft was not projected.'
 }
-if ($draftTask.TargetSection -ne 'AiSuggestion' -or $draftTask.ActionHint -ne 'ReplyToCustomer') {
+if ($draftTask.TargetSection -ne 'AiSuggestion' -or $draftTask.ActionHint -ne 'ReviewDraft') {
     throw "DraftNotSent task deep-link fields are unexpected. Section=$($draftTask.TargetSection), ActionHint=$($draftTask.ActionHint)"
 }
 
@@ -262,7 +262,7 @@ $ocrTask = $tasks | Where-Object { $_.Type.ToString() -eq 'OcrNotConverted' -and
 if ($null -eq $ocrTask) {
     throw 'OcrNotConverted task for completed OCR result was not projected.'
 }
-if ($ocrTask.TargetSection -ne 'Ocr' -or $ocrTask.ActionHint -ne 'ConvertOcr') {
+if ($ocrTask.TargetSection -ne 'Ocr' -or $ocrTask.ActionHint -ne 'ConvertOcrToMessage') {
     throw "OcrNotConverted task deep-link fields are unexpected. Section=$($ocrTask.TargetSection), ActionHint=$($ocrTask.ActionHint)"
 }
 

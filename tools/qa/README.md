@@ -26,10 +26,14 @@
   - 校验今日行动任务生成、排序稳定、QA reset 恢复
 - `run-p3-2-pipeline-smoke.ps1`
   - 校验阶段推导、fallback、不落库、不破坏旧状态
+- `run-p3-4-workbench-logic-smoke.ps1`
+  - 校验深链字段补齐、去重、recently active 降噪、排序稳定
 - `run-p3-5-search-smoke.ps1`
   - 校验统一搜索、WorkbenchTask 筛选、QuickAction 投影、QA reset 恢复
+- `run-p3-6-navigation-smoke.ps1`
+  - 校验 route service、TargetSection / ActionHint 收口、QuickAction 风险标记、ViewModel 安全定位
 - `run-p3-full-regression.ps1`
-  - `dotnet build -> P1 -> P2 full -> P3.1 -> P3.2 -> P3.4 -> P3.5`
+  - `dotnet build -> P1 -> P2 full -> P3.1 -> P3.2 -> P3.4 -> P3.5 -> P3.6`
 
 ## 常用命令
 
@@ -39,7 +43,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-1-workbench-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-2-pipeline-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-4-workbench-logic-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-5-search-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-6-navigation-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 ```
 
@@ -47,16 +53,19 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 
 2026-04-29：
 
-- P1 smoke：PASS
 - P2 full regression：PASS
 - P3.1 workbench smoke：PASS
 - P3.2 pipeline smoke：PASS
+- P3.4 workbench logic smoke：PASS
 - P3.5 search/action smoke：PASS
-- P3 full regression：PASS
+- P3.6 navigation route smoke：PASS
+- P1 smoke：FAIL（既有 UIA `SendWait`）
+- P3 full regression：FAIL（被同一 P1 UIA 问题提前截断）
 
 ## 注意
 
 - 默认回归不联网，不调用真实 AI API
 - 本轮 QA 不验证任何 UI / XAML 视觉改动
+- 路由 smoke 只验证逻辑和非视觉状态，不验证最终 UI 焦点表现
 - `artifacts\qa-smoke\` 只存运行产物，不提交
 - 如果某条 smoke 失败，先看该脚本输出，再看 `artifacts\qa-smoke\<timestamp>\`
