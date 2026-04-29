@@ -8,6 +8,15 @@
 - 执行前关闭已有 `Orderly.App`
 - 从 `powershell.exe` 启动也可以，脚本会自动切到 `pwsh`
 
+## P3 Final Closeout 命令
+
+```powershell
+dotnet build Orderly.sln -c Debug
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
+```
+
 ## 脚本列表
 
 - `run-qa-data-status.ps1`
@@ -32,25 +41,11 @@
 - `run-p3-4-workbench-logic-smoke.ps1`
   - 校验深链字段补齐、去重、recently active 降噪、排序稳定
 - `run-p3-5-search-smoke.ps1`
-  - 校验统一搜索、WorkbenchTask 筛选、QuickAction 投影、QA reset 恢复
+  - 校验统一搜索、`WorkbenchTask` 筛选、`QuickAction` 投影、QA reset 恢复
 - `run-p3-6-navigation-smoke.ps1`
-  - 校验 route service、TargetSection / ActionHint 收口、QuickAction 风险标记、ViewModel 安全定位
+  - 校验 route service、`TargetSection / ActionHint` 收口、QuickAction 风险标记、ViewModel 安全定位
 - `run-p3-full-regression.ps1`
   - `dotnet build -> P1 -> P2 full -> P3.1 -> P3.2 -> P3.4 -> P3.5 -> P3.6`
-
-## 常用命令
-
-```powershell
-dotnet build Orderly.sln -c Debug
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-1-workbench-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-2-pipeline-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-4-workbench-logic-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-5-search-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-6-navigation-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
-```
 
 ## 当前结论
 
@@ -72,4 +67,4 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 - 路由 smoke 只验证逻辑和非视觉状态，不验证最终 UI 焦点表现
 - `artifacts\qa-smoke\` 只存运行产物，不提交
 - 如果某条 smoke 失败，先看该脚本输出，再看 `artifacts\qa-smoke\<timestamp>\`
-- `run-uia-smoke.ps1` 日志会标明当前步骤、重试次数和最终失败原因，便于定位焦点/输入 race
+- `p4/customer-import-export-wip` 的 tests project 与迁移能力未并入当前 main，本目录结论不覆盖该分支

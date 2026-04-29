@@ -1,100 +1,70 @@
 # P3 Roadmap
 
-## 当前范围
+日期：2026-04-29
+状态：P3 完成，closeout 以 `docs/P3_CLOSEOUT_SUMMARY.md` 为准
 
-已完成：
+## 当前结论
 
-- P3.1 `今日行动 / 待处理工作台`
-- P3.2 `Pipeline 只读阶段推导`
-- P3.4 `Workbench 非 UI 逻辑加固`
-- P3.5 `非 UI 搜索 / 筛选 / 快捷动作数据能力`
-- P3.6 `命令路由一致性 / 深链 QA 加固`
-- P3 QA / 回归总控
+- P3 已完成并完成收口。
+- 本阶段主线是工作台、只读阶段推导、搜索/筛选/快捷动作 projection、统一路由语义和 QA 回归。
+- 本阶段不包含最终 UI/XAML 接入，不包含视觉 polish，不包含 125% 缩放收尾。
+- `p4/customer-import-export-wip` 已隔离，不属于 P3 closeout。
 
-本轮明确不做：
+## 阶段提交
+
+- `01ad22d` `feat: p3.1 workbench tasks`
+  - 落地 `WorkbenchTask`、`PipelineStage`、`PipelineStageResolver`、`PipelineStageRuleEngine`
+  - 建立今日行动 / 待处理工作台基础投影
+- `d833459` `chore: p3 qa and docs`
+  - 补 `P3.1 / P3.2` 文档
+  - 新增 `run-p3-1-workbench-smoke.ps1`
+  - 新增 `run-p3-2-pipeline-smoke.ps1`
+  - 新增 `run-p3-full-regression.ps1`
+- `e6c8398` `feat: p3.4 workbench logic hardening`
+  - 补齐 `WorkbenchTask` 深链字段
+  - 加固 `RecentlyActiveCustomer` 降噪、去重、稳定排序
+  - 加固 `PipelineStage` fallback
+- `97b6108` `feat: p3.5 search and action projections`
+  - 落地统一全局搜索 projection
+  - 落地 `WorkbenchTaskFilter / WorkbenchTaskQuery`
+  - 落地 `QuickAction` 只读投影
+- `501e984` `feat: p3.6 navigation route hardening`
+  - 落地 `INavigationRouteService`
+  - 统一 `SearchResult / WorkbenchTask / QuickAction` 的 `TargetSection / ActionHint` 语义
+  - 收口 ViewModel 安全定位路径
+- `bff98fb` `test: stabilize p1 uia smoke`
+  - 加固 `run-uia-smoke.ps1`
+  - 让 `run-p1-smoke.ps1` 与 `run-p3-full-regression.ps1` 稳定通过
+
+## 当前已确认能力
+
+- 今日行动 / 待处理工作台
+- `PipelineStage` 只读阶段推导
+- `FollowUpToday / FollowUpOverdue`
+- `WorkbenchTask` 深链字段
+- `RecentlyActiveCustomer` 降噪
+- `WorkbenchTask` 去重与稳定排序
+- 全局搜索 projection
+- `WorkbenchTask` 筛选
+- `QuickAction` projection
+- `NavigationRouteService`
+- `SearchResult / WorkbenchTask / QuickAction` 路由语义统一
+- `P3 full regression` 已通过
+
+## 当前明确未做
 
 - 不改任何 `.xaml`
-- 不改数据库 schema
-- 不改 `src/Orderly.Data/Sqlite/DatabaseInitializer.cs`
-- 不接云同步、微信、闲鱼或其他平台
+- 不改 `src/Orderly.App/Views/MainWindow.xaml`
+- 不做最终 UI 接入
+- 不做视觉 polish
+- 不做 125% 缩放收尾
+- 不接平台联动
 - 不自动发送
-- 不自动截屏
-- 不改 AI Provider / OCR / 备份恢复核心链路
-- 不做最终 UI polish
-- 不做搜索框、布局、样式、视觉和交互体验
+- 不接云同步
+- 不开放生产库覆盖恢复
+- 不合入 `p4/customer-import-export-wip`
 
-## 已落地架构
-
-- Core Models
-  - `WorkbenchTask`
-  - `WorkbenchTaskType`
-  - `WorkbenchTaskPriority`
-  - `PipelineStage`
-  - `PipelineStageSnapshot`
-  - `NavigationTarget`
-  - `NavigationTargetSection`
-  - `NavigationActionHint`
-  - `NavigationRouteResult`
-- Core Services
-  - `IWorkbenchTaskService`
-  - `IPipelineStageResolver`
-  - `INavigationRouteService`
-- Data Services
-  - `LocalWorkbenchTaskService`
-  - `LocalGlobalSearchService`
-  - `LocalNavigationRouteService`
-  - `PipelineStageResolver`
-  - `PipelineStageRuleEngine`
-- App 接入
-  - `WorkbenchTaskListItem`
-  - `SearchResultListItem`
-  - `MainViewModel` 仅增加非视觉字段、选择同步、刷新命令
-
-## P3.4 逻辑加固
-
-- 深链字段：
-  - `DealId`
-  - `MessageId`
-  - `AiSuggestionId`
-  - `OcrResultId`
-  - `FollowUpId`
-  - `TargetSection`
-  - `ActionHint`
-  - `DedupeKey`
-- `RecentlyActiveCustomer` 降噪：
-  - 仅最近 7 天
-  - 最多 5 条
-  - 同客户最多 1 条
-  - 如果已有更高优先级任务，则移除该客户的 `RecentlyActiveCustomer`
-- 任务去重与排序：
-  - 同一实体同一任务类型按 `DedupeKey` 去重
-  - 排序规则集中在 service comparer
-  - 重复读取结果保持稳定
-- Pipeline 推导加固：
-  - `WaitingPayment` 仅凭本地 sent 信号时标记 fallback
-  - `Fulfilled / Lost` 对 `Closed` 订单的回退条件更明确
-  - 缺失客户/订单上下文时安全回退到 `New`
-
-## P3.6 路由加固
-
-- 统一 `SearchResult / WorkbenchTask / QuickAction` 的 `TargetSection / ActionHint` 语义。
-- `DraftNotSent` 统一为 `AiSuggestion / ReviewDraft`。
-- `Ocr` 统一为 `ConvertOcrToMessage`，旧 `ConvertOcr` 只保留兼容解析。
-- `ActivityLog` 搜索结果统一使用 `TargetSection = ActivityLog`。
-- `QuickAction` 现在携带：
-  - `Type / TargetSection / ActionHint`
-  - `IsEnabled / DisabledReason`
-  - `CustomerId / OrderId / RelatedEntityType / RelatedEntityId`
-  - `RequiresUserAction`
-- 高风险动作只返回 `RequiresUserAction = true`：
-  - `CopyDraft`
-  - `MarkSent`
-  - `ConvertOcrToMessage`
-  - `CompleteFollowUp`
-  - `SnoozeFollowUp`
-- `MainViewModel` 统一先走 route service，只做安全定位，不触发副作用。
-
-## QA 状态
+## QA 结论
 
 2026-04-29 已执行：
 
@@ -102,84 +72,16 @@
 dotnet build Orderly.sln -c Debug
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-1-workbench-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-2-pipeline-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-4-workbench-logic-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-5-search-smoke.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-6-navigation-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 ```
 
 - `dotnet build Orderly.sln -c Debug`：PASS
+- `run-p1-smoke.ps1`：PASS
 - `run-p2-full-regression.ps1`：PASS
-- `run-p3-1-workbench-smoke.ps1`：PASS
-- `run-p3-2-pipeline-smoke.ps1`：PASS
-- `run-p3-4-workbench-logic-smoke.ps1`：PASS
-- `run-p3-5-search-smoke.ps1`：PASS
-- `run-p3-6-navigation-smoke.ps1`：PASS
-- `run-p1-smoke.ps1`：FAIL
-- `run-p3-full-regression.ps1`：FAIL
-
-失败原因：
-
-- 两者都被既有 `run-uia-smoke.ps1` 的 `SendWait` 异常阻塞。
-- 当前 P3 逻辑 smoke 已单独验证通过。
-
-## 当前限制
-
-- 本轮只准备数据和 ViewModel 状态，不处理 UI/XAML。
-- `OpenWorkbenchTaskCommand` 不触发发送、OCR 转换、跟进完成等副作用。
-- `PipelineStage` 仍然是只读 projection，不写回 `Orders / Deals`。
-- 最终 UI 仍未消费 `NavigationTarget / NavigationRouteResult` 的全部焦点态。
-
-## P3.5 搜索 / 筛选 / 快捷动作
-
-- 本轮只做数据层、Service、Projection、ViewModel 非视觉接入。
-- 没有修改任何 `.xaml`，`MainWindow.xaml` 保持不变。
-- 全局搜索范围：
-  - `Customers`
-  - `Orders / MerchantOrders`
-  - `ConversationMessages`
-  - `AiSuggestions`
-  - `OcrResults`
-  - `FollowUps`
-  - `ActivityLogs`
-- 搜索规则：
-  - `query` 为空返回空结果
-  - `trim` 后长度小于 `2` 返回空结果
-  - 大小写不敏感
-  - 中文按 `contains` 匹配
-  - 默认最多返回 `50` 条
-- 搜索排序：
-  - 字段强匹配优先：标题/客户名 > 内容 > metadata
-  - 同分时按 `OccurredAt` 最近优先
-  - 再按实体类型优先：`Customer / Order` 主对象优先于日志类
-  - 最后按实体 Id / 结果 Id 稳定排序
-- `SearchResultItem` 字段：
-  - `Id / Type / Title / Summary`
-  - `CustomerId / CustomerName / OrderId`
-  - `RelatedEntityType / RelatedEntityId`
-  - `OccurredAt / MatchedField / Score / Priority`
-  - `PipelineStage / TargetSection / ActionHint`
-- `WorkbenchTask` 筛选：
-  - `TaskType / Priority / PipelineStage / CustomerId / OrderId / TargetSection`
-  - `OnlyActionable / IncludeRecentlyActive / OccurredFrom / OccurredTo`
-  - 默认调用路径不传筛选，行为保持与 P3.4 一致
-- QuickAction 规则：
-  - 只生成动作列表，不执行真实发送、复制、转换、完成、延期
-  - `DraftNotSent` -> `ReviewDraft / CopyDraft / MarkSent`
-  - `AiSuggestionPending` -> `ReviewSuggestion`
-  - `OcrNotConverted` -> `ConvertOcrToMessage`
-  - `FollowUpToday / FollowUpOverdue` -> `CompleteFollowUp / SnoozeFollowUp`
-  - `ReplyNeeded` -> `ReplyToCustomer`
-  - 导航动作按上下文补 `OpenCustomer / OpenOrder`
-- ViewModel 非视觉接入：
-  - `SearchQuery / SearchResults / SelectedSearchResult`
-  - `RunSearchCommand / RefreshSearchCommand / ClearSearchCommand / OpenSearchResultCommand`
-  - `WorkbenchTaskFilter` 状态接入 `RefreshWorkbenchTasks`
+- `run-p3-full-regression.ps1`：PASS
 
 ## 后续边界
 
-- UI 留待最终阶段统一处理。
-- 后续如果做界面接入，只消费本轮新增的深链字段和 ViewModel 状态，不反向推动 schema 变更。
-- 下一步更适合先 close out P3，并优先修掉 P1 UIA `SendWait` 稳定性，再统一做最终 UI 接入。
+- Final UI 阶段只应消费现有 `WorkbenchTask`、`SearchResult`、`QuickAction`、`NavigationRouteResult` 和相关 ViewModel 状态。
+- 不应为 UI 再新增平行路由逻辑、平行任务状态源或 schema 变更。
+- P4 工作继续留在 `p4/customer-import-export-wip`，与 P3 closeout 分支解耦。
