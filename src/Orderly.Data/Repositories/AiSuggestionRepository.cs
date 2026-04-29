@@ -104,6 +104,11 @@ public sealed class AiSuggestionRepository : IAiSuggestionRepository
             command => command.Parameters.AddWithValue("$customerId", customerId));
     }
 
+    public Task<IReadOnlyList<AiSuggestion>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        return QueryAsync("1 = 1", cancellationToken);
+    }
+
     public Task<IReadOnlyList<AiSuggestion>> ListByOrderIdAsync(int orderId, CancellationToken cancellationToken = default)
     {
         return QueryAsync(

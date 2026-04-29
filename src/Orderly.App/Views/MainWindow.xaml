@@ -84,41 +84,137 @@
                     <ColumnDefinition Width="330" />
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,14,0">
-                    <DockPanel>
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                            <TextBlock Text="客户/订单列表" Style="{StaticResource SectionHeaderTextStyle}" />
-                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                <TextBlock Text="{Binding Orders.Count, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                            </Border>
-                        </DockPanel>
-                        <ListBox ItemsSource="{Binding Orders}" SelectedItem="{Binding SelectedOrderItem}" BorderThickness="0" Background="Transparent" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border x:Name="OrderListItemCard" Padding="12" Margin="0,0,0,10" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="#ECE5D9" BorderThickness="1" CornerRadius="8">
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding CustomerName}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0" />
-                                            <DockPanel Margin="0,8,0,0">
-                                                <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2">
-                                                    <TextBlock Text="{Binding StatusLabel}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                </Border>
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding AmountText}" HorizontalAlignment="Right" Foreground="{StaticResource WarmTextBrush}" FontWeight="SemiBold" />
-                                            </DockPanel>
-                                            <TextBlock Text="{Binding FollowUpText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
-                                        </StackPanel>
+                <Grid Grid.Column="0" Margin="0,0,14,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="今日行动" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <TextBlock Text="只读推导当前待处理项" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" />
+                                </StackPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                                    <Button Content="刷新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="10,4" Margin="0,0,8,0" Command="{Binding RefreshWorkbenchTasksCommand}" />
+                                    <Border Style="{StaticResource CountBadgeBorderStyle}">
+                                        <TextBlock Text="{Binding WorkbenchTasks.Count, StringFormat={}{0} 项}" Style="{StaticResource CaptionTextStyle}" />
                                     </Border>
-                                    <DataTemplate.Triggers>
-                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                            <Setter TargetName="OrderListItemCard" Property="Background" Value="#EEF4F0" />
-                                            <Setter TargetName="OrderListItemCard" Property="BorderBrush" Value="#D5E4DA" />
-                                        </DataTrigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </DockPanel>
-                </Border>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <TextBlock Text="当前没有待处理工作台任务。">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasWorkbenchTasks}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <ListBox x:Name="WorkbenchTasksList"
+                                     AutomationProperties.AutomationId="WorkbenchTasksList"
+                                     ItemsSource="{Binding WorkbenchTasks}"
+                                     SelectedItem="{Binding SelectedWorkbenchTask}"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     MaxHeight="280"
+                                     ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
+                                <ListBox.Style>
+                                    <Style TargetType="ListBox">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasWorkbenchTasks}" Value="False">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ListBox.Style>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="WorkbenchTaskCard" Padding="12" Margin="0,0,0,10" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="#ECE5D9" BorderThickness="1" CornerRadius="8">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <WrapPanel>
+                                                        <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2" Margin="0,0,6,0">
+                                                            <TextBlock Text="{Binding TypeText}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                                                        </Border>
+                                                        <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="9" Padding="8,2">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding HasPipelineStage}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <TextBlock Text="{Binding PipelineStageText}" Foreground="{StaticResource WarmTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                                                        </Border>
+                                                    </WrapPanel>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OccurredAtText}" Foreground="{StaticResource SecondaryTextBrush}" />
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                                                <TextBlock Text="{Binding Summary}" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                                <TextBlock Text="{Binding RelatedContextText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding PriorityText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                                                <Setter TargetName="WorkbenchTaskCard" Property="Background" Value="#EEF4F0" />
+                                                <Setter TargetName="WorkbenchTaskCard" Property="BorderBrush" Value="#D5E4DA" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                <TextBlock Text="客户/订单列表" Style="{StaticResource SectionHeaderTextStyle}" />
+                                <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
+                                    <TextBlock Text="{Binding Orders.Count, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
+                                </Border>
+                            </DockPanel>
+                            <ListBox ItemsSource="{Binding Orders}" SelectedItem="{Binding SelectedOrderItem}" BorderThickness="0" Background="Transparent" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="OrderListItemCard" Padding="12" Margin="0,0,0,10" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="#ECE5D9" BorderThickness="1" CornerRadius="8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding CustomerName}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0" />
+                                                <DockPanel Margin="0,8,0,0">
+                                                    <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2">
+                                                        <TextBlock Text="{Binding StatusLabel}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                                                    </Border>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding AmountText}" HorizontalAlignment="Right" Foreground="{StaticResource WarmTextBrush}" FontWeight="SemiBold" />
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding FollowUpText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                                                <Setter TargetName="OrderListItemCard" Property="Background" Value="#EEF4F0" />
+                                                <Setter TargetName="OrderListItemCard" Property="BorderBrush" Value="#D5E4DA" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </Border>
+                </Grid>
 
                 <Grid Grid.Column="1" Margin="0,0,14,0">
                     <Grid.RowDefinitions>

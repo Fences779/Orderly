@@ -98,18 +98,34 @@ public sealed class OcrResultRepository : IOcrResultRepository
 
     public async Task<IReadOnlyList<OcrResult>> ListByCustomerIdAsync(int customerId, CancellationToken cancellationToken = default)
     {
+        return await QueryAsync("CustomerId = $customerId", cancellationToken, command =>
+        {
+            command.Parameters.AddWithValue("$customerId", customerId);
+        });
+    }
+
+    public Task<IReadOnlyList<OcrResult>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        return QueryAsync("1 = 1", cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<OcrResult>> QueryAsync(
+        string whereClause,
+        CancellationToken cancellationToken,
+        Action<SqliteCommand>? configure = null)
+    {
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
-        command.CommandText = """
+        command.CommandText = $"""
             SELECT
                 Id, CustomerId, OrderId, SourcePath, SourceName, ExtractedText, Status, ErrorMessage, MetadataJson,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             FROM OcrResults
-            WHERE DeletedAt IS NULL AND CustomerId = $customerId
+            WHERE DeletedAt IS NULL AND {whereClause}
             ORDER BY CreatedAt DESC, Id DESC;
             """;
-        command.Parameters.AddWithValue("$customerId", customerId);
+        configure?.Invoke(command);
 
         var rows = new List<OcrResult>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);

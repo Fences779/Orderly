@@ -20,6 +20,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IAiAssistantService _aiAssistantService;
     private readonly IAutoReplyService _autoReplyService;
     private readonly IActivityLogService _activityLogService;
+    private readonly IWorkbenchTaskService _workbenchTaskService;
     private readonly IBackupService _backupService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
@@ -45,6 +46,49 @@ public partial class MainViewModel : ObservableObject
         IAppSettingRepository settingRepository,
         IClipboardService clipboardService,
         string databasePath)
+        : this(
+            customerRepository,
+            orderRepository,
+            customerService,
+            orderService,
+            dealService,
+            followUpService,
+            noteService,
+            conversationService,
+            ocrService,
+            aiAssistantService,
+            autoReplyService,
+            activityLogService,
+            EmptyWorkbenchTaskService.Instance,
+            backupService,
+            priceAdjustmentService,
+            replyTemplateRepository,
+            settingRepository,
+            clipboardService,
+            databasePath)
+    {
+    }
+
+    public MainViewModel(
+        ICustomerRepository customerRepository,
+        IOrderRepository orderRepository,
+        ICustomerService customerService,
+        IOrderService orderService,
+        IDealService dealService,
+        IFollowUpService followUpService,
+        INoteService noteService,
+        IConversationService conversationService,
+        IOcrService ocrService,
+        IAiAssistantService aiAssistantService,
+        IAutoReplyService autoReplyService,
+        IActivityLogService activityLogService,
+        IWorkbenchTaskService workbenchTaskService,
+        IBackupService backupService,
+        IPriceAdjustmentService priceAdjustmentService,
+        IReplyTemplateRepository replyTemplateRepository,
+        IAppSettingRepository settingRepository,
+        IClipboardService clipboardService,
+        string databasePath)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -58,6 +102,7 @@ public partial class MainViewModel : ObservableObject
         _aiAssistantService = aiAssistantService;
         _autoReplyService = autoReplyService;
         _activityLogService = activityLogService;
+        _workbenchTaskService = workbenchTaskService;
         _backupService = backupService;
         _priceAdjustmentService = priceAdjustmentService;
         _replyTemplateRepository = replyTemplateRepository;
@@ -77,6 +122,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<PriceAdjustment> PriceAdjustments { get; } = new();
     public ObservableCollection<ActivityLog> ActivityLogs { get; } = new();
     public ObservableCollection<ReplyTemplate> ReplyTemplates { get; } = new();
+    public ObservableCollection<WorkbenchTaskListItem> WorkbenchTasks { get; } = new();
     public ObservableCollection<string> Sections { get; } = new(new[] { "工作台", "客户/订单", "话术库", "设置" });
     public ObservableCollection<SearchFilterOption> SearchFilterOptions { get; } = new();
     public ObservableCollection<QuickFilterOption> QuickFilterOptions { get; } = new();
@@ -166,6 +212,10 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     private AiSuggestionListItem? selectedAiSuggestion;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OpenWorkbenchTaskCommand))]
+    private WorkbenchTaskListItem? selectedWorkbenchTask;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCurrentOcrResult))]
@@ -301,6 +351,8 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(CopyAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshWorkbenchTasksCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenWorkbenchTaskCommand))]
     private bool isLoading;
 
     [ObservableProperty]
@@ -335,6 +387,8 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(CopyAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshWorkbenchTasksCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenWorkbenchTaskCommand))]
     private bool isSaving;
 
     [ObservableProperty]
@@ -366,8 +420,20 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(CopyAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(MarkAutoReplySentCommand))]
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshWorkbenchTasksCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenWorkbenchTaskCommand))]
     private bool isGeneratingAiSuggestion;
 
     private bool _isSynchronizingSelection;
     private int _detailLoadVersion;
+
+    private sealed class EmptyWorkbenchTaskService : IWorkbenchTaskService
+    {
+        public static EmptyWorkbenchTaskService Instance { get; } = new();
+
+        public Task<IReadOnlyList<WorkbenchTask>> GetTasksAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<WorkbenchTask>>([]);
+        }
+    }
 }

@@ -55,6 +55,7 @@ public partial class MainViewModel
     public bool HasAiSuggestions => AiSuggestions.Count > 0;
     public bool HasPriceAdjustments => PriceAdjustments.Count > 0;
     public bool HasActivityLogs => ActivityLogs.Count > 0;
+    public bool HasWorkbenchTasks => WorkbenchTasks.Count > 0;
     public bool HasCustomers => Customers.Count > 0;
     public bool HasOrders => Orders.Count > 0;
     public string CurrentOcrFileNameText => string.IsNullOrWhiteSpace(CurrentOcrResult?.SourceName) ? "未选择图片" : CurrentOcrResult.SourceName;
@@ -122,6 +123,7 @@ public partial class MainViewModel
 
     private void OnSummaryChanged()
     {
+        OnPropertyChanged(nameof(HasWorkbenchTasks));
         OnPropertyChanged(nameof(HasCustomers));
         OnPropertyChanged(nameof(HasOrders));
         OnPropertyChanged(nameof(PendingCount));

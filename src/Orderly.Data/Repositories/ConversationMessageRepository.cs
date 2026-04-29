@@ -126,6 +126,11 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
             command => command.Parameters.AddWithValue("$customerId", customerId));
     }
 
+    public Task<IReadOnlyList<ConversationMessage>> ListAsync(CancellationToken cancellationToken = default)
+    {
+        return QueryAsync("1 = 1", cancellationToken);
+    }
+
     public Task<IReadOnlyList<ConversationMessage>> ListByOrderIdAsync(int orderId, CancellationToken cancellationToken = default)
     {
         return QueryAsync(

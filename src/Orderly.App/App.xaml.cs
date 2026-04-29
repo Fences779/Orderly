@@ -150,6 +150,25 @@ public partial class App : System.Windows.Application
             aiProviderOptions);
         IAutoReplyService autoReplyService = new LocalAutoReplyService(aiSuggestionRepository, orderRepository, activityLogRepository, clipboardService);
         IActivityLogService activityLogService = new ActivityLogService(activityLogRepository);
+        IPipelineStageResolver pipelineStageResolver = new PipelineStageResolver(
+            customerRepository,
+            orderRepository,
+            dealRepository,
+            conversationMessageRepository,
+            aiSuggestionRepository,
+            followUpRepository,
+            activityLogRepository,
+            priceAdjustmentRepository);
+        IWorkbenchTaskService workbenchTaskService = new LocalWorkbenchTaskService(
+            customerRepository,
+            orderRepository,
+            dealRepository,
+            followUpRepository,
+            conversationMessageRepository,
+            aiSuggestionRepository,
+            ocrResultRepository,
+            activityLogRepository,
+            priceAdjustmentRepository);
         IBackupService backupService = new LocalBackupService(connectionFactory, syncService, syncRecordRepository, activityLogRepository);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
 
@@ -168,6 +187,7 @@ public partial class App : System.Windows.Application
             aiAssistantService,
             autoReplyService,
             activityLogService,
+            workbenchTaskService,
             backupService,
             priceAdjustmentService,
             replyTemplateRepository,

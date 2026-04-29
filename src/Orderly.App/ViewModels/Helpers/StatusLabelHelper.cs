@@ -50,6 +50,23 @@ internal static class StatusLabelHelper
         };
     }
 
+    public static string GetPipelineStageLabel(PipelineStage stage)
+    {
+        return stage switch
+        {
+            PipelineStage.New => "新线索",
+            PipelineStage.Contacted => "已沟通",
+            PipelineStage.Interested => "有意向",
+            PipelineStage.Quoted => "已报价",
+            PipelineStage.DraftPrepared => "草稿已备",
+            PipelineStage.WaitingPayment => "待付款",
+            PipelineStage.Paid => "已成交",
+            PipelineStage.Fulfilled => "已履约",
+            PipelineStage.Lost => "已流失",
+            _ => stage.ToString()
+        };
+    }
+
     public static DealStage GetNextStage(DealStage stage)
     {
         return stage switch

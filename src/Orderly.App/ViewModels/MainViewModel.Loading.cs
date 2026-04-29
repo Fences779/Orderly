@@ -20,6 +20,7 @@ public partial class MainViewModel
             var followUps = await _followUpService.GetFollowUpsAsync(cancellationToken);
             var notes = await _noteService.GetNotesAsync(cancellationToken);
             var templates = await _replyTemplateRepository.GetAllAsync(cancellationToken);
+            var workbenchTasks = await _workbenchTaskService.GetTasksAsync(cancellationToken);
             await LoadRecentBackupStatusAsync(cancellationToken);
 
             _allCustomers = customers.ToList();
@@ -28,9 +29,11 @@ public partial class MainViewModel
             _allFollowUps = followUps.ToList();
             _allCustomerNotes = notes.ToList();
             ReplaceCollection(ReplyTemplates, templates);
+            ReplaceCollection(WorkbenchTasks, workbenchTasks.Select(task => new WorkbenchTaskListItem(task)));
             ApplyFilters();
 
             SelectedOrderItem = Orders.FirstOrDefault();
+            SelectedWorkbenchTask = WorkbenchTasks.FirstOrDefault();
             if (SelectedOrderItem is null)
             {
                 SelectedCustomer = Customers.FirstOrDefault();
@@ -115,13 +118,18 @@ public partial class MainViewModel
         var deals = await _dealService.GetDealsAsync();
         var followUps = await _followUpService.GetFollowUpsAsync();
         var notes = await _noteService.GetNotesAsync();
+        var workbenchTasks = await _workbenchTaskService.GetTasksAsync();
 
         _allCustomers = customers.ToList();
         _allOrders = orders.Select(order => new OrderListItem(order)).ToList();
         _allDeals = deals.ToList();
         _allFollowUps = followUps.ToList();
         _allCustomerNotes = notes.ToList();
+        ReplaceCollection(WorkbenchTasks, workbenchTasks.Select(task => new WorkbenchTaskListItem(task)));
         ApplyFilters(selectedCustomerId ?? SelectedCustomer?.Id, selectedOrderId ?? SelectedOrder?.Id);
+        SelectedWorkbenchTask = WorkbenchTasks.FirstOrDefault(item => item.CustomerId == (selectedCustomerId ?? SelectedCustomer?.Id) && item.OrderId == (selectedOrderId ?? SelectedOrder?.Id))
+            ?? WorkbenchTasks.FirstOrDefault(item => item.CustomerId == (selectedCustomerId ?? SelectedCustomer?.Id))
+            ?? SelectedWorkbenchTask;
         AddOrderCommand.NotifyCanExecuteChanged();
     }
 
