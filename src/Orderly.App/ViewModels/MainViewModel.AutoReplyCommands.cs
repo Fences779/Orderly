@@ -141,9 +141,10 @@ public partial class MainViewModel
 
     private void NotifyAutoReplyCommandStateChanged()
     {
-        PrepareAutoReplyDraftCommand.NotifyCanExecuteChanged();
-        CopyAutoReplyDraftCommand.NotifyCanExecuteChanged();
-        MarkAutoReplySentCommand.NotifyCanExecuteChanged();
-        RejectAutoReplyDraftCommand.NotifyCanExecuteChanged();
+        NotifyCommandStateChanged(
+            PrepareAutoReplyDraftCommand,
+            CopyAutoReplyDraftCommand,
+            MarkAutoReplySentCommand,
+            RejectAutoReplyDraftCommand);
     }
 }

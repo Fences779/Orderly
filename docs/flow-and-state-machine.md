@@ -1,5 +1,11 @@
 # 流程与状态机
 
+> Legacy / Historical Reference
+>
+> 本文描述的是旧小程序 / 云函数 / `capture` / `dealStage` 状态机体系，只供历史追溯，不代表当前 `main` 的实现或发布基线。
+>
+> 当前主线请以 `README.md`、`docs/product-overview.md`、`docs/deployment.md`、`docs/RELEASE_CHECK.md`、`docs/QA_AUTOMATION.md` 为准。
+
 ## 录入链路
 
 主链路固定为：

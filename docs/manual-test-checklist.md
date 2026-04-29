@@ -1,5 +1,11 @@
 # 手测清单
 
+> Legacy / Historical Reference
+>
+> 本文是旧小程序手测清单，只供历史追溯，不代表当前 `main` 的发布前验收基线。
+>
+> 当前主线发布前请改看 `docs/RELEASE_CHECK.md`、`docs/QA_AUTOMATION.md` 与 `tools/qa/README.md`。
+
 ## 1. 极速新建 -> 查看 deal 详情
 
 1. 首页点击「极速新建」。

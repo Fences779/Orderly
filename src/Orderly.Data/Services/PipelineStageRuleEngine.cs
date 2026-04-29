@@ -135,8 +135,7 @@ internal static class PipelineStageRuleEngine
         {
             var state = ProjectionMetadataHelper.ReadAutoReplyState(suggestion.MetadataJson);
             return suggestion.Status == AiSuggestionStatus.DraftPrepared
-                || string.Equals(state, "prepared", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(state, "copied", StringComparison.OrdinalIgnoreCase);
+                || AutoReplyState.IsPreparedDraft(state);
         });
     }
 
@@ -144,7 +143,7 @@ internal static class PipelineStageRuleEngine
     {
         var hasSuggestionSent = suggestions.Any(suggestion =>
             suggestion.Status == AiSuggestionStatus.Sent ||
-            string.Equals(ProjectionMetadataHelper.ReadAutoReplyState(suggestion.MetadataJson), "sent", StringComparison.OrdinalIgnoreCase));
+            AutoReplyState.IsSent(ProjectionMetadataHelper.ReadAutoReplyState(suggestion.MetadataJson)));
         if (hasSuggestionSent)
         {
             return true;

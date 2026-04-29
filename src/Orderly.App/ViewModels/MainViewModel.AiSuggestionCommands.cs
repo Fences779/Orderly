@@ -129,8 +129,9 @@ public partial class MainViewModel
 
     private void NotifyAiSuggestionCommandStateChanged()
     {
-        GenerateAiSuggestionCommand.NotifyCanExecuteChanged();
-        AcceptAiSuggestionCommand.NotifyCanExecuteChanged();
-        RejectAiSuggestionCommand.NotifyCanExecuteChanged();
+        NotifyCommandStateChanged(
+            GenerateAiSuggestionCommand,
+            AcceptAiSuggestionCommand,
+            RejectAiSuggestionCommand);
     }
 }

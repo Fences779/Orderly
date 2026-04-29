@@ -143,15 +143,20 @@ public partial class MainViewModel
 
     private bool CanCompleteFollowUp(FollowUp? followUp)
     {
-        return followUp is not null && FollowUpDateHelper.CanTransitionFollowUp(followUp.Status) && !IsBusy;
+        return CanUpdateFollowUp(followUp);
     }
 
     private bool CanSnoozeFollowUp(FollowUp? followUp)
     {
-        return followUp is not null && FollowUpDateHelper.CanTransitionFollowUp(followUp.Status) && !IsBusy;
+        return CanUpdateFollowUp(followUp);
     }
 
     private bool CanCancelFollowUp(FollowUp? followUp)
+    {
+        return CanUpdateFollowUp(followUp);
+    }
+
+    private bool CanUpdateFollowUp(FollowUp? followUp)
     {
         return followUp is not null && FollowUpDateHelper.CanTransitionFollowUp(followUp.Status) && !IsBusy;
     }

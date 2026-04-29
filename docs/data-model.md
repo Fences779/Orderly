@@ -1,5 +1,11 @@
 # 数据模型
 
+> Legacy / Historical Reference
+>
+> 本文描述的是旧小程序 / 云函数数据模型设计，只供历史追溯，不代表当前 `main` 的 SQLite 实现或发布基线。
+>
+> 当前主线请以 `README.md`、`docs/product-overview.md`、`docs/deployment.md`、`docs/RELEASE_CHECK.md`、`docs/QA_AUTOMATION.md` 为准。
+
 所有正式业务数据以 `workspaceId` 隔离。第一版默认 `workspaceId = default`。
 
 ## customers

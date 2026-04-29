@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows;
+using CommunityToolkit.Mvvm.Input;
 using Orderly.App.Views;
 using Orderly.Core.Models;
 
@@ -134,6 +135,14 @@ public partial class MainViewModel
         foreach (var item in items)
         {
             target.Add(item);
+        }
+    }
+
+    private static void NotifyCommandStateChanged(params IRelayCommand[] commands)
+    {
+        foreach (var command in commands)
+        {
+            command.NotifyCanExecuteChanged();
         }
     }
 

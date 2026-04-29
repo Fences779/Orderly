@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Orderly.Core.Models;
 
 namespace Orderly.Data.Services;
 
@@ -6,27 +7,7 @@ internal static class ProjectionMetadataHelper
 {
     public static string? ReadAutoReplyState(string metadataJson)
     {
-        if (string.IsNullOrWhiteSpace(metadataJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(metadataJson);
-            if (!document.RootElement.TryGetProperty("autoReply", out var autoReply))
-            {
-                return null;
-            }
-
-            return autoReply.TryGetProperty("state", out var stateElement)
-                ? stateElement.GetString()
-                : null;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return AutoReplyMetadataHelper.ReadState(metadataJson);
     }
 
     public static int? ReadConvertedToMessageId(string metadataJson)

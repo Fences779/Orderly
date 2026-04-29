@@ -456,8 +456,7 @@ public sealed class LocalGlobalSearchService : IGlobalSearchService
     {
         var autoReplyState = ProjectionMetadataHelper.ReadAutoReplyState(suggestion.MetadataJson);
         var isPrepared = suggestion.Status == AiSuggestionStatus.DraftPrepared
-            || string.Equals(autoReplyState, "prepared", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(autoReplyState, "copied", StringComparison.OrdinalIgnoreCase);
+            || AutoReplyState.IsPreparedDraft(autoReplyState);
 
         return isPrepared
             ? "AI 草稿"
@@ -468,8 +467,7 @@ public sealed class LocalGlobalSearchService : IGlobalSearchService
     {
         var autoReplyState = ProjectionMetadataHelper.ReadAutoReplyState(suggestion.MetadataJson);
         var isPrepared = suggestion.Status == AiSuggestionStatus.DraftPrepared
-            || string.Equals(autoReplyState, "prepared", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(autoReplyState, "copied", StringComparison.OrdinalIgnoreCase);
+            || AutoReplyState.IsPreparedDraft(autoReplyState);
 
         return isPrepared
             ? ProjectionActionHints.ReviewDraft

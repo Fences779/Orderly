@@ -45,7 +45,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
 
         suggestion.Status = AiSuggestionStatus.DraftPrepared;
         suggestion.SuggestionText = AutoReplyDraftText.EnsurePrefix(suggestion.SuggestionText);
-        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, "prepared");
+        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, AutoReplyState.Prepared);
         await _suggestionRepository.UpdateAsync(suggestion, cancellationToken);
 
         await _activityLogRepository.CreateAsync(new ActivityLog
@@ -57,7 +57,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
             Title = "准备回复草稿",
             Description = "已基于 AI 建议准备本地回复草稿，仅本地保存，未发送任何外部消息。",
             Operator = "local-user",
-            MetadataJson = BuildActivityMetadata(suggestion, "prepared")
+            MetadataJson = BuildActivityMetadata(suggestion, AutoReplyState.Prepared)
         }, cancellationToken);
 
         return suggestion;
@@ -78,7 +78,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
 
         _clipboardService.SetText(AutoReplyDraftText.StripPrefix(suggestion.SuggestionText));
 
-        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, "copied");
+        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, AutoReplyState.Copied);
         await _suggestionRepository.UpdateAsync(suggestion, cancellationToken);
 
         await _activityLogRepository.CreateAsync(new ActivityLog
@@ -90,7 +90,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
             Title = "复制回复草稿",
             Description = "该回复草稿已复制到系统剪贴板，请手动粘贴到微信/闲鱼等目标平台发送；本软件不会自动发送。",
             Operator = "local-user",
-            MetadataJson = BuildActivityMetadata(suggestion, "copied")
+            MetadataJson = BuildActivityMetadata(suggestion, AutoReplyState.Copied)
         }, cancellationToken);
     }
 
@@ -108,7 +108,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
         }
 
         suggestion.Status = AiSuggestionStatus.Sent;
-        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, "sent");
+        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, AutoReplyState.Sent);
         await _suggestionRepository.UpdateAsync(suggestion, cancellationToken);
 
         await _activityLogRepository.CreateAsync(new ActivityLog
@@ -120,7 +120,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
             Title = "标记回复已发送",
             Description = "该回复草稿已在本地标记为已发送，仅更新本地状态，未执行外部平台发送。",
             Operator = "local-user",
-            MetadataJson = BuildActivityMetadata(suggestion, "sent")
+            MetadataJson = BuildActivityMetadata(suggestion, AutoReplyState.Sent)
         }, cancellationToken);
     }
 
@@ -138,7 +138,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
         }
 
         suggestion.Status = AiSuggestionStatus.Rejected;
-        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, "rejected");
+        suggestion.MetadataJson = UpdateAutoReplyMetadata(suggestion.MetadataJson, AutoReplyState.Rejected);
         await _suggestionRepository.UpdateAsync(suggestion, cancellationToken);
 
         await _activityLogRepository.CreateAsync(new ActivityLog
@@ -150,7 +150,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
             Title = "拒绝回复草稿",
             Description = "该回复草稿已被本地拒绝，仅更新本地状态，保留记录，不删除数据。",
             Operator = "local-user",
-            MetadataJson = BuildActivityMetadata(suggestion, "rejected")
+            MetadataJson = BuildActivityMetadata(suggestion, AutoReplyState.Rejected)
         }, cancellationToken);
     }
 
@@ -172,7 +172,7 @@ public sealed class LocalAutoReplyService : IAutoReplyService
 
     private static bool IsCopiedDraft(AiSuggestion suggestion)
     {
-        return string.Equals(ReadAutoReplyState(suggestion.MetadataJson), "copied", StringComparison.OrdinalIgnoreCase);
+        return AutoReplyState.IsCopied(AutoReplyMetadataHelper.ReadState(suggestion.MetadataJson));
     }
 
     private static bool HasAutoReplyMetadata(string metadataJson)
@@ -192,12 +192,12 @@ public sealed class LocalAutoReplyService : IAutoReplyService
         autoReply["externalSendExecuted"] = false;
         autoReply["updatedAt"] = now;
 
-        if (state == "prepared" && autoReply["preparedAt"] is null)
+        if (AutoReplyState.IsPrepared(state) && autoReply["preparedAt"] is null)
         {
             autoReply["preparedAt"] = now;
         }
 
-        if (state is "copied" or "sent")
+        if (AutoReplyState.IsCopied(state) || AutoReplyState.IsSent(state))
         {
             autoReply["deliveryMode"] = "manual-copy";
             if (autoReply["externalPlatform"] is null)
@@ -206,13 +206,13 @@ public sealed class LocalAutoReplyService : IAutoReplyService
             }
         }
 
-        if (state == "copied")
+        if (AutoReplyState.IsCopied(state))
         {
             autoReply["copiedAt"] = now;
             autoReply["copiedBy"] = "p2.6";
         }
 
-        if (state == "sent")
+        if (AutoReplyState.IsSent(state))
         {
             autoReply["sentAt"] = now;
             autoReply["sentBy"] = "manual-confirm";
@@ -263,12 +263,6 @@ public sealed class LocalAutoReplyService : IAutoReplyService
         CopyJsonProperty(autoReply, metadata, "sentBy");
 
         return metadata.ToJsonString();
-    }
-
-    private static string? ReadAutoReplyState(string metadataJson)
-    {
-        var autoReply = ParseMetadata(metadataJson)["autoReply"] as JsonObject;
-        return autoReply?["state"]?.GetValue<string>();
     }
 
     private static void CopyJsonProperty(JsonObject? source, JsonObject target, string propertyName)

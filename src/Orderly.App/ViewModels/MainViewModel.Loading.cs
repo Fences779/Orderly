@@ -131,7 +131,7 @@ public partial class MainViewModel
         await RefreshSearchResultsAsync(updateStatus: false);
         ApplyFilters(selectedCustomerId ?? SelectedCustomer?.Id, selectedOrderId ?? SelectedOrder?.Id);
         SelectedWorkbenchTask = ResolveWorkbenchTaskSelection(previousSelection, selectedCustomerId, selectedOrderId);
-        AddOrderCommand.NotifyCanExecuteChanged();
+        NotifyCommandStateChanged(AddOrderCommand);
     }
 
     private Task ReloadSelectedCustomerDetailsAsync(Customer? customer = null)

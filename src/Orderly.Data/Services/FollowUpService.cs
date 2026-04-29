@@ -46,7 +46,7 @@ public sealed class FollowUpService : IFollowUpService
     public async Task CompleteFollowUpAsync(int id, DateTime completedAt, CancellationToken cancellationToken = default)
     {
         var followUp = await _followUpRepository.GetByIdAsync(id, cancellationToken);
-        if (followUp is null || !CanTransition(followUp.Status))
+        if (followUp is null || !FollowUpStatusHelper.CanTransition(followUp.Status))
         {
             return;
         }
@@ -60,7 +60,7 @@ public sealed class FollowUpService : IFollowUpService
     public async Task SnoozeFollowUpAsync(int id, DateTime scheduledAt, CancellationToken cancellationToken = default)
     {
         var followUp = await _followUpRepository.GetByIdAsync(id, cancellationToken);
-        if (followUp is null || !CanTransition(followUp.Status) || followUp.ScheduledAt == scheduledAt)
+        if (followUp is null || !FollowUpStatusHelper.CanTransition(followUp.Status) || followUp.ScheduledAt == scheduledAt)
         {
             return;
         }
@@ -83,7 +83,7 @@ public sealed class FollowUpService : IFollowUpService
     public async Task CancelFollowUpAsync(int id, CancellationToken cancellationToken = default)
     {
         var followUp = await _followUpRepository.GetByIdAsync(id, cancellationToken);
-        if (followUp is null || !CanTransition(followUp.Status))
+        if (followUp is null || !FollowUpStatusHelper.CanTransition(followUp.Status))
         {
             return;
         }
@@ -91,11 +91,6 @@ public sealed class FollowUpService : IFollowUpService
         followUp.Status = FollowUpStatus.Cancelled;
         await _followUpRepository.UpdateAsync(followUp, cancellationToken);
         await AddActivityAsync(ActivityType.FollowUpCancelled, followUp.CustomerId, followUp.DealId, followUp.OrderId, "取消跟进", followUp.Title, cancellationToken);
-    }
-
-    private static bool CanTransition(FollowUpStatus status)
-    {
-        return status is FollowUpStatus.Pending or FollowUpStatus.InProgress or FollowUpStatus.Overdue;
     }
 
     private Task AddActivityAsync(ActivityType type, int? customerId, int? dealId, int? orderId, string title, string description, CancellationToken cancellationToken)

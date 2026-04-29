@@ -338,7 +338,6 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(RestoreRiskPromptText));
         OnPropertyChanged(nameof(RestoreRiskConfirmationText));
         OnPropertyChanged(nameof(CanRestoreWithConfirmation));
-        RestoreBackupCommand.NotifyCanExecuteChanged();
     }
 
     private static string GetDefaultBackupDirectory()

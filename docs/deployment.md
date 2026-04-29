@@ -1,106 +1,62 @@
-# 部署说明
+# 部署与运行说明
 
-## 1. 导入工程
+日期：2026-04-29
+口径：当前 `main` 主线
 
-用微信开发者工具导入当前目录：
+## 范围
 
-`D:\Dev\Orderly`
+本文描述当前 `main` 的桌面端构建、运行和发布前验收准备。
 
-小程序根目录为 `miniprogram/`，云函数根目录为 `cloudfunctions/`。
+旧小程序 / 云函数部署内容不再作为当前发布基线；仓库中的 `miniprogram/`、`cloudfunctions/` 目录仅作历史参考。
 
-## 2. 初始化云开发环境
+## 环境前置
 
-1. 打开微信开发者工具。
-2. 点击「云开发」。
-3. 创建一个云环境。
-4. 复制环境 ID。
-5. 修改 `miniprogram/config/appConfig.js`：
+- Windows 开发环境
+- .NET 8 SDK
+- 可用的 PowerShell
 
-```js
-cloudEnv: '你的环境 ID'
+## 本地构建与启动
+
+1. 还原依赖：
+
+```powershell
+dotnet restore Orderly.sln
 ```
 
-如果不填写，代码会使用微信开发者工具当前默认云环境。
+2. 构建桌面应用：
 
-## 3. 创建集合
-
-可以先不手工创建集合，`dealInitSeed` 会尝试创建集合并写入 seed。
-
-集合清单：
-
-- `customers`
-- `deals`
-- `quotes`
-- `sku_catalog`
-- `followup_tasks`
-- `message_templates`
-- `captures`
-- `activity_logs`
-
-建议根据 `database.indexes.json` 在云开发控制台补索引。
-
-## 4. 部署云函数
-
-在微信开发者工具中，逐个右键以下目录，选择「上传并部署：云端安装依赖」：
-
-- `cloudfunctions/dealInitSeed`
-- `cloudfunctions/captureParse`
-- `cloudfunctions/captureConfirm`
-- `cloudfunctions/customerUpsert`
-- `cloudfunctions/dealUpsert`
-- `cloudfunctions/dealStageUpdate`
-- `cloudfunctions/quoteCreateOrUpdate`
-- `cloudfunctions/followupScan`
-- `cloudfunctions/statsSummary`
-- `cloudfunctions/ocrAdapter`
-
-每个云函数目录都有独立 `package.json`，依赖为 `wx-server-sdk`。
-
-## 5. 灌 seed 数据
-
-方式一：在小程序里操作。
-
-1. 进入首页。
-2. 点击「设置」。
-3. 点击「初始化演示数据」。
-
-方式二：在云开发控制台直接调用 `dealInitSeed`，参数：
-
-```json
-{
-  "workspaceId": "default"
-}
+```powershell
+dotnet build Orderly.sln -c Debug
 ```
 
-seed 包含：
+3. 启动方式：
 
-- 6 个 SKU
-- 15 条模板
-- 5 个客户
-- 10 个 deal
-- 3 条报价
-- 5 条跟进任务
-- 3 条 capture
-- activity log 示例
+- 在 IDE 中启动 `Orderly.App`
+- 或运行 `start-orderly.bat`
 
-## 6. OCR adapter
+## 发布前统一入口
 
-默认 `ocrAdapter` 使用 mock provider，会返回一段可解析的示例文本。
+当前发布前验收入口统一为：
 
-如果配置真实 OCR：
+- `docs/RELEASE_CHECK.md`
+- `docs/QA_AUTOMATION.md`
+- `tools/qa/README.md`
 
-1. 在云函数环境变量设置 `OCR_PROVIDER`。
-2. 在 `cloudfunctions/ocrAdapter/index.js` 增加对应 provider 调用。
-3. 真实 OCR 异常时仍应返回空文本和提示，页面允许用户手动粘贴修正。
+其中 `docs/RELEASE_CHECK.md` 是发布前必须遵循的主入口。
 
-当前降级不影响主链路，因为 OCR 页允许用户直接编辑 OCR 文本，再走解析和确认。
+## 当前发布基线
 
-## 7. 首页测试入口
+- 当前主线采用 `QA-only baseline`
+- `dotnet build` 是必跑项
+- 当前 QA smoke 脚本是必跑项
+- 当前 `main` 不存在正式 tests project
+- 未恢复 tests project 前，`dotnet test` 暂不作为必跑项
+- UI / 视觉 / XAML / 125% 缩放验收不属于当前阶段，由 Antigravity 后续负责
 
-编译后进入 `pages/dashboard/dashboard`。
+## 当前不应作为发布判断依据的内容
 
-建议先执行：
+- 历史小程序页面路由
+- 云函数上传部署步骤
+- 旧 `capture / quote / dealStage` 文档流程
+- 未合入 `main` 的分支能力
 
-1. 设置页初始化 seed。
-2. 回到工作台手动扫描跟进任务。
-3. 按 `docs/manual-test-checklist.md` 验收主链路。

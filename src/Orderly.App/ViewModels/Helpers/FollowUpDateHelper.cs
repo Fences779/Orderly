@@ -6,7 +6,7 @@ internal static class FollowUpDateHelper
 {
     public static bool CanTransitionFollowUp(FollowUpStatus status)
     {
-        return status is FollowUpStatus.Pending or FollowUpStatus.InProgress or FollowUpStatus.Overdue;
+        return FollowUpStatusHelper.CanTransition(status);
     }
 
     public static bool IsPendingOrder(OrderStatus status)

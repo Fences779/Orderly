@@ -12,7 +12,7 @@ public sealed class AiSuggestionListItem
     public AiSuggestionListItem(AiSuggestion suggestion)
     {
         Suggestion = suggestion;
-        _autoReplyState = ReadAutoReplyState(suggestion.MetadataJson);
+        _autoReplyState = AutoReplyMetadataHelper.ReadState(suggestion.MetadataJson);
         _providerBadgeText = ReadProviderBadgeText(suggestion.MetadataJson);
     }
 
@@ -60,38 +60,13 @@ public sealed class AiSuggestionListItem
     }
 
     private bool IsAutoReplyDraft => !string.IsNullOrWhiteSpace(_autoReplyState);
-    private bool IsCopiedDraft => string.Equals(_autoReplyState, "copied", StringComparison.OrdinalIgnoreCase);
+    private bool IsCopiedDraft => AutoReplyState.IsCopied(_autoReplyState);
 
     private string GetSuggestionText()
     {
         return IsAutoReplyDraft
             ? AutoReplyDraftText.StripPrefix(Suggestion.SuggestionText)
             : Suggestion.SuggestionText;
-    }
-
-    private static string? ReadAutoReplyState(string metadataJson)
-    {
-        if (string.IsNullOrWhiteSpace(metadataJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(metadataJson);
-            if (!document.RootElement.TryGetProperty("autoReply", out var autoReply))
-            {
-                return null;
-            }
-
-            return autoReply.TryGetProperty("state", out var stateElement)
-                ? stateElement.GetString()
-                : null;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 
     private static string ReadProviderBadgeText(string metadataJson)

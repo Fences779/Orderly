@@ -80,8 +80,20 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 - `run-p2-full-regression.ps1`：PASS
 - `run-p3-full-regression.ps1`：PASS
 
+## P4 接续状态
+
+- `P4.1` 已完成：工程健康审计，见 `docs/P4_ENGINEERING_AUDIT.md`
+- `P4.2A` 已完成：文档口径收口与发布验收入口统一
+- `P4.2B` 已完成：低风险工程债清理完成
+- `P4.3` 不进入本轮：当前接受 `QA-only baseline`，不恢复 tests project
+- `P4.4` 已完成：Release freeze 归档见 `docs/P4_RELEASE_FREEZE.md`
+- 当前发布基线：`QA-only baseline`
+- `dotnet test` 当前不是必跑项
+- 当前剩余非视觉阻断项：无
+- UI / 视觉 / XAML / 125% 缩放阶段交由 Antigravity
+
 ## 后续边界
 
 - Final UI 阶段只应消费现有 `WorkbenchTask`、`SearchResult`、`QuickAction`、`NavigationRouteResult` 和相关 ViewModel 状态。
 - 不应为 UI 再新增平行路由逻辑、平行任务状态源或 schema 变更。
-- P4 工作继续留在 `p4/customer-import-export-wip`，与 P3 closeout 分支解耦。
+- 当前发布前验收入口以 `docs/RELEASE_CHECK.md` 为准。

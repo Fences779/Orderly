@@ -141,14 +141,14 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
     {
         foreach (var followUp in followUps)
         {
-            if (!IsOpenFollowUp(followUp))
+            if (!FollowUpStatusHelper.IsOpen(followUp))
             {
                 continue;
             }
 
-            var type = followUp.ScheduledAt.Date < today
+            var type = FollowUpStatusHelper.IsOverdue(followUp, today)
                 ? WorkbenchTaskType.FollowUpOverdue
-                : followUp.ScheduledAt.Date == today
+                : FollowUpStatusHelper.IsScheduledOn(followUp, today)
                     ? WorkbenchTaskType.FollowUpToday
                     : (WorkbenchTaskType?)null;
 
@@ -197,12 +197,11 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         foreach (var suggestion in suggestions)
         {
             var autoReplyState = ProjectionMetadataHelper.ReadAutoReplyState(suggestion.MetadataJson);
-            var isCopiedDraft = string.Equals(autoReplyState, "copied", StringComparison.OrdinalIgnoreCase);
+            var isCopiedDraft = AutoReplyState.IsCopied(autoReplyState);
             var isPreparedDraft = suggestion.Status == AiSuggestionStatus.DraftPrepared
-                || string.Equals(autoReplyState, "prepared", StringComparison.OrdinalIgnoreCase)
-                || isCopiedDraft;
+                || AutoReplyState.IsPreparedDraft(autoReplyState);
             var isSent = suggestion.Status == AiSuggestionStatus.Sent
-                || string.Equals(autoReplyState, "sent", StringComparison.OrdinalIgnoreCase);
+                || AutoReplyState.IsSent(autoReplyState);
 
             if (!isPreparedDraft || isSent)
             {
@@ -573,12 +572,6 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         }
 
         return $"{task.Type}:{task.CustomerId?.ToString() ?? "none"}:{task.OrderId?.ToString() ?? "none"}";
-    }
-
-    private static bool IsOpenFollowUp(FollowUp followUp)
-    {
-        return followUp.Status is FollowUpStatus.Pending or FollowUpStatus.InProgress or FollowUpStatus.Overdue
-            && followUp.CompletedAt is null;
     }
 
     private static bool IsAfter(DateTime leftTime, int leftId, DateTime rightTime, int rightId)

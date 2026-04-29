@@ -243,8 +243,7 @@ public partial class MainViewModel
         return _allFollowUps.Any(followUp =>
             followUp.CustomerId == customerId &&
             (orderId is null || followUp.OrderId == orderId) &&
-            FollowUpDateHelper.CanTransitionFollowUp(followUp.Status) &&
-            followUp.ScheduledAt.Date == date.Date);
+            FollowUpStatusHelper.IsScheduledOn(followUp, date));
     }
 
     private bool HasOverdueFollowUp(int customerId, int? orderId = null)
@@ -252,7 +251,6 @@ public partial class MainViewModel
         return _allFollowUps.Any(followUp =>
             followUp.CustomerId == customerId &&
             (orderId is null || followUp.OrderId == orderId) &&
-            FollowUpDateHelper.CanTransitionFollowUp(followUp.Status) &&
-            followUp.ScheduledAt.Date < DateTime.Today);
+            FollowUpStatusHelper.IsOverdue(followUp, DateTime.Today));
     }
 }

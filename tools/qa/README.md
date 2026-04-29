@@ -2,17 +2,34 @@
 
 正式 QA 脚本统一放在 `tools/qa`。
 
+## 当前口径
+
+- 当前 `main` 发布前验收基线是 `QA-only baseline`
+- 当前 `main` 没有正式 tests project
+- `dotnet test` 暂不作为必跑项
+- 发布前统一入口见 `docs/RELEASE_CHECK.md`
+
 ## 前置条件
 
 - 已完成 Debug 构建：`src\Orderly.App\bin\Debug\net8.0-windows\Orderly.App.exe`
 - 执行前关闭已有 `Orderly.App`
 - 从 `powershell.exe` 启动也可以，脚本会自动切到 `pwsh`
 
-## P3 Final Closeout 命令
+## 发布前必跑命令
 
 ```powershell
 dotnet build Orderly.sln -c Debug
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-qa-data-status.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-2-pipeline-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-5-search-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-6-navigation-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
+git status --short
+```
+
+## 可选扩展回归
+
+```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 ```
@@ -27,9 +44,6 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
   - 只清理 QA 数据
 - `run-uia-smoke.ps1`
   - P1 UIA 主链路 smoke
-  - 控件模式优先：`ValuePattern / InvokePattern / SelectionItemPattern / ExpandCollapsePattern`
-  - 显式等待窗口 ready、控件可用、焦点稳定、文本回读
-  - `SendWait` 仅作键盘兜底，异常会记录并重试，不会静默吞掉
 - `run-p1-smoke.ps1`
   - `reset -> status -> UIA -> status`
 - `run-p2-full-regression.ps1`
@@ -47,24 +61,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 - `run-p3-full-regression.ps1`
   - `dotnet build -> P1 -> P2 full -> P3.1 -> P3.2 -> P3.4 -> P3.5 -> P3.6`
 
-## 当前结论
-
-2026-04-29：
-
-- P1 smoke：PASS
-- P2 full regression：PASS
-- P3.1 workbench smoke：PASS
-- P3.2 pipeline smoke：PASS
-- P3.4 workbench logic smoke：PASS
-- P3.5 search/action smoke：PASS
-- P3.6 navigation route smoke：PASS
-- P3 full regression：PASS
-
-## 注意
+## 边界
 
 - 默认回归不联网，不调用真实 AI API
-- 本轮 QA 不验证任何 UI / XAML 视觉改动
-- 路由 smoke 只验证逻辑和非视觉状态，不验证最终 UI 焦点表现
+- 本目录结论不覆盖最终 UI / XAML 视觉验收
+- 本目录结论不覆盖 125% 缩放收尾
 - `artifacts\qa-smoke\` 只存运行产物，不提交
-- 如果某条 smoke 失败，先看该脚本输出，再看 `artifacts\qa-smoke\<timestamp>\`
-- `p4/customer-import-export-wip` 的 tests project 与迁移能力未并入当前 main，本目录结论不覆盖该分支
+
