@@ -26,8 +26,10 @@
   - 校验今日行动任务生成、排序稳定、QA reset 恢复
 - `run-p3-2-pipeline-smoke.ps1`
   - 校验阶段推导、fallback、不落库、不破坏旧状态
+- `run-p3-5-search-smoke.ps1`
+  - 校验统一搜索、WorkbenchTask 筛选、QuickAction 投影、QA reset 恢复
 - `run-p3-full-regression.ps1`
-  - `dotnet build -> P1 -> P2 full -> P3.1 -> P3.2`
+  - `dotnet build -> P1 -> P2 full -> P3.1 -> P3.2 -> P3.4 -> P3.5`
 
 ## 常用命令
 
@@ -37,6 +39,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p2-full-regression.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-1-workbench-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-2-pipeline-smoke.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-5-search-smoke.ps1
 powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 ```
 
@@ -48,10 +51,12 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 - P2 full regression：PASS
 - P3.1 workbench smoke：PASS
 - P3.2 pipeline smoke：PASS
+- P3.5 search/action smoke：PASS
 - P3 full regression：PASS
 
 ## 注意
 
 - 默认回归不联网，不调用真实 AI API
+- 本轮 QA 不验证任何 UI / XAML 视觉改动
 - `artifacts\qa-smoke\` 只存运行产物，不提交
 - 如果某条 smoke 失败，先看该脚本输出，再看 `artifacts\qa-smoke\<timestamp>\`

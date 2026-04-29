@@ -21,6 +21,7 @@ public sealed class WorkbenchTask
     public int? FollowUpId { get; set; }
     public string TargetSection { get; set; } = string.Empty;
     public string ActionHint { get; set; } = string.Empty;
+    public IReadOnlyList<QuickAction> QuickActions { get; set; } = [];
     public DateTime OccurredAt { get; set; }
     public PipelineStage? PipelineStage { get; set; }
     public long SortKey { get; set; }

@@ -20,7 +20,7 @@ public partial class MainViewModel
             var followUps = await _followUpService.GetFollowUpsAsync(cancellationToken);
             var notes = await _noteService.GetNotesAsync(cancellationToken);
             var templates = await _replyTemplateRepository.GetAllAsync(cancellationToken);
-            var workbenchTasks = await _workbenchTaskService.GetTasksAsync(cancellationToken);
+            var workbenchTasks = await _workbenchTaskService.GetTasksAsync(WorkbenchTaskFilter, cancellationToken);
             await LoadRecentBackupStatusAsync(cancellationToken);
 
             _allCustomers = customers.ToList();
@@ -30,6 +30,7 @@ public partial class MainViewModel
             _allCustomerNotes = notes.ToList();
             ReplaceCollection(ReplyTemplates, templates);
             ReplaceCollection(WorkbenchTasks, workbenchTasks.Select(task => new WorkbenchTaskListItem(task)));
+            await RefreshSearchResultsAsync(updateStatus: false, cancellationToken);
             ApplyFilters();
 
             SelectedOrderItem = Orders.FirstOrDefault();
@@ -119,7 +120,7 @@ public partial class MainViewModel
         var deals = await _dealService.GetDealsAsync();
         var followUps = await _followUpService.GetFollowUpsAsync();
         var notes = await _noteService.GetNotesAsync();
-        var workbenchTasks = await _workbenchTaskService.GetTasksAsync();
+        var workbenchTasks = await _workbenchTaskService.GetTasksAsync(WorkbenchTaskFilter);
 
         _allCustomers = customers.ToList();
         _allOrders = orders.Select(order => new OrderListItem(order)).ToList();
@@ -127,6 +128,7 @@ public partial class MainViewModel
         _allFollowUps = followUps.ToList();
         _allCustomerNotes = notes.ToList();
         ReplaceCollection(WorkbenchTasks, workbenchTasks.Select(task => new WorkbenchTaskListItem(task)));
+        await RefreshSearchResultsAsync(updateStatus: false);
         ApplyFilters(selectedCustomerId ?? SelectedCustomer?.Id, selectedOrderId ?? SelectedOrder?.Id);
         SelectedWorkbenchTask = ResolveWorkbenchTaskSelection(previousSelection, selectedCustomerId, selectedOrderId);
         AddOrderCommand.NotifyCanExecuteChanged();

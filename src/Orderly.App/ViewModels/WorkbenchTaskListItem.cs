@@ -26,6 +26,8 @@ public sealed class WorkbenchTaskListItem
     public string ActionHint => Task.ActionHint;
     public string Title => Task.Title;
     public string Summary => Task.Summary;
+    public IReadOnlyList<QuickAction> QuickActions => Task.QuickActions;
+    public bool HasQuickActions => Task.QuickActions.Count > 0;
     public string CustomerNameDisplay => string.IsNullOrWhiteSpace(Task.CustomerName) ? "未定位客户" : Task.CustomerName;
     public string OrderDisplay => string.IsNullOrWhiteSpace(Task.OrderDisplay) ? "未关联订单" : Task.OrderDisplay;
     public string TypeText => GetTypeText();

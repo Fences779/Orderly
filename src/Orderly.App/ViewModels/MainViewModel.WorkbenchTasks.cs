@@ -18,7 +18,7 @@ public partial class MainViewModel
     private async Task RefreshWorkbenchTasksAsync()
     {
         var previousSelection = SelectedWorkbenchTask;
-        var tasks = await _workbenchTaskService.GetTasksAsync();
+        var tasks = await _workbenchTaskService.GetTasksAsync(WorkbenchTaskFilter);
         ReplaceCollection(WorkbenchTasks, tasks.Select(task => new WorkbenchTaskListItem(task)));
         SelectedWorkbenchTask = ResolveWorkbenchTaskSelection(previousSelection);
         StatusMessage = $"今日行动已刷新，共 {WorkbenchTasks.Count} 项";

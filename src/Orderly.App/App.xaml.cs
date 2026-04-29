@@ -169,6 +169,16 @@ public partial class App : System.Windows.Application
             ocrResultRepository,
             activityLogRepository,
             priceAdjustmentRepository);
+        IGlobalSearchService globalSearchService = new LocalGlobalSearchService(
+            customerRepository,
+            orderRepository,
+            dealRepository,
+            followUpRepository,
+            conversationMessageRepository,
+            aiSuggestionRepository,
+            ocrResultRepository,
+            activityLogRepository,
+            priceAdjustmentRepository);
         IBackupService backupService = new LocalBackupService(connectionFactory, syncService, syncRecordRepository, activityLogRepository);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
 
@@ -188,6 +198,7 @@ public partial class App : System.Windows.Application
             autoReplyService,
             activityLogService,
             workbenchTaskService,
+            globalSearchService,
             backupService,
             priceAdjustmentService,
             replyTemplateRepository,

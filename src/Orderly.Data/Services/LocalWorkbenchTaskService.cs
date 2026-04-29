@@ -9,18 +9,6 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
     private const int RecentlyActiveWindowDays = 7;
     private const int RecentlyActiveLimit = 5;
 
-    private const string TargetSectionCustomer = "Customer";
-    private const string TargetSectionConversation = "Conversation";
-    private const string TargetSectionAiSuggestion = "AiSuggestion";
-    private const string TargetSectionOcr = "Ocr";
-    private const string TargetSectionFollowUp = "FollowUp";
-
-    private const string ActionHintReviewDraft = "ReviewDraft";
-    private const string ActionHintReviewSuggestion = "ReviewSuggestion";
-    private const string ActionHintConvertOcr = "ConvertOcr";
-    private const string ActionHintCompleteFollowUp = "CompleteFollowUp";
-    private const string ActionHintReplyToCustomer = "ReplyToCustomer";
-
     private static readonly HashSet<WorkbenchTaskType> RecentlyActiveBlockedTypes =
     [
         WorkbenchTaskType.FollowUpOverdue,
@@ -65,6 +53,19 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
 
     public async Task<IReadOnlyList<WorkbenchTask>> GetTasksAsync(CancellationToken cancellationToken = default)
     {
+        return await GetTasksAsync(new WorkbenchTaskQuery(), cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<WorkbenchTask>> GetTasksAsync(WorkbenchTaskFilter filter, CancellationToken cancellationToken = default)
+    {
+        return await GetTasksAsync(new WorkbenchTaskQuery
+        {
+            Filter = filter ?? new WorkbenchTaskFilter()
+        }, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<WorkbenchTask>> GetTasksAsync(WorkbenchTaskQuery query, CancellationToken cancellationToken = default)
+    {
         var customers = (await _customerRepository.GetAllAsync(cancellationToken)).ToList();
         var orders = (await _orderRepository.GetRecentAsync(cancellationToken)).ToList();
         var deals = (await _dealRepository.ListAsync(cancellationToken)).ToList();
@@ -92,8 +93,11 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
             .ToHashSet();
         tasks.AddRange(BuildRecentlyActiveTasks(customers, messages, activities, orderMap, customersWithBlockingTasks, today));
 
-        ApplyPipelineStages(tasks, customerMap, orders, deals, followUps, messages, suggestions, activities, priceAdjustments);
-        return FinalizeTasks(tasks);
+        ProjectionPipelineStageHelper.ApplyToWorkbenchTasks(tasks, customerMap, orders, deals, followUps, messages, suggestions, activities, priceAdjustments);
+        var finalized = FinalizeTasks(tasks)
+            .Select(AttachQuickActions)
+            .ToList();
+        return ApplyFilter(finalized, query);
     }
 
     private static IReadOnlyList<WorkbenchTask> FinalizeTasks(IEnumerable<WorkbenchTask> tasks)
@@ -179,8 +183,8 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 occurredAt: followUp.ScheduledAt,
                 dealId: followUp.DealId,
                 followUpId: followUp.Id,
-                targetSection: TargetSectionFollowUp,
-                actionHint: ActionHintCompleteFollowUp,
+                targetSection: ProjectionTargetSections.FollowUp,
+                actionHint: ProjectionActionHints.CompleteFollowUp,
                 dedupeKey: $"followup-{type}-{followUp.Id}");
         }
     }
@@ -231,8 +235,8 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 dealId: order?.DealId,
                 messageId: suggestion.MessageId,
                 aiSuggestionId: suggestion.Id,
-                targetSection: TargetSectionAiSuggestion,
-                actionHint: isCopiedDraft ? ActionHintReplyToCustomer : ActionHintReviewDraft,
+                targetSection: ProjectionTargetSections.AiSuggestion,
+                actionHint: isCopiedDraft ? ProjectionActionHints.ReplyToCustomer : ProjectionActionHints.ReviewDraft,
                 dedupeKey: $"draft-{suggestion.Id}");
         }
     }
@@ -312,8 +316,8 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 occurredAt: latestIncoming.MessageTime,
                 dealId: latestIncoming.DealId ?? order?.DealId,
                 messageId: latestIncoming.Id,
-                targetSection: TargetSectionConversation,
-                actionHint: ActionHintReplyToCustomer,
+                targetSection: ProjectionTargetSections.Conversation,
+                actionHint: ProjectionActionHints.ReplyToCustomer,
                 dedupeKey: $"reply-{group.Key.CustomerId}-{group.Key.OrderId?.ToString() ?? "none"}");
         }
     }
@@ -346,8 +350,8 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 dealId: order?.DealId,
                 messageId: suggestion.MessageId,
                 aiSuggestionId: suggestion.Id,
-                targetSection: TargetSectionAiSuggestion,
-                actionHint: ActionHintReviewSuggestion,
+                targetSection: ProjectionTargetSections.AiSuggestion,
+                actionHint: ProjectionActionHints.ReviewSuggestion,
                 dedupeKey: $"ai-pending-{suggestion.Id}");
         }
     }
@@ -391,8 +395,8 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                 occurredAt: ocrResult.UpdatedAt,
                 dealId: order?.DealId,
                 ocrResultId: ocrResult.Id,
-                targetSection: TargetSectionOcr,
-                actionHint: ActionHintConvertOcr,
+                targetSection: ProjectionTargetSections.Ocr,
+                actionHint: ProjectionActionHints.ConvertOcr,
                 dedupeKey: $"ocr-{ocrResult.Id}");
         }
     }
@@ -437,8 +441,8 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                     RelatedEntityType: nameof(ActivityLog),
                     RelatedEntityId: recentActivity.Id,
                     MessageId: null,
-                    TargetSection: recentActivity.Type == ActivityType.ConversationMessageAdded ? TargetSectionConversation : TargetSectionCustomer,
-                    ActionHint: recentActivity.Type == ActivityType.ConversationMessageAdded ? ActionHintReplyToCustomer : string.Empty,
+                    TargetSection: recentActivity.Type == ActivityType.ConversationMessageAdded ? ProjectionTargetSections.Conversation : ProjectionTargetSections.Customer,
+                    ActionHint: recentActivity.Type == ActivityType.ConversationMessageAdded ? ProjectionActionHints.ReplyToCustomer : string.Empty,
                     SignalRank: 1));
             }
 
@@ -451,8 +455,8 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                     RelatedEntityType: nameof(ConversationMessage),
                     RelatedEntityId: recentMessage.Id,
                     MessageId: recentMessage.Id,
-                    TargetSection: TargetSectionConversation,
-                    ActionHint: ActionHintReplyToCustomer,
+                    TargetSection: ProjectionTargetSections.Conversation,
+                    ActionHint: ProjectionActionHints.ReplyToCustomer,
                     SignalRank: 2));
             }
 
@@ -465,7 +469,7 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
                     RelatedEntityType: nameof(Customer),
                     RelatedEntityId: customer.Id,
                     MessageId: null,
-                    TargetSection: TargetSectionCustomer,
+                    TargetSection: ProjectionTargetSections.Customer,
                     ActionHint: string.Empty,
                     SignalRank: 3));
             }
@@ -592,7 +596,7 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         return task.Type switch
         {
             WorkbenchTaskType.FollowUpOverdue => 1,
-            WorkbenchTaskType.DraftNotSent when string.Equals(task.ActionHint, ActionHintReplyToCustomer, StringComparison.Ordinal) => 2,
+            WorkbenchTaskType.DraftNotSent when string.Equals(task.ActionHint, ProjectionActionHints.ReplyToCustomer, StringComparison.Ordinal) => 2,
             WorkbenchTaskType.ReplyNeeded => 3,
             WorkbenchTaskType.DraftNotSent => 4,
             WorkbenchTaskType.AiSuggestionPending => 5,
@@ -611,78 +615,78 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         return (rank * 10_000_000_000L) + reverseSeconds;
     }
 
-    private static string GetTitleOrDefault(string? value, string? fallback)
+    private static WorkbenchTask AttachQuickActions(WorkbenchTask task)
     {
-        return string.IsNullOrWhiteSpace(value)
-            ? fallback ?? string.Empty
-            : value.Trim();
+        task.QuickActions = QuickActionProjectionBuilder.BuildForWorkbenchTask(task);
+        return task;
     }
 
-    private static string TrimPreview(string? value)
+    private static IReadOnlyList<WorkbenchTask> ApplyFilter(IReadOnlyList<WorkbenchTask> tasks, WorkbenchTaskQuery? query)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (query is null)
         {
-            return "暂无摘要";
+            return tasks;
         }
 
-        var normalized = value.ReplaceLineEndings(" ").Trim();
-        return normalized.Length <= 48
-            ? normalized
-            : $"{normalized[..48]}...";
-    }
+        IEnumerable<WorkbenchTask> filtered = tasks;
+        var filter = query.Filter ?? new WorkbenchTaskFilter();
 
-    private static void ApplyPipelineStages(
-        IEnumerable<WorkbenchTask> tasks,
-        IReadOnlyDictionary<int, Customer> customerMap,
-        IReadOnlyList<MerchantOrder> orders,
-        IReadOnlyList<Deal> deals,
-        IReadOnlyList<FollowUp> followUps,
-        IReadOnlyList<ConversationMessage> messages,
-        IReadOnlyList<AiSuggestion> suggestions,
-        IReadOnlyList<ActivityLog> activities,
-        IReadOnlyList<PriceAdjustment> priceAdjustments)
-    {
-        var customerOrders = orders.GroupBy(order => order.CustomerId).ToDictionary(group => group.Key, group => (IReadOnlyList<MerchantOrder>)group.ToList());
-        var customerDeals = deals.GroupBy(deal => deal.CustomerId).ToDictionary(group => group.Key, group => (IReadOnlyList<Deal>)group.ToList());
-        var customerFollowUps = followUps.GroupBy(followUp => followUp.CustomerId).ToDictionary(group => group.Key, group => (IReadOnlyList<FollowUp>)group.ToList());
-        var customerMessages = messages.GroupBy(message => message.CustomerId).ToDictionary(group => group.Key, group => (IReadOnlyList<ConversationMessage>)group.ToList());
-        var customerSuggestions = suggestions.GroupBy(suggestion => suggestion.CustomerId).ToDictionary(group => group.Key, group => (IReadOnlyList<AiSuggestion>)group.ToList());
-        var customerActivities = activities.Where(activity => activity.CustomerId is int)
-            .GroupBy(activity => activity.CustomerId!.Value)
-            .ToDictionary(group => group.Key, group => (IReadOnlyList<ActivityLog>)group.ToList());
-        var customerAdjustments = priceAdjustments.GroupBy(adjustment => adjustment.CustomerId).ToDictionary(group => group.Key, group => (IReadOnlyList<PriceAdjustment>)group.ToList());
-
-        foreach (var task in tasks)
+        if (filter.TaskType is WorkbenchTaskType taskType)
         {
-            if (task.CustomerId is not int customerId || !customerMap.TryGetValue(customerId, out var customer))
-            {
-                continue;
-            }
-
-            customerOrders.TryGetValue(customerId, out var scopedOrders);
-            customerDeals.TryGetValue(customerId, out var scopedDeals);
-            customerFollowUps.TryGetValue(customerId, out var scopedFollowUps);
-            customerMessages.TryGetValue(customerId, out var scopedMessages);
-            customerSuggestions.TryGetValue(customerId, out var scopedSuggestions);
-            customerActivities.TryGetValue(customerId, out var scopedActivities);
-            customerAdjustments.TryGetValue(customerId, out var scopedAdjustments);
-
-            var context = new PipelineStageResolutionContext
-            {
-                Customer = customer,
-                OrderId = task.OrderId,
-                Order = task.OrderId is int orderId ? scopedOrders?.FirstOrDefault(order => order.Id == orderId) : null,
-                Orders = scopedOrders ?? Array.Empty<MerchantOrder>(),
-                Deals = scopedDeals ?? Array.Empty<Deal>(),
-                Messages = scopedMessages ?? Array.Empty<ConversationMessage>(),
-                Suggestions = scopedSuggestions ?? Array.Empty<AiSuggestion>(),
-                FollowUps = scopedFollowUps ?? Array.Empty<FollowUp>(),
-                Activities = scopedActivities ?? Array.Empty<ActivityLog>(),
-                PriceAdjustments = scopedAdjustments ?? Array.Empty<PriceAdjustment>()
-            };
-
-            task.PipelineStage = PipelineStageRuleEngine.Resolve(context).Stage;
+            filtered = filtered.Where(task => task.Type == taskType);
         }
+
+        if (filter.Priority is WorkbenchTaskPriority priority)
+        {
+            filtered = filtered.Where(task => task.Priority == priority);
+        }
+
+        if (filter.PipelineStage is PipelineStage stage)
+        {
+            filtered = filtered.Where(task => task.PipelineStage == stage);
+        }
+
+        if (filter.CustomerId is int customerId)
+        {
+            filtered = filtered.Where(task => task.CustomerId == customerId);
+        }
+
+        if (filter.OrderId is int orderId)
+        {
+            filtered = filtered.Where(task => task.OrderId == orderId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.TargetSection))
+        {
+            filtered = filtered.Where(task => string.Equals(task.TargetSection, filter.TargetSection, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (filter.OnlyActionable == true)
+        {
+            filtered = filtered.Where(QuickActionProjectionBuilder.HasActionableOperation);
+        }
+
+        if (filter.IncludeRecentlyActive == false)
+        {
+            filtered = filtered.Where(task => task.Type != WorkbenchTaskType.RecentlyActiveCustomer);
+        }
+
+        if (filter.OccurredFrom is DateTime occurredFrom)
+        {
+            filtered = filtered.Where(task => task.OccurredAt >= occurredFrom);
+        }
+
+        if (filter.OccurredTo is DateTime occurredTo)
+        {
+            filtered = filtered.Where(task => task.OccurredAt <= occurredTo);
+        }
+
+        if (query.Limit is > 0)
+        {
+            filtered = filtered.Take(query.Limit.Value);
+        }
+
+        return filtered.ToList();
     }
 
     private sealed class WorkbenchTaskComparer : IComparer<WorkbenchTask>
@@ -763,4 +767,14 @@ public sealed class LocalWorkbenchTaskService : IWorkbenchTaskService
         string TargetSection,
         string ActionHint,
         int SignalRank);
+
+    private static string GetTitleOrDefault(string? value, string? fallback)
+    {
+        return ProjectionTextHelper.GetTitleOrDefault(value, fallback);
+    }
+
+    private static string TrimPreview(string? value)
+    {
+        return ProjectionTextHelper.TrimPreview(value);
+    }
 }

@@ -21,6 +21,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IAutoReplyService _autoReplyService;
     private readonly IActivityLogService _activityLogService;
     private readonly IWorkbenchTaskService _workbenchTaskService;
+    private readonly IGlobalSearchService _globalSearchService;
     private readonly IBackupService _backupService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
@@ -60,6 +61,7 @@ public partial class MainViewModel : ObservableObject
             autoReplyService,
             activityLogService,
             EmptyWorkbenchTaskService.Instance,
+            EmptyGlobalSearchService.Instance,
             backupService,
             priceAdjustmentService,
             replyTemplateRepository,
@@ -83,6 +85,7 @@ public partial class MainViewModel : ObservableObject
         IAutoReplyService autoReplyService,
         IActivityLogService activityLogService,
         IWorkbenchTaskService workbenchTaskService,
+        IGlobalSearchService globalSearchService,
         IBackupService backupService,
         IPriceAdjustmentService priceAdjustmentService,
         IReplyTemplateRepository replyTemplateRepository,
@@ -103,6 +106,7 @@ public partial class MainViewModel : ObservableObject
         _autoReplyService = autoReplyService;
         _activityLogService = activityLogService;
         _workbenchTaskService = workbenchTaskService;
+        _globalSearchService = globalSearchService;
         _backupService = backupService;
         _priceAdjustmentService = priceAdjustmentService;
         _replyTemplateRepository = replyTemplateRepository;
@@ -123,6 +127,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<ActivityLog> ActivityLogs { get; } = new();
     public ObservableCollection<ReplyTemplate> ReplyTemplates { get; } = new();
     public ObservableCollection<WorkbenchTaskListItem> WorkbenchTasks { get; } = new();
+    public ObservableCollection<SearchResultListItem> SearchResults { get; } = new();
     public ObservableCollection<string> Sections { get; } = new(new[] { "工作台", "客户/订单", "话术库", "设置" });
     public ObservableCollection<SearchFilterOption> SearchFilterOptions { get; } = new();
     public ObservableCollection<QuickFilterOption> QuickFilterOptions { get; } = new();
@@ -142,6 +147,11 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string searchKeyword = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RunSearchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshSearchCommand))]
+    private string searchQuery = string.Empty;
 
     [ObservableProperty]
     private SearchFilterOption selectedStatusFilter = SearchFilterOption.All;
@@ -216,6 +226,13 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(OpenWorkbenchTaskCommand))]
     private WorkbenchTaskListItem? selectedWorkbenchTask;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OpenSearchResultCommand))]
+    private SearchResultListItem? selectedSearchResult;
+
+    [ObservableProperty]
+    private WorkbenchTaskFilter workbenchTaskFilter = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCurrentOcrResult))]
@@ -353,6 +370,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshWorkbenchTasksCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenWorkbenchTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RunSearchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshSearchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenSearchResultCommand))]
     private bool isLoading;
 
     [ObservableProperty]
@@ -389,6 +409,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshWorkbenchTasksCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenWorkbenchTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RunSearchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshSearchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenSearchResultCommand))]
     private bool isSaving;
 
     [ObservableProperty]
@@ -422,6 +445,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(RejectAutoReplyDraftCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshWorkbenchTasksCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenWorkbenchTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RunSearchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshSearchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenSearchResultCommand))]
     private bool isGeneratingAiSuggestion;
 
     private bool _isSynchronizingSelection;
@@ -434,6 +460,32 @@ public partial class MainViewModel : ObservableObject
         public Task<IReadOnlyList<WorkbenchTask>> GetTasksAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<WorkbenchTask>>([]);
+        }
+
+        public Task<IReadOnlyList<WorkbenchTask>> GetTasksAsync(WorkbenchTaskFilter filter, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<WorkbenchTask>>([]);
+        }
+
+        public Task<IReadOnlyList<WorkbenchTask>> GetTasksAsync(WorkbenchTaskQuery query, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<WorkbenchTask>>([]);
+        }
+    }
+
+    private sealed class EmptyGlobalSearchService : IGlobalSearchService
+    {
+        public static EmptyGlobalSearchService Instance { get; } = new();
+
+        public Task<SearchResultSet> SearchAsync(SearchRequest request, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new SearchResultSet
+            {
+                Query = request?.Query?.Trim() ?? string.Empty,
+                Limit = request?.Limit ?? 50,
+                TotalCount = 0,
+                Items = []
+            });
         }
     }
 }
