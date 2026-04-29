@@ -7,19 +7,20 @@
 ## 2026-04-29 已执行结果
 
 - `dotnet build Orderly.sln -c Debug`：PASS
+- `run-p1-smoke.ps1`：PASS
 - `run-p2-full-regression.ps1`：PASS
 - `run-p3-1-workbench-smoke.ps1`：PASS
 - `run-p3-2-pipeline-smoke.ps1`：PASS
 - `run-p3-4-workbench-logic-smoke.ps1`：PASS
 - `run-p3-5-search-smoke.ps1`：PASS
 - `run-p3-6-navigation-smoke.ps1`：PASS
-- `run-p1-smoke.ps1`：FAIL
-- `run-p3-full-regression.ps1`：FAIL
+- `run-p3-full-regression.ps1`：PASS
 
-失败原因：
+P3.6.1 QA stability 修复结论：
 
-- 两者都在既有 UIA `SendWait` 上失败。
-- 当前失败点不在本轮路由逻辑或 build。
+- 既有 P1 UIA 主链路存在多处裸 `SendWait`，对窗口 ready、控件 enable、焦点稳定和输入回读没有显式等待。
+- P3.6 新增 `INavigationRouteService` 注入和 `MainViewModel` 导航状态字段，启动服务图比之前更重，但没有修改 UI/XAML 或业务流程；这类启动时序波动会放大旧 UIA race。
+- 已将 `run-uia-smoke.ps1` 改为 `ValuePattern / InvokePattern / SelectionItemPattern / ExpandCollapsePattern` 优先，`SendWait` 仅保留为异常可见的键盘兜底，并增加重试与日志。
 
 ## 常用命令
 
@@ -39,6 +40,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 
 - `run-p1-smoke.ps1`
   - `reset -> qa-data-status -> UIA smoke -> qa-data-status`
+  - `run-uia-smoke.ps1` 现在会显式等待主窗口 ready、控件 enabled/visible、焦点稳定、文本回读一致
 - `run-p2-full-regression.ps1`
   - 顺序执行 `P2.1 -> P2.9`，失败即停
 - `run-p3-1-workbench-smoke.ps1`
@@ -82,5 +84,4 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 
 - 任务卡片的最终视觉 polish
 - 搜索框与筛选栏的最终 UI 接入
-- `run-uia-smoke.ps1` 的 `SendWait` 环境稳定性
 - 真实外部平台回执

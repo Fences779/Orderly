@@ -14,6 +14,9 @@ using System.Runtime.InteropServices;
 
 public static class QaNativeMethods
 {
+    public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+    public const uint MOUSEEVENTF_LEFTUP = 0x0004;
+
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT
     {
@@ -31,6 +34,12 @@ public static class QaNativeMethods
 
     [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr hWnd, int command);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetCursorPos(int x, int y);
+
+    [DllImport("user32.dll")]
+    public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
 }
 "@
 
@@ -119,11 +128,215 @@ function Wait-MainWindow {
     throw "等待 WPF 主窗口超时：$TimeoutSeconds 秒内未拿到 MainWindowHandle。"
 }
 
+function Get-AutomationElementDescription {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Automation.AutomationElement]$Element
+    )
+
+    try {
+        $id = [string]$Element.Current.AutomationId
+        $name = [string]$Element.Current.Name
+        $type = if ($null -eq $Element.Current.ControlType) { '<unknown>' } else { $Element.Current.ControlType.ProgrammaticName }
+        return "AutomationId='$id', Name='$name', ControlType='$type'"
+    }
+    catch {
+        return '<stale automation element>'
+    }
+}
+
+function Wait-AutomationElementReady {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Automation.AutomationElement]$Element,
+        [int]$TimeoutSeconds = 5,
+        [switch]$RequireEnabled,
+        [switch]$RequireVisible,
+        [switch]$RequireKeyboardFocusable
+    )
+
+    $description = Get-AutomationElementDescription -Element $Element
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $lastReason = 'unknown'
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $current = $Element.Current
+            $enabled = (-not $RequireEnabled) -or $current.IsEnabled
+            $visible = (-not $RequireVisible) -or (-not $current.IsOffscreen)
+            $focusable = (-not $RequireKeyboardFocusable) -or $current.IsKeyboardFocusable
+            $rect = $current.BoundingRectangle
+            $hasBounds = $rect.Width -gt 0 -and $rect.Height -gt 0
+
+            if ($enabled -and $visible -and $focusable -and ((-not $RequireVisible) -or $hasBounds)) {
+                return
+            }
+
+            $lastReason = "Enabled=$($current.IsEnabled), Offscreen=$($current.IsOffscreen), Focusable=$($current.IsKeyboardFocusable), Bounds=$($rect.Width)x$($rect.Height)"
+        }
+        catch {
+            $lastReason = $_.Exception.Message
+        }
+
+        Start-Sleep -Milliseconds 200
+    }
+
+    throw "等待元素就绪超时：$description；最后状态：$lastReason"
+}
+
+function Test-AutomationElementMatch {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Automation.AutomationElement]$Left,
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Automation.AutomationElement]$Right
+    )
+
+    try {
+        $leftId = @($Left.GetRuntimeId())
+        $rightId = @($Right.GetRuntimeId())
+        if ($leftId.Count -ne $rightId.Count) {
+            return $false
+        }
+
+        for ($index = 0; $index -lt $leftId.Count; $index++) {
+            if ($leftId[$index] -ne $rightId[$index]) {
+                return $false
+            }
+        }
+
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
+function Wait-AutomationFocus {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Automation.AutomationElement]$Element,
+        [int]$TimeoutSeconds = 3
+    )
+
+    $description = Get-AutomationElementDescription -Element $Element
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $lastFocused = '<none>'
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $Element.SetFocus()
+        }
+        catch {
+        }
+
+        Start-Sleep -Milliseconds 120
+
+        try {
+            $focusedElement = [System.Windows.Automation.AutomationElement]::FocusedElement
+            if ($null -ne $focusedElement) {
+                if (Test-AutomationElementMatch -Left $Element -Right $focusedElement) {
+                    return
+                }
+
+                $targetId = [string]$Element.Current.AutomationId
+                $focusedId = [string]$focusedElement.Current.AutomationId
+                if (-not [string]::IsNullOrWhiteSpace($targetId) -and $targetId -eq $focusedId) {
+                    return
+                }
+            }
+
+            if ($null -ne $focusedElement) {
+                $lastFocused = Get-AutomationElementDescription -Element $focusedElement
+            }
+        }
+        catch {
+            $lastFocused = $_.Exception.Message
+        }
+    }
+
+    throw "等待焦点稳定超时：$description；最后聚焦元素：$lastFocused"
+}
+
+function Get-AutomationAncestorWindow {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Windows.Automation.AutomationElement]$Element
+    )
+
+    $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $current = $Element
+    while ($null -ne $current) {
+        try {
+            if ($current.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window) {
+                return $current
+            }
+        }
+        catch {
+        }
+
+        $current = $walker.GetParent($current)
+    }
+
+    return $null
+}
+
+function Invoke-NativeLeftClick {
+    param(
+        [Parameter(Mandatory = $true)]
+        [double]$X,
+        [Parameter(Mandatory = $true)]
+        [double]$Y
+    )
+
+    $targetX = [int][Math]::Round($X)
+    $targetY = [int][Math]::Round($Y)
+    if (-not [QaNativeMethods]::SetCursorPos($targetX, $targetY)) {
+        throw "移动鼠标失败：($targetX, $targetY)"
+    }
+
+    Start-Sleep -Milliseconds 60
+    [QaNativeMethods]::mouse_event([QaNativeMethods]::MOUSEEVENTF_LEFTDOWN, 0, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 40
+    [QaNativeMethods]::mouse_event([QaNativeMethods]::MOUSEEVENTF_LEFTUP, 0, 0, 0, [UIntPtr]::Zero)
+}
+
+function Invoke-SendKeysSafely {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Keys,
+        [string]$Context = 'UIA input',
+        [int]$RetryCount = 2
+    )
+
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $RetryCount; $attempt++) {
+        try {
+            [System.Windows.Forms.SendKeys]::SendWait($Keys)
+            return $true
+        }
+        catch {
+            $lastError = $_.Exception.Message
+            if (Get-Command -Name Add-LogLine -ErrorAction SilentlyContinue) {
+                Add-LogLine "SendWait 第 $attempt 次失败（$Context）：$lastError"
+            }
+
+            Start-Sleep -Milliseconds (150 * $attempt)
+        }
+    }
+
+    if (Get-Command -Name Add-LogLine -ErrorAction SilentlyContinue) {
+        Add-LogLine "SendWait 已放弃（$Context）：$lastError"
+    }
+
+    return $false
+}
+
 function Invoke-AutomationClick {
     param(
         [Parameter(Mandatory = $true)]
         [System.Windows.Automation.AutomationElement]$Element
     )
+
+    Wait-AutomationElementReady -Element $Element -TimeoutSeconds 5 -RequireEnabled -RequireVisible
 
     try {
         $invoke = $Element.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
@@ -145,14 +358,22 @@ function Invoke-AutomationClick {
     catch {
     }
 
+    try {
+        $legacy = $Element.GetCurrentPattern([System.Windows.Automation.LegacyIAccessiblePattern]::Pattern)
+        if ($null -ne $legacy) {
+            $legacy.DoDefaultAction()
+            return
+        }
+    }
+    catch {
+    }
+
     $rect = $Element.Current.BoundingRectangle
     if ($rect.Width -le 0 -or $rect.Height -le 0) {
         throw "元素无法点击：AutomationId=$($Element.Current.AutomationId)，BoundingRectangle 无效。"
     }
 
-    $point = New-Object System.Drawing.Point([int]($rect.X + ($rect.Width / 2)), [int]($rect.Y + ($rect.Height / 2)))
-    [System.Windows.Forms.Cursor]::Position = $point
-    [System.Windows.Forms.SendKeys]::SendWait(' ')
+    Invoke-NativeLeftClick -X ($rect.X + ($rect.Width / 2)) -Y ($rect.Y + ($rect.Height / 2))
 }
 
 function Set-AutomationText {
@@ -160,24 +381,71 @@ function Set-AutomationText {
         [Parameter(Mandatory = $true)]
         [System.Windows.Automation.AutomationElement]$Element,
         [Parameter(Mandatory = $true)]
-        [string]$Text
+        [string]$Text,
+        [int]$RetryCount = 3
     )
 
-    try {
-        $valuePattern = $Element.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
-        if ($null -ne $valuePattern) {
-            $valuePattern.SetValue($Text)
-            return
+    Wait-AutomationElementReady -Element $Element -TimeoutSeconds 5 -RequireEnabled -RequireVisible
+
+    $description = Get-AutomationElementDescription -Element $Element
+    $lastError = $null
+    for ($attempt = 1; $attempt -le $RetryCount; $attempt++) {
+        try {
+            $valuePattern = $null
+            try {
+                $valuePattern = $Element.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+            }
+            catch {
+            }
+
+            if ($null -ne $valuePattern) {
+                $valuePattern.SetValue($Text)
+            }
+            else {
+                $legacy = $null
+                try {
+                    $legacy = $Element.GetCurrentPattern([System.Windows.Automation.LegacyIAccessiblePattern]::Pattern)
+                }
+                catch {
+                }
+
+                if ($null -ne $legacy) {
+                    $legacy.SetValue($Text)
+                }
+                else {
+                    Wait-AutomationFocus -Element $Element -TimeoutSeconds 3
+                    $selectAllSent = Invoke-SendKeysSafely -Keys '^a' -Context "$description select-all" -RetryCount 2
+                    if (-not $selectAllSent) {
+                        throw "无法发送 Ctrl+A。"
+                    }
+
+                    Start-Sleep -Milliseconds 120
+                    $textSent = Invoke-SendKeysSafely -Keys $Text -Context "$description text-input" -RetryCount 2
+                    if (-not $textSent) {
+                        throw "无法发送文本。"
+                    }
+                }
+            }
+
+            Start-Sleep -Milliseconds (100 * $attempt)
+            $actualText = Get-AutomationTextValue -Element $Element
+            if ($actualText -eq $Text) {
+                return
+            }
+
+            $lastError = "写入后回读不一致。expected='$Text', actual='$actualText'"
         }
-    }
-    catch {
+        catch {
+            $lastError = $_.Exception.Message
+        }
+
+        if (Get-Command -Name Add-LogLine -ErrorAction SilentlyContinue) {
+            Add-LogLine "文本写入重试 $attempt/$RetryCount：$description；原因：$lastError"
+        }
+        Start-Sleep -Milliseconds (180 * $attempt)
     }
 
-    $Element.SetFocus()
-    Start-Sleep -Milliseconds 150
-    [System.Windows.Forms.SendKeys]::SendWait('^a')
-    Start-Sleep -Milliseconds 100
-    [System.Windows.Forms.SendKeys]::SendWait($Text)
+    throw "设置文本失败：$description；$lastError"
 }
 
 function Get-AutomationTextValue {
@@ -204,12 +472,83 @@ function Select-FirstComboBoxItem {
         [System.Windows.Automation.AutomationElement]$ComboBox
     )
 
-    Invoke-AutomationClick -Element $ComboBox
-    Start-Sleep -Milliseconds 250
-    [System.Windows.Forms.SendKeys]::SendWait('{DOWN}')
+    Wait-AutomationElementReady -Element $ComboBox -TimeoutSeconds 5 -RequireEnabled -RequireVisible
+    $beforeText = Get-AutomationTextValue -Element $ComboBox
+
+    $expanded = $false
+    try {
+        $expandCollapse = $ComboBox.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+        if ($null -ne $expandCollapse) {
+            if ($expandCollapse.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Expanded) {
+                $expandCollapse.Expand()
+            }
+            $expanded = $true
+        }
+    }
+    catch {
+    }
+
+    if ($expanded) {
+        $comboRect = $ComboBox.Current.BoundingRectangle
+        $processId = $ComboBox.Current.ProcessId
+        $condition = New-Object System.Windows.Automation.AndCondition(
+            (Get-AutomationPropertyCondition -Property ([System.Windows.Automation.AutomationElement]::ProcessIdProperty) -Value $processId),
+            (Get-AutomationPropertyCondition -Property ([System.Windows.Automation.AutomationElement]::ControlTypeProperty) -Value ([System.Windows.Automation.ControlType]::ListItem)))
+
+        $deadline = (Get-Date).AddSeconds(5)
+        while ((Get-Date) -lt $deadline) {
+            $candidateCollection = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+            $candidates = for ($index = 0; $index -lt $candidateCollection.Count; $index++) { $candidateCollection.Item($index) }
+            $match = $candidates |
+                Where-Object {
+                    try {
+                        $current = $_.Current
+                        $rect = $current.BoundingRectangle
+                        -not $current.IsOffscreen -and
+                        $current.IsEnabled -and
+                        $rect.Width -gt 0 -and
+                        $rect.Height -gt 0 -and
+                        $rect.Top -ge ($comboRect.Top - 20) -and
+                        $rect.Left -le ($comboRect.Right + 220) -and
+                        $rect.Right -ge ($comboRect.Left - 120)
+                    }
+                    catch {
+                        $false
+                    }
+                } |
+                Sort-Object {
+                    try {
+                        [Math]::Abs($_.Current.BoundingRectangle.Top - $comboRect.Bottom)
+                    }
+                    catch {
+                        [double]::MaxValue
+                    }
+                } |
+                Select-Object -First 1
+
+            if ($null -ne $match) {
+                Invoke-AutomationClick -Element $match
+                Start-Sleep -Milliseconds 250
+
+                $selectedText = Get-AutomationTextValue -Element $ComboBox
+                if (-not [string]::IsNullOrWhiteSpace($selectedText)) {
+                    return $selectedText
+                }
+            }
+
+            Start-Sleep -Milliseconds 150
+        }
+    }
+
+    Wait-AutomationFocus -Element $ComboBox -TimeoutSeconds 3
+    $downSent = Invoke-SendKeysSafely -Keys '{DOWN}' -Context 'combo-box down' -RetryCount 3
     Start-Sleep -Milliseconds 150
-    [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+    $enterSent = Invoke-SendKeysSafely -Keys '{ENTER}' -Context 'combo-box enter' -RetryCount 3
     Start-Sleep -Milliseconds 250
+
+    if (-not ($downSent -and $enterSent)) {
+        throw "ComboBox 选择失败：无法完成键盘兜底输入。"
+    }
 
     $selectedText = Get-AutomationTextValue -Element $ComboBox
     if ([string]::IsNullOrWhiteSpace($selectedText)) {
@@ -420,15 +759,22 @@ try {
     $noteContent = "$runtimeMarker Note $runToken"
 
     $exePath = Get-OrderlyAppExePath
+    Add-LogLine "启动 Orderly.App：$exePath --qa-mode"
     $process = Start-Process -FilePath $exePath -ArgumentList @('--qa-mode') -PassThru
+    Add-LogLine "等待主窗口就绪（超时 ${WindowTimeoutSeconds}s）"
     $window = Wait-MainWindow -Process $process -TimeoutSeconds $WindowTimeoutSeconds
     $windowHandle = [IntPtr]$process.MainWindowHandle
+    Wait-AutomationElementReady -Element $window -TimeoutSeconds 10 -RequireEnabled -RequireVisible
+    [QaNativeMethods]::ShowWindow($windowHandle, 9) | Out-Null
+    [QaNativeMethods]::SetForegroundWindow($windowHandle) | Out-Null
+    Start-Sleep -Milliseconds 350
 
     $mainWindowPath = Join-Path $run.Path '00-main-window.png'
     Save-WindowScreenshot -WindowHandle $windowHandle -Path $mainWindowPath
     $report.screenshots.mainWindow = $mainWindowPath
     $report.mainWindowTitle = [string]$window.Current.Name
 
+    Add-LogLine '步骤：切换到客户/订单 Tab'
     $customerOrderTab = Find-AutomationElement -Root $window -AutomationId 'Tab_CustomerOrder' -TimeoutSeconds 5
     if ($null -eq $customerOrderTab) {
         throw "未找到客户/订单 Tab。"
@@ -437,6 +783,7 @@ try {
     Invoke-AutomationClick -Element $customerOrderTab
     Start-Sleep -Milliseconds 700
 
+    Add-LogLine '步骤：选择 QA 客户 p13qa-customer-a'
     $qaCustomer = Find-AutomationElement -Root $window -AutomationId 'p13qa-customer-a' -TimeoutSeconds 5
     if ($null -eq $qaCustomer) {
         throw "未找到 QA 客户：p13qa-customer-a"
@@ -446,6 +793,7 @@ try {
     Start-Sleep -Milliseconds 500
     $report.checks.selectedCustomer = 'p13qa-customer-a'
 
+    Add-LogLine '步骤：打开新增订单对话框'
     $addOrderButton = Find-AutomationElement -Root $window -AutomationId 'Btn_AddOrder' -TimeoutSeconds 5
     if ($null -eq $addOrderButton) {
         throw "未找到新增订单按钮。"
@@ -459,6 +807,7 @@ try {
         throw "未找到 AddOrderDialog。"
     }
 
+    Add-LogLine '步骤：填写新增订单表单'
     Set-AutomationText -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Title' -TimeoutSeconds 2) -Text $orderTitle
     Set-AutomationText -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Amount' -TimeoutSeconds 2) -Text '199'
     Set-AutomationText -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Requirement' -TimeoutSeconds 2) -Text $orderRequirement
@@ -468,6 +817,7 @@ try {
     Save-WindowScreenshot -WindowHandle $windowHandle -Path $orderDialogPath
     $report.screenshots.addOrderDialog = $orderDialogPath
 
+    Add-LogLine '步骤：提交新增订单'
     Invoke-AutomationClick -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Confirm' -TimeoutSeconds 2)
     Wait-AutomationElementMissing -Root $window -AutomationId 'AddOrderDialog' -TimeoutSeconds 8
     Start-Sleep -Milliseconds 800
@@ -477,6 +827,7 @@ try {
     Save-WindowScreenshot -WindowHandle $windowHandle -Path $afterOrderPath
     $report.screenshots.afterAddOrder = $afterOrderPath
 
+    Add-LogLine '步骤：切换到工作台 Tab'
     $dashboardTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Dashboard' -TimeoutSeconds 5
     if ($null -eq $dashboardTab) {
         throw "未找到工作台 Tab。"
@@ -485,6 +836,7 @@ try {
     Invoke-AutomationClick -Element $dashboardTab
     Start-Sleep -Milliseconds 700
 
+    Add-LogLine '步骤：打开新增备注对话框'
     $addNoteButton = Find-AutomationElement -Root $window -AutomationId 'Btn_AddNote' -TimeoutSeconds 5
     if ($null -eq $addNoteButton) {
         throw "未找到新增备注按钮。"
@@ -498,6 +850,7 @@ try {
         throw "未找到 AddNoteDialog。"
     }
 
+    Add-LogLine '步骤：选择备注模板并填写内容'
     $templateCombo = Find-AutomationElement -Root $noteDialog -AutomationId 'AddNoteDialog_Template' -TimeoutSeconds 2
     $templateName = Select-FirstComboBoxItem -ComboBox $templateCombo
     $insertButton = Find-AutomationElement -Root $noteDialog -AutomationId 'AddNoteDialog_InsertTemplate' -TimeoutSeconds 2
@@ -522,6 +875,7 @@ try {
     Save-WindowScreenshot -WindowHandle $windowHandle -Path $noteDialogPath
     $report.screenshots.addNoteDialog = $noteDialogPath
 
+    Add-LogLine '步骤：提交新增备注'
     Invoke-AutomationClick -Element (Find-AutomationElement -Root $noteDialog -AutomationId 'AddNoteDialog_Confirm' -TimeoutSeconds 2)
     Wait-AutomationElementMissing -Root $window -AutomationId 'AddNoteDialog' -TimeoutSeconds 8
     Start-Sleep -Milliseconds 800

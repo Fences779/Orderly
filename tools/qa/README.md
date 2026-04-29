@@ -18,6 +18,9 @@
   - 只清理 QA 数据
 - `run-uia-smoke.ps1`
   - P1 UIA 主链路 smoke
+  - 控件模式优先：`ValuePattern / InvokePattern / SelectionItemPattern / ExpandCollapsePattern`
+  - 显式等待窗口 ready、控件可用、焦点稳定、文本回读
+  - `SendWait` 仅作键盘兜底，异常会记录并重试，不会静默吞掉
 - `run-p1-smoke.ps1`
   - `reset -> status -> UIA -> status`
 - `run-p2-full-regression.ps1`
@@ -53,14 +56,14 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 
 2026-04-29：
 
+- P1 smoke：PASS
 - P2 full regression：PASS
 - P3.1 workbench smoke：PASS
 - P3.2 pipeline smoke：PASS
 - P3.4 workbench logic smoke：PASS
 - P3.5 search/action smoke：PASS
 - P3.6 navigation route smoke：PASS
-- P1 smoke：FAIL（既有 UIA `SendWait`）
-- P3 full regression：FAIL（被同一 P1 UIA 问题提前截断）
+- P3 full regression：PASS
 
 ## 注意
 
@@ -69,3 +72,4 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 - 路由 smoke 只验证逻辑和非视觉状态，不验证最终 UI 焦点表现
 - `artifacts\qa-smoke\` 只存运行产物，不提交
 - 如果某条 smoke 失败，先看该脚本输出，再看 `artifacts\qa-smoke\<timestamp>\`
+- `run-uia-smoke.ps1` 日志会标明当前步骤、重试次数和最终失败原因，便于定位焦点/输入 race
