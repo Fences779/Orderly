@@ -4,9 +4,9 @@
 
 ### 0. UI Modification Ban
 - **Status**: Strict default restriction.
-- **Constraint**: **DO NOT** modify any UI-related content, including layout, styles, bindings, visuals, interaction flow, UI-adjacent logic, or UI interfaces/APIs, unless the user explicitly and clearly asks for that specific UI change.
+- **Constraint**: **DO NOT** modify any UI-related content by default. Codex is strictly forbidden from changing layout, styles, bindings, visuals, interaction flow, UI-adjacent logic, or UI interfaces/APIs unless the user explicitly and unambiguously requests that exact UI change.
 - **Scope**: This applies to all UI surfaces, UI code, and UI interfaces in the repo, not just the pages listed below.
-- **Priority**: This rule overrides any general refactoring or implementation request when the change would touch UI code.
+- **Priority**: This is a top-level rule. It overrides any general implementation, cleanup, refactor, or optimization request whenever the change would touch UI code.
 
 ### 1. Login Page (登录页)
 - **Status**: Completed by the USER.
