@@ -29,6 +29,9 @@
   - `miniprogram/pages/settings/settings.json`
   - Any other files or views directly impacting Settings Page UI/UX, settings persistence, settings commands, or settings runtime behavior, unless explicitly requested by the user.
 
+### 3. 后端数据与 UI 限制 (Data & UI Constraint)
+- **Constraint**: **严禁**修改后端数据，只修改UI。
+
 ## CURRENT WORK IN PROGRESS
 
 ### 1. Home Page / MainWindow Refactoring (首页重构)
