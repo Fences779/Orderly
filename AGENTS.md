@@ -29,6 +29,12 @@
   - `miniprogram/pages/settings/settings.json`
   - Any other files or views directly impacting Settings Page UI/UX, settings persistence, settings commands, or settings runtime behavior, unless explicitly requested by the user.
 
+### 3. UI Modification Ban
+- **Status**: Strict default restriction.
+- **Constraint**: **DO NOT** modify any UI-related content, including layout, styles, bindings, visuals, interaction flow, UI-adjacent logic, or UI interfaces/APIs, unless the user explicitly and clearly asks for that specific UI change.
+- **Scope**: This applies to all UI surfaces, UI code, and UI interfaces in the repo, not just the pages listed below.
+- **Priority**: This rule overrides any general refactoring or implementation request when the change would touch UI code.
+
 ## CURRENT WORK IN PROGRESS
 
 ### 1. Home Page / MainWindow Refactoring (首页重构)

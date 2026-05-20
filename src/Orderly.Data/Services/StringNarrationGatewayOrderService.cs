@@ -45,15 +45,6 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         StringNarrationFulfillmentStatusCatalog.Completed,
         StringNarrationFulfillmentStatusCatalog.Exception
     };
-    private static readonly HashSet<string> ResolvedExceptionStates = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "resolved",
-        "closed",
-        "fixed",
-        "done",
-        "cleared"
-    };
-
     private readonly StringNarrationGatewayClient _client;
 
     public StringNarrationGatewayOrderService(StringNarrationGatewayClient client)
@@ -564,6 +555,68 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             adminResolutionRemark = ReadStringFromCandidates(candidates, "adminResolutionRemark", "resolutionRemark", "resolvedRemark");
         }
 
+        var owner = ReadString(primaryExceptionElement, "owner", "assignee", "handler", "processor", "exceptionOwner", "riskOwner");
+        if (string.IsNullOrWhiteSpace(owner))
+        {
+            owner = ReadStringFromCandidates(
+                candidates,
+                "owner",
+                "assignee",
+                "handler",
+                "processor",
+                "exceptionOwner",
+                "riskOwner");
+        }
+
+        var assignee = ReadString(primaryExceptionElement, "assignee", "handler", "processor", "owner", "exceptionAssignee", "riskAssignee");
+        if (string.IsNullOrWhiteSpace(assignee))
+        {
+            assignee = ReadStringFromCandidates(
+                candidates,
+                "assignee",
+                "handler",
+                "processor",
+                "owner",
+                "exceptionAssignee",
+                "riskAssignee");
+        }
+
+        var priority = ReadString(primaryExceptionElement, "priority", "exceptionPriority", "riskPriority", "severityPriority");
+        if (string.IsNullOrWhiteSpace(priority))
+        {
+            priority = ReadStringFromCandidates(candidates, "priority", "exceptionPriority", "riskPriority", "severityPriority");
+        }
+
+        var resolutionStatus = ReadString(primaryExceptionElement, "resolutionStatus", "handleStatus", "processStatus", "exceptionProcessStatus");
+        if (string.IsNullOrWhiteSpace(resolutionStatus))
+        {
+            resolutionStatus = ReadStringFromCandidates(candidates, "resolutionStatus", "handleStatus", "processStatus", "exceptionProcessStatus");
+        }
+
+        var resolutionAction = ReadString(primaryExceptionElement, "resolutionAction", "handleAction", "processAction", "fixAction");
+        if (string.IsNullOrWhiteSpace(resolutionAction))
+        {
+            resolutionAction = ReadStringFromCandidates(candidates, "resolutionAction", "handleAction", "processAction", "fixAction");
+        }
+
+        var resolvedBy = ReadString(primaryExceptionElement, "resolvedBy", "closedBy", "fixedBy", "handlerId");
+        if (string.IsNullOrWhiteSpace(resolvedBy))
+        {
+            resolvedBy = ReadStringFromCandidates(candidates, "resolvedBy", "closedBy", "fixedBy", "handlerId");
+        }
+
+        var slaDueAt = ReadLong(primaryExceptionElement, "slaDueAt", "dueAt", "deadlineAt", "handleDueAt");
+        if (slaDueAt <= 0)
+        {
+            slaDueAt = ReadLongFromCandidates(candidates, "slaDueAt", "dueAt", "deadlineAt", "handleDueAt");
+        }
+
+        var lastCheckedAt = ReadLong(primaryExceptionElement, "lastCheckedAt", "checkedAt", "lastReviewAt", "reviewedAt");
+        if (lastCheckedAt <= 0)
+        {
+            lastCheckedAt = ReadLongFromCandidates(candidates, "lastCheckedAt", "checkedAt", "lastReviewAt", "reviewedAt");
+        }
+
         var detectedAt = ReadLong(primaryExceptionElement, "detectedAt", "occurredAt", "raisedAt", "createdAt");
         if (detectedAt <= 0)
         {
@@ -617,13 +670,21 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         var explicitHasException = ReadBoolFromCandidates(candidates, "hasException", "isException");
         var explicitRequiresManualReview = ReadBoolFromCandidates(candidates, "requiresManualReview", "needManualReview", "manualReviewRequired");
         var explicitIsResolved = ReadBoolFromCandidates(candidates, "isResolved", "resolved");
-        var normalizedStatus = NormalizeValue(status);
-        var isResolved = explicitIsResolved || resolvedAt > 0 || ResolvedExceptionStates.Contains(normalizedStatus);
+        var normalizedStatus = StringNarrationExceptionFieldCatalog.NormalizeResolutionStatus(status);
+        var normalizedResolutionStatus = StringNarrationExceptionFieldCatalog.NormalizeResolutionStatus(resolutionStatus);
+        var isResolvedByStatus = string.Equals(normalizedStatus, StringNarrationExceptionFieldCatalog.ResolutionResolved, StringComparison.Ordinal)
+            || string.Equals(normalizedResolutionStatus, StringNarrationExceptionFieldCatalog.ResolutionResolved, StringComparison.Ordinal);
+        var isResolved = explicitIsResolved
+            || resolvedAt > 0
+            || isResolvedByStatus;
         var hasExceptionSignal = explicitHasException
             || !string.IsNullOrWhiteSpace(type)
             || !string.IsNullOrWhiteSpace(code)
             || !string.IsNullOrWhiteSpace(level)
             || !string.IsNullOrWhiteSpace(reason)
+            || !string.IsNullOrWhiteSpace(priority)
+            || !string.IsNullOrWhiteSpace(resolutionStatus)
+            || !string.IsNullOrWhiteSpace(resolutionAction)
             || primaryExceptionElement.ValueKind == JsonValueKind.Object
             || hasMissingAddress
             || hasMissingReceiverPhone
@@ -645,6 +706,32 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             requiresManualReview = true;
         }
 
+        var inferredCode = StringNarrationExceptionFieldCatalog.InferExceptionCode(
+            hasExceptionSignal,
+            hasMissingAddress,
+            hasMissingReceiverPhone,
+            hasMissingTrackingNo,
+            hasShippingSyncFailure,
+            hasProductionOrderMissing,
+            hasWorkOrderMissing,
+            normalizedFulfillmentStatus);
+
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            code = inferredCode;
+        }
+
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            type = string.IsNullOrWhiteSpace(code) ? inferredCode : code;
+        }
+
+        if (string.IsNullOrWhiteSpace(reason) && hasExceptionSignal)
+        {
+            reason = StringNarrationExceptionFieldCatalog.GetExceptionReason(
+                string.IsNullOrWhiteSpace(code) ? inferredCode : code);
+        }
+
         return new StringNarrationExceptionSnapshot
         {
             Type = type,
@@ -655,6 +742,14 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             Reason = reason,
             SuggestedAction = suggestedAction,
             AdminResolutionRemark = adminResolutionRemark,
+            Owner = owner,
+            Assignee = assignee,
+            Priority = priority,
+            ResolutionStatus = resolutionStatus,
+            ResolutionAction = resolutionAction,
+            ResolvedBy = resolvedBy,
+            SlaDueAt = slaDueAt,
+            LastCheckedAt = lastCheckedAt,
             DetectedAt = detectedAt,
             ResolvedAt = resolvedAt,
             HasException = hasExceptionSignal,

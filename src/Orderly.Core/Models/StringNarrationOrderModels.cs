@@ -197,6 +197,14 @@ public sealed class StringNarrationExceptionSnapshot
     public string Reason { get; set; } = string.Empty;
     public string SuggestedAction { get; set; } = string.Empty;
     public string AdminResolutionRemark { get; set; } = string.Empty;
+    public string Owner { get; set; } = string.Empty;
+    public string Assignee { get; set; } = string.Empty;
+    public string Priority { get; set; } = string.Empty;
+    public string ResolutionStatus { get; set; } = string.Empty;
+    public string ResolutionAction { get; set; } = string.Empty;
+    public string ResolvedBy { get; set; } = string.Empty;
+    public long SlaDueAt { get; set; }
+    public long LastCheckedAt { get; set; }
     public long DetectedAt { get; set; }
     public long ResolvedAt { get; set; }
     public bool HasException { get; set; }
@@ -231,17 +239,59 @@ public sealed class StringNarrationExceptionSnapshot
                 parts.Add(StatusText);
             }
 
-            if (!string.IsNullOrWhiteSpace(Reason))
+            if (!string.IsNullOrWhiteSpace(Priority))
             {
-                parts.Add(TrimForSummary(Reason, 36));
+                parts.Add($"优先级:{PriorityLabel}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(ResolutionStatus))
+            {
+                parts.Add($"处理:{ResolutionStatusLabel}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(EffectiveReason))
+            {
+                parts.Add(TrimForSummary(EffectiveReason, 36));
             }
 
             return parts.Count == 0 ? "异常待人工确认" : string.Join(" / ", parts);
         }
     }
 
+    public string NormalizedPriority => StringNarrationExceptionFieldCatalog.NormalizePriority(Priority);
+    public int PrioritySortOrder => StringNarrationExceptionFieldCatalog.GetPrioritySortOrder(Priority);
+    public string PriorityLabel => StringNarrationExceptionFieldCatalog.GetPriorityLabel(Priority);
+    public string NormalizedResolutionStatus => StringNarrationExceptionFieldCatalog.NormalizeResolutionStatus(ResolutionStatus);
+    public string ResolutionStatusLabel => StringNarrationExceptionFieldCatalog.GetResolutionStatusLabel(ResolutionStatus);
+    public int ResolutionStatusSortOrder => StringNarrationExceptionFieldCatalog.GetResolutionStatusSortOrder(ResolutionStatus);
+    public bool IsResolvedByNormalizedStatus => StringNarrationExceptionFieldCatalog.IsResolvedState(ResolutionStatus);
+    public int ResolvedSortOrder => IsResolved ? 1 : 0;
+    public long SlaDueSortTimestamp => NormalizeGatewayTimestamp(SlaDueAt);
+    public long DetectedSortTimestamp => NormalizeGatewayTimestamp(DetectedAt);
+    public string EffectiveCode => BuildValue(
+        Code,
+        StringNarrationExceptionFieldCatalog.InferExceptionCode(
+            HasException,
+            HasMissingAddress,
+            HasMissingReceiverPhone,
+            HasMissingTrackingNo,
+            HasShippingSyncFailure,
+            HasProductionOrderMissing,
+            HasWorkOrderMissing,
+            fulfillmentStatus: string.Empty));
+    public string EffectiveType => BuildValue(Type, EffectiveCode);
+    public string EffectiveReason => BuildValue(Reason, StringNarrationExceptionFieldCatalog.GetExceptionReason(EffectiveCode));
+    public string ExceptionCategoryLabel => StringNarrationExceptionFieldCatalog.GetExceptionLabel(EffectiveCode);
     public string LevelText => BuildValue(Level, HasException ? "待判级" : "无");
     public string StatusText => BuildValue(Status, IsResolved ? "已解决" : (HasException ? "待处理" : "无"));
+    public string OwnerText => BuildValue(Owner, BuildValue(Assignee, "未分配"));
+    public string AssigneeText => BuildValue(Assignee, "未分配");
+    public string PriorityText => BuildValue(Priority, "normal");
+    public string ResolutionStatusText => BuildValue(ResolutionStatus, IsResolved ? "resolved" : (HasException ? "open" : "none"));
+    public string ResolutionActionText => BuildValue(ResolutionAction, "无");
+    public string ResolvedByText => BuildValue(ResolvedBy, IsResolved ? "系统/未知" : "未处理");
+    public string SlaDueAtText => FormatGatewayTime(SlaDueAt);
+    public string LastCheckedAtText => FormatGatewayTime(LastCheckedAt);
     public string DetectedAtText => FormatGatewayTime(DetectedAt);
     public string ResolvedAtText => IsResolved ? FormatGatewayTime(ResolvedAt) : "未解决";
     public string TagsText => Tags.Count == 0 ? "无" : string.Join(", ", Tags);
@@ -278,6 +328,16 @@ public sealed class StringNarrationExceptionSnapshot
         {
             return "暂无";
         }
+    }
+
+    private static long NormalizeGatewayTimestamp(long timestamp)
+    {
+        if (timestamp <= 0)
+        {
+            return 0;
+        }
+
+        return timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp;
     }
 }
 
@@ -350,6 +410,16 @@ public class StringNarrationOrderSummary
     public string ExceptionSummaryText => Exception.SummaryText;
     public string ExceptionLevelText => Exception.LevelText;
     public string ExceptionStatusText => Exception.StatusText;
+    public int ExceptionResolvedSortOrder => Exception.ResolvedSortOrder;
+    public int ExceptionPrioritySortOrder => Exception.PrioritySortOrder;
+    public int ExceptionResolutionStatusSortOrder => Exception.ResolutionStatusSortOrder;
+    public long ExceptionSlaDueSortTimestamp => Exception.SlaDueSortTimestamp;
+    public long ExceptionDetectedSortTimestamp =>
+        Exception.DetectedSortTimestamp > 0
+            ? Exception.DetectedSortTimestamp
+            : NormalizeGatewayTimestamp(FulfillmentUpdatedAt) > 0
+                ? NormalizeGatewayTimestamp(FulfillmentUpdatedAt)
+                : NormalizeGatewayTimestamp(PaidAt);
 
     protected static string FormatJson(JsonElement? value, string fallback)
     {
@@ -395,6 +465,16 @@ public class StringNarrationOrderSummary
         {
             return "暂无";
         }
+    }
+
+    private static long NormalizeGatewayTimestamp(long timestamp)
+    {
+        if (timestamp <= 0)
+        {
+            return 0;
+        }
+
+        return timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp;
     }
 }
 

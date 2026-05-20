@@ -285,7 +285,11 @@ public partial class MainViewModel
                 "已解决" => item.Exception.IsResolved,
                 _ => true
             })
-            .OrderByDescending(item => item.Exception.DetectedAt > 0 ? item.Exception.DetectedAt : item.FulfillmentUpdatedAt)
+            .OrderBy(item => item.ExceptionResolvedSortOrder)
+            .ThenBy(item => item.ExceptionPrioritySortOrder)
+            .ThenBy(item => item.ExceptionSlaDueSortTimestamp > 0 ? item.ExceptionSlaDueSortTimestamp : long.MaxValue)
+            .ThenBy(item => item.ExceptionResolutionStatusSortOrder)
+            .ThenByDescending(item => item.ExceptionDetectedSortTimestamp)
             .ThenByDescending(item => item.PaidAt)
             .ToList();
 
@@ -317,7 +321,22 @@ public partial class MainViewModel
             || summary.TitleSnapshot.Contains(keyword, StringComparison.OrdinalIgnoreCase)
             || summary.ExceptionSummaryText.Contains(keyword, StringComparison.OrdinalIgnoreCase)
             || summary.ExceptionStatusText.Contains(keyword, StringComparison.OrdinalIgnoreCase)
-            || summary.ExceptionLevelText.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            || summary.ExceptionLevelText.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.Owner.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.Assignee.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.Priority.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.NormalizedPriority.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.PriorityLabel.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.ResolutionStatus.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.NormalizedResolutionStatus.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.ResolutionStatusLabel.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.ResolutionAction.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.ResolvedBy.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.AdminResolutionRemark.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.EffectiveType.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.EffectiveCode.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.EffectiveReason.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+            || summary.Exception.ExceptionCategoryLabel.Contains(keyword, StringComparison.OrdinalIgnoreCase);
     }
 
     private void OnExceptionOrdersCollectionStateChanged()
