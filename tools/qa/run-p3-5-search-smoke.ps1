@@ -102,15 +102,17 @@ function New-QaMetadataJson {
 function New-P35Context {
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
-    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
-    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory)
-    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory)
-    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory)
-    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
-    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
-    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
-    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory, $fieldEncryptionService)
+    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory, $fieldEncryptionService)
+    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory, $fieldEncryptionService)
+    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory, $fieldEncryptionService)
+    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory, $fieldEncryptionService)
+    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory, $fieldEncryptionService)
+    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory, $fieldEncryptionService)
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
+    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory, $fieldEncryptionService)
     $workbenchTaskService = [Orderly.Data.Services.LocalWorkbenchTaskService]::new(
         $customerRepository,
         $orderRepository,
@@ -398,6 +400,7 @@ $suggestion = New-P35Suggestion -Context $context -Customer $customer -Order $or
 $ocrResult = New-P35OcrResult -Context $context -Customer $customer -Order $order -Key 'p35qa-ocr-001' -Text "[P3.5_QA] OCR needle $commonToken"
 $followUp = New-P35FollowUp -Context $context -Customer $customer -Order $order -Key 'p35qa-followup-001' -Title "[P3.5_QA] FollowUp needle $commonToken" -ScheduledAt ([DateTime]::Today.AddHours(11))
 $activity = New-P35Activity -Context $context -Customer $customer -Order $order -Key 'p35qa-activity-001' -Title "[P3.5_QA] Activity needle $commonToken" -OccurredAt ([DateTime]::Now.AddMinutes(-20))
+Invoke-QaCiphertextBackfill -DatabasePath (Get-DefaultDatabasePath)
 $recentOnlyCustomer = New-P35Customer -Context $context -Key 'p35qa-recent-001' -Name '[P3.5_QA] Recent only customer' -Remark '[P3.5_QA] recent only'
 $null = New-P35Activity -Context $context -Customer $recentOnlyCustomer -Order $null -Key 'p35qa-recent-activity-001' -Title '[P3.5_QA] recent only activity' -OccurredAt ([DateTime]::Now.AddMinutes(-5))
 

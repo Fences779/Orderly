@@ -32,7 +32,11 @@ dotnet build Orderly.sln -c Debug
 3. 启动方式：
 
 - 在 IDE 中启动 `Orderly.App`
-- 或运行 `start-orderly.bat`
+- 开发热重载：`dev-watch-sn.bat`
+- 上述脚本会先清理 `src\Orderly.App\*_wpftmp.csproj`，避免 `dotnet watch` 命中 `MSB1011`
+- 等价命令：`dotnet watch run --project .\src\Orderly.App\Orderly.App.csproj`
+- 普通启动：`start-sn.bat`
+- 兼容旧入口：`start-orderly.bat`
 
 ## 发布前统一入口
 
@@ -59,4 +63,3 @@ dotnet build Orderly.sln -c Debug
 - 云函数上传部署步骤
 - 旧 `capture / quote / dealStage` 文档流程
 - 未合入 `main` 的分支能力
-

@@ -308,6 +308,72 @@ public sealed class DatabaseInitializer
 
         await EnsureColumnAsync(connection, "Orders", "DealId", "INTEGER NULL", cancellationToken);
         await EnsureEntityColumnsAsync(connection, "Orders", cancellationToken);
+
+        await EnsureSensitiveCipherColumnsAsync(connection, cancellationToken);
+    }
+
+    private static async Task EnsureSensitiveCipherColumnsAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        await EnsureColumnAsync(connection, "Customers", "NameCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Customers", "ContactHandleCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Customers", "PhoneCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Customers", "RemarkCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Customers", "ExternalIdCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Customers", "RawPayloadCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Customers", "LastContactAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "Deals", "TitleCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Deals", "EstimatedAmountCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Deals", "RequirementCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Deals", "ExpectedCloseAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Deals", "ClosedAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Deals", "LostReasonCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "Orders", "TitleCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Orders", "AmountCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Orders", "RequirementCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Orders", "ExternalIdCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Orders", "RawPayloadCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "Orders", "NextFollowUpAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "FollowUps", "TitleCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "FollowUps", "ContentCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "FollowUps", "ScheduledAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "FollowUps", "CompletedAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "FollowUps", "ReminderAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "CustomerNotes", "ContentCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "ActivityLogs", "TitleCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "ActivityLogs", "DescriptionCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "ActivityLogs", "OperatorCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "ActivityLogs", "MetadataJsonCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "ConversationMessages", "SenderNameCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "ConversationMessages", "ContentCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "ConversationMessages", "MessageTimeCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "ConversationMessages", "SourceMessageIdCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "ConversationMessages", "MetadataJsonCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "AiSuggestions", "SuggestionTextCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "AiSuggestions", "ReasonCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "AiSuggestions", "ConfidenceCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "AiSuggestions", "MetadataJsonCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "OcrResults", "SourcePathCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "OcrResults", "SourceNameCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "OcrResults", "ExtractedTextCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "OcrResults", "ErrorMessageCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "OcrResults", "MetadataJsonCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "PriceAdjustments", "OriginalAmountCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "PriceAdjustments", "AdjustedAmountCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "PriceAdjustments", "ReasonCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "PriceAdjustments", "RequestedByCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "PriceAdjustments", "ApprovedByCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "PriceAdjustments", "ApprovedAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "ReplyTemplates", "ContentCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
     }
 
     private static async Task EnsureEntityColumnsAsync(SqliteConnection connection, string table, CancellationToken cancellationToken)
@@ -385,13 +451,7 @@ public sealed class DatabaseInitializer
             await InsertTemplateAsync(connection, "结束语", "通用", "收到，我这边先记录，确认后会第一时间同步给你。", false, "通用", now, cancellationToken);
         }
 
-        if (await CountAsync(connection, "AppSettings", cancellationToken) == 0)
-        {
-            await UpsertSettingAsync(connection, "MainHotkey", "Ctrl+Alt+O", cancellationToken);
-            await UpsertSettingAsync(connection, "FloatingHotkey", "Ctrl+Alt+R", cancellationToken);
-            await UpsertSettingAsync(connection, "ShowFloatingWindowOnStartup", "false", cancellationToken);
-            await UpsertSettingAsync(connection, "StartMinimizedToTray", "false", cancellationToken);
-        }
+        await EnsureDefaultAppSettingsAsync(connection, cancellationToken);
     }
 
     private static async Task<int> CountAsync(SqliteConnection connection, string table, CancellationToken cancellationToken)
@@ -473,6 +533,99 @@ public sealed class DatabaseInitializer
             INSERT INTO AppSettings (Key, Value)
             VALUES ($key, $value)
             ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value;
+            """;
+        command.Parameters.AddWithValue("$key", key);
+        command.Parameters.AddWithValue("$value", value);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task EnsureDefaultAppSettingsAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        var defaults = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [AppSettingKeys.MainHotkey] = "Ctrl+Alt+O",
+            [AppSettingKeys.FloatingHotkey] = "Ctrl+Alt+R",
+            [AppSettingKeys.GlobalSearchHotkey] = "Ctrl+Alt+F",
+            [AppSettingKeys.TodayWorkbenchHotkey] = "Ctrl+Alt+W",
+            [AppSettingKeys.CopyOrderSummaryHotkey] = "Ctrl+Shift+C",
+            [AppSettingKeys.OpenProductionSheetHotkey] = "Ctrl+Shift+P",
+            [AppSettingKeys.MarkOrderExceptionHotkey] = "Ctrl+Shift+E",
+            [AppSettingKeys.AdvanceFulfillmentHotkey] = "Ctrl+Shift+N",
+            [AppSettingKeys.OpenCustomerProfileHotkey] = "Ctrl+Shift+F",
+            [AppSettingKeys.NewCustomerNoteHotkey] = "Ctrl+Shift+M",
+            [AppSettingKeys.CopyCustomerPreferenceSummaryHotkey] = "Ctrl+Shift+Y",
+            [AppSettingKeys.ShowFloatingWindowOnStartup] = "false",
+            [AppSettingKeys.StartMinimizedToTray] = "false",
+            [AppSettingKeys.StartupDefaultSection] = "工作台",
+            [AppSettingKeys.RememberLastSection] = "false",
+            [AppSettingKeys.LastSection] = "工作台",
+            [AppSettingKeys.StartWithWindows] = "false",
+            [AppSettingKeys.RememberWindowBounds] = "false",
+            [AppSettingKeys.DefaultWindowMode] = "普通",
+            [AppSettingKeys.SidebarDefaultExpanded] = "true",
+            [AppSettingKeys.FontSizePreset] = "标准",
+            [AppSettingKeys.ShowWindowsScaleHint] = "true",
+            [AppSettingKeys.ThemeMode] = "浅色",
+            [AppSettingKeys.AccentColor] = "默认绿",
+            [AppSettingKeys.EnableLightAnimation] = "false",
+            [AppSettingKeys.BackupDirectory] = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "Orderly",
+                "Backups"),
+            [AppSettingKeys.AutoBackupEnabled] = "false",
+            [AppSettingKeys.AutoBackupFrequency] = "手动",
+            [AppSettingKeys.BackupRetentionCount] = "10",
+            [AppSettingKeys.SnOrderSyncEnabled] = "false",
+            [AppSettingKeys.SnSyncMode] = "手动",
+            [AppSettingKeys.SnSyncFrequency] = "每6小时",
+            [AppSettingKeys.SnLastConnectionCheckAt] = string.Empty,
+            [AppSettingKeys.SnLastConnectionResult] = "未检查",
+            [AppSettingKeys.SnLastSyncAt] = string.Empty,
+            [AppSettingKeys.SnLastSyncResult] = "未执行",
+            [AppSettingKeys.MaskPhoneByDefault] = "true",
+            [AppSettingKeys.MaskAddressByDefault] = "true",
+            [AppSettingKeys.IncludeSensitiveInExport] = "false",
+            [AppSettingKeys.MaskOrderSummaryOnCopy] = "true",
+            [AppSettingKeys.OperationLogEnabled] = "true",
+            [AppSettingKeys.OperationLogRetentionDays] = "180",
+            [AppSettingKeys.AiAssistantEnabled] = "false",
+            [AppSettingKeys.AiAllowOrderContext] = "false",
+            [AppSettingKeys.AiAllowCustomerProfileContext] = "false",
+            [AppSettingKeys.AiDefaultModel] = string.Empty,
+            [AppSettingKeys.AiTimeoutSeconds] = "15",
+            [AppSettingKeys.AiAutoRedactBeforeSend] = "true",
+            [AppSettingKeys.AiBlockPhone] = "true",
+            [AppSettingKeys.AiBlockFullAddress] = "true",
+            [AppSettingKeys.AiBlockPaymentTransactionId] = "true",
+            [AppSettingKeys.AiReplyTone] = "简洁",
+            [AppSettingKeys.AiReplyLength] = "标准",
+            [AppSettingKeys.AiAutoGenerateOrderSummary] = "false",
+            [AppSettingKeys.NotifyNewOrder] = "true",
+            [AppSettingKeys.NotifyExceptionOrder] = "true",
+            [AppSettingKeys.NotifyOverdueUnhandled] = "true",
+            [AppSettingKeys.NotifySyncFailed] = "true",
+            [AppSettingKeys.NotifyPaidUnconfirmedHours] = "24",
+            [AppSettingKeys.NotifyPendingProductionHours] = "24",
+            [AppSettingKeys.NotifyPendingShipmentHours] = "48",
+            [AppSettingKeys.NotifyMissingAddress] = "true",
+            [AppSettingKeys.NotifyDoNotDisturbRange] = "22:00-08:00",
+            [AppSettingKeys.NotifyHighPriorityOnly] = "false",
+            [AppSettingKeys.DebugModeEnabled] = "false"
+        };
+
+        foreach (var setting in defaults)
+        {
+            await InsertSettingIfMissingAsync(connection, setting.Key, setting.Value, cancellationToken);
+        }
+    }
+
+    private static async Task InsertSettingIfMissingAsync(SqliteConnection connection, string key, string value, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO AppSettings (Key, Value)
+            VALUES ($key, $value)
+            ON CONFLICT(Key) DO NOTHING;
             """;
         command.Parameters.AddWithValue("$key", key);
         command.Parameters.AddWithValue("$value", value);

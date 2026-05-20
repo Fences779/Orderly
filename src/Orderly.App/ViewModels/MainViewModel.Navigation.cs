@@ -23,7 +23,7 @@ public partial class MainViewModel
         _isSynchronizingSelection = true;
         try
         {
-            SelectedSection = selectedSection;
+            SelectedSection = NormalizeSection(selectedSection);
 
             if (target.OrderId is int orderId)
             {

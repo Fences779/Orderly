@@ -1,0 +1,757 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Orderly.Core.Models;
+
+namespace Orderly.App.ViewModels;
+
+public partial class MainViewModel
+{
+    private bool _isSynchronizingStringNarrationSelection;
+
+    public ObservableCollection<StringNarrationOrderSummary> StringNarrationOrders { get; } = new();
+    public ObservableCollection<StringNarrationOrderItemSnapshot> StringNarrationOrderItems { get; } = new();
+    public ObservableCollection<StringNarrationStatusLog> StringNarrationStatusLogs { get; } = new();
+    public ObservableCollection<StringNarrationWorkOrderSnapshot> StringNarrationWorkOrders { get; } = new();
+    public ObservableCollection<StringNarrationFulfillmentStatusMetric> StringNarrationFulfillmentMetrics { get; } = new();
+    public ObservableCollection<string> StringNarrationStatusFilterOptions { get; } = new(new[]
+    {
+        "全部",
+        "paid",
+        "pending_payment",
+        "closed",
+        "refunded"
+    });
+    public ObservableCollection<string> StringNarrationFulfillmentStatusFilterOptions { get; } = new(new[]
+    {
+        "全部",
+        "paid_pending_confirm",
+        "pending_make",
+        "making",
+        "ready_to_ship",
+        "shipped",
+        "exception",
+        "completed"
+    });
+    public ObservableCollection<string> StringNarrationFulfillmentStatusOptions { get; } = new(new[]
+    {
+        "paid_pending_confirm",
+        "pending_make",
+        "making",
+        "ready_to_ship",
+        "shipped",
+        "exception",
+        "completed"
+    });
+
+    public string StringNarrationGatewayEndpoint { get; }
+    public bool IsStringNarrationGatewayTokenConfigured { get; }
+    public bool IsStringNarrationGatewayEndpointConfigured { get; }
+    public int StringNarrationGatewayTimeoutSeconds { get; }
+    public string StringNarrationGatewayEndpointStatus => IsStringNarrationGatewayEndpointConfigured ? "endpoint 已配置" : "endpoint 未配置";
+    public string StringNarrationGatewayTokenStatus => IsStringNarrationGatewayTokenConfigured ? "token 已配置" : "token 未配置";
+    public string StringNarrationGatewayTimeoutText => $"{StringNarrationGatewayTimeoutSeconds} 秒";
+    public string StringNarrationGatewayConfigurationPrompt => IsStringNarrationGatewayEndpointConfigured && IsStringNarrationGatewayTokenConfigured
+        ? "配置完整，可调用 adminPcGateway。"
+        : "需要配置 ADMIN_PC_GATEWAY_ENDPOINT / ADMIN_PC_GATEWAY_TOKEN 后才能调用；页面不会显示 token 明文。";
+    public bool HasStringNarrationOrders => StringNarrationOrders.Count > 0;
+    public bool HasSelectedStringNarrationOrderDetail => SelectedStringNarrationOrderDetail is not null;
+    public bool HasStringNarrationOrderItems => StringNarrationOrderItems.Count > 0;
+    public bool HasStringNarrationStatusLogs => StringNarrationStatusLogs.Count > 0;
+    public bool HasStringNarrationWorkOrders => StringNarrationWorkOrders.Count > 0;
+    public bool HasStringNarrationFulfillmentMetrics => StringNarrationFulfillmentMetrics.Count > 0;
+    public bool IsStringNarrationBusy => IsStringNarrationLoading || IsStringNarrationSaving;
+    public string StringNarrationOrdersCountText => $"{StringNarrationOrders.Count} 单";
+    public string StringNarrationStatsTotalText => $"{StringNarrationFulfillmentStats.TotalCount} 单";
+    public string StringNarrationEmptyStateText => string.IsNullOrWhiteSpace(StringNarrationError)
+        ? "暂无串述订单，点击刷新从 adminPcGateway 拉取。"
+        : StringNarrationError;
+    public string StringNarrationSelectedTitle => string.IsNullOrWhiteSpace(SelectedStringNarrationOrderDetail?.TitleSnapshot)
+        ? "未选择串述订单"
+        : SelectedStringNarrationOrderDetail.TitleSnapshot;
+    public string StringNarrationSelectedOrderNo => string.IsNullOrWhiteSpace(SelectedStringNarrationOrderDetail?.OrderNo)
+        ? "无 orderNo"
+        : SelectedStringNarrationOrderDetail.OrderNo;
+    public string StringNarrationSelectedTradeNo => string.IsNullOrWhiteSpace(SelectedStringNarrationOrderDetail?.WxOutTradeNo)
+        ? "无 tradeNo"
+        : SelectedStringNarrationOrderDetail.WxOutTradeNo;
+    public string StringNarrationSelectedAmountText => SelectedStringNarrationOrderDetail is null
+        ? "¥0"
+        : $"¥{SelectedStringNarrationOrderDetail.Amount:N0}";
+    public string StringNarrationSelectedPaidAtText => FormatGatewayTime(SelectedStringNarrationOrderDetail?.PaidAt ?? 0);
+    public string StringNarrationSelectedCreatedAtText => FormatGatewayTime(SelectedStringNarrationOrderDetail?.CreatedAt ?? 0);
+    public string StringNarrationAddressText => SelectedStringNarrationOrderDetail?.Address is null
+        ? "暂无收件信息"
+        : BuildAddressText(SelectedStringNarrationOrderDetail.Address);
+    public string StringNarrationRemarkText => string.IsNullOrWhiteSpace(SelectedStringNarrationOrderDetail?.Remark)
+        ? "暂无买家备注"
+        : SelectedStringNarrationOrderDetail.Remark;
+    public string StringNarrationShippingStateText => SelectedStringNarrationOrderDetail is null
+        ? "暂无履约信息"
+        : $"支付/订单状态：{SelectedStringNarrationOrderDetail.StatusText} / 履约状态：{SelectedStringNarrationOrderDetail.FulfillmentStatusLabel} ({SelectedStringNarrationOrderDetail.FulfillmentStatus}) / 微信发货同步：{SelectedStringNarrationOrderDetail.WxShippingSyncStatusText}";
+    public string StringNarrationTrackingText => SelectedStringNarrationOrderDetail is null
+        ? "暂无物流"
+        : $"{BuildValue(SelectedStringNarrationOrderDetail.Carrier, "未填快递公司")} {BuildValue(SelectedStringNarrationOrderDetail.ExpressCompanyCode, "未填编码")} {BuildValue(SelectedStringNarrationOrderDetail.TrackingNo, "未填单号")}";
+    public string StringNarrationFulfillmentTimeText => SelectedStringNarrationOrderDetail is null
+        ? "暂无履约时间"
+        : $"shippedAt：{SelectedStringNarrationOrderDetail.ShippedAtText} / completedAt：{SelectedStringNarrationOrderDetail.CompletedAtText} / fulfillmentUpdatedAt：{SelectedStringNarrationOrderDetail.FulfillmentUpdatedAtText}";
+    public string StringNarrationDetailOrderNo => SelectedStringNarrationOrderDetail?.OrderNoText ?? "无 orderNo";
+    public string StringNarrationDetailTransactionId => SelectedStringNarrationOrderDetail?.WxTransactionIdText ?? "无 wxTransactionId";
+    public string StringNarrationDetailStatus => SelectedStringNarrationOrderDetail is null
+        ? "未选择订单"
+        : $"{SelectedStringNarrationOrderDetail.StatusText} / {SelectedStringNarrationOrderDetail.FulfillmentStatusLabel}";
+    public string StringNarrationDetailProduct => SelectedStringNarrationOrderDetail is null
+        ? "暂无商品信息"
+        : $"{SelectedStringNarrationOrderDetail.TitleSnapshotText} / {SelectedStringNarrationOrderDetail.ItemsSnapshotStateText}";
+    public string StringNarrationDetailReceiver => SelectedStringNarrationOrderDetail is null
+        ? "暂无收货信息"
+        : $"{SelectedStringNarrationOrderDetail.ReceiverSummaryText}{Environment.NewLine}{SelectedStringNarrationOrderDetail.FullAddressText}";
+    public string StringNarrationDetailProduction => SelectedStringNarrationOrderDetail?.ProductionOrderSummaryText ?? "暂无制作单";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationBusy))]
+    [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestStringNarrationGatewayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchStringNarrationOrderDetailCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
+    private bool isStringNarrationLoading;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationBusy))]
+    [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestStringNarrationGatewayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchStringNarrationOrderDetailCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
+    private bool isStringNarrationSaving;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StringNarrationEmptyStateText))]
+    private string stringNarrationError = string.Empty;
+
+    [ObservableProperty]
+    private string stringNarrationStatusMessage = "串述订单未加载";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StringNarrationStatsTotalText))]
+    private StringNarrationFulfillmentStats stringNarrationFulfillmentStats = new();
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SearchStringNarrationOrderDetailCommand))]
+    private string stringNarrationLookupInput = string.Empty;
+
+    [ObservableProperty]
+    private string stringNarrationListKeyword = string.Empty;
+
+    [ObservableProperty]
+    private string selectedStringNarrationStatusFilter = "全部";
+
+    [ObservableProperty]
+    private string selectedStringNarrationFulfillmentStatusFilter = "全部";
+
+    [ObservableProperty]
+    private long stringNarrationStartAt;
+
+    [ObservableProperty]
+    private long stringNarrationEndAt;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedStringNarrationOrderDetail))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationSelectedTitle))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationSelectedOrderNo))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationSelectedTradeNo))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationSelectedAmountText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationSelectedPaidAtText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationSelectedCreatedAtText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationAddressText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationRemarkText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationShippingStateText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationTrackingText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationFulfillmentTimeText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationDetailOrderNo))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationDetailTransactionId))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationDetailStatus))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationDetailProduct))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationDetailReceiver))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationDetailProduction))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyStringNarrationOrderFieldCommand))]
+    private StringNarrationOrderDetail? selectedStringNarrationOrderDetail;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
+    private StringNarrationOrderSummary? selectedStringNarrationOrder;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
+    private string stringNarrationFulfillmentStatusInput = StringNarrationFulfillmentStatusCatalog.PendingMake;
+
+    [ObservableProperty]
+    private string stringNarrationTrackingNoInput = string.Empty;
+
+    [ObservableProperty]
+    private string stringNarrationCarrierInput = string.Empty;
+
+    [ObservableProperty]
+    private string stringNarrationExpressCompanyCodeInput = string.Empty;
+
+    [ObservableProperty]
+    private string stringNarrationShippingRemarkInput = string.Empty;
+
+    [ObservableProperty]
+    private string stringNarrationAdminRemarkInput = string.Empty;
+
+    [ObservableProperty]
+    private string stringNarrationProductionOrderRemarkInput = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
+    private bool stringNarrationProductionOrderForceRegenerate;
+
+    partial void OnSelectedStringNarrationOrderChanged(StringNarrationOrderSummary? value)
+    {
+        if (_isSynchronizingStringNarrationSelection)
+        {
+            return;
+        }
+
+        if (value is null)
+        {
+            SelectedStringNarrationOrderDetail = null;
+            ReplaceCollection(StringNarrationOrderItems, []);
+            ReplaceCollection(StringNarrationStatusLogs, []);
+            ReplaceCollection(StringNarrationWorkOrders, []);
+            return;
+        }
+
+        _ = LoadStringNarrationOrderDetailAsync(value);
+    }
+
+    partial void OnSelectedStringNarrationOrderDetailChanged(StringNarrationOrderDetail? value)
+    {
+        ReplaceCollection(StringNarrationOrderItems, value?.ItemsSnapshot ?? []);
+        ReplaceCollection(StringNarrationStatusLogs, value is null ? [] : value.StatusLogs.OrderByDescending(log => log.At));
+        var workOrders = value?.WorkOrders ?? value?.ProductionOrder.WorkOrders ?? [];
+        ReplaceCollection(StringNarrationWorkOrders, workOrders);
+        PopulateStringNarrationFulfillmentForm(value);
+        if (value is not null)
+        {
+            UpsertExceptionOrder(value);
+        }
+
+        OnStringNarrationCollectionStateChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunStringNarrationReadAction))]
+    private async Task TestStringNarrationGatewayAsync()
+    {
+        await ExecuteStringNarrationReadActionAsync("正在验证串述网关...", async () =>
+        {
+            var result = await _stringNarrationOrderService.WhoamiAsync();
+            StringNarrationStatusMessage = result.Authorized
+                ? $"网关已授权：{result.OperatorId} / {string.Join(", ", result.Permissions)}"
+                : "网关未授权";
+        });
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunStringNarrationReadAction))]
+    private async Task LoadStringNarrationOrdersAsync()
+    {
+        await ExecuteStringNarrationReadActionAsync("正在加载串述订单...", async () =>
+        {
+            var query = BuildStringNarrationQuery();
+            ValidateTimeRangeOrThrow(query);
+            var result = await _stringNarrationOrderService.GetOrdersAsync(query);
+
+            ReplaceCollection(StringNarrationOrders, result.Orders);
+            SyncExceptionOrdersFromOrders(result.Orders);
+            var statsLoaded = await TryLoadStatsWithoutThrowAsync(query);
+            if (!statsLoaded)
+            {
+                ApplyStringNarrationStats(result.Stats);
+            }
+
+            SelectedStringNarrationOrder = StringNarrationOrders.FirstOrDefault();
+            var statsSuffix = statsLoaded ? string.Empty : "；统计未更新";
+            StringNarrationStatusMessage = $"已加载 {StringNarrationOrders.Count} 单，总数 {result.PageInfo.Total}{statsSuffix}";
+            OnStringNarrationCollectionStateChanged();
+        });
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunStringNarrationReadAction))]
+    private async Task LoadStringNarrationStatsAsync()
+    {
+        await ExecuteStringNarrationReadActionAsync("正在加载履约统计...", async () =>
+        {
+            var query = BuildStringNarrationQuery();
+            ValidateTimeRangeOrThrow(query);
+            var stats = await _stringNarrationOrderService.GetFulfillmentStatsAsync(query);
+            ApplyStringNarrationStats(stats);
+            StringNarrationStatusMessage = $"履约统计已更新：{StringNarrationStatsTotalText}";
+        });
+    }
+
+    [RelayCommand]
+    private void ClearStringNarrationFilters()
+    {
+        StringNarrationListKeyword = string.Empty;
+        SelectedStringNarrationStatusFilter = "全部";
+        SelectedStringNarrationFulfillmentStatusFilter = "全部";
+        StringNarrationStartAt = 0;
+        StringNarrationEndAt = 0;
+        StringNarrationStatusMessage = "筛选已清空，点击刷新列表重新加载。";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSearchStringNarrationOrderDetail))]
+    private async Task SearchStringNarrationOrderDetailAsync()
+    {
+        var lookup = StringNarrationLookupInput.Trim();
+        await ExecuteStringNarrationReadActionAsync("正在查询串述订单详情...", async () =>
+        {
+            try
+            {
+                SelectedStringNarrationOrderDetail = await _stringNarrationOrderService.GetOrderDetailAsync(orderNo: lookup);
+            }
+            catch (InvalidOperationException) when (!lookup.StartsWith("CS", StringComparison.OrdinalIgnoreCase))
+            {
+                SelectedStringNarrationOrderDetail = await _stringNarrationOrderService.GetOrderDetailAsync(orderNo: string.Empty, tradeNo: lookup);
+            }
+
+            SelectStringNarrationSummaryByDetail(SelectedStringNarrationOrderDetail);
+            StringNarrationStatusMessage = $"已加载详情：{SelectedStringNarrationOrderDetail?.OrderNo}";
+        });
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRefreshStringNarrationOrderDetail))]
+    private async Task RefreshStringNarrationOrderDetailAsync()
+    {
+        var detail = SelectedStringNarrationOrderDetail;
+        var summary = SelectedStringNarrationOrder;
+        if (detail is not null)
+        {
+            await LoadStringNarrationOrderDetailAsync(detail.OrderNo, detail.WxOutTradeNo, detail.Id);
+            return;
+        }
+
+        if (summary is not null)
+        {
+            await LoadStringNarrationOrderDetailAsync(summary);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUpdateStringNarrationFulfillment))]
+    private async Task UpdateStringNarrationFulfillmentAsync()
+    {
+        var detail = SelectedStringNarrationOrderDetail;
+        if (detail is null)
+        {
+            return;
+        }
+
+        if (!ConfirmStringNarrationFulfillmentUpdate(detail))
+        {
+            StringNarrationStatusMessage = "已取消履约更新";
+            return;
+        }
+
+        try
+        {
+            IsStringNarrationSaving = true;
+            StringNarrationError = string.Empty;
+            StringNarrationStatusMessage = "正在更新串述履约信息...";
+
+            SelectedStringNarrationOrderDetail = await _stringNarrationOrderService.UpdateFulfillmentAsync(new StringNarrationFulfillmentUpdateRequest
+            {
+                Id = detail.Id,
+                OrderNo = detail.OrderNo,
+                TradeNo = detail.WxOutTradeNo,
+                FulfillmentStatus = StringNarrationFulfillmentStatusInput,
+                TrackingNo = StringNarrationTrackingNoInput,
+                Carrier = StringNarrationCarrierInput,
+                ExpressCompanyCode = StringNarrationExpressCompanyCodeInput,
+                ShippingRemark = StringNarrationShippingRemarkInput,
+                AdminRemark = StringNarrationAdminRemarkInput
+            });
+
+            UpdateStringNarrationSummary(SelectedStringNarrationOrderDetail);
+            StringNarrationStatusMessage = $"履约已更新：{SelectedStringNarrationOrderDetail.FulfillmentStatus}";
+        }
+        catch (Exception ex)
+        {
+            StringNarrationError = ex.Message;
+            StringNarrationStatusMessage = $"更新履约失败：{ex.Message}";
+        }
+        finally
+        {
+            IsStringNarrationSaving = false;
+            OnStringNarrationCollectionStateChanged();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGenerateStringNarrationProductionOrder))]
+    private async Task GenerateStringNarrationProductionOrderAsync()
+    {
+        var detail = SelectedStringNarrationOrderDetail;
+        if (detail is null)
+        {
+            return;
+        }
+
+        try
+        {
+            IsStringNarrationSaving = true;
+            StringNarrationError = string.Empty;
+            StringNarrationStatusMessage = "正在生成制作单...";
+
+            SelectedStringNarrationOrderDetail = await _stringNarrationOrderService.GenerateProductionOrderAsync(new StringNarrationGenerateProductionOrderRequest
+            {
+                Id = detail.Id,
+                OrderNo = detail.OrderNo,
+                TradeNo = detail.WxOutTradeNo,
+                Remark = StringNarrationProductionOrderRemarkInput,
+                ForceRegenerate = StringNarrationProductionOrderForceRegenerate
+            });
+
+            UpdateStringNarrationSummary(SelectedStringNarrationOrderDetail);
+            StringNarrationStatusMessage = "制作单请求已提交并刷新详情。";
+        }
+        catch (Exception ex)
+        {
+            StringNarrationError = ex.Message;
+            StringNarrationStatusMessage = $"生成制作单失败：{ex.Message}";
+        }
+        finally
+        {
+            IsStringNarrationSaving = false;
+            OnStringNarrationCollectionStateChanged();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCopyStringNarrationOrderField))]
+    private void CopyStringNarrationOrderField(string? field)
+    {
+        var detail = SelectedStringNarrationOrderDetail;
+        if (detail is null || string.IsNullOrWhiteSpace(field))
+        {
+            return;
+        }
+
+        var (label, text) = BuildStringNarrationCopyText(detail, field);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            StringNarrationStatusMessage = $"{label}为空，未复制";
+            return;
+        }
+
+        _clipboardService.SetText(text);
+        StringNarrationStatusMessage = $"已复制{label}";
+    }
+
+    private async Task LoadStringNarrationOrderDetailAsync(StringNarrationOrderSummary summary)
+    {
+        await LoadStringNarrationOrderDetailAsync(summary.OrderNo, summary.WxOutTradeNo, summary.Id);
+    }
+
+    private async Task LoadStringNarrationOrderDetailAsync(string orderNo, string tradeNo, string id)
+    {
+        await ExecuteStringNarrationReadActionAsync("正在加载串述订单详情...", async () =>
+        {
+            SelectedStringNarrationOrderDetail = await _stringNarrationOrderService.GetOrderDetailAsync(orderNo, tradeNo, id);
+            StringNarrationStatusMessage = $"已加载详情：{SelectedStringNarrationOrderDetail.OrderNo}";
+        });
+    }
+
+    private async Task ExecuteStringNarrationReadActionAsync(string busyMessage, Func<Task> action)
+    {
+        if (IsStringNarrationBusy)
+        {
+            return;
+        }
+
+        try
+        {
+            IsStringNarrationLoading = true;
+            StringNarrationError = string.Empty;
+            StringNarrationStatusMessage = busyMessage;
+            await action();
+        }
+        catch (Exception ex)
+        {
+            StringNarrationError = ex.Message;
+            StringNarrationStatusMessage = $"串述网关调用失败：{ex.Message}";
+        }
+        finally
+        {
+            IsStringNarrationLoading = false;
+            OnStringNarrationCollectionStateChanged();
+        }
+    }
+
+    private bool CanRunStringNarrationReadAction()
+    {
+        return !IsStringNarrationBusy;
+    }
+
+    private bool CanSearchStringNarrationOrderDetail()
+    {
+        return !IsStringNarrationBusy && !string.IsNullOrWhiteSpace(StringNarrationLookupInput);
+    }
+
+    private bool CanRefreshStringNarrationOrderDetail()
+    {
+        return !IsStringNarrationBusy && (SelectedStringNarrationOrderDetail is not null || SelectedStringNarrationOrder is not null);
+    }
+
+    private bool CanUpdateStringNarrationFulfillment()
+    {
+        return !IsStringNarrationBusy
+            && SelectedStringNarrationOrderDetail is not null
+            && !string.IsNullOrWhiteSpace(StringNarrationFulfillmentStatusInput);
+    }
+
+    private bool CanGenerateStringNarrationProductionOrder()
+    {
+        return !IsStringNarrationBusy && SelectedStringNarrationOrderDetail is not null;
+    }
+
+    private bool CanCopyStringNarrationOrderField(string? field)
+    {
+        return SelectedStringNarrationOrderDetail is not null && !string.IsNullOrWhiteSpace(field);
+    }
+
+    private void PopulateStringNarrationFulfillmentForm(StringNarrationOrderDetail? detail)
+    {
+        StringNarrationFulfillmentStatusInput = string.IsNullOrWhiteSpace(detail?.FulfillmentStatus)
+            ? StringNarrationFulfillmentStatusCatalog.PendingMake
+            : detail.FulfillmentStatus;
+        StringNarrationTrackingNoInput = detail?.TrackingNo ?? string.Empty;
+        StringNarrationCarrierInput = detail?.Carrier ?? string.Empty;
+        StringNarrationExpressCompanyCodeInput = detail?.ExpressCompanyCode ?? string.Empty;
+        StringNarrationShippingRemarkInput = detail?.ShippingRemark ?? string.Empty;
+        StringNarrationAdminRemarkInput = detail?.AdminRemark ?? string.Empty;
+    }
+
+    private void ApplyStringNarrationStats(StringNarrationFulfillmentStats? stats)
+    {
+        var resolved = stats ?? new StringNarrationFulfillmentStats();
+        if (resolved.Metrics.Count == 0)
+        {
+            resolved = new StringNarrationFulfillmentStats
+            {
+                TotalCount = resolved.TotalCount,
+                CalculatedAt = resolved.CalculatedAt,
+                Metrics = StringNarrationFulfillmentStatusCatalog.GetDefinitions()
+                    .OrderBy(item => item.SortOrder)
+                    .Select(item => new StringNarrationFulfillmentStatusMetric
+                    {
+                        FulfillmentStatus = item.FulfillmentStatus,
+                        Label = item.Label,
+                        SortOrder = item.SortOrder,
+                        Count = 0,
+                        IsTerminal = item.IsTerminal,
+                        IsException = item.IsException
+                    })
+                    .ToArray()
+            };
+        }
+
+        StringNarrationFulfillmentStats = resolved;
+        ReplaceCollection(StringNarrationFulfillmentMetrics, resolved.Metrics.OrderBy(item => item.SortOrder));
+    }
+
+    private StringNarrationOrderQuery BuildStringNarrationQuery()
+    {
+        return new StringNarrationOrderQuery
+        {
+            Page = 1,
+            PageSize = 20,
+            Keyword = StringNarrationListKeyword,
+            Status = NormalizeStringNarrationFilter(SelectedStringNarrationStatusFilter),
+            FulfillmentStatus = NormalizeStringNarrationFilter(SelectedStringNarrationFulfillmentStatusFilter),
+            StartAt = StringNarrationStartAt,
+            EndAt = StringNarrationEndAt
+        };
+    }
+
+    private static void ValidateTimeRangeOrThrow(StringNarrationOrderQuery query)
+    {
+        if (query.StartAt > 0 && query.EndAt > 0 && query.StartAt > query.EndAt)
+        {
+            throw new InvalidOperationException("时间筛选范围无效：startAt 不能大于 endAt。");
+        }
+    }
+
+    private async Task<bool> TryLoadStatsWithoutThrowAsync(StringNarrationOrderQuery query)
+    {
+        try
+        {
+            var stats = await _stringNarrationOrderService.GetFulfillmentStatsAsync(query);
+            ApplyStringNarrationStats(stats);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StringNarrationStatusMessage = $"列表已加载，统计单独拉取失败：{ex.Message}";
+            return false;
+        }
+    }
+
+    private void SelectStringNarrationSummaryByDetail(StringNarrationOrderDetail? detail)
+    {
+        if (detail is null)
+        {
+            return;
+        }
+
+        var match = StringNarrationOrders.FirstOrDefault(item =>
+            string.Equals(item.OrderNo, detail.OrderNo, StringComparison.Ordinal)
+            || string.Equals(item.Id, detail.Id, StringComparison.Ordinal)
+            || string.Equals(item.WxOutTradeNo, detail.WxOutTradeNo, StringComparison.Ordinal));
+        if (match is not null && SelectedStringNarrationOrder != match)
+        {
+            _isSynchronizingStringNarrationSelection = true;
+            try
+            {
+                SelectedStringNarrationOrder = match;
+            }
+            finally
+            {
+                _isSynchronizingStringNarrationSelection = false;
+            }
+        }
+    }
+
+    private void UpdateStringNarrationSummary(StringNarrationOrderDetail detail)
+    {
+        var index = StringNarrationOrders.ToList().FindIndex(item =>
+            string.Equals(item.OrderNo, detail.OrderNo, StringComparison.Ordinal)
+            || string.Equals(item.Id, detail.Id, StringComparison.Ordinal));
+        if (index < 0)
+        {
+            return;
+        }
+
+        _isSynchronizingStringNarrationSelection = true;
+        try
+        {
+            StringNarrationOrders[index] = detail;
+            SelectedStringNarrationOrder = StringNarrationOrders[index];
+            UpsertExceptionOrder(detail);
+        }
+        finally
+        {
+            _isSynchronizingStringNarrationSelection = false;
+        }
+    }
+
+    private void OnStringNarrationCollectionStateChanged()
+    {
+        OnPropertyChanged(nameof(HasStringNarrationOrders));
+        OnPropertyChanged(nameof(HasSelectedStringNarrationOrderDetail));
+        OnPropertyChanged(nameof(HasStringNarrationOrderItems));
+        OnPropertyChanged(nameof(HasStringNarrationStatusLogs));
+        OnPropertyChanged(nameof(HasStringNarrationWorkOrders));
+        OnPropertyChanged(nameof(HasStringNarrationFulfillmentMetrics));
+        OnPropertyChanged(nameof(StringNarrationOrdersCountText));
+        OnPropertyChanged(nameof(StringNarrationStatsTotalText));
+        OnPropertyChanged(nameof(StringNarrationStatsCalculatedAtText));
+        OnPropertyChanged(nameof(StringNarrationEmptyStateText));
+        OnPropertyChanged(nameof(StringNarrationSelectedTitle));
+        OnPropertyChanged(nameof(StringNarrationSelectedOrderNo));
+        OnPropertyChanged(nameof(StringNarrationSelectedTradeNo));
+        OnPropertyChanged(nameof(StringNarrationSelectedAmountText));
+        OnPropertyChanged(nameof(StringNarrationSelectedPaidAtText));
+        OnPropertyChanged(nameof(StringNarrationSelectedCreatedAtText));
+        OnPropertyChanged(nameof(StringNarrationAddressText));
+        OnPropertyChanged(nameof(StringNarrationRemarkText));
+        OnPropertyChanged(nameof(StringNarrationShippingStateText));
+        OnPropertyChanged(nameof(StringNarrationTrackingText));
+        OnPropertyChanged(nameof(StringNarrationFulfillmentTimeText));
+        OnPropertyChanged(nameof(StringNarrationDetailOrderNo));
+        OnPropertyChanged(nameof(StringNarrationDetailTransactionId));
+        OnPropertyChanged(nameof(StringNarrationDetailStatus));
+        OnPropertyChanged(nameof(StringNarrationDetailProduct));
+        OnPropertyChanged(nameof(StringNarrationDetailReceiver));
+        OnPropertyChanged(nameof(StringNarrationDetailProduction));
+    }
+
+    private bool ConfirmStringNarrationFulfillmentUpdate(StringNarrationOrderDetail detail)
+    {
+        var targetStatus = StringNarrationFulfillmentStatusInput.Trim();
+        var message = targetStatus is StringNarrationFulfillmentStatusCatalog.Shipped or StringNarrationFulfillmentStatusCatalog.Completed
+            ? $"确认将订单 {detail.OrderNoText} 的 fulfillmentStatus 更新为 {targetStatus}？\n\n本操作只提交履约字段，不提交支付 status；后端如有 shippedAt/completedAt 自动逻辑，将由接口处理。"
+            : $"确认更新订单 {detail.OrderNoText} 的履约信息？\n\n本操作只提交 fulfillmentStatus、物流和备注字段，不提交支付 status。";
+
+        var result = System.Windows.MessageBox.Show(
+            GetDialogOwner(),
+            message,
+            "确认更新串述履约",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question,
+            System.Windows.MessageBoxResult.No);
+
+        return result == System.Windows.MessageBoxResult.Yes;
+    }
+
+    private static (string Label, string Text) BuildStringNarrationCopyText(StringNarrationOrderDetail detail, string field)
+    {
+        return field.Trim() switch
+        {
+            "orderNo" => ("订单号", detail.OrderNo),
+            "wxOutTradeNo" => ("微信商户单号", detail.WxOutTradeNo),
+            "phone" => ("手机号", detail.Address.ReceiverPhone),
+            "address" => ("完整地址", detail.Address.FullAddressText == "无地址" ? string.Empty : detail.Address.FullAddressText),
+            "trackingNo" => ("快递单号", detail.TrackingNo),
+            "shippingInfo" => ("发货信息", JoinNonEmpty(" ", detail.Carrier, detail.TrackingNo)),
+            "receiverInfo" => ("收件信息", JoinNonEmpty(Environment.NewLine, detail.Address.ReceiverName, detail.Address.ReceiverPhone, detail.Address.FullAddressText == "无地址" ? string.Empty : detail.Address.FullAddressText)),
+            _ => ("内容", string.Empty)
+        };
+    }
+
+    private static string JoinNonEmpty(string separator, params string[] values)
+    {
+        return string.Join(separator, values.Where(item => !string.IsNullOrWhiteSpace(item)).Select(item => item.Trim()));
+    }
+
+    private static string NormalizeStringNarrationFilter(string value)
+    {
+        return string.Equals(value, "全部", StringComparison.OrdinalIgnoreCase) ? string.Empty : value.Trim();
+    }
+
+    private static string BuildAddressText(StringNarrationAddressSnapshot address)
+    {
+        var summary = address.FullAddressText;
+        var receiver = string.Join(" ", new[] { address.ReceiverName, address.ReceiverPhone }.Where(item => !string.IsNullOrWhiteSpace(item)));
+        return string.IsNullOrWhiteSpace(receiver) ? summary : $"{receiver}\n{summary}";
+    }
+
+    private static string BuildValue(string? value, string fallback = "暂无")
+    {
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+    }
+
+    private static string FormatGatewayTime(long timestamp)
+    {
+        if (timestamp <= 0)
+        {
+            return "暂无";
+        }
+
+        try
+        {
+            var milliseconds = timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp;
+            return DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).LocalDateTime.ToString("yyyy-MM-dd HH:mm");
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return "暂无";
+        }
+    }
+}

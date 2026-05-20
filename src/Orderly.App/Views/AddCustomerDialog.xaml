@@ -10,6 +10,13 @@
         ResizeMode="NoResize"
         Background="{StaticResource PageBackgroundBrush}"
         AutomationProperties.AutomationId="AddCustomerDialog">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/AppContentScrollResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
         <!-- 顶部标题栏 -->
         <Grid.RowDefinitions>

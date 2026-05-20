@@ -26,6 +26,11 @@ public sealed class GlobalHotkeyService : IDisposable
         _source?.AddHook(WndProc);
     }
 
+    public static bool IsValidHotkey(string? hotkey)
+    {
+        return TryParse(hotkey ?? string.Empty, out _, out _);
+    }
+
     public bool Register(int id, string hotkey)
     {
         if (_handle == IntPtr.Zero || !TryParse(hotkey, out var modifiers, out var key))
@@ -90,14 +95,21 @@ public sealed class GlobalHotkeyService : IDisposable
 
         foreach (var part in parts.Take(parts.Length - 1))
         {
-            modifiers |= part.ToUpperInvariant() switch
+            var current = part.ToUpperInvariant() switch
             {
                 "CTRL" or "CONTROL" => ModControl,
                 "ALT" => ModAlt,
                 "SHIFT" => ModShift,
                 "WIN" or "WINDOWS" => ModWin,
-                _ => 0
+                _ => 0u
             };
+
+            if (current == 0)
+            {
+                return false;
+            }
+
+            modifiers |= current;
         }
 
         if (!Enum.TryParse<Key>(parts[^1], true, out var key))

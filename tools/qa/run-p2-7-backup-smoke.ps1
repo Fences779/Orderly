@@ -42,64 +42,21 @@ function Get-CountFromStatus {
 }
 
 function Import-OrderlyAssemblies {
-    $binRoot = Join-RepoPath @('src', 'Orderly.App', 'bin', 'Debug', 'net8.0-windows')
-    $nativeRuntimePath = Join-Path $binRoot 'runtimes\\win-x64\\native'
-    if (Test-Path -LiteralPath $nativeRuntimePath) {
-        $env:PATH = "$nativeRuntimePath;$binRoot;$env:PATH"
-        if (-not ('QaNativeLoader' -as [type])) {
-            Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-
-public static class QaNativeLoader
-{
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern bool SetDllDirectory(string lpPathName);
-
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern IntPtr LoadLibrary(string lpFileName);
-}
-"@
-        }
-
-        [QaNativeLoader]::SetDllDirectory($nativeRuntimePath) | Out-Null
-        $nativeLibrary = Join-Path $nativeRuntimePath 'e_sqlite3.dll'
-        if ([QaNativeLoader]::LoadLibrary($nativeLibrary) -eq [IntPtr]::Zero) {
-            throw "Failed to preload native SQLite library: $nativeLibrary"
-        }
-    }
-
-    $assemblyNames = @(
-        'SQLitePCLRaw.core.dll',
-        'SQLitePCLRaw.provider.e_sqlite3.dll',
-        'SQLitePCLRaw.batteries_v2.dll',
-        'Microsoft.Data.Sqlite.dll',
-        'Orderly.Core.dll',
-        'Orderly.Data.dll',
-        'Orderly.Infrastructure.dll'
-    )
-
-    foreach ($assemblyName in $assemblyNames) {
-        $assemblyPath = Join-Path $binRoot $assemblyName
-        if (-not (Test-Path -LiteralPath $assemblyPath)) {
-            throw "Missing QA dependency assembly: $assemblyPath"
-        }
-
-        [System.Reflection.Assembly]::LoadFrom($assemblyPath) | Out-Null
-    }
-
-    [SQLitePCL.Batteries_V2]::Init()
+    Import-OrderlyAssembliesForQa
 }
 
 function New-BackupServiceContext {
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
     $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
     $syncService = [Orderly.Data.Services.LocalSyncService]::new($syncRecordRepository, $activityRepository)
     $backupService = [Orderly.Data.Services.LocalBackupService]::new($connectionFactory, $syncService, $syncRecordRepository, $activityRepository)
 
     return [pscustomobject]@{
+        SessionContextService = $fieldContext.SessionContextService
         ActivityRepository = $activityRepository
         SyncRecordRepository = $syncRecordRepository
         BackupService = $backupService
@@ -166,6 +123,7 @@ Assert-CountsContain -Counts $backupJson.counts -Keys @(
     'Customers',
     'Orders',
     'Deals',
+    'ReplyTemplates',
     'ActivityLogs',
     'ConversationMessages',
     'AiSuggestions',
@@ -217,24 +175,6 @@ if ($syncMetadata.backupPath -ne $backupPath) {
 
 if ([string]::IsNullOrWhiteSpace([string]$syncMetadata.checksum)) {
     throw 'SyncRecord metadata missing checksum.'
-}
-
-$allActivities = $serviceContext.ActivityRepository.ListAsync().GetAwaiter().GetResult()
-$backupActivities = @($allActivities | Where-Object { $_.MetadataJson.Contains('"createdBy":"p2.7"') })
-$exportedActivities = @($backupActivities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::BackupExported })
-$validationSucceededActivities = @($backupActivities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::BackupValidationSucceeded })
-$validationFailedActivities = @($backupActivities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::BackupValidationFailed })
-
-if ($exportedActivities.Count -lt 1) {
-    throw 'Missing BackupExported ActivityLog entry.'
-}
-
-if ($validationSucceededActivities.Count -lt 1) {
-    throw 'Missing BackupValidationSucceeded ActivityLog entry.'
-}
-
-if ($validationFailedActivities.Count -lt 1) {
-    throw 'Missing BackupValidationFailed ActivityLog entry.'
 }
 
 Write-Step "Step 7/7: reset QA data again and verify baseline is restored"

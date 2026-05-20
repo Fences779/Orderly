@@ -1,8 +1,8 @@
 @echo off
 setlocal
 
-cd /d "D:\Dev\Orderly"
-dotnet run --project "src\Orderly.App"
+cd /d "%~dp0"
+dotnet run --project "src\Orderly.App\Orderly.App.csproj"
 
 if errorlevel 1 (
   echo.

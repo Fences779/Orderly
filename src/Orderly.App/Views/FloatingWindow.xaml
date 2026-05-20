@@ -8,10 +8,33 @@
         ResizeMode="CanResizeWithGrip"
         WindowStartupLocation="CenterScreen"
         Background="#FFFDF8">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/AppContentScrollResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Border Padding="16" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
         <DockPanel>
             <StackPanel DockPanel.Dock="Top">
-                <TextBlock Text="悬浮助手" FontSize="22" FontWeight="Bold" />
+                <DockPanel>
+                    <Border Width="28"
+                            Height="28"
+                            Background="#FFFFFF"
+                            CornerRadius="10"
+                            BorderBrush="{StaticResource BorderBrushSoft}"
+                            BorderThickness="1"
+                            Margin="0,0,10,0">
+                        <Image Source="{StaticResource OrderlyBrandLogoImage}"
+                               Width="18"
+                               Height="18"
+                               Stretch="Uniform"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="悬浮助手" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
+                </DockPanel>
                 <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" Margin="0,12,0,12" Padding="10,8" />
                 <TextBlock Text="最近订单" FontWeight="SemiBold" />
             </StackPanel>

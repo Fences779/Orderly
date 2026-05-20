@@ -93,10 +93,12 @@ public static class QaNativeLoader
 function New-ConversationServiceContext {
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
-    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
-    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory)
-    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory, $fieldEncryptionService)
+    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory, $fieldEncryptionService)
+    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory, $fieldEncryptionService)
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
     $conversationService = [Orderly.Data.Services.ConversationService]::new($messageRepository, $activityRepository)
 
     return [pscustomobject]@{

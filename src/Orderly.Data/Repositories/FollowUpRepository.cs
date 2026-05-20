@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Core.Services;
+using Orderly.Data.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -9,10 +11,12 @@ namespace Orderly.Data.Repositories;
 public sealed class FollowUpRepository : IFollowUpRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
+    private readonly IFieldEncryptionService _fieldEncryptionService;
 
-    public FollowUpRepository(SqliteConnectionFactory connectionFactory)
+    public FollowUpRepository(SqliteConnectionFactory connectionFactory, IFieldEncryptionService fieldEncryptionService)
     {
         _connectionFactory = connectionFactory;
+        _fieldEncryptionService = fieldEncryptionService ?? throw new ArgumentNullException(nameof(fieldEncryptionService));
     }
 
     public async Task<FollowUp> CreateAsync(FollowUp followUp, CancellationToken cancellationToken = default)
@@ -33,16 +37,16 @@ public sealed class FollowUpRepository : IFollowUpRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO FollowUps (
-                CustomerId, DealId, OrderId, Title, Content, Status, ScheduledAt, CompletedAt, ReminderAt,
+                CustomerId, DealId, OrderId, Title, TitleCiphertext, Content, ContentCiphertext, Status, ScheduledAt, ScheduledAtCiphertext, CompletedAt, CompletedAtCiphertext, ReminderAt, ReminderAtCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             )
             VALUES (
-                $customerId, $dealId, $orderId, $title, $content, $status, $scheduledAt, $completedAt, $reminderAt,
+                $customerId, $dealId, $orderId, $title, $titleCiphertext, $content, $contentCiphertext, $status, $scheduledAt, $scheduledAtCiphertext, $completedAt, $completedAtCiphertext, $reminderAt, $reminderAtCiphertext,
                 $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
             );
             SELECT last_insert_rowid();
             """;
-        AddParameters(command, followUp);
+        AddParameters(command, followUp, _fieldEncryptionService);
         followUp.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
         return followUp;
     }
@@ -56,7 +60,7 @@ public sealed class FollowUpRepository : IFollowUpRepository
         command.Parameters.AddWithValue("$id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public Task<IReadOnlyList<FollowUp>> ListAsync(CancellationToken cancellationToken = default)
@@ -92,11 +96,16 @@ public sealed class FollowUpRepository : IFollowUpRepository
                 DealId = $dealId,
                 OrderId = $orderId,
                 Title = $title,
+                TitleCiphertext = $titleCiphertext,
                 Content = $content,
+                ContentCiphertext = $contentCiphertext,
                 Status = $status,
                 ScheduledAt = $scheduledAt,
+                ScheduledAtCiphertext = $scheduledAtCiphertext,
                 CompletedAt = $completedAt,
+                CompletedAtCiphertext = $completedAtCiphertext,
                 ReminderAt = $reminderAt,
+                ReminderAtCiphertext = $reminderAtCiphertext,
                 UpdatedAt = $updatedAt,
                 DeletedAt = $deletedAt,
                 RemoteId = $remoteId,
@@ -104,7 +113,7 @@ public sealed class FollowUpRepository : IFollowUpRepository
                 Version = $version
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
-        AddParameters(command, followUp);
+        AddParameters(command, followUp, _fieldEncryptionService);
         command.Parameters.AddWithValue("$id", followUp.Id);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -141,29 +150,34 @@ public sealed class FollowUpRepository : IFollowUpRepository
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            rows.Add(Map(reader));
+            rows.Add(Map(reader, _fieldEncryptionService));
         }
 
         return rows;
     }
 
     private const string SelectSql = """
-        SELECT Id, CustomerId, DealId, OrderId, Title, Content, Status, ScheduledAt, CompletedAt, ReminderAt,
+        SELECT Id, CustomerId, DealId, OrderId, Title, TitleCiphertext, Content, ContentCiphertext, Status, ScheduledAt, ScheduledAtCiphertext, CompletedAt, CompletedAtCiphertext, ReminderAt, ReminderAtCiphertext,
                CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
         FROM FollowUps
         """;
 
-    private static void AddParameters(SqliteCommand command, FollowUp followUp)
+    private static void AddParameters(SqliteCommand command, FollowUp followUp, IFieldEncryptionService fieldEncryptionService)
     {
         command.Parameters.AddWithValue("$customerId", followUp.CustomerId);
         command.Parameters.AddWithValue("$dealId", ToDbInt(followUp.DealId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(followUp.OrderId));
-        command.Parameters.AddWithValue("$title", followUp.Title);
-        command.Parameters.AddWithValue("$content", followUp.Content);
+        command.Parameters.AddWithValue("$title", string.Empty);
+        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(followUp.Title));
+        command.Parameters.AddWithValue("$content", string.Empty);
+        command.Parameters.AddWithValue("$contentCiphertext", fieldEncryptionService.Encrypt(followUp.Content));
         command.Parameters.AddWithValue("$status", (int)followUp.Status);
-        command.Parameters.AddWithValue("$scheduledAt", followUp.ScheduledAt.ToString("O"));
-        command.Parameters.AddWithValue("$completedAt", ToDbDate(followUp.CompletedAt));
-        command.Parameters.AddWithValue("$reminderAt", ToDbDate(followUp.ReminderAt));
+        command.Parameters.AddWithValue("$scheduledAt", string.Empty);
+        command.Parameters.AddWithValue("$scheduledAtCiphertext", fieldEncryptionService.Encrypt(followUp.ScheduledAt.ToString("O")));
+        command.Parameters.AddWithValue("$completedAt", DBNull.Value);
+        command.Parameters.AddWithValue("$completedAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(followUp.CompletedAt)));
+        command.Parameters.AddWithValue("$reminderAt", DBNull.Value);
+        command.Parameters.AddWithValue("$reminderAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(followUp.ReminderAt)));
         command.Parameters.AddWithValue("$createdAt", followUp.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", followUp.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(followUp.DeletedAt));
@@ -172,26 +186,32 @@ public sealed class FollowUpRepository : IFollowUpRepository
         command.Parameters.AddWithValue("$version", followUp.Version);
     }
 
-    private static FollowUp Map(SqliteDataReader reader)
+    private static FollowUp Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)
     {
+        var title = EncryptedColumnReader.ReadRequiredString(reader, 5, fieldEncryptionService, "FollowUps.TitleCiphertext");
+        var content = EncryptedColumnReader.ReadRequiredString(reader, 7, fieldEncryptionService, "FollowUps.ContentCiphertext");
+        var scheduledAt = EncryptedColumnReader.ReadRequiredDateTime(reader, 10, fieldEncryptionService, "FollowUps.ScheduledAtCiphertext");
+        var completedAt = EncryptedColumnReader.ReadOptionalDateTime(reader, 12, fieldEncryptionService, "FollowUps.CompletedAtCiphertext");
+        var reminderAt = EncryptedColumnReader.ReadOptionalDateTime(reader, 14, fieldEncryptionService, "FollowUps.ReminderAtCiphertext");
+
         return new FollowUp
         {
             Id = reader.GetInt32(0),
             CustomerId = reader.GetInt32(1),
             DealId = reader.IsDBNull(2) ? null : reader.GetInt32(2),
             OrderId = reader.IsDBNull(3) ? null : reader.GetInt32(3),
-            Title = reader.GetString(4),
-            Content = reader.GetString(5),
-            Status = (FollowUpStatus)reader.GetInt32(6),
-            ScheduledAt = DateTime.Parse(reader.GetString(7), null, DateTimeStyles.RoundtripKind),
-            CompletedAt = reader.IsDBNull(8) ? null : DateTime.Parse(reader.GetString(8), null, DateTimeStyles.RoundtripKind),
-            ReminderAt = reader.IsDBNull(9) ? null : DateTime.Parse(reader.GetString(9), null, DateTimeStyles.RoundtripKind),
-            CreatedAt = DateTime.Parse(reader.GetString(10), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(11), null, DateTimeStyles.RoundtripKind),
-            DeletedAt = reader.IsDBNull(12) ? null : DateTime.Parse(reader.GetString(12), null, DateTimeStyles.RoundtripKind),
-            RemoteId = reader.GetString(13),
-            IsSynced = reader.GetInt32(14) == 1,
-            Version = reader.GetInt32(15)
+            Title = title,
+            Content = content,
+            Status = (FollowUpStatus)reader.GetInt32(8),
+            ScheduledAt = scheduledAt,
+            CompletedAt = completedAt,
+            ReminderAt = reminderAt,
+            CreatedAt = DateTime.Parse(reader.GetString(15), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(16), null, DateTimeStyles.RoundtripKind),
+            DeletedAt = reader.IsDBNull(17) ? null : DateTime.Parse(reader.GetString(17), null, DateTimeStyles.RoundtripKind),
+            RemoteId = reader.GetString(18),
+            IsSynced = reader.GetInt32(19) == 1,
+            Version = reader.GetInt32(20)
         };
     }
 
@@ -203,5 +223,10 @@ public sealed class FollowUpRepository : IFollowUpRepository
     private static object ToDbDate(DateTime? value)
     {
         return value is null ? DBNull.Value : value.Value.ToString("O");
+    }
+
+    private static string ToCipherDate(DateTime? value)
+    {
+        return value is null ? string.Empty : value.Value.ToString("O");
     }
 }

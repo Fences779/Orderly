@@ -52,7 +52,7 @@ public partial class MainViewModel
 
         SelectedSearchResult = target;
         var route = await _navigationRouteService.ResolveAsync(target.Result);
-        await ApplyNavigationRouteAsync(route, target.Title, "客户/订单");
+        await ApplyNavigationRouteAsync(route, target.Title, SectionWorkbench);
     }
 
     private bool CanRunSearch()

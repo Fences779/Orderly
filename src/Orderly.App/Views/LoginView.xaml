@@ -1,38 +1,225 @@
 <Window x:Class="Orderly.App.Views.LoginView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="登录 - Orderly" 
-        Height="600" Width="900"
-        WindowStyle="None" 
-        AllowsTransparency="True" 
-        Background="Transparent"
+        Title="Orderly"
+        Height="560"
+        Width="860"
+        MinHeight="500"
+        MinWidth="760"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize"
-        MouseLeftButtonDown="Window_MouseLeftButtonDown"
-        FontFamily="Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif">
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown"
+        PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
-        <!-- Apple 风格输入框：极致圆角、低对比度边框、大呼吸感 -->
-        <Style x:Key="AppleInputStyle" TargetType="Control">
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="Foreground" Value="#1D1D1F"/>
-            <Setter Property="Background" Value="#F5F5F7"/>
-            <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="2"/>
-            <Setter Property="Padding" Value="16,14"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/AppContentScrollResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 进场动画 -->
+            <Storyboard x:Key="LoadAnimation">
+                <DoubleAnimation Storyboard.TargetName="MainCard" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.8">
+                    <DoubleAnimation.EasingFunction>
+                        <CubicEase EasingMode="EaseOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="MainCard" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="20" To="0" Duration="0:0:0.8">
+                    <DoubleAnimation.EasingFunction>
+                        <CubicEase EasingMode="EaseOut" />
+                    </DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+
+            <!-- 主按钮：保留强主操作，但降低纯黑压迫感-->
+            <Style x:Key="PremiumButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#17181C" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Height" Value="50" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="Control">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg"
+                                CornerRadius="14"
+                                SnapsToDevicePixels="True">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="ButtonBackgroundBrush" Color="#17181C" />
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect x:Name="ButtonShadowEffect"
+                                                  BlurRadius="18"
+                                                  ShadowDepth="3"
+                                                  Direction="270"
+                                                  Color="#101114"
+                                                  Opacity="0.07" />
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard x:Name="ButtonHoverStoryboard">
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="ButtonBackgroundBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#1E2025"
+                                                            Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonShadowEffect"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.18"
+                                                             Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonShadowEffect"
+                                                             Storyboard.TargetProperty="BlurRadius"
+                                                             To="22"
+                                                             Duration="0:0:0.18">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="ButtonBackgroundBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#17181C"
+                                                            Duration="0:0:0.2">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonShadowEffect"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0.12"
+                                                             Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonShadowEffect"
+                                                             Storyboard.TargetProperty="BlurRadius"
+                                                             To="18"
+                                                             Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#121317" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bg" Property="Background" Value="#C9CCD3" />
+                                <Setter Property="Foreground" Value="#F8F8FA" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            </Style>
+
+        <!-- 输入框：默认态和焦点态拉近，只做轻微点亮 -->
+        <Style TargetType="TextBox">
+            <Setter Property="Height" Value="48" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Background" Value="#F7F7F9" />
+            <Setter Property="BorderBrush" Value="#DFE3EA" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#1D1D1F" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="border"
+                                CornerRadius="14"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="12">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="0" VerticalAlignment="Center"/>
+                                SnapsToDevicePixels="True">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="TextBoxBackgroundBrush" Color="#F7F7F9" />
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush x:Name="TextBoxBorderBrush" Color="#DFE3EA" />
+                            </Border.BorderBrush>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                <Setter Property="BorderBrush" Value="#007AFF"/> <!-- Apple Blue -->
-                                <Setter Property="Background" Value="#FFFFFF"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="TextBoxBackgroundBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#FFFFFF"
+                                                            Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#8A9AB5"
+                                                            Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="TextBoxBackgroundBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#F7F7F9"
+                                                            Duration="0:0:0.22">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#DFE3EA"
+                                                            Duration="0:0:0.22">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsKeyboardFocusWithin" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#FAFAFB" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D4D9E2" />
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#F1F2F5" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#E5E7EC" />
+                                <Setter Property="Foreground" Value="#A0A5AF" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -40,29 +227,152 @@
             </Setter>
         </Style>
 
-        <!-- Apple Pro 风格主按钮 -->
-        <Style x:Key="ApplePrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#000000"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
+        <Style TargetType="PasswordBox">
+            <Setter Property="Height" Value="48" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Background" Value="#F7F7F9" />
+            <Setter Property="BorderBrush" Value="#DFE3EA" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#1D1D1F" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <Border x:Name="border"
+                                CornerRadius="14"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="PasswordBoxBackgroundBrush" Color="#F7F7F9" />
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush x:Name="PasswordBoxBorderBrush" Color="#DFE3EA" />
+                            </Border.BorderBrush>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="PasswordBoxBackgroundBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#FFFFFF"
+                                                            Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <ColorAnimation Storyboard.TargetName="PasswordBoxBorderBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#8A9AB5"
+                                                            Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="PasswordBoxBackgroundBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#F7F7F9"
+                                                            Duration="0:0:0.22">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <ColorAnimation Storyboard.TargetName="PasswordBoxBorderBrush"
+                                                            Storyboard.TargetProperty="Color"
+                                                            To="#DFE3EA"
+                                                            Duration="0:0:0.22">
+                                                <ColorAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsKeyboardFocusWithin" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#FAFAFB" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D4D9E2" />
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#F1F2F5" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#E5E7EC" />
+                                <Setter Property="Foreground" Value="#A0A5AF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 字段标签 -->
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#606773" />
+            <Setter Property="Margin" Value="2,0,0,8" />
+        </Style>
+
+        <Style x:Key="LinkButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#5F6674" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" CornerRadius="12">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,14"/>
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalAlignment}" VerticalAlignment="Center" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#1D1D1F" />
+                    <Setter Property="Opacity" Value="0.86" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Opacity" Value="0.58" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F5F5F7" />
+            <Setter Property="Foreground" Value="#1D1D1F" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="18,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="BtnBorder" Property="Background" Value="#1D1D1F"/>
+                                <Setter TargetName="bg" Property="Background" Value="#ECECF1" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="BtnBorder" Property="Background" Value="#333336"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="BtnBorder" Property="Background" Value="#E5E5EA"/>
-                                <Setter Property="Foreground" Value="#8E8E93"/>
+                                <Setter TargetName="bg" Property="Opacity" Value="0.78" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -70,130 +380,1329 @@
             </Setter>
         </Style>
 
-        <!-- Apple 极简次级按钮 -->
-        <Style x:Key="AppleGhostButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#007AFF"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Cursor" Value="Hand"/>
+        <Style x:Key="BackIconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Background" Value="#F5F5F7" />
+            <Setter Property="Foreground" Value="#1D1D1F" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8"/>
+                        <Border x:Name="BackButtonBorder"
+                                Width="{TemplateBinding Width}"
+                                Height="{TemplateBinding Height}"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="18">
+                            <Viewbox Width="14" Height="14" Stretch="Uniform" Margin="-2,0,0,0">
+                                <Canvas Width="14" Height="14">
+                                    <Path Data="M8.8,2.2 L4.2,7 L8.8,11.8"
+                                          Stroke="{TemplateBinding Foreground}"
+                                          StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                    <Line X1="4.6"
+                                          Y1="7"
+                                          X2="11.2"
+                                          Y2="7"
+                                          Stroke="{TemplateBinding Foreground}"
+                                          StrokeThickness="1.8"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round" />
+                                </Canvas>
+                            </Viewbox>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Opacity" Value="0.7"/>
+                                <Setter TargetName="BackButtonBorder" Property="Background" Value="#EBEBEF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="BackButtonBorder" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.96" ScaleY="0.96" CenterX="18" CenterY="18" />
+                                    </Setter.Value>
+                                </Setter>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+        </ResourceDictionary>
     </Window.Resources>
 
-    <!-- 悬浮主卡片 -->
-    <Border Background="#FFFFFF" CornerRadius="20" Margin="40">
-        <Border.Effect>
-            <!-- 类似 macOS 的大范围柔和阴影 -->
-            <DropShadowEffect BlurRadius="50" ShadowDepth="12" Opacity="0.12" Color="#000000" Direction="270"/>
-        </Border.Effect>
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard Storyboard="{StaticResource LoadAnimation}" />
+        </EventTrigger>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                    <DoubleAnimation Storyboard.TargetName="SilkWavePrimaryTranslate"
+                                     Storyboard.TargetProperty="Y"
+                                     From="-14"
+                                     To="18"
+                                     Duration="0:0:12" />
+                    <DoubleAnimation Storyboard.TargetName="SilkWavePrimaryTranslate"
+                                     Storyboard.TargetProperty="X"
+                                     From="-8"
+                                     To="10"
+                                     Duration="0:0:14" />
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                    <DoubleAnimation Storyboard.TargetName="SilkWaveSecondaryTranslate"
+                                     Storyboard.TargetProperty="Y"
+                                     From="12"
+                                     To="-18"
+                                     Duration="0:0:10" />
+                    <DoubleAnimation Storyboard.TargetName="SilkWaveSecondaryTranslate"
+                                     Storyboard.TargetProperty="X"
+                                     From="6"
+                                     To="-12"
+                                     Duration="0:0:13" />
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
 
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="4.5*"/>
-                <ColumnDefinition Width="5.5*"/>
-            </Grid.ColumnDefinitions>
+    <!-- 窗口外部留出阴影空间 -->
+    <Border x:Name="RootGrid" Background="Transparent" Padding="32">
+        <Border x:Name="MainCard" Background="#FCFCFD" CornerRadius="24" Opacity="0" RenderTransformOrigin="0.5,0.5">
+            <Border.RenderTransform>
+                <TranslateTransform Y="20" />
+            </Border.RenderTransform>
+            <Border.Effect>
+                <DropShadowEffect x:Name="MainCardShadow" BlurRadius="46" ShadowDepth="14" Direction="270" Color="#111216" Opacity="0.08" />
+            </Border.Effect>
 
-            <!-- 左侧：Apple 风格流体渐变与品牌区 -->
-            <Border Grid.Column="0" CornerRadius="20,0,0,20" ClipToBounds="True">
-                <Border.Background>
-                    <!-- macOS Monterey 风格渐变 -->
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#F2F2F7" Offset="0.0"/>
-                        <GradientStop Color="#E5E5EA" Offset="1.0"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-                <Grid>
-                    <!-- 模拟流体光晕 -->
-                    <Ellipse Width="400" Height="400" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-150,-100,0,0">
-                        <Ellipse.Fill>
-                            <RadialGradientBrush>
-                                <GradientStop Color="#40007AFF" Offset="0"/>
-                                <GradientStop Color="Transparent" Offset="1"/>
-                            </RadialGradientBrush>
-                        </Ellipse.Fill>
-                    </Ellipse>
-                    <Ellipse Width="350" Height="350" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-100,-150">
-                        <Ellipse.Fill>
-                            <RadialGradientBrush>
-                                <GradientStop Color="#30FF2D55" Offset="0"/>
-                                <GradientStop Color="Transparent" Offset="1"/>
-                            </RadialGradientBrush>
-                        </Ellipse.Fill>
-                    </Ellipse>
+            <!-- 主内容区域，绑定拖拽事件 -->
+            <Grid x:Name="MainCardContent"
+                  Background="Transparent"
+                  MouseLeftButtonDown="RootGrid_MouseLeftButtonDown"
+                  SizeChanged="MainCardContent_SizeChanged">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="286" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                    <!-- 居中极简 Logo -->
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <!-- 可以替换为真实的矢量 Logo，这里用极简黑块代替 -->
-                        <Border Width="60" Height="60" Background="#1D1D1F" CornerRadius="16" Margin="0,0,0,20">
-                            <TextBlock Text="O" FontSize="36" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="Orderly" FontSize="28" FontWeight="SemiBold" Foreground="#1D1D1F" HorizontalAlignment="Center"/>
-                        <TextBlock Text="高效处理，一目了然。" FontSize="15" Foreground="#8E8E93" HorizontalAlignment="Center" Margin="0,8,0,0"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
+                <!-- 左侧品牌展示�?(深邃的高级感) -->
+                <Border x:Name="BrandSurface"
+                        Grid.Column="0"
+                        Background="#F7F7F9"
+                        BorderBrush="#ECEEF3"
+                        BorderThickness="0,0,1,0"
+                        CornerRadius="24,0,0,24"
+                        ClipToBounds="True">
+                    <Grid>
+                        <Canvas IsHitTestVisible="False" ClipToBounds="True">
+                            <Ellipse Width="320"
+                                     Height="520"
+                                     Canvas.Left="-112"
+                                     Canvas.Top="-126"
+                                     Opacity="0.42">
+                                <Ellipse.Fill>
+                                    <RadialGradientBrush GradientOrigin="0.42,0.35" Center="0.5,0.5" RadiusX="0.72" RadiusY="0.72">
+                                        <GradientStop Color="#FFFFFFFF" Offset="0" />
+                                        <GradientStop Color="#F7F8FB" Offset="0.46" />
+                                        <GradientStop Color="#00F7F8FB" Offset="1" />
+                                    </RadialGradientBrush>
+                                </Ellipse.Fill>
+                                <Ellipse.RenderTransform>
+                                    <TransformGroup>
+                                        <TranslateTransform x:Name="SilkWavePrimaryTranslate" X="0" Y="0" />
+                                        <RotateTransform Angle="-16" CenterX="160" CenterY="260" />
+                                    </TransformGroup>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                            <Ellipse Width="286"
+                                     Height="432"
+                                     Canvas.Left="74"
+                                     Canvas.Top="134"
+                                     Opacity="0.26">
+                                <Ellipse.Fill>
+                                    <RadialGradientBrush GradientOrigin="0.58,0.48" Center="0.5,0.5" RadiusX="0.76" RadiusY="0.76">
+                                        <GradientStop Color="#FFFFFFFF" Offset="0" />
+                                        <GradientStop Color="#F0F2F7" Offset="0.52" />
+                                        <GradientStop Color="#00F0F2F7" Offset="1" />
+                                    </RadialGradientBrush>
+                                </Ellipse.Fill>
+                                <Ellipse.RenderTransform>
+                                    <TransformGroup>
+                                        <TranslateTransform x:Name="SilkWaveSecondaryTranslate" X="0" Y="0" />
+                                        <RotateTransform Angle="18" CenterX="143" CenterY="216" />
+                                    </TransformGroup>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                        </Canvas>
 
-            <!-- 右侧：登录操作区 -->
-            <Grid Grid.Column="1" Background="Transparent">
-                
-                <!-- Windows 极简窗口控制 (保留原生感) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20" WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Content="—" Width="30" Height="30" Foreground="#8E8E93" FontSize="14" Style="{StaticResource AppleGhostButton}" Click="BtnMinimize_Click"/>
-                    <Button Content="✕" Width="30" Height="30" Foreground="#8E8E93" FontSize="14" Style="{StaticResource AppleGhostButton}" Click="BtnClose_Click"/>
-                </StackPanel>
-
-                <!-- 登录表单 -->
-                <StackPanel VerticalAlignment="Center" Margin="70,0,70,0">
-                    <TextBlock Text="欢迎回来" FontSize="32" FontWeight="Bold" Foreground="#1D1D1F" Margin="0,0,0,40"/>
-
-                    <TextBox x:Name="txtAccount" Style="{StaticResource AppleInputStyle}" Height="50" Margin="0,0,0,20"/>
-                    
-                    <PasswordBox x:Name="txtPassword" Style="{StaticResource AppleInputStyle}" Height="50" KeyDown="TxtPassword_KeyDown"/>
-
-                    <Grid Margin="4,20,4,40">
-                        <CheckBox x:Name="chkRememberMe" Content="记住此设备" Foreground="#8E8E93" FontSize="14" HorizontalAlignment="Left" VerticalAlignment="Center">
-                            <CheckBox.LayoutTransform>
-                                <ScaleTransform ScaleX="1.1" ScaleY="1.1"/>
-                            </CheckBox.LayoutTransform>
-                        </CheckBox>
-                        <!-- 使用次级按钮代替复选框，更符合现代 UI -->
-                        <Button Content="忘记密码？" Style="{StaticResource AppleGhostButton}" HorizontalAlignment="Right"/>
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border Width="88" Height="88" Background="#FFFFFF" CornerRadius="26" HorizontalAlignment="Center" Margin="0,0,0,24">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="22" ShadowDepth="8" Direction="270" Color="#121317" Opacity="0.12" />
+                                </Border.Effect>
+                                <Image Source="{StaticResource OrderlyBrandLogoImage}"
+                                       Width="58"
+                                       Height="58"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="Orderly" FontSize="29" FontWeight="Bold" Foreground="#1D1D1F" HorizontalAlignment="Center" />
+                            <TextBlock Text="String Narration" FontSize="11" Foreground="#7D8390" HorizontalAlignment="Center" Margin="0,10,0,0" Opacity="0.82" />
+                        </StackPanel>
                     </Grid>
-
-                    <Button x:Name="btnLogin" Content="登 录" Style="{StaticResource ApplePrimaryButton}" Click="BtnLogin_Click"/>
-                    
-                    <Button x:Name="BtnLocalMode" Content="进入离线演示模式" Style="{StaticResource AppleGhostButton}" Margin="0,20,0,0" Foreground="#8E8E93" Click="BtnLocalMode_Click" AutomationProperties.AutomationId="DemoModeButton"/>
-                    
-                    <!-- 优雅错误提示 -->
-                    <TextBlock x:Name="txtError" Text="账号或密码不正确。" Foreground="#FF3B30" FontSize="14" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,20,0,0" Visibility="Collapsed"/>
-                </StackPanel>
-
-                <!-- 磨砂质感 Loading 层 -->
-                <Border x:Name="gridLoading" Visibility="Collapsed" CornerRadius="0,20,20,0">
-                    <Border.Background>
-                        <SolidColorBrush Color="#FFFFFF" Opacity="0.85"/>
-                    </Border.Background>
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <!-- 可以考虑加入一个系统的 ProgressRing -->
-                        <TextBlock Text="正在登录..." FontSize="18" FontWeight="SemiBold" Foreground="#1D1D1F" HorizontalAlignment="Center"/>
-                        <TextBlock Text="获取工作空间数据" FontSize="14" Foreground="#8E8E93" Margin="0,8,0,0" HorizontalAlignment="Center"/>
-                    </StackPanel>
                 </Border>
 
-            </Grid>
-        </Grid>
-    </Border>
+                <!-- 右侧登录表单区 -->
+                <Grid Grid.Column="1" x:Name="RightSurface" ClipToBounds="True">
+                    <Grid Margin="42,0,28,0" ClipToBounds="True">
+                    <!-- ============================ -->
+                    <!-- 登录态面�?(Sign In)          -->
+                    <!-- ============================ -->
+                    <Grid x:Name="SignInPanel"
+                          Visibility="Visible"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Opacity="1"
+                          FocusManager.FocusedElement="{Binding ElementName=TxtSignInUsername}">
+                        <Grid.RenderTransform>
+                            <TranslateTransform X="0" />
+                        </Grid.RenderTransform>
+                        <Grid Margin="0,26,0,30">
+                            <StackPanel Width="320" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0">
+                                <StackPanel x:Name="SignInAccountBlock" Margin="0,0,0,22">
+                                    <StackPanel.RenderTransform>
+                                        <TranslateTransform x:Name="SignInAccountBlockTranslateTransform" Y="0" />
+                                    </StackPanel.RenderTransform>
+                                    <TextBlock Text="账号"
+                                               Style="{StaticResource FieldLabel}"
+                                               FontWeight="Bold"
+                                               Foreground="#1D1D1F"
+                                               Margin="0,0,0,8" />
+                                    <Grid x:Name="SignInAccountSection"
+                                          Width="320"
+                                          HorizontalAlignment="Left">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <TextBox x:Name="TxtSignInUsername"
+                                                 Grid.Row="0"
+                                                 HorizontalAlignment="Stretch"
+                                                 PreviewMouseLeftButtonDown="TxtSignInUsername_PreviewMouseLeftButtonDown"
+                                                 GotKeyboardFocus="TxtSignInUsername_GotKeyboardFocus"
+                                                 KeyDown="TxtSignInUsername_KeyDown"
+                                                 TextChanged="TxtSignInUsername_TextChanged"
+                                                 LostKeyboardFocus="TxtSignInUsername_LostKeyboardFocus" />
+                                        <Border x:Name="RecentAccountsDropdown"
+                                                Grid.Row="1"
+                                                Margin="0,10,0,0"
+                                                Padding="6"
+                                                Background="#FFFFFF"
+                                                BorderBrush="#DCE1E9"
+                                                BorderThickness="1"
+                                                CornerRadius="16"
+                                                SnapsToDevicePixels="True"
+                                                Visibility="Collapsed"
+                                                Opacity="0"
+                                                MaxHeight="0"
+                                                RenderTransformOrigin="0.5,0">
+                                            <Border.RenderTransform>
+                                                <TransformGroup>
+                                                    <ScaleTransform x:Name="RecentAccountsDropdownScaleTransform" ScaleY="0.96" />
+                                                    <TranslateTransform x:Name="RecentAccountsDropdownTranslateTransform" Y="-8" />
+                                                </TransformGroup>
+                                            </Border.RenderTransform>
+                                            <Border.Effect>
+                                                <DropShadowEffect BlurRadius="18"
+                                                                  ShadowDepth="4"
+                                                                  Direction="270"
+                                                                  Color="#111216"
+                                                                  Opacity="0.04" />
+                                            </Border.Effect>
+                                            <ListBox x:Name="LstRecentSignInAccounts"
+                                                     ItemsSource="{Binding FilteredSignInAccounts}"
+                                                     BorderThickness="0"
+                                                     Background="Transparent"
+                                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                     MaxHeight="168"
+                                                     SelectionChanged="LstRecentSignInAccounts_SelectionChanged">
+                                                <ListBox.ItemContainerStyle>
+                                                    <Style TargetType="ListBoxItem">
+                                                        <Setter Property="Padding" Value="0" />
+                                                        <Setter Property="Margin" Value="0,0,0,4" />
+                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="ListBoxItem">
+                                                                    <Border x:Name="AccountOption"
+                                                                            Background="Transparent"
+                                                                            BorderBrush="Transparent"
+                                                                            BorderThickness="1"
+                                                                            CornerRadius="12"
+                                                                            Padding="12,10">
+                                                                        <ContentPresenter />
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="AccountOption" Property="Background" Value="#F7F7F9" />
+                                                                            <Setter TargetName="AccountOption" Property="BorderBrush" Value="#ECEEF3" />
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsSelected" Value="True">
+                                                                            <Setter TargetName="AccountOption" Property="Background" Value="#F3F4F7" />
+                                                                            <Setter TargetName="AccountOption" Property="BorderBrush" Value="#DFE3EA" />
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </ListBox.ItemContainerStyle>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Username}"
+                                                                           FontSize="14"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="#1D1D1F" />
+                                                                <TextBlock Text="{Binding DisplayName}"
+                                                                           Margin="0,2,0,0"
+                                                                           FontSize="12"
+                                                                           Foreground="#7D8390" />
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="1"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="11"
+                                                                       Foreground="#A0A5AF"
+                                                                       Text="{Binding LastLoginAt, StringFormat=最近登录 {0:MM-dd HH:mm}}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Border>
+                                    </Grid>
+                                    <TextBlock x:Name="TxtSignInAccountHint"
+                                               Margin="2,8,0,0"
+                                               Foreground="#D14B4B"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"
+                                               Visibility="Collapsed" />
+                                </StackPanel>
+
+                                <Grid x:Name="SignInCredentialSection"
+                                      Width="320"
+                                      HorizontalAlignment="Left"
+                                      MaxHeight="0"
+                                      Opacity="0"
+                                      ClipToBounds="True"
+                                      IsHitTestVisible="False">
+                                    <StackPanel>
+                                        <StackPanel Margin="0,0,0,16">
+                                            <TextBlock Text="主密码" Style="{StaticResource FieldLabel}" FontWeight="Bold" Foreground="#1D1D1F" />
+                                            <PasswordBox x:Name="TxtSignInPassword" Width="320" HorizontalAlignment="Left" KeyDown="TxtSignInPassword_KeyDown" />
+                                        </StackPanel>
+
+                                        <Button x:Name="BtnSignIn"
+                                                Content="进入系统"
+                                                Width="320"
+                                                HorizontalAlignment="Left"
+                                                Style="{StaticResource PremiumButtonStyle}"
+                                                Margin="0,14,0,0"
+                                                Click="BtnSignIn_Click" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Width="320" Margin="0,22,0,0" HorizontalAlignment="Left">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="BtnOpenPasswordRecovery"
+                                            Grid.Column="0"
+                                            Content="忘记密码"
+                                            Style="{StaticResource LinkButtonStyle}"
+                                            Click="BtnOpenPasswordRecovery_Click" />
+                                    <Button x:Name="BtnOpenAccountManagement"
+                                            Grid.Column="2"
+                                            Content="账户管理"
+                                            Style="{StaticResource LinkButtonStyle}"
+                                            HorizontalAlignment="Right"
+                                            Click="BtnOpenAccountManagement_Click" />
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+
+                    <Grid x:Name="PasswordRecoveryPanel" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Opacity="0">
+                        <Grid.RenderTransform>
+                            <TranslateTransform X="0" />
+                        </Grid.RenderTransform>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalAlignment="Center">
+                        <Grid Margin="0,26,0,30">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                                <Grid Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="重置主密码" FontWeight="Bold" FontSize="26" Foreground="#1D1D1F" />
+                                        <TextBlock Text="{Binding RecoveryResetHintMessage}" Foreground="#86868B" FontSize="14" Margin="0,6,0,0" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button x:Name="BtnBackToSignIn"
+                                            Grid.Column="1"
+                                            Style="{StaticResource BackIconButtonStyle}"
+                                            VerticalAlignment="Top"
+                                            Click="BtnBackToSignIn_Click" />
+                                </Grid>
+
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="账号" Style="{StaticResource FieldLabel}" />
+                                        <TextBox x:Name="TxtRecoveryOwnerUsername"
+                                                 TextChanged="TxtRecoveryOwnerUsername_TextChanged" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="PIN" Style="{StaticResource FieldLabel}" />
+                                        <PasswordBox x:Name="TxtRecoveryOwnerPin" MaxLength="6" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Border Background="#F5F5F7"
+                                        CornerRadius="18"
+                                        Padding="18"
+                                        Margin="0,0,0,20">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasRecoveryOwnerSection}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <TextBlock Text="恢复验证"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#1D1D1F" />
+                                        <TextBlock Text="主账号恢复时，需要该账号的 Recovery Key 和新主密码。"
+                                                   Margin="0,8,0,0"
+                                                   Foreground="#86868B"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap" />
+
+                                        <StackPanel Margin="0,14,0,0">
+                                            <TextBlock Text="恢复密钥" Style="{StaticResource FieldLabel}" />
+                                            <TextBox x:Name="TxtRecoveryKeyInput" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#F5F5F7"
+                                        CornerRadius="18"
+                                        Padding="18"
+                                        Margin="0,0,0,20">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasRecoveryMemberSection}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <TextBlock Text="管理员验证"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#1D1D1F" />
+                                        <TextBlock Text="成员账号恢复时，需要管理员账号、主密码和 PIN 完成验证。"
+                                                   Margin="0,8,0,0"
+                                                   Foreground="#86868B"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap" />
+                                        <Grid Margin="0,14,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="16" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="管理员账号" Style="{StaticResource FieldLabel}" />
+                                                <TextBox x:Name="TxtRecoveryAdminUsername" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="管理员 PIN" Style="{StaticResource FieldLabel}" />
+                                                <PasswordBox x:Name="TxtRecoveryAdminPin" MaxLength="6" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <StackPanel Margin="0,12,0,0">
+                                            <TextBlock Text="管理员主密码" Style="{StaticResource FieldLabel}" />
+                                            <PasswordBox x:Name="TxtRecoveryAdminPassword" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Background="#F5F5F7"
+                                        CornerRadius="18"
+                                        Padding="18"
+                                        Margin="0,0,0,20">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Opacity" Value="0.62" />
+                                            <Setter Property="IsEnabled" Value="False" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CanEditRecoveryNewPassword}" Value="True">
+                                                    <Setter Property="Opacity" Value="1" />
+                                                    <Setter Property="IsEnabled" Value="True" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <TextBlock Text="设置新密码"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#1D1D1F" />
+                                        <TextBlock Text="验证通过后，才能设置该账号的新主密码。"
+                                                   Margin="0,8,0,0"
+                                                   Foreground="#86868B"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap" />
+                                        <StackPanel Margin="0,14,0,0">
+                                            <TextBlock Text="新密码" Style="{StaticResource FieldLabel}" />
+                                            <TextBox x:Name="TxtRecoveryNewPassword" />
+                                            <TextBlock Text="至少 8 位，含大小写字母和数字，且不能包含空白或前后空格。"
+                                                       Margin="0,6,0,0"
+                                                       Foreground="#86868B"
+                                                       FontSize="12"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <Button x:Name="BtnResetOwnerPassword"
+                                        Content="{Binding RecoveryPrimaryActionLabel}"
+                                        Style="{StaticResource PremiumButtonStyle}"
+                                        Margin="0,12,0,0"
+                                        Click="BtnResetOwnerPassword_Click" />
+                                <TextBlock x:Name="TxtNotice"
+                                           Margin="0,14,0,0"
+                                           Foreground="#000000"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
+                        </Grid>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <Grid x:Name="AccountManagementPanel"
+                          Visibility="Collapsed"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Opacity="0">
+                        <Grid.RenderTransform>
+                            <TranslateTransform X="0" />
+                        </Grid.RenderTransform>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,0,0">
+                            <Grid HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"
+                                  MaxWidth="612">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="账户管理"
+                                               FontWeight="Bold"
+                                               FontSize="24"
+                                               Foreground="#1D1D1F"
+                                               VerticalAlignment="Center" />
+                                    <Button x:Name="BtnBackFromAccountManagement"
+                                            Grid.Column="1"
+                                            Style="{StaticResource BackIconButtonStyle}"
+                                            Click="BtnBackFromAccountManagement_Click" />
+                                </Grid>
+
+                                <Border Grid.Row="1"
+                                        Background="#F5F5F7"
+                                        CornerRadius="18"
+                                        Padding="18">
+                                    <StackPanel>
+                                        <TextBlock FontSize="16"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#1D1D1F">
+                                            <Run Text="已有账户" />
+                                            <Run Text=" " />
+                                            <Run Text="{Binding AccountDirectory.Count, Mode=OneWay}" />
+                                        </TextBlock>
+
+                                        <TextBlock Text="{Binding AccountManagementStatus}"
+                                                   Margin="0,8,0,0"
+                                                   Foreground="#86868B"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasAccountManagementStatus}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <ListBox x:Name="LstAccountDirectory"
+                                                 ItemsSource="{Binding AccountDirectory}"
+                                                 Margin="0,12,0,0"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 MaxHeight="220">
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Padding" Value="0" />
+                                                    <Setter Property="Margin" Value="0,0,0,10" />
+                                                    <Setter Property="Focusable" Value="False" />
+                                                    <Setter Property="BorderThickness" Value="0" />
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ListBoxItem">
+                                                                <Border Background="Transparent"
+                                                                        SnapsToDevicePixels="True">
+                                                                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border x:Name="AccountCard"
+                                                            Background="#FFFFFF"
+                                                            BorderBrush="#E5E5EA"
+                                                            BorderThickness="1"
+                                                            CornerRadius="14"
+                                                            Padding="14">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding DisplayName, Mode=OneWay}"
+                                                                           FontSize="14"
+                                                                           FontWeight="SemiBold"
+                                                                           Foreground="#1D1D1F" />
+                                                                <TextBlock Text="{Binding Username, Mode=OneWay, StringFormat=@{0}}"
+                                                                           Margin="0,6,0,0"
+                                                                           Foreground="#6E6E73"
+                                                                           FontSize="12" />
+                                                            </StackPanel>
+                                                            <Grid Grid.Column="1"
+                                                                  Margin="12,0,0,0">
+                                                                <StackPanel Orientation="Horizontal"
+                                                                            HorizontalAlignment="Right"
+                                                                            VerticalAlignment="Top">
+                                                                    <Border Padding="8,2"
+                                                                            Background="#E7F1FF"
+                                                                            CornerRadius="10"
+                                                                            Margin="0,0,8,0">
+                                                                        <Border.Style>
+                                                                            <Style TargetType="Border">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsMostRecentlyLoggedIn, Mode=OneWay}" Value="True">
+                                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Border.Style>
+                                                                        <TextBlock Text="最近登录"
+                                                                                   FontSize="11"
+                                                                                   FontWeight="SemiBold"
+                                                                                   Foreground="#175CD3" />
+                                                                    </Border>
+                                                                    <Border Padding="8,2"
+                                                                            Background="#F1F2F6"
+                                                                            CornerRadius="10"
+                                                                            Margin="0,0,8,0">
+                                                                        <Border.Style>
+                                                                            <Style TargetType="Border">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding Role, Mode=OneWay}" Value="Owner">
+                                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Border.Style>
+                                                                        <TextBlock FontSize="11"
+                                                                                   FontWeight="SemiBold"
+                                                                                   Foreground="#4A4A52">
+                                                                            <Run Text="主账号" />
+                                                                        </TextBlock>
+                                                                    </Border>
+                                                                    <Border Padding="8,2"
+                                                                            Background="#FCE8E8"
+                                                                            CornerRadius="10">
+                                                                        <Border.Style>
+                                                                            <Style TargetType="Border">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsEnabled, Mode=OneWay}" Value="False">
+                                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Border.Style>
+                                                                        <TextBlock Text="已禁用"
+                                                                                   FontSize="11"
+                                                                                   FontWeight="SemiBold"
+                                                                                   Foreground="#B42318" />
+                                                                    </Border>
+                                                                </StackPanel>
+                                                                <Button Grid.Column="1"
+                                                                        Content="删除账户"
+                                                                        Tag="{Binding AccountId}"
+                                                                        Width="84"
+                                                                        Height="30"
+                                                                        HorizontalAlignment="Right"
+                                                                        VerticalAlignment="Center"
+                                                                        Background="#FCE8E8"
+                                                                        Foreground="#B42318"
+                                                                        BorderBrush="#F6C7C7"
+                                                                        Click="BtnRequestDeleteAccount_Click">
+                                                                    <Button.Style>
+                                                                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding Role, Mode=OneWay}" Value="Owner">
+                                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Button.Style>
+                                                                </Button>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Border>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                                                            <Setter TargetName="AccountCard" Property="BorderBrush" Value="#E5E5EA" />
+                                                            <Setter TargetName="AccountCard" Property="Background" Value="#FFFFFF" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+
+                                    </StackPanel>
+                                </Border>
+
+                                <Button x:Name="BtnCreateManagedAccount"
+                                        Grid.Row="2"
+                                        Content="创建新账号"
+                                        Style="{StaticResource PremiumButtonStyle}"
+                                        Height="52"
+                                        Width="208"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,28,0,0"
+                                        Click="BtnCreateManagedAccount_Click" />
+
+                            </Grid>
+                        </ScrollViewer>
+
+                    </Grid>
+
+                    <Grid x:Name="CreateManagedAccountPanel"
+                          Visibility="Collapsed"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Opacity="0">
+                        <Grid.RenderTransform>
+                            <TranslateTransform X="0" />
+                        </Grid.RenderTransform>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalAlignment="Center">
+                            <Grid Margin="0,26,0,30"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Center"
+                                  MaxWidth="612">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="创建新账号"
+                                                       FontWeight="Bold"
+                                                       FontSize="24"
+                                                       Foreground="#1D1D1F" />
+                                            <TextBlock Text="先验证管理员账号，再创建新的成员账号。"
+                                                       Foreground="#86868B"
+                                                       FontSize="14"
+                                                       Margin="0,6,0,0"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Button x:Name="BtnBackFromCreateManagedAccount"
+                                                Grid.Column="1"
+                                                Style="{StaticResource BackIconButtonStyle}"
+                                                VerticalAlignment="Top"
+                                                Click="BtnBackFromCreateManagedAccount_Click" />
+                                    </Grid>
+
+                                    <Border Background="#F5F5F7"
+                                            CornerRadius="18"
+                                            Padding="18">
+                                        <StackPanel>
+                                            <TextBlock Text="管理员验证"
+                                                       FontSize="16"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#1D1D1F" />
+                                            <Grid Margin="0,14,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="16" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="主账号" Style="{StaticResource FieldLabel}" />
+                                                    <TextBox x:Name="TxtCreateOwnerUsername"
+                                                             TextChanged="TxtCreateOwnerUsername_TextChanged" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Text="PIN" Style="{StaticResource FieldLabel}" />
+                                                    <PasswordBox x:Name="TxtCreateOwnerPin"
+                                                                 MaxLength="6"
+                                                                 PasswordChanged="TxtCreateOwnerPin_PasswordChanged" />
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <StackPanel Margin="0,12,0,0">
+                                                <TextBlock Text="主密码" Style="{StaticResource FieldLabel}" />
+                                                <PasswordBox x:Name="TxtCreateOwnerPassword"
+                                                             PasswordChanged="TxtCreateOwnerPassword_PasswordChanged" />
+                                            </StackPanel>
+
+                                            <Border BorderBrush="#E5E5EA"
+                                                    BorderThickness="1"
+                                                    CornerRadius="14"
+                                                    Padding="16"
+                                                    Margin="0,18,0,0">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#F3F4F7" />
+                                                        <Setter Property="Opacity" Value="0.72" />
+                                                        <Setter Property="IsEnabled" Value="False" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanEditCreateManagedAccountFields}" Value="True">
+                                                                <Setter Property="Background" Value="#FFFFFF" />
+                                                                <Setter Property="Opacity" Value="1" />
+                                                                <Setter Property="IsEnabled" Value="True" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <StackPanel>
+                                                    <TextBlock Text="新账号信息"
+                                                               FontSize="16"
+                                                               FontWeight="SemiBold"
+                                                               Foreground="#1D1D1F" />
+                                                    <TextBlock Text="新账号会创建独立业务库，并使用自己的主密码和 PIN。"
+                                                               Margin="0,8,0,0"
+                                                               Foreground="#86868B"
+                                                               FontSize="12"
+                                                               TextWrapping="Wrap" />
+
+                                                    <Grid Margin="0,14,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="16" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Text="用户名" Style="{StaticResource FieldLabel}" />
+                                                            <TextBox x:Name="TxtCreateMemberUsername" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2">
+                                                            <TextBlock Text="昵称" Style="{StaticResource FieldLabel}" />
+                                                            <TextBox x:Name="TxtCreateMemberDisplayName" />
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <Grid Margin="0,12,0,0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="16" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Text="主密码" Style="{StaticResource FieldLabel}" />
+                                                            <PasswordBox x:Name="TxtCreateMemberPassword" />
+                                                            <TextBlock Text="至少8位，包含大小写字母和数字，不能含空白或首尾空格。"
+                                                                       Margin="0,6,0,0"
+                                                                       Foreground="#86868B"
+                                                                       FontSize="12"
+                                                                       TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2">
+                                                            <TextBlock Text="PIN" Style="{StaticResource FieldLabel}" />
+                                                            <PasswordBox x:Name="TxtCreateMemberPin" MaxLength="6" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Button x:Name="BtnSubmitCreateManagedAccount"
+                                                    Content="{Binding CreateManagedAccountPrimaryActionLabel}"
+                                                    Style="{StaticResource PremiumButtonStyle}"
+                                                    Width="220"
+                                                    Height="52"
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,22,0,0"
+                                                    Click="BtnSubmitCreateManagedAccount_Click" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <Grid IsHitTestVisible="False"
+                          Panel.ZIndex="40">
+                        <Border x:Name="ErrorToastOverlay"
+                                Visibility="Collapsed"
+                                Opacity="0"
+                                Padding="22,16"
+                                Background="#FFF6F5"
+                                BorderBrush="#F4C7C3"
+                                BorderThickness="1"
+                                CornerRadius="18"
+                                MaxWidth="620"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Top"
+                                Margin="0,126,0,0">
+                            <Border.RenderTransform>
+                                <TranslateTransform x:Name="ErrorToastTranslateTransform" Y="10" />
+                            </Border.RenderTransform>
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24"
+                                                  ShadowDepth="8"
+                                                  Direction="270"
+                                                  Color="#101114"
+                                                  Opacity="0.12" />
+                            </Border.Effect>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="28"
+                                        Height="28"
+                                        Background="#FDE8E6"
+                                        CornerRadius="14"
+                                        Grid.Column="0"
+                                        VerticalAlignment="Top">
+                                    <Grid>
+                                        <Path Data="M8,8 L20,20 M20,8 L8,20"
+                                              Width="12"
+                                              Height="12"
+                                              Stretch="Fill"
+                                              Stroke="#D92D20"
+                                              StrokeThickness="2.2"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,0,0" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock x:Name="TxtErrorToast"
+                                           Grid.Column="2"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           Foreground="#B42318"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="520" />
+                            </Grid>
+                        </Border>
+
+                        <Border x:Name="SuccessToastOverlay"
+                                Visibility="Collapsed"
+                                Opacity="0"
+                                Padding="22,16"
+                                Background="#FDFDFE"
+                                BorderBrush="#E2E6ED"
+                                BorderThickness="1"
+                                CornerRadius="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Top"
+                                Margin="0,126,0,0">
+                            <Border.RenderTransform>
+                                <TranslateTransform x:Name="SuccessToastTranslateTransform" Y="10" />
+                            </Border.RenderTransform>
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24"
+                                                  ShadowDepth="8"
+                                                  Direction="270"
+                                                  Color="#101114"
+                                                  Opacity="0.12" />
+                            </Border.Effect>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="28"
+                                        Height="28"
+                                        Background="#E8F7EE"
+                                        CornerRadius="14"
+                                        Margin="0,0,12,0">
+                                    <Grid>
+                                        <Path Data="M7,14 L12,19 L21,9"
+                                              Width="14"
+                                              Height="10"
+                                              Stretch="Fill"
+                                              Stroke="#18864B"
+                                              StrokeThickness="2.2"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="0,-1,0,0" />
+                                    </Grid>
+                                </Border>
+                                <TextBlock x:Name="TxtSuccessToast"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1D1D1F"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                </Grid>
+
+                    <Grid HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Panel.ZIndex="20">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAccountManagementNoticeOpen}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+
+                        <Border Background="#D9F7F7FA"
+                                CornerRadius="0,24,24,0" />
+
+                        <Border Width="430"
+                                Padding="24"
+                                Background="#FFFFFF"
+                                CornerRadius="18"
+                                BorderBrush="#E5E5EA"
+                                BorderThickness="1"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.12" />
+                            </Border.Effect>
+                            <StackPanel>
+                                <TextBlock Text="使用说明"
+                                           FontSize="20"
+                                           FontWeight="Bold"
+                                           Foreground="#1D1D1F" />
+                                <TextBlock Margin="0,12,0,0"
+                                           Foreground="#6E6E73"
+                                           FontSize="13"
+                                           TextWrapping="Wrap">
+                                    此处仅展示已有账号概览。
+                                    <LineBreak />
+                                    主账号无法查看其他账号密码；
+                                    <LineBreak />
+                                    如需删除已有账户，必须通过主账号验证并输入 PIN 二次确认。
+                                </TextBlock>
+                                <Button Content="我已知晓"
+                                        Width="120"
+                                        Height="42"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,20,0,0"
+                                        Style="{StaticResource PremiumButtonStyle}"
+                                        Click="BtnAcknowledgeAccountManagementNotice_Click" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                    <!-- ============================ -->
+                    <!-- 首次初始化面�?(Create Owner) -->
+                    <!-- ============================ -->
+                    <Grid x:Name="OwnerCreatePanel" Grid.Column="1" Visibility="Collapsed" VerticalAlignment="Center">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="初始化系统" FontWeight="Bold" FontSize="26" Foreground="#1D1D1F" Margin="0,0,0,6" />
+                        <TextBlock Grid.Row="1" Text="创建首个管理员全局账户" Foreground="#86868B" FontSize="14" Margin="0,0,0,32" />
+                        <StackPanel Grid.Row="2" Margin="0,0,0,8">
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="账号" Style="{StaticResource FieldLabel}" />
+                                    <TextBox x:Name="TxtOwnerUsername" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="昵称" Style="{StaticResource FieldLabel}" />
+                                    <TextBox x:Name="TxtOwnerDisplayName" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,24">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="主密码" Style="{StaticResource FieldLabel}" />
+                                    <PasswordBox x:Name="TxtOwnerPassword" />
+                                    <TextBlock Text="至少 8 位，含大小写字母和数字，且不能包含空白或前后空格。"
+                                               Margin="0,6,0,0"
+                                               Foreground="#86868B"
+                                               FontSize="12"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="PIN" Style="{StaticResource FieldLabel}" />
+                                    <PasswordBox x:Name="TxtOwnerPin" MaxLength="6" />
+                                </StackPanel>
+                            </Grid>
+
+                            <CheckBox x:Name="ChkImportLegacyDb" IsChecked="{Binding ImportLegacyDatabase}" Visibility="Collapsed" />
+                            <CheckBox x:Name="ChkOverwriteLegacyTarget" IsChecked="{Binding OverwriteLegacyTarget}" Visibility="Collapsed" />
+
+                            <Button x:Name="BtnCreateOwner" Content="创建并登录" Style="{StaticResource PremiumButtonStyle}" Margin="0,8,0,0" Click="BtnCreateOwner_Click" />
+                        </StackPanel>
+
+                        <Border x:Name="RecoveryPanel"
+                                Grid.RowSpan="3"
+                                Background="#66FFFFFF"
+                                CornerRadius="24"
+                                Visibility="Collapsed">
+                            <Grid>
+                                <Border Width="420"
+                                        Padding="28"
+                                        Background="#FFFFFF"
+                                        CornerRadius="20"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="30" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.12" />
+                                    </Border.Effect>
+                                    <StackPanel>
+                                        <TextBlock Text="保存 Recovery Key"
+                                                   FontWeight="Bold"
+                                                   FontSize="24"
+                                                   Foreground="#1D1D1F" />
+                                        <TextBlock Text="这是重置管理员主密码的唯一离线密钥。请先保存，再继续进入系统。"
+                                                   Margin="0,10,0,0"
+                                                   Foreground="#86868B"
+                                                   FontSize="14"
+                                                   TextWrapping="Wrap" />
+
+                                        <Border Margin="0,24,0,0"
+                                                Padding="18"
+                                                Background="#F5F5F7"
+                                                CornerRadius="14">
+                                            <TextBlock x:Name="TxtRecoveryKeyValue"
+                                                       FontFamily="Consolas"
+                                                       FontSize="18"
+                                                       FontWeight="Bold"
+                                                       Foreground="#000000"
+                                                       TextWrapping="Wrap" />
+                                        </Border>
+
+                                        <CheckBox x:Name="ChkRecoverySaved"
+                                                  Content="我已妥善保存此密钥"
+                                                  Margin="0,18,0,0"
+                                                  Checked="ChkRecoverySaved_OnChanged"
+                                                  Unchecked="ChkRecoverySaved_OnChanged"
+                                                  Foreground="#1D1D1F"
+                                                  FontWeight="SemiBold" />
+
+                                        <Button x:Name="BtnContinueAfterRecovery"
+                                                Content="确认并进入系统"
+                                                Height="48"
+                                                Margin="0,24,0,0"
+                                                IsEnabled="False"
+                                                Click="BtnContinueAfterRecovery_Click">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="#000000"/>
+                                                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="12">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Background" Value="#E5E5EA"/>
+                                                            <Setter Property="Foreground" Value="#A1A1A6"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid Grid.ColumnSpan="2"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Panel.ZIndex="30">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasPendingDeleteAccount}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+
+                        <Border Background="#CCF7F7FA"
+                                CornerRadius="24" />
+
+                        <Border Width="452"
+                                MaxWidth="452"
+                                Padding="24"
+                                Background="#FFF7F2"
+                                BorderBrush="#F2D3BE"
+                                BorderThickness="1"
+                                CornerRadius="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="24"
+                                MouseLeftButtonDown="DeleteAccountDialog_MouseLeftButtonDown">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24"
+                                                  ShadowDepth="10"
+                                                  Direction="270"
+                                                  Color="#000000"
+                                                  Opacity="0.12" />
+                            </Border.Effect>
+                            <StackPanel>
+                                <TextBlock Text="{Binding PendingDeleteAccountConfirmationTitle}"
+                                           FontSize="17"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1D1D1F"
+                                           TextWrapping="Wrap" />
+
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="14" />
+                                        <ColumnDefinition Width="152" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="主账号" Style="{StaticResource FieldLabel}" />
+                                        <TextBox x:Name="TxtDeleteOwnerUsername" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="PIN" Style="{StaticResource FieldLabel}" />
+                                        <PasswordBox x:Name="TxtDeleteOwnerPin" MaxLength="6" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Margin="0,12,0,0">
+                                    <TextBlock Text="主密码" Style="{StaticResource FieldLabel}" />
+                                    <PasswordBox x:Name="TxtDeleteOwnerPassword" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal"
+                                            HorizontalAlignment="Right"
+                                            Margin="0,18,0,0">
+                                    <Button Content="取消"
+                                            Width="90"
+                                            Margin="0,0,10,0"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Click="BtnCancelDeleteAccount_Click" />
+                                    <Button Content="确认删除"
+                                            Width="110"
+                                            Style="{StaticResource PremiumButtonStyle}"
+                                            Click="BtnConfirmDeleteAccount_Click" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <TextBlock x:Name="TxtError" Grid.Column="1" Foreground="#FF3B30" FontSize="13" FontWeight="SemiBold" Visibility="Collapsed" TextWrapping="Wrap" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,20" />
+                </Grid>
+        </Border>
+        </Border>
 </Window>

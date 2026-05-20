@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Core.Services;
+using Orderly.Data.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -9,10 +11,12 @@ namespace Orderly.Data.Repositories;
 public sealed class CustomerRepository : ICustomerRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
+    private readonly IFieldEncryptionService _fieldEncryptionService;
 
-    public CustomerRepository(SqliteConnectionFactory connectionFactory)
+    public CustomerRepository(SqliteConnectionFactory connectionFactory, IFieldEncryptionService fieldEncryptionService)
     {
         _connectionFactory = connectionFactory;
+        _fieldEncryptionService = fieldEncryptionService ?? throw new ArgumentNullException(nameof(fieldEncryptionService));
     }
 
     public async Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -21,8 +25,8 @@ public sealed class CustomerRepository : ICustomerRepository
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT Id, Name, Status, Priority, SourcePlatform, Channel, ContactHandle, Phone, Remark, ExternalId, RawPayload,
-                   LastContactAt, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+            SELECT Id, Name, NameCiphertext, Status, Priority, SourcePlatform, Channel, ContactHandle, ContactHandleCiphertext, Phone, PhoneCiphertext, Remark, RemarkCiphertext, ExternalId, ExternalIdCiphertext, RawPayload, RawPayloadCiphertext,
+                   LastContactAt, LastContactAtCiphertext, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             FROM Customers
             WHERE DeletedAt IS NULL
             ORDER BY UpdatedAt DESC;
@@ -32,7 +36,7 @@ public sealed class CustomerRepository : ICustomerRepository
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            rows.Add(Map(reader));
+            rows.Add(Map(reader, _fieldEncryptionService));
         }
 
         return rows;
@@ -44,15 +48,15 @@ public sealed class CustomerRepository : ICustomerRepository
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT Id, Name, Status, Priority, SourcePlatform, Channel, ContactHandle, Phone, Remark, ExternalId, RawPayload,
-                   LastContactAt, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+            SELECT Id, Name, NameCiphertext, Status, Priority, SourcePlatform, Channel, ContactHandle, ContactHandleCiphertext, Phone, PhoneCiphertext, Remark, RemarkCiphertext, ExternalId, ExternalIdCiphertext, RawPayload, RawPayloadCiphertext,
+                   LastContactAt, LastContactAtCiphertext, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             FROM Customers
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
         command.Parameters.AddWithValue("$id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public async Task<Customer> CreateAsync(Customer customer, CancellationToken cancellationToken = default)
@@ -73,16 +77,16 @@ public sealed class CustomerRepository : ICustomerRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO Customers (
-                Name, Status, Priority, SourcePlatform, Channel, ContactHandle, Phone, Remark, ExternalId, RawPayload,
-                LastContactAt, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+                Name, NameCiphertext, Status, Priority, SourcePlatform, Channel, ContactHandle, ContactHandleCiphertext, Phone, PhoneCiphertext, Remark, RemarkCiphertext, ExternalId, ExternalIdCiphertext, RawPayload, RawPayloadCiphertext,
+                LastContactAt, LastContactAtCiphertext, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             )
             VALUES (
-                $name, $status, $priority, $sourcePlatform, $channel, $contactHandle, $phone, $remark, $externalId, $rawPayload,
-                $lastContactAt, $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
+                $name, $nameCiphertext, $status, $priority, $sourcePlatform, $channel, $contactHandle, $contactHandleCiphertext, $phone, $phoneCiphertext, $remark, $remarkCiphertext, $externalId, $externalIdCiphertext, $rawPayload, $rawPayloadCiphertext,
+                $lastContactAt, $lastContactAtCiphertext, $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
             );
             SELECT last_insert_rowid();
             """;
-        AddParameters(command, customer);
+        AddParameters(command, customer, _fieldEncryptionService);
         customer.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
         return customer;
     }
@@ -99,16 +103,23 @@ public sealed class CustomerRepository : ICustomerRepository
         command.CommandText = """
             UPDATE Customers
             SET Name = $name,
+                NameCiphertext = $nameCiphertext,
                 Status = $status,
                 Priority = $priority,
                 SourcePlatform = $sourcePlatform,
                 Channel = $channel,
                 ContactHandle = $contactHandle,
+                ContactHandleCiphertext = $contactHandleCiphertext,
                 Phone = $phone,
+                PhoneCiphertext = $phoneCiphertext,
                 Remark = $remark,
+                RemarkCiphertext = $remarkCiphertext,
                 ExternalId = $externalId,
+                ExternalIdCiphertext = $externalIdCiphertext,
                 RawPayload = $rawPayload,
+                RawPayloadCiphertext = $rawPayloadCiphertext,
                 LastContactAt = $lastContactAt,
+                LastContactAtCiphertext = $lastContactAtCiphertext,
                 UpdatedAt = $updatedAt,
                 DeletedAt = $deletedAt,
                 RemoteId = $remoteId,
@@ -116,7 +127,7 @@ public sealed class CustomerRepository : ICustomerRepository
                 Version = $version
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
-        AddParameters(command, customer);
+        AddParameters(command, customer, _fieldEncryptionService);
         command.Parameters.AddWithValue("$id", customer.Id);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -141,49 +152,59 @@ public sealed class CustomerRepository : ICustomerRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    internal static Customer Map(SqliteDataReader reader)
+    internal static Customer Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService, int offset = 0)
     {
-        return Map(reader, 0);
-    }
+        var name = EncryptedColumnReader.ReadRequiredString(reader, offset + 2, fieldEncryptionService, "Customers.NameCiphertext");
+        var contactHandle = EncryptedColumnReader.ReadRequiredString(reader, offset + 8, fieldEncryptionService, "Customers.ContactHandleCiphertext");
+        var phone = EncryptedColumnReader.ReadRequiredString(reader, offset + 10, fieldEncryptionService, "Customers.PhoneCiphertext");
+        var remark = EncryptedColumnReader.ReadRequiredString(reader, offset + 12, fieldEncryptionService, "Customers.RemarkCiphertext");
+        var externalId = EncryptedColumnReader.ReadRequiredString(reader, offset + 14, fieldEncryptionService, "Customers.ExternalIdCiphertext");
+        var rawPayload = EncryptedColumnReader.ReadRequiredString(reader, offset + 16, fieldEncryptionService, "Customers.RawPayloadCiphertext");
+        var lastContactAt = EncryptedColumnReader.ReadOptionalDateTime(reader, offset + 18, fieldEncryptionService, "Customers.LastContactAtCiphertext");
 
-    internal static Customer Map(SqliteDataReader reader, int offset)
-    {
         return new Customer
         {
             Id = reader.GetInt32(offset),
-            Name = reader.GetString(offset + 1),
-            Status = (CustomerStatus)reader.GetInt32(offset + 2),
-            Priority = (CustomerPriority)reader.GetInt32(offset + 3),
-            SourcePlatform = reader.GetString(offset + 4),
-            Channel = reader.GetString(offset + 5),
-            ContactHandle = reader.GetString(offset + 6),
-            Phone = reader.GetString(offset + 7),
-            Remark = reader.GetString(offset + 8),
-            ExternalId = reader.GetString(offset + 9),
-            RawPayload = reader.GetString(offset + 10),
-            LastContactAt = reader.IsDBNull(offset + 11) ? null : DateTime.Parse(reader.GetString(offset + 11), null, DateTimeStyles.RoundtripKind),
-            CreatedAt = DateTime.Parse(reader.GetString(offset + 12), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(offset + 13), null, DateTimeStyles.RoundtripKind),
-            DeletedAt = reader.IsDBNull(offset + 14) ? null : DateTime.Parse(reader.GetString(offset + 14), null, DateTimeStyles.RoundtripKind),
-            RemoteId = reader.GetString(offset + 15),
-            IsSynced = reader.GetInt32(offset + 16) == 1,
-            Version = reader.GetInt32(offset + 17)
+            Name = name,
+            Status = (CustomerStatus)reader.GetInt32(offset + 3),
+            Priority = (CustomerPriority)reader.GetInt32(offset + 4),
+            SourcePlatform = reader.GetString(offset + 5),
+            Channel = reader.GetString(offset + 6),
+            ContactHandle = contactHandle,
+            Phone = phone,
+            Remark = remark,
+            ExternalId = externalId,
+            RawPayload = rawPayload,
+            LastContactAt = lastContactAt,
+            CreatedAt = DateTime.Parse(reader.GetString(offset + 19), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(offset + 20), null, DateTimeStyles.RoundtripKind),
+            DeletedAt = reader.IsDBNull(offset + 21) ? null : DateTime.Parse(reader.GetString(offset + 21), null, DateTimeStyles.RoundtripKind),
+            RemoteId = reader.GetString(offset + 22),
+            IsSynced = reader.GetInt32(offset + 23) == 1,
+            Version = reader.GetInt32(offset + 24)
         };
     }
 
-    private static void AddParameters(SqliteCommand command, Customer customer)
+    private static void AddParameters(SqliteCommand command, Customer customer, IFieldEncryptionService fieldEncryptionService)
     {
-        command.Parameters.AddWithValue("$name", customer.Name);
+        command.Parameters.AddWithValue("$name", string.Empty);
+        command.Parameters.AddWithValue("$nameCiphertext", fieldEncryptionService.Encrypt(customer.Name));
         command.Parameters.AddWithValue("$status", (int)customer.Status);
         command.Parameters.AddWithValue("$priority", (int)customer.Priority);
         command.Parameters.AddWithValue("$sourcePlatform", customer.SourcePlatform);
         command.Parameters.AddWithValue("$channel", customer.Channel);
-        command.Parameters.AddWithValue("$contactHandle", customer.ContactHandle);
-        command.Parameters.AddWithValue("$phone", customer.Phone);
-        command.Parameters.AddWithValue("$remark", customer.Remark);
-        command.Parameters.AddWithValue("$externalId", customer.ExternalId);
-        command.Parameters.AddWithValue("$rawPayload", customer.RawPayload);
-        command.Parameters.AddWithValue("$lastContactAt", ToDbDate(customer.LastContactAt));
+        command.Parameters.AddWithValue("$contactHandle", string.Empty);
+        command.Parameters.AddWithValue("$contactHandleCiphertext", fieldEncryptionService.Encrypt(customer.ContactHandle));
+        command.Parameters.AddWithValue("$phone", string.Empty);
+        command.Parameters.AddWithValue("$phoneCiphertext", fieldEncryptionService.Encrypt(customer.Phone));
+        command.Parameters.AddWithValue("$remark", string.Empty);
+        command.Parameters.AddWithValue("$remarkCiphertext", fieldEncryptionService.Encrypt(customer.Remark));
+        command.Parameters.AddWithValue("$externalId", string.Empty);
+        command.Parameters.AddWithValue("$externalIdCiphertext", fieldEncryptionService.Encrypt(customer.ExternalId));
+        command.Parameters.AddWithValue("$rawPayload", string.Empty);
+        command.Parameters.AddWithValue("$rawPayloadCiphertext", fieldEncryptionService.Encrypt(customer.RawPayload));
+        command.Parameters.AddWithValue("$lastContactAt", DBNull.Value);
+        command.Parameters.AddWithValue("$lastContactAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(customer.LastContactAt)));
         command.Parameters.AddWithValue("$createdAt", customer.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", customer.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(customer.DeletedAt));
@@ -195,5 +216,10 @@ public sealed class CustomerRepository : ICustomerRepository
     private static object ToDbDate(DateTime? value)
     {
         return value is null ? DBNull.Value : value.Value.ToString("O");
+    }
+
+    private static string ToCipherDate(DateTime? value)
+    {
+        return value is null ? string.Empty : value.Value.ToString("O");
     }
 }

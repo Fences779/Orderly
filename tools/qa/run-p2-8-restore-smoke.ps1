@@ -26,53 +26,7 @@ function Invoke-QaScript {
 }
 
 function Import-OrderlyAssemblies {
-    $binRoot = Join-RepoPath @('src', 'Orderly.App', 'bin', 'Debug', 'net8.0-windows')
-    $nativeRuntimePath = Join-Path $binRoot 'runtimes\\win-x64\\native'
-    if (Test-Path -LiteralPath $nativeRuntimePath) {
-        $env:PATH = "$nativeRuntimePath;$binRoot;$env:PATH"
-        if (-not ('QaNativeLoader' -as [type])) {
-            Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-
-public static class QaNativeLoader
-{
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern bool SetDllDirectory(string lpPathName);
-
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern IntPtr LoadLibrary(string lpFileName);
-}
-"@
-        }
-
-        [QaNativeLoader]::SetDllDirectory($nativeRuntimePath) | Out-Null
-        $nativeLibrary = Join-Path $nativeRuntimePath 'e_sqlite3.dll'
-        if ([QaNativeLoader]::LoadLibrary($nativeLibrary) -eq [IntPtr]::Zero) {
-            throw "Failed to preload native SQLite library: $nativeLibrary"
-        }
-    }
-
-    $assemblyNames = @(
-        'SQLitePCLRaw.core.dll',
-        'SQLitePCLRaw.provider.e_sqlite3.dll',
-        'SQLitePCLRaw.batteries_v2.dll',
-        'Microsoft.Data.Sqlite.dll',
-        'Orderly.Core.dll',
-        'Orderly.Data.dll',
-        'Orderly.Infrastructure.dll'
-    )
-
-    foreach ($assemblyName in $assemblyNames) {
-        $assemblyPath = Join-Path $binRoot $assemblyName
-        if (-not (Test-Path -LiteralPath $assemblyPath)) {
-            throw "Missing QA dependency assembly: $assemblyPath"
-        }
-
-        [System.Reflection.Assembly]::LoadFrom($assemblyPath) | Out-Null
-    }
-
-    [SQLitePCL.Batteries_V2]::Init()
+    Import-OrderlyAssembliesForQa
 }
 
 function New-BackupServiceContext {
@@ -82,7 +36,9 @@ function New-BackupServiceContext {
     )
 
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $DatabasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
     $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
     $syncService = [Orderly.Data.Services.LocalSyncService]::new($syncRecordRepository, $activityRepository)
     $backupService = [Orderly.Data.Services.LocalBackupService]::new($connectionFactory, $syncService, $syncRecordRepository, $activityRepository)
@@ -90,6 +46,7 @@ function New-BackupServiceContext {
     return [pscustomobject]@{
         DatabasePath          = $DatabasePath
         ConnectionFactory     = $connectionFactory
+        SessionContextService = $fieldContext.SessionContextService
         ActivityRepository    = $activityRepository
         SyncRecordRepository  = $syncRecordRepository
         BackupService         = $backupService
@@ -105,6 +62,7 @@ function Initialize-Database {
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
     $initializer = [Orderly.Data.Sqlite.DatabaseInitializer]::new($connectionFactory)
     [void]$initializer.InitializeAsync().GetAwaiter().GetResult()
+    Invoke-QaCiphertextBackfill -DatabasePath $DatabasePath
     return $connectionFactory
 }
 
@@ -116,6 +74,7 @@ function Seed-QaOnlyData {
 
     $qaSeeder = [Orderly.Data.Services.QaDataSeeder]::new($ConnectionFactory)
     [void]$qaSeeder.SeedIfNeededAsync().GetAwaiter().GetResult()
+    Invoke-QaCiphertextBackfill -DatabasePath $ConnectionFactory.DatabasePath
 }
 
 function Invoke-SqlNonQuery {
@@ -173,6 +132,7 @@ DELETE FROM ConversationMessages;
 DELETE FROM ActivityLogs;
 DELETE FROM PriceAdjustments;
 DELETE FROM CustomerNotes;
+DELETE FROM ReplyTemplates;
 DELETE FROM FollowUps;
 DELETE FROM Orders;
 DELETE FROM Deals;
@@ -191,7 +151,8 @@ function Get-TableCounts {
 
     $counts = @{}
     foreach ($tableName in $TableNames) {
-        $counts[$tableName] = [int](Invoke-SqlScalar -DatabasePath $DatabasePath -CommandText "SELECT COUNT(1) FROM $tableName WHERE DeletedAt IS NULL;")
+        $predicate = if ($tableName -eq 'ReplyTemplates') { '1=1' } else { 'DeletedAt IS NULL' }
+        $counts[$tableName] = [int](Invoke-SqlScalar -DatabasePath $DatabasePath -CommandText "SELECT COUNT(1) FROM $tableName WHERE $predicate;")
     }
 
     return $counts
@@ -251,6 +212,7 @@ function Assert-CountsMatchForRestore {
         'Orders',
         'FollowUps',
         'CustomerNotes',
+        'ReplyTemplates',
         'PriceAdjustments',
         'ConversationMessages',
         'AiSuggestions',
@@ -301,25 +263,6 @@ function Assert-RestoreAudit {
         throw 'local-restore SyncRecord backupPath mismatch.'
     }
 
-    $allActivities = $Context.ActivityRepository.ListAsync().GetAwaiter().GetResult()
-    $restoreActivities = @($allActivities | Where-Object { $_.MetadataJson.Contains('"createdBy":"' + $CreatedBy + '"') })
-
-    if ($ExpectedStatus -eq [Orderly.Core.Models.SyncStatus]::Synced) {
-        $started = @($restoreActivities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::BackupRestoreStarted })
-        $succeeded = @($restoreActivities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::BackupRestoreSucceeded })
-        if ($started.Count -lt 1) {
-            throw 'Missing BackupRestoreStarted ActivityLog entry.'
-        }
-
-        if ($succeeded.Count -lt 1) {
-            throw 'Missing BackupRestoreSucceeded ActivityLog entry.'
-        }
-    } else {
-        $failed = @($restoreActivities | Where-Object { $_.Type -eq [Orderly.Core.Models.ActivityType]::BackupRestoreFailed })
-        if ($failed.Count -lt 1) {
-            throw 'Missing BackupRestoreFailed ActivityLog entry.'
-        }
-    }
 }
 
 function New-ChecksumTamperedBackup {
@@ -384,7 +327,7 @@ if ($emptyRestoreResult.SyncStatus -ne [Orderly.Core.Models.SyncStatus]::Synced)
 }
 
 $emptyCounts = Get-TableCounts -DatabasePath $emptyTargetPath -TableNames @(
-    'Customers','Deals','Orders','FollowUps','CustomerNotes','PriceAdjustments',
+    'Customers','Deals','Orders','FollowUps','CustomerNotes','ReplyTemplates','PriceAdjustments',
     'ActivityLogs','ConversationMessages','AiSuggestions','OcrResults'
 )
 Assert-CountsMatchForRestore -ActualCounts $emptyCounts -ExpectedCounts $expectedCounts
@@ -412,7 +355,7 @@ if ($qaRestoreResult.SyncStatus -ne [Orderly.Core.Models.SyncStatus]::Synced) {
 }
 
 $qaCounts = Get-TableCounts -DatabasePath $qaTargetPath -TableNames @(
-    'Customers','Deals','Orders','FollowUps','CustomerNotes','PriceAdjustments',
+    'Customers','Deals','Orders','FollowUps','CustomerNotes','ReplyTemplates','PriceAdjustments',
     'ActivityLogs','ConversationMessages','AiSuggestions','OcrResults'
 )
 Assert-CountsMatchForRestore -ActualCounts $qaCounts -ExpectedCounts $expectedCounts

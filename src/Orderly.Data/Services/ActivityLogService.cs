@@ -27,4 +27,11 @@ public sealed class ActivityLogService : IActivityLogService
     {
         return _activityLogRepository.CreateAsync(activityLog, cancellationToken);
     }
+
+    public Task<int> CleanupExpiredActivitiesAsync(int retentionDays, CancellationToken cancellationToken = default)
+    {
+        var normalizedDays = Math.Clamp(retentionDays, 1, 3650);
+        var cutoff = DateTime.Now.AddDays(-normalizedDays);
+        return _activityLogRepository.SoftDeleteOlderThanAsync(cutoff, cancellationToken);
+    }
 }

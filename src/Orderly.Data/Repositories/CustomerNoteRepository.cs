@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Core.Services;
+using Orderly.Data.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -9,10 +11,12 @@ namespace Orderly.Data.Repositories;
 public sealed class CustomerNoteRepository : ICustomerNoteRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
+    private readonly IFieldEncryptionService _fieldEncryptionService;
 
-    public CustomerNoteRepository(SqliteConnectionFactory connectionFactory)
+    public CustomerNoteRepository(SqliteConnectionFactory connectionFactory, IFieldEncryptionService fieldEncryptionService)
     {
         _connectionFactory = connectionFactory;
+        _fieldEncryptionService = fieldEncryptionService ?? throw new ArgumentNullException(nameof(fieldEncryptionService));
     }
 
     public async Task<CustomerNote> CreateAsync(CustomerNote note, CancellationToken cancellationToken = default)
@@ -33,14 +37,14 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO CustomerNotes (
-                CustomerId, DealId, OrderId, Type, Content, IsPinned, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+                CustomerId, DealId, OrderId, Type, Content, ContentCiphertext, IsPinned, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             )
             VALUES (
-                $customerId, $dealId, $orderId, $type, $content, $isPinned, $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
+                $customerId, $dealId, $orderId, $type, $content, $contentCiphertext, $isPinned, $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
             );
             SELECT last_insert_rowid();
             """;
-        AddParameters(command, note);
+        AddParameters(command, note, _fieldEncryptionService);
         note.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
         return note;
     }
@@ -54,7 +58,7 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
         command.Parameters.AddWithValue("$id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public Task<IReadOnlyList<CustomerNote>> ListAsync(CancellationToken cancellationToken = default)
@@ -86,6 +90,7 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
                 OrderId = $orderId,
                 Type = $type,
                 Content = $content,
+                ContentCiphertext = $contentCiphertext,
                 IsPinned = $isPinned,
                 UpdatedAt = $updatedAt,
                 DeletedAt = $deletedAt,
@@ -94,7 +99,7 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
                 Version = $version
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
-        AddParameters(command, note);
+        AddParameters(command, note, _fieldEncryptionService);
         command.Parameters.AddWithValue("$id", note.Id);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -131,24 +136,25 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            rows.Add(Map(reader));
+            rows.Add(Map(reader, _fieldEncryptionService));
         }
 
         return rows;
     }
 
     private const string SelectSql = """
-        SELECT Id, CustomerId, DealId, OrderId, Type, Content, IsPinned, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+        SELECT Id, CustomerId, DealId, OrderId, Type, Content, ContentCiphertext, IsPinned, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
         FROM CustomerNotes
         """;
 
-    private static void AddParameters(SqliteCommand command, CustomerNote note)
+    private static void AddParameters(SqliteCommand command, CustomerNote note, IFieldEncryptionService fieldEncryptionService)
     {
         command.Parameters.AddWithValue("$customerId", note.CustomerId);
         command.Parameters.AddWithValue("$dealId", ToDbInt(note.DealId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(note.OrderId));
         command.Parameters.AddWithValue("$type", (int)note.Type);
-        command.Parameters.AddWithValue("$content", note.Content);
+        command.Parameters.AddWithValue("$content", string.Empty);
+        command.Parameters.AddWithValue("$contentCiphertext", fieldEncryptionService.Encrypt(note.Content));
         command.Parameters.AddWithValue("$isPinned", note.IsPinned ? 1 : 0);
         command.Parameters.AddWithValue("$createdAt", note.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", note.UpdatedAt.ToString("O"));
@@ -158,8 +164,10 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
         command.Parameters.AddWithValue("$version", note.Version);
     }
 
-    private static CustomerNote Map(SqliteDataReader reader)
+    private static CustomerNote Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)
     {
+        var content = EncryptedColumnReader.ReadRequiredString(reader, 6, fieldEncryptionService, "CustomerNotes.ContentCiphertext");
+
         return new CustomerNote
         {
             Id = reader.GetInt32(0),
@@ -167,14 +175,14 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
             DealId = reader.IsDBNull(2) ? null : reader.GetInt32(2),
             OrderId = reader.IsDBNull(3) ? null : reader.GetInt32(3),
             Type = (NoteType)reader.GetInt32(4),
-            Content = reader.GetString(5),
-            IsPinned = reader.GetInt32(6) == 1,
-            CreatedAt = DateTime.Parse(reader.GetString(7), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(8), null, DateTimeStyles.RoundtripKind),
-            DeletedAt = reader.IsDBNull(9) ? null : DateTime.Parse(reader.GetString(9), null, DateTimeStyles.RoundtripKind),
-            RemoteId = reader.GetString(10),
-            IsSynced = reader.GetInt32(11) == 1,
-            Version = reader.GetInt32(12)
+            Content = content,
+            IsPinned = reader.GetInt32(7) == 1,
+            CreatedAt = DateTime.Parse(reader.GetString(8), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(9), null, DateTimeStyles.RoundtripKind),
+            DeletedAt = reader.IsDBNull(10) ? null : DateTime.Parse(reader.GetString(10), null, DateTimeStyles.RoundtripKind),
+            RemoteId = reader.GetString(11),
+            IsSynced = reader.GetInt32(12) == 1,
+            Version = reader.GetInt32(13)
         };
     }
 

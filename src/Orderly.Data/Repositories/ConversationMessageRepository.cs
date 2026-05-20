@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Core.Services;
+using Orderly.Data.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -9,10 +11,12 @@ namespace Orderly.Data.Repositories;
 public sealed class ConversationMessageRepository : IConversationMessageRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
+    private readonly IFieldEncryptionService _fieldEncryptionService;
 
-    public ConversationMessageRepository(SqliteConnectionFactory connectionFactory)
+    public ConversationMessageRepository(SqliteConnectionFactory connectionFactory, IFieldEncryptionService fieldEncryptionService)
     {
         _connectionFactory = connectionFactory;
+        _fieldEncryptionService = fieldEncryptionService ?? throw new ArgumentNullException(nameof(fieldEncryptionService));
     }
 
     public async Task<ConversationMessage> CreateAsync(ConversationMessage message, CancellationToken cancellationToken = default)
@@ -33,16 +37,26 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO ConversationMessages (
-                CustomerId, OrderId, DealId, Direction, Channel, SenderName, Content, MessageTime, SourceMessageId, MetadataJson,
+                CustomerId, OrderId, DealId, Direction, Channel,
+                SenderName, SenderNameCiphertext,
+                Content, ContentCiphertext,
+                MessageTime, MessageTimeCiphertext,
+                SourceMessageId, SourceMessageIdCiphertext,
+                MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             )
             VALUES (
-                $customerId, $orderId, $dealId, $direction, $channel, $senderName, $content, $messageTime, $sourceMessageId, $metadataJson,
+                $customerId, $orderId, $dealId, $direction, $channel,
+                $senderName, $senderNameCiphertext,
+                $content, $contentCiphertext,
+                $messageTime, $messageTimeCiphertext,
+                $sourceMessageId, $sourceMessageIdCiphertext,
+                $metadataJson, $metadataJsonCiphertext,
                 $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
             );
             SELECT last_insert_rowid();
             """;
-        AddParameters(command, message);
+        AddParameters(command, message, _fieldEncryptionService);
         message.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
         return await GetByIdAsync(message.Id, cancellationToken) ?? message;
     }
@@ -64,10 +78,15 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
                 Direction = $direction,
                 Channel = $channel,
                 SenderName = $senderName,
+                SenderNameCiphertext = $senderNameCiphertext,
                 Content = $content,
+                ContentCiphertext = $contentCiphertext,
                 MessageTime = $messageTime,
+                MessageTimeCiphertext = $messageTimeCiphertext,
                 SourceMessageId = $sourceMessageId,
+                SourceMessageIdCiphertext = $sourceMessageIdCiphertext,
                 MetadataJson = $metadataJson,
+                MetadataJsonCiphertext = $metadataJsonCiphertext,
                 UpdatedAt = $updatedAt,
                 DeletedAt = $deletedAt,
                 RemoteId = $remoteId,
@@ -75,7 +94,7 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
                 Version = $version
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
-        AddParameters(command, message);
+        AddParameters(command, message, _fieldEncryptionService);
         command.Parameters.AddWithValue("$id", message.Id);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -87,7 +106,12 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                Id, CustomerId, OrderId, DealId, Direction, Channel, SenderName, Content, MessageTime, SourceMessageId, MetadataJson,
+                Id, CustomerId, OrderId, DealId, Direction, Channel,
+                SenderName, SenderNameCiphertext,
+                Content, ContentCiphertext,
+                MessageTime, MessageTimeCiphertext,
+                SourceMessageId, SourceMessageIdCiphertext,
+                MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             FROM ConversationMessages
             WHERE Id = $id AND DeletedAt IS NULL;
@@ -95,7 +119,7 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         command.Parameters.AddWithValue("$id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public async Task<ConversationMessage?> GetBySourceMessageIdAsync(string sourceMessageId, CancellationToken cancellationToken = default)
@@ -105,17 +129,30 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                Id, CustomerId, OrderId, DealId, Direction, Channel, SenderName, Content, MessageTime, SourceMessageId, MetadataJson,
+                Id, CustomerId, OrderId, DealId, Direction, Channel,
+                SenderName, SenderNameCiphertext,
+                Content, ContentCiphertext,
+                MessageTime, MessageTimeCiphertext,
+                SourceMessageId, SourceMessageIdCiphertext,
+                MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             FROM ConversationMessages
-            WHERE SourceMessageId = $sourceMessageId AND DeletedAt IS NULL
+            WHERE DeletedAt IS NULL
             ORDER BY Id DESC
-            LIMIT 1;
+            LIMIT 2000;
             """;
-        command.Parameters.AddWithValue("$sourceMessageId", sourceMessageId);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var message = Map(reader, _fieldEncryptionService);
+            if (string.Equals(message.SourceMessageId, sourceMessageId, StringComparison.Ordinal))
+            {
+                return message;
+            }
+        }
+
+        return null;
     }
 
     public Task<IReadOnlyList<ConversationMessage>> ListByCustomerIdAsync(int customerId, CancellationToken cancellationToken = default)
@@ -149,11 +186,16 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         await using var command = connection.CreateCommand();
         command.CommandText = $"""
             SELECT
-                Id, CustomerId, OrderId, DealId, Direction, Channel, SenderName, Content, MessageTime, SourceMessageId, MetadataJson,
+                Id, CustomerId, OrderId, DealId, Direction, Channel,
+                SenderName, SenderNameCiphertext,
+                Content, ContentCiphertext,
+                MessageTime, MessageTimeCiphertext,
+                SourceMessageId, SourceMessageIdCiphertext,
+                MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             FROM ConversationMessages
             WHERE DeletedAt IS NULL AND {whereClause}
-            ORDER BY MessageTime DESC, Id DESC;
+            ORDER BY CreatedAt DESC, Id DESC;
             """;
         configure?.Invoke(command);
 
@@ -161,24 +203,29 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            rows.Add(Map(reader));
+            rows.Add(Map(reader, _fieldEncryptionService));
         }
 
         return rows;
     }
 
-    private static void AddParameters(SqliteCommand command, ConversationMessage message)
+    private static void AddParameters(SqliteCommand command, ConversationMessage message, IFieldEncryptionService fieldEncryptionService)
     {
         command.Parameters.AddWithValue("$customerId", message.CustomerId);
         command.Parameters.AddWithValue("$orderId", ToDbInt(message.OrderId));
         command.Parameters.AddWithValue("$dealId", ToDbInt(message.DealId));
         command.Parameters.AddWithValue("$direction", (int)message.Direction);
         command.Parameters.AddWithValue("$channel", (int)message.Channel);
-        command.Parameters.AddWithValue("$senderName", message.SenderName);
-        command.Parameters.AddWithValue("$content", message.Content);
-        command.Parameters.AddWithValue("$messageTime", message.MessageTime.ToString("O"));
-        command.Parameters.AddWithValue("$sourceMessageId", message.SourceMessageId);
-        command.Parameters.AddWithValue("$metadataJson", message.MetadataJson);
+        command.Parameters.AddWithValue("$senderName", string.Empty);
+        command.Parameters.AddWithValue("$senderNameCiphertext", fieldEncryptionService.Encrypt(message.SenderName));
+        command.Parameters.AddWithValue("$content", string.Empty);
+        command.Parameters.AddWithValue("$contentCiphertext", fieldEncryptionService.Encrypt(message.Content));
+        command.Parameters.AddWithValue("$messageTime", string.Empty);
+        command.Parameters.AddWithValue("$messageTimeCiphertext", fieldEncryptionService.Encrypt(message.MessageTime.ToString("O")));
+        command.Parameters.AddWithValue("$sourceMessageId", string.Empty);
+        command.Parameters.AddWithValue("$sourceMessageIdCiphertext", fieldEncryptionService.Encrypt(message.SourceMessageId));
+        command.Parameters.AddWithValue("$metadataJson", string.Empty);
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(message.MetadataJson));
         command.Parameters.AddWithValue("$createdAt", message.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", message.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(message.DeletedAt));
@@ -187,8 +234,14 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         command.Parameters.AddWithValue("$version", message.Version);
     }
 
-    private static ConversationMessage Map(SqliteDataReader reader)
+    private static ConversationMessage Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)
     {
+        var senderName = EncryptedColumnReader.ReadRequiredString(reader, 7, fieldEncryptionService, "ConversationMessages.SenderNameCiphertext");
+        var content = EncryptedColumnReader.ReadRequiredString(reader, 9, fieldEncryptionService, "ConversationMessages.ContentCiphertext");
+        var sourceMessageId = EncryptedColumnReader.ReadRequiredString(reader, 13, fieldEncryptionService, "ConversationMessages.SourceMessageIdCiphertext");
+        var metadataJson = EncryptedColumnReader.ReadRequiredString(reader, 15, fieldEncryptionService, "ConversationMessages.MetadataJsonCiphertext");
+        var messageTime = EncryptedColumnReader.ReadRequiredDateTime(reader, 11, fieldEncryptionService, "ConversationMessages.MessageTimeCiphertext");
+
         return new ConversationMessage
         {
             Id = reader.GetInt32(0),
@@ -197,17 +250,17 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
             DealId = reader.IsDBNull(3) ? null : reader.GetInt32(3),
             Direction = (MessageDirection)reader.GetInt32(4),
             Channel = (MessageChannel)reader.GetInt32(5),
-            SenderName = reader.GetString(6),
-            Content = reader.GetString(7),
-            MessageTime = DateTime.Parse(reader.GetString(8), null, DateTimeStyles.RoundtripKind),
-            SourceMessageId = reader.GetString(9),
-            MetadataJson = reader.GetString(10),
-            CreatedAt = DateTime.Parse(reader.GetString(11), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(12), null, DateTimeStyles.RoundtripKind),
-            DeletedAt = reader.IsDBNull(13) ? null : DateTime.Parse(reader.GetString(13), null, DateTimeStyles.RoundtripKind),
-            RemoteId = reader.GetString(14),
-            IsSynced = reader.GetInt32(15) == 1,
-            Version = reader.GetInt32(16)
+            SenderName = senderName,
+            Content = content,
+            MessageTime = messageTime,
+            SourceMessageId = sourceMessageId,
+            MetadataJson = metadataJson,
+            CreatedAt = DateTime.Parse(reader.GetString(16), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(17), null, DateTimeStyles.RoundtripKind),
+            DeletedAt = reader.IsDBNull(18) ? null : DateTime.Parse(reader.GetString(18), null, DateTimeStyles.RoundtripKind),
+            RemoteId = reader.GetString(19),
+            IsSynced = reader.GetInt32(20) == 1,
+            Version = reader.GetInt32(21)
         };
     }
 

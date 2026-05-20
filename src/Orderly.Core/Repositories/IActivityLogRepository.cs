@@ -9,6 +9,7 @@ public interface IActivityLogRepository
     Task<IReadOnlyList<ActivityLog>> ListAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ActivityLog>> ListRecentAsync(int count, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ActivityLog>> ListByCustomerIdAsync(int customerId, CancellationToken cancellationToken = default);
+    Task<int> SoftDeleteOlderThanAsync(DateTime cutoff, CancellationToken cancellationToken = default);
     Task UpdateAsync(ActivityLog activityLog, CancellationToken cancellationToken = default);
     Task SoftDeleteAsync(int id, CancellationToken cancellationToken = default);
 }

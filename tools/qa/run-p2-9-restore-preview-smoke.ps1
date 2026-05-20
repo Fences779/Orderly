@@ -28,54 +28,7 @@ function Invoke-QaScript {
 }
 
 function Import-OrderlyAssemblies {
-    $binRoot = Join-RepoPath @('src', 'Orderly.App', 'bin', 'Debug', 'net8.0-windows')
-    $nativeRuntimePath = Join-Path $binRoot 'runtimes\\win-x64\\native'
-    if (Test-Path -LiteralPath $nativeRuntimePath) {
-        $env:PATH = "$nativeRuntimePath;$binRoot;$env:PATH"
-        if (-not ('QaNativeLoader' -as [type])) {
-            Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-
-public static class QaNativeLoader
-{
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern bool SetDllDirectory(string lpPathName);
-
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern IntPtr LoadLibrary(string lpFileName);
-}
-"@
-        }
-
-        [QaNativeLoader]::SetDllDirectory($nativeRuntimePath) | Out-Null
-        $nativeLibrary = Join-Path $nativeRuntimePath 'e_sqlite3.dll'
-        if ([QaNativeLoader]::LoadLibrary($nativeLibrary) -eq [IntPtr]::Zero) {
-            throw "Failed to preload native SQLite library: $nativeLibrary"
-        }
-    }
-
-    $assemblyNames = @(
-        'SQLitePCLRaw.core.dll',
-        'SQLitePCLRaw.provider.e_sqlite3.dll',
-        'SQLitePCLRaw.batteries_v2.dll',
-        'Microsoft.Data.Sqlite.dll',
-        'Orderly.Core.dll',
-        'Orderly.Data.dll',
-        'Orderly.Infrastructure.dll',
-        'Orderly.App.dll'
-    )
-
-    foreach ($assemblyName in $assemblyNames) {
-        $assemblyPath = Join-Path $binRoot $assemblyName
-        if (-not (Test-Path -LiteralPath $assemblyPath)) {
-            throw "Missing QA dependency assembly: $assemblyPath"
-        }
-
-        [System.Reflection.Assembly]::LoadFrom($assemblyPath) | Out-Null
-    }
-
-    [SQLitePCL.Batteries_V2]::Init()
+    Import-OrderlyAssembliesForQa -IncludeAppAssembly
 }
 
 function New-BackupServiceContext {
@@ -85,7 +38,9 @@ function New-BackupServiceContext {
     )
 
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $DatabasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
     $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
     $syncService = [Orderly.Data.Services.LocalSyncService]::new($syncRecordRepository, $activityRepository)
     $backupService = [Orderly.Data.Services.LocalBackupService]::new($connectionFactory, $syncService, $syncRecordRepository, $activityRepository)
@@ -93,6 +48,7 @@ function New-BackupServiceContext {
     return [pscustomobject]@{
         DatabasePath         = $DatabasePath
         ConnectionFactory    = $connectionFactory
+        SessionContextService = $fieldContext.SessionContextService
         ActivityRepository   = $activityRepository
         SyncRecordRepository = $syncRecordRepository
         BackupService        = $backupService
@@ -107,18 +63,20 @@ function New-MainViewModel {
 
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
 
-    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
-    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory)
-    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory)
-    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory)
-    $noteRepository = [Orderly.Data.Repositories.CustomerNoteRepository]::new($connectionFactory)
-    $conversationMessageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
-    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory)
-    $aiSuggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
-    $activityLogRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $DatabasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory, $fieldEncryptionService)
+    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory, $fieldEncryptionService)
+    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory, $fieldEncryptionService)
+    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory, $fieldEncryptionService)
+    $noteRepository = [Orderly.Data.Repositories.CustomerNoteRepository]::new($connectionFactory, $fieldEncryptionService)
+    $conversationMessageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory, $fieldEncryptionService)
+    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory, $fieldEncryptionService)
+    $aiSuggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory, $fieldEncryptionService)
+    $activityLogRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
     $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
-    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory)
-    $replyTemplateRepository = [Orderly.Data.Repositories.ReplyTemplateRepository]::new($connectionFactory)
+    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory, $fieldEncryptionService)
+    $replyTemplateRepository = [Orderly.Data.Repositories.ReplyTemplateRepository]::new($connectionFactory, $fieldEncryptionService)
     $settingRepository = [Orderly.Data.Repositories.AppSettingRepository]::new($connectionFactory)
     $clipboardService = [Orderly.Infrastructure.Services.InMemoryClipboardService]::new()
     $syncService = [Orderly.Data.Services.LocalSyncService]::new($syncRecordRepository, $activityLogRepository)
@@ -177,6 +135,7 @@ function Initialize-Database {
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
     $initializer = [Orderly.Data.Sqlite.DatabaseInitializer]::new($connectionFactory)
     [void]$initializer.InitializeAsync().GetAwaiter().GetResult()
+    Invoke-QaCiphertextBackfill -DatabasePath $DatabasePath
     return $connectionFactory
 }
 
@@ -188,6 +147,7 @@ function Seed-QaOnlyData {
 
     $qaSeeder = [Orderly.Data.Services.QaDataSeeder]::new($ConnectionFactory)
     [void]$qaSeeder.SeedIfNeededAsync().GetAwaiter().GetResult()
+    Invoke-QaCiphertextBackfill -DatabasePath $ConnectionFactory.DatabasePath
 }
 
 function Invoke-SqlNonQuery {
@@ -224,6 +184,7 @@ DELETE FROM OcrResults;
 DELETE FROM ConversationMessages;
 DELETE FROM ActivityLogs;
 DELETE FROM PriceAdjustments;
+DELETE FROM ReplyTemplates;
 DELETE FROM CustomerNotes;
 DELETE FROM FollowUps;
 DELETE FROM Orders;
@@ -298,7 +259,7 @@ if ($null -eq $emptyPreview.ExportedAt) { throw 'Preview missing exportedAt.' }
 if ($emptyPreview.SchemaVersion -ne 1) { throw "Preview schemaVersion mismatch: $($emptyPreview.SchemaVersion)" }
 if ([string]::IsNullOrWhiteSpace([string]$emptyPreview.Checksum)) { throw 'Preview missing checksum.' }
 if (-not $emptyPreview.IsChecksumValid) { throw 'Expected preview checksum valid for exported backup.' }
-Assert-CountsContain -Counts $emptyPreview.Counts -Keys @('Customers','Deals','Orders','FollowUps','CustomerNotes','PriceAdjustments','ActivityLogs','ConversationMessages','AiSuggestions','OcrResults')
+Assert-CountsContain -Counts $emptyPreview.Counts -Keys @('Customers','Deals','Orders','FollowUps','CustomerNotes','ReplyTemplates','PriceAdjustments','ActivityLogs','ConversationMessages','AiSuggestions','OcrResults')
 if ($emptyPreview.TargetState -ne [Orderly.Core.Models.BackupRestoreTargetState]::EmptyDatabase) { throw "Expected empty target state, got: $($emptyPreview.TargetState)" }
 if ($emptyPreview.WillClearQaData) { throw 'Empty target should not clear QA data.' }
 if (-not $emptyPreview.CanRestore) { throw "Empty target preview should allow restore: $($emptyPreview.RefuseReason)" }
@@ -365,5 +326,5 @@ Write-Step "Step 8/9: invoke P2.8 restore smoke to preserve restore boundary"
 Invoke-QaScript -Path $p28Script
 
 Write-Step "Step 9/9: verify exported preview counts remain aligned with source backup"
-Assert-CountsContain -Counts $expectedCounts -Keys @('Customers','Deals','Orders','FollowUps','CustomerNotes','PriceAdjustments','ActivityLogs','ConversationMessages','AiSuggestions','OcrResults')
+Assert-CountsContain -Counts $expectedCounts -Keys @('Customers','Deals','Orders','FollowUps','CustomerNotes','ReplyTemplates','PriceAdjustments','ActivityLogs','ConversationMessages','AiSuggestions','OcrResults')
 Write-Step "P2.9 restore preview smoke completed"

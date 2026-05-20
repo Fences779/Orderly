@@ -102,15 +102,17 @@ function New-QaMetadataJson {
 function New-WorkbenchContext {
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
-    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
-    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory)
-    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory)
-    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory)
-    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
-    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
-    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
-    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory, $fieldEncryptionService)
+    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory, $fieldEncryptionService)
+    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory, $fieldEncryptionService)
+    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory, $fieldEncryptionService)
+    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory, $fieldEncryptionService)
+    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory, $fieldEncryptionService)
+    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory, $fieldEncryptionService)
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
+    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory, $fieldEncryptionService)
     $workbenchTaskService = [Orderly.Data.Services.LocalWorkbenchTaskService]::new(
         $customerRepository,
         $orderRepository,
@@ -239,6 +241,7 @@ $target.OcrResult.MetadataJson = New-QaMetadataJson -Key 'p2qa-ocr-001' -Extra @
 [void]$context.OcrResultRepository.UpdateAsync($target.OcrResult).GetAwaiter().GetResult()
 
 Write-Step 'Step 5/8: generate workbench tasks and validate required task types'
+Invoke-QaCiphertextBackfill -DatabasePath (Get-DefaultDatabasePath)
 $tasks = $context.WorkbenchTaskService.GetTasksAsync().GetAwaiter().GetResult()
 if ($tasks.Count -lt 5) {
     throw "Expected at least 5 workbench tasks after projection, actual: $($tasks.Count)"

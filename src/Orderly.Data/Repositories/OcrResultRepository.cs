@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Core.Services;
+using Orderly.Data.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -9,10 +11,12 @@ namespace Orderly.Data.Repositories;
 public sealed class OcrResultRepository : IOcrResultRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
+    private readonly IFieldEncryptionService _fieldEncryptionService;
 
-    public OcrResultRepository(SqliteConnectionFactory connectionFactory)
+    public OcrResultRepository(SqliteConnectionFactory connectionFactory, IFieldEncryptionService fieldEncryptionService)
     {
         _connectionFactory = connectionFactory;
+        _fieldEncryptionService = fieldEncryptionService ?? throw new ArgumentNullException(nameof(fieldEncryptionService));
     }
 
     public async Task<OcrResult> CreateAsync(OcrResult result, CancellationToken cancellationToken = default)
@@ -33,16 +37,28 @@ public sealed class OcrResultRepository : IOcrResultRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO OcrResults (
-                CustomerId, OrderId, SourcePath, SourceName, ExtractedText, Status, ErrorMessage, MetadataJson,
+                CustomerId, OrderId,
+                SourcePath, SourcePathCiphertext,
+                SourceName, SourceNameCiphertext,
+                ExtractedText, ExtractedTextCiphertext,
+                Status,
+                ErrorMessage, ErrorMessageCiphertext,
+                MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             )
             VALUES (
-                $customerId, $orderId, $sourcePath, $sourceName, $extractedText, $status, $errorMessage, $metadataJson,
+                $customerId, $orderId,
+                $sourcePath, $sourcePathCiphertext,
+                $sourceName, $sourceNameCiphertext,
+                $extractedText, $extractedTextCiphertext,
+                $status,
+                $errorMessage, $errorMessageCiphertext,
+                $metadataJson, $metadataJsonCiphertext,
                 $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
             );
             SELECT last_insert_rowid();
             """;
-        AddParameters(command, result);
+        AddParameters(command, result, _fieldEncryptionService);
         result.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
         return await GetByIdAsync(result.Id, cancellationToken) ?? result;
     }
@@ -61,11 +77,16 @@ public sealed class OcrResultRepository : IOcrResultRepository
             SET CustomerId = $customerId,
                 OrderId = $orderId,
                 SourcePath = $sourcePath,
+                SourcePathCiphertext = $sourcePathCiphertext,
                 SourceName = $sourceName,
+                SourceNameCiphertext = $sourceNameCiphertext,
                 ExtractedText = $extractedText,
+                ExtractedTextCiphertext = $extractedTextCiphertext,
                 Status = $status,
                 ErrorMessage = $errorMessage,
+                ErrorMessageCiphertext = $errorMessageCiphertext,
                 MetadataJson = $metadataJson,
+                MetadataJsonCiphertext = $metadataJsonCiphertext,
                 UpdatedAt = $updatedAt,
                 DeletedAt = $deletedAt,
                 RemoteId = $remoteId,
@@ -73,7 +94,7 @@ public sealed class OcrResultRepository : IOcrResultRepository
                 Version = $version
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
-        AddParameters(command, result);
+        AddParameters(command, result, _fieldEncryptionService);
         command.Parameters.AddWithValue("$id", result.Id);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -85,7 +106,13 @@ public sealed class OcrResultRepository : IOcrResultRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                Id, CustomerId, OrderId, SourcePath, SourceName, ExtractedText, Status, ErrorMessage, MetadataJson,
+                Id, CustomerId, OrderId,
+                SourcePath, SourcePathCiphertext,
+                SourceName, SourceNameCiphertext,
+                ExtractedText, ExtractedTextCiphertext,
+                Status,
+                ErrorMessage, ErrorMessageCiphertext,
+                MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             FROM OcrResults
             WHERE Id = $id AND DeletedAt IS NULL;
@@ -93,7 +120,7 @@ public sealed class OcrResultRepository : IOcrResultRepository
         command.Parameters.AddWithValue("$id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public async Task<IReadOnlyList<OcrResult>> ListByCustomerIdAsync(int customerId, CancellationToken cancellationToken = default)
@@ -119,7 +146,13 @@ public sealed class OcrResultRepository : IOcrResultRepository
         await using var command = connection.CreateCommand();
         command.CommandText = $"""
             SELECT
-                Id, CustomerId, OrderId, SourcePath, SourceName, ExtractedText, Status, ErrorMessage, MetadataJson,
+                Id, CustomerId, OrderId,
+                SourcePath, SourcePathCiphertext,
+                SourceName, SourceNameCiphertext,
+                ExtractedText, ExtractedTextCiphertext,
+                Status,
+                ErrorMessage, ErrorMessageCiphertext,
+                MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             FROM OcrResults
             WHERE DeletedAt IS NULL AND {whereClause}
@@ -131,22 +164,27 @@ public sealed class OcrResultRepository : IOcrResultRepository
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            rows.Add(Map(reader));
+            rows.Add(Map(reader, _fieldEncryptionService));
         }
 
         return rows;
     }
 
-    private static void AddParameters(SqliteCommand command, OcrResult result)
+    private static void AddParameters(SqliteCommand command, OcrResult result, IFieldEncryptionService fieldEncryptionService)
     {
         command.Parameters.AddWithValue("$customerId", ToDbInt(result.CustomerId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(result.OrderId));
-        command.Parameters.AddWithValue("$sourcePath", result.SourcePath);
-        command.Parameters.AddWithValue("$sourceName", result.SourceName);
-        command.Parameters.AddWithValue("$extractedText", result.ExtractedText);
+        command.Parameters.AddWithValue("$sourcePath", string.Empty);
+        command.Parameters.AddWithValue("$sourcePathCiphertext", fieldEncryptionService.Encrypt(result.SourcePath));
+        command.Parameters.AddWithValue("$sourceName", string.Empty);
+        command.Parameters.AddWithValue("$sourceNameCiphertext", fieldEncryptionService.Encrypt(result.SourceName));
+        command.Parameters.AddWithValue("$extractedText", string.Empty);
+        command.Parameters.AddWithValue("$extractedTextCiphertext", fieldEncryptionService.Encrypt(result.ExtractedText));
         command.Parameters.AddWithValue("$status", (int)result.Status);
-        command.Parameters.AddWithValue("$errorMessage", result.ErrorMessage);
-        command.Parameters.AddWithValue("$metadataJson", result.MetadataJson);
+        command.Parameters.AddWithValue("$errorMessage", string.Empty);
+        command.Parameters.AddWithValue("$errorMessageCiphertext", fieldEncryptionService.Encrypt(result.ErrorMessage));
+        command.Parameters.AddWithValue("$metadataJson", string.Empty);
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(result.MetadataJson));
         command.Parameters.AddWithValue("$createdAt", result.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", result.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(result.DeletedAt));
@@ -155,25 +193,31 @@ public sealed class OcrResultRepository : IOcrResultRepository
         command.Parameters.AddWithValue("$version", result.Version);
     }
 
-    private static OcrResult Map(SqliteDataReader reader)
+    private static OcrResult Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)
     {
+        var sourcePath = EncryptedColumnReader.ReadRequiredString(reader, 4, fieldEncryptionService, "OcrResults.SourcePathCiphertext");
+        var sourceName = EncryptedColumnReader.ReadRequiredString(reader, 6, fieldEncryptionService, "OcrResults.SourceNameCiphertext");
+        var extractedText = EncryptedColumnReader.ReadRequiredString(reader, 8, fieldEncryptionService, "OcrResults.ExtractedTextCiphertext");
+        var errorMessage = EncryptedColumnReader.ReadRequiredString(reader, 11, fieldEncryptionService, "OcrResults.ErrorMessageCiphertext");
+        var metadataJson = EncryptedColumnReader.ReadRequiredString(reader, 13, fieldEncryptionService, "OcrResults.MetadataJsonCiphertext");
+
         return new OcrResult
         {
             Id = reader.GetInt32(0),
             CustomerId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
             OrderId = reader.IsDBNull(2) ? null : reader.GetInt32(2),
-            SourcePath = reader.GetString(3),
-            SourceName = reader.GetString(4),
-            ExtractedText = reader.GetString(5),
-            Status = (OcrStatus)reader.GetInt32(6),
-            ErrorMessage = reader.GetString(7),
-            MetadataJson = reader.GetString(8),
-            CreatedAt = DateTime.Parse(reader.GetString(9), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(10), null, DateTimeStyles.RoundtripKind),
-            DeletedAt = reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11), null, DateTimeStyles.RoundtripKind),
-            RemoteId = reader.GetString(12),
-            IsSynced = reader.GetInt32(13) == 1,
-            Version = reader.GetInt32(14)
+            SourcePath = sourcePath,
+            SourceName = sourceName,
+            ExtractedText = extractedText,
+            Status = (OcrStatus)reader.GetInt32(9),
+            ErrorMessage = errorMessage,
+            MetadataJson = metadataJson,
+            CreatedAt = DateTime.Parse(reader.GetString(14), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(15), null, DateTimeStyles.RoundtripKind),
+            DeletedAt = reader.IsDBNull(16) ? null : DateTime.Parse(reader.GetString(16), null, DateTimeStyles.RoundtripKind),
+            RemoteId = reader.GetString(17),
+            IsSynced = reader.GetInt32(18) == 1,
+            Version = reader.GetInt32(19)
         };
     }
 

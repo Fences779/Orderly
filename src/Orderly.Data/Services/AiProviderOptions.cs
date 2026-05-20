@@ -8,6 +8,8 @@ public sealed class AiProviderOptions
     public const string DeepSeekBaseUrl = "https://api.deepseek.com";
     public const string DeepSeekDefaultModel = "deepseek-chat";
     public const string DeepSeekApiKeyEnvironmentVariableName = "DEEPSEEK_API_KEY";
+    public const int MinTimeoutSeconds = 5;
+    public const int MaxTimeoutSeconds = 120;
     public const int DefaultTimeoutSeconds = 15;
 
     public AiProviderOptions(
@@ -81,11 +83,11 @@ public sealed class AiProviderOptions
 
     private static int NormalizeTimeout(int timeoutSeconds)
     {
-        if (timeoutSeconds <= 0)
+        if (timeoutSeconds < MinTimeoutSeconds)
         {
             return DefaultTimeoutSeconds;
         }
 
-        return Math.Clamp(timeoutSeconds, 1, DefaultTimeoutSeconds);
+        return Math.Clamp(timeoutSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
     }
 }

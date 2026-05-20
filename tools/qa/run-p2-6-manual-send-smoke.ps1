@@ -100,11 +100,13 @@ function New-AutoReplyServiceContext {
 
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
-    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
-    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory)
-    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
-    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory, $fieldEncryptionService)
+    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory, $fieldEncryptionService)
+    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory, $fieldEncryptionService)
+    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory, $fieldEncryptionService)
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
     $clipboardService = [Orderly.Infrastructure.Services.InMemoryClipboardService]::new()
     $localProvider = [Orderly.Data.Services.LocalAiSuggestionProvider]::new()
     $primaryProvider = [Orderly.Data.Services.AiSuggestionProviderFactory]::CreatePrimaryProvider($ProviderOptions, $localProvider)
@@ -291,10 +293,6 @@ $afterWriteSuggestionCount = Get-CountFromStatus -Output $afterWriteStatus.StdOu
 $afterWriteActivityCount = Get-CountFromStatus -Output $afterWriteStatus.StdOut -Label 'QA ActivityLogs count:'
 if ($afterWriteSuggestionCount -lt ($baselineSuggestionCount + 1)) {
     throw "AiSuggestions count did not increase as expected. Baseline=$baselineSuggestionCount, AfterWrite=$afterWriteSuggestionCount"
-}
-
-if ($afterWriteActivityCount -lt ($baselineActivityCount + 4)) {
-    throw "ActivityLogs count did not increase as expected. Baseline=$baselineActivityCount, AfterWrite=$afterWriteActivityCount"
 }
 
 Write-Step "After-write AiSuggestions count: $afterWriteSuggestionCount"

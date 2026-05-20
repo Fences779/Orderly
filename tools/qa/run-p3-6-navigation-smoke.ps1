@@ -104,17 +104,19 @@ function New-P36MetadataJson {
 function New-P36Context {
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
-    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
-    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory)
-    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory)
-    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory)
-    $noteRepository = [Orderly.Data.Repositories.CustomerNoteRepository]::new($connectionFactory)
-    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
-    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
-    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
-    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory)
-    $replyTemplateRepository = [Orderly.Data.Repositories.ReplyTemplateRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory, $fieldEncryptionService)
+    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory, $fieldEncryptionService)
+    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory, $fieldEncryptionService)
+    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory, $fieldEncryptionService)
+    $noteRepository = [Orderly.Data.Repositories.CustomerNoteRepository]::new($connectionFactory, $fieldEncryptionService)
+    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory, $fieldEncryptionService)
+    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory, $fieldEncryptionService)
+    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory, $fieldEncryptionService)
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
+    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory, $fieldEncryptionService)
+    $replyTemplateRepository = [Orderly.Data.Repositories.ReplyTemplateRepository]::new($connectionFactory, $fieldEncryptionService)
     $settingRepository = [Orderly.Data.Repositories.AppSettingRepository]::new($connectionFactory)
     $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
     $workbenchTaskService = [Orderly.Data.Services.LocalWorkbenchTaskService]::new(
@@ -470,10 +472,16 @@ function New-P36ViewModelHarness {
         $Context.NavigationRouteService,
         $backupService,
         $priceAdjustmentService,
+        $null,
         $Context.ReplyTemplateRepository,
         $Context.SettingRepository,
         $clipboardService,
-        $Context.DatabasePath)
+        $Context.DatabasePath,
+        $null,
+        $null,
+        '',
+        $false,
+        15)
 
     return [pscustomobject]@{
         ViewModel  = $viewModel
@@ -513,6 +521,7 @@ $activity = New-P36Activity -Context $context -Customer $customer -Order $order 
 $recentOnlyCustomer = New-P36Customer -Context $context -Key 'p36qa-recent-001' -Name '[P3.6_QA] Recent customer no order' -Remark '[P3.6_QA] recent only'
 
 Write-Step 'Step 5/12: load search results and workbench tasks'
+Invoke-QaCiphertextBackfill -DatabasePath (Get-DefaultDatabasePath)
 $customerHit = Assert-SearchContainsType -ResultSet (Invoke-Search -Context $context -Query 'Customer [P3.6_QA] route') -TypeName 'Customer'
 $orderHit = Assert-SearchContainsType -ResultSet (Invoke-Search -Context $context -Query 'Order [P3.6_QA] route') -TypeName 'Order'
 $messageHit = Assert-SearchContainsType -ResultSet (Invoke-Search -Context $context -Query 'Message [P3.6_QA] route') -TypeName 'ConversationMessage'

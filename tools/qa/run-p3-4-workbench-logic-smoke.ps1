@@ -102,15 +102,17 @@ function New-QaMetadataJson {
 function New-P34Context {
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
-    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
-    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory)
-    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory)
-    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory)
-    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
-    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
-    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
-    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory, $fieldEncryptionService)
+    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory, $fieldEncryptionService)
+    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory, $fieldEncryptionService)
+    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory, $fieldEncryptionService)
+    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory, $fieldEncryptionService)
+    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory, $fieldEncryptionService)
+    $ocrResultRepository = [Orderly.Data.Repositories.OcrResultRepository]::new($connectionFactory, $fieldEncryptionService)
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
+    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory, $fieldEncryptionService)
     $workbenchTaskService = [Orderly.Data.Services.LocalWorkbenchTaskService]::new(
         $customerRepository,
         $orderRepository,
@@ -431,6 +433,7 @@ $closedFallbackCustomer = New-P34Customer -Context $context -Key 'p13qa-p34-clos
 $closedFallbackOrder = New-P34Order -Context $context -Customer $closedFallbackCustomer -Key 'p13qa-p34-closed-order-001' -Status ([Orderly.Core.Models.OrderStatus]::Closed)
 
 Write-Step 'Step 5/10: generate workbench tasks and validate deep-link fields'
+Invoke-QaCiphertextBackfill -DatabasePath (Get-DefaultDatabasePath)
 $tasks = $context.WorkbenchTaskService.GetTasksAsync().GetAwaiter().GetResult()
 if ($tasks.Count -lt 8) {
     throw "Expected at least 8 workbench tasks after projection, actual: $($tasks.Count)"

@@ -340,13 +340,9 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(CanRestoreWithConfirmation));
     }
 
-    private static string GetDefaultBackupDirectory()
+    private string GetDefaultBackupDirectory()
     {
-        var directory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "Orderly",
-            "Backups");
-
+        var directory = ResolveBackupDirectory(BackupDirectoryInput);
         Directory.CreateDirectory(directory);
         return directory;
     }

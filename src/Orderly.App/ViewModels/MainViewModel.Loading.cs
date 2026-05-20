@@ -14,6 +14,11 @@ public partial class MainViewModel
         try
         {
             Preferences = await _settingRepository.GetPreferencesAsync(cancellationToken);
+            ApplySettingsInputsFromPreferences(Preferences);
+            ApplyStartupSectionPreferenceIfNeeded();
+            var currentSession = _sessionContextService?.Current;
+            CurrentAccountDisplayName = currentSession?.DisplayName ?? string.Empty;
+            IsCurrentUserOwner = currentSession?.Role == LocalAccountRole.Owner;
             var customers = await _customerRepository.GetAllAsync(cancellationToken);
             var orders = await _orderRepository.GetRecentAsync(cancellationToken);
             var deals = await _dealService.GetDealsAsync(cancellationToken);
@@ -21,7 +26,9 @@ public partial class MainViewModel
             var notes = await _noteService.GetNotesAsync(cancellationToken);
             var templates = await _replyTemplateRepository.GetAllAsync(cancellationToken);
             var workbenchTasks = await _workbenchTaskService.GetTasksAsync(WorkbenchTaskFilter, cancellationToken);
+            await LoadManagedAccountsAsync(cancellationToken);
             await LoadRecentBackupStatusAsync(cancellationToken);
+            await RefreshSettingsRuntimeStatusAsync(cancellationToken);
 
             _allCustomers = customers.ToList();
             _allOrders = orders.Select(order => new OrderListItem(order)).ToList();
@@ -42,6 +49,14 @@ public partial class MainViewModel
 
             OnSummaryChanged();
             StatusMessage = $"已加载 {Customers.Count} 个客户、{Orders.Count} 个订单";
+            if (string.Equals(SelectedSection, SectionFulfillment, StringComparison.Ordinal))
+            {
+                await LoadStringNarrationOrdersAsync();
+            }
+            else if (string.Equals(SelectedSection, SectionException, StringComparison.Ordinal))
+            {
+                await LoadExceptionOrdersAsync();
+            }
         }
         catch (Exception ex)
         {

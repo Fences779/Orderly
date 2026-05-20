@@ -7,4 +7,5 @@ public interface IActivityLogService
     Task<IReadOnlyList<ActivityLog>> GetRecentActivitiesAsync(int count, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ActivityLog>> GetCustomerActivitiesAsync(int customerId, CancellationToken cancellationToken = default);
     Task<ActivityLog> AddActivityAsync(ActivityLog activityLog, CancellationToken cancellationToken = default);
+    Task<int> CleanupExpiredActivitiesAsync(int retentionDays, CancellationToken cancellationToken = default);
 }

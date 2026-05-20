@@ -157,4 +157,16 @@ public partial class MainViewModel
     {
         System.Windows.MessageBox.Show(GetDialogOwner(), ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
+
+    [RelayCommand]
+    private void LockSession()
+    {
+        LockSessionRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private void Logout()
+    {
+        LogoutRequested?.Invoke();
+    }
 }

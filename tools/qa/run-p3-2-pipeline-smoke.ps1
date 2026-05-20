@@ -102,14 +102,16 @@ function New-QaMetadataJson {
 function New-PipelineContext {
     $databasePath = Get-DefaultDatabasePath
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
-    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory)
-    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory)
-    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory)
-    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory)
-    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory)
-    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory)
-    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory)
-    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory)
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
+    $fieldEncryptionService = $fieldContext.FieldEncryptionService
+    $customerRepository = [Orderly.Data.Repositories.CustomerRepository]::new($connectionFactory, $fieldEncryptionService)
+    $orderRepository = [Orderly.Data.Repositories.OrderRepository]::new($connectionFactory, $fieldEncryptionService)
+    $dealRepository = [Orderly.Data.Repositories.DealRepository]::new($connectionFactory, $fieldEncryptionService)
+    $messageRepository = [Orderly.Data.Repositories.ConversationMessageRepository]::new($connectionFactory, $fieldEncryptionService)
+    $suggestionRepository = [Orderly.Data.Repositories.AiSuggestionRepository]::new($connectionFactory, $fieldEncryptionService)
+    $followUpRepository = [Orderly.Data.Repositories.FollowUpRepository]::new($connectionFactory, $fieldEncryptionService)
+    $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
+    $priceAdjustmentRepository = [Orderly.Data.Repositories.PriceAdjustmentRepository]::new($connectionFactory, $fieldEncryptionService)
     $resolver = [Orderly.Data.Services.PipelineStageResolver]::new(
         $customerRepository,
         $orderRepository,
@@ -346,6 +348,7 @@ $lostDeal = New-P3Deal -Context $context -Customer $lostCustomer -Key 'p13qa-p3-
 $lostOrder = New-P3Order -Context $context -Customer $lostCustomer -Deal $lostDeal -Key 'p13qa-p3-lost-order-001' -Status ([Orderly.Core.Models.OrderStatus]::PendingCommunication)
 
 Write-Step 'Step 4/10: resolve pipeline stages'
+Invoke-QaCiphertextBackfill -DatabasePath (Get-DefaultDatabasePath)
 $snapshotNew = $context.Resolver.ResolveAsync($newCustomer.Id).GetAwaiter().GetResult()
 $snapshotFallback = $context.Resolver.ResolveAsync($fallbackCustomer.Id).GetAwaiter().GetResult()
 $snapshotContact = $context.Resolver.ResolveAsync($contactCustomer.Id, $contactOrder.Id).GetAwaiter().GetResult()

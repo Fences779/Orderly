@@ -1,5 +1,6 @@
 ﻿Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
+$script:QaEncryptionKeyBytes = $null
 
 $script:Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 [Console]::InputEncoding = $script:Utf8NoBom
@@ -67,7 +68,7 @@ function Get-QaSmokeRoot {
 }
 
 function New-QaSmokeRunDirectory {
-    $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $timestamp = (Get-Date -Format 'yyyyMMdd_HHmmss_fff') + '_' + [guid]::NewGuid().ToString('N').Substring(0, 6)
     $root = Get-QaSmokeRoot
     $path = Join-Path $root $timestamp
     New-Item -ItemType Directory -Path $path -Force | Out-Null
@@ -79,7 +80,7 @@ function New-QaSmokeRunDirectory {
 }
 
 function Get-DefaultDatabasePath {
-    $root = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Orderly'
+    $root = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Orderly-SN'
     return Join-Path $root 'orderly.db'
 }
 
@@ -90,6 +91,145 @@ function Get-MicrosoftDataSqliteAssemblyPath {
     }
 
     return $assemblyPath
+}
+
+function Import-OrderlyAssembliesForQa {
+    param(
+        [switch]$IncludeAppAssembly
+    )
+
+    $binRoot = Join-RepoPath @('src', 'Orderly.App', 'bin', 'Debug', 'net8.0-windows')
+    $nativeRuntimePath = Join-Path $binRoot 'runtimes\\win-x64\\native'
+    if (Test-Path -LiteralPath $nativeRuntimePath) {
+        $env:PATH = "$nativeRuntimePath;$binRoot;$env:PATH"
+        if (-not ('QaNativeLoader' -as [type])) {
+            Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class QaNativeLoader
+{
+    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+    public static extern bool SetDllDirectory(string lpPathName);
+
+    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+    public static extern IntPtr LoadLibrary(string lpFileName);
+}
+"@
+        }
+
+        [QaNativeLoader]::SetDllDirectory($nativeRuntimePath) | Out-Null
+        $nativeLibrary = Join-Path $nativeRuntimePath 'e_sqlite3.dll'
+        if ([QaNativeLoader]::LoadLibrary($nativeLibrary) -eq [IntPtr]::Zero) {
+            throw "Failed to preload native SQLite library: $nativeLibrary"
+        }
+    }
+
+    $assemblyNames = @(
+        'SQLitePCLRaw.core.dll',
+        'SQLitePCLRaw.provider.e_sqlite3.dll',
+        'SQLitePCLRaw.batteries_v2.dll',
+        'Microsoft.Data.Sqlite.dll',
+        'Orderly.Core.dll',
+        'Orderly.Data.dll',
+        'Orderly.Infrastructure.dll'
+    )
+
+    if ($IncludeAppAssembly) {
+        $assemblyNames += 'Orderly.App.dll'
+    }
+
+    foreach ($assemblyName in $assemblyNames) {
+        $assemblyPath = Join-Path $binRoot $assemblyName
+        if (-not (Test-Path -LiteralPath $assemblyPath)) {
+            throw "Missing QA dependency assembly: $assemblyPath"
+        }
+
+        [System.Reflection.Assembly]::LoadFrom($assemblyPath) | Out-Null
+    }
+
+    [SQLitePCL.Batteries_V2]::Init()
+}
+
+function New-PassthroughFieldEncryptionService {
+    return [Orderly.Data.Services.PassthroughFieldEncryptionService]::Instance
+}
+
+function Get-QaEncryptionKeyBytes {
+    if (-not $script:QaEncryptionKeyBytes) {
+        $seedBytes = [System.Text.Encoding]::UTF8.GetBytes('Orderly-QA-Encryption-v1')
+        $script:QaEncryptionKeyBytes = [System.Security.Cryptography.SHA256]::HashData($seedBytes)
+    }
+
+    return $script:QaEncryptionKeyBytes
+}
+
+function New-QaFieldEncryptionContext {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DatabasePath,
+        [string]$AccountId = 'qa-local-account',
+        [string]$Username = 'qa-local-user',
+        [string]$DisplayName = 'QA Local User'
+    )
+
+    $sessionContextService = [Orderly.Data.Services.SessionContextService]::new()
+    $sessionContext = [Orderly.Core.Models.LocalSessionContext]@{
+        AccountId   = $AccountId
+        Username    = $Username
+        DisplayName = $DisplayName
+        Role        = [Orderly.Core.Models.LocalAccountRole]::Owner
+        DatabasePath = $DatabasePath
+        DataKey     = Get-QaEncryptionKeyBytes
+        SignedInAt  = [DateTime]::Now
+    }
+    $sessionContextService.SetCurrent($sessionContext)
+
+    return [pscustomobject]@{
+        SessionContextService = $sessionContextService
+        FieldEncryptionService = [Orderly.Data.Services.FieldEncryptionService]::new($sessionContextService)
+    }
+}
+
+function Invoke-QaCiphertextBackfill {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DatabasePath
+    )
+
+    $fieldContext = New-QaFieldEncryptionContext -DatabasePath $DatabasePath
+    $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
+    $migrationService = [Orderly.Data.Services.SensitiveFieldMigrationService]::new(
+        $connectionFactory,
+        $fieldContext.FieldEncryptionService)
+    [void]$migrationService.BackfillAsync().GetAwaiter().GetResult()
+}
+
+function Remove-LegacyInvalidEncryptedActivityLogs {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DatabasePath
+    )
+
+    $commandText = @'
+DELETE FROM ActivityLogs
+WHERE
+    (ifnull(TitleCiphertext, '') <> '' AND TitleCiphertext NOT LIKE 'v1:%')
+ OR (ifnull(DescriptionCiphertext, '') <> '' AND DescriptionCiphertext NOT LIKE 'v1:%')
+ OR (ifnull(OperatorCiphertext, '') <> '' AND OperatorCiphertext NOT LIKE 'v1:%')
+ OR (ifnull(MetadataJsonCiphertext, '') <> '' AND MetadataJsonCiphertext NOT LIKE 'v1:%');
+'@
+
+    $connection = [Microsoft.Data.Sqlite.SqliteConnection]::new("Data Source=$DatabasePath;Foreign Keys=True")
+    try {
+        $connection.Open()
+        $command = $connection.CreateCommand()
+        $command.CommandText = $commandText
+        [void]$command.ExecuteNonQuery()
+    }
+    finally {
+        $connection.Dispose()
+    }
 }
 
 function Get-RunningOrderlyProcesses {

@@ -44,7 +44,7 @@ public partial class MainViewModel
     {
         if (!string.IsNullOrWhiteSpace(section))
         {
-            SelectedSection = section;
+            SelectedSection = NormalizeSection(section);
         }
     }
 

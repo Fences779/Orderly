@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 namespace Orderly.Data.Services;
 
@@ -16,6 +17,7 @@ public sealed class LocalBackupService : IBackupService
     private const string BackupEntityType = "local-backup";
     private const string RestoreEntityType = "local-restore";
     private const string RestoreOperator = "local-restore";
+    private const string LauncherLocalAccountsTableName = "LocalAccountsSnapshot";
 
     private static readonly string[] IncludedTableNames =
     [
@@ -24,6 +26,7 @@ public sealed class LocalBackupService : IBackupService
         "Orders",
         "FollowUps",
         "CustomerNotes",
+        "ReplyTemplates",
         "PriceAdjustments",
         "ActivityLogs",
         "ConversationMessages",
@@ -38,6 +41,7 @@ public sealed class LocalBackupService : IBackupService
         "Orders",
         "FollowUps",
         "CustomerNotes",
+        "ReplyTemplates",
         "PriceAdjustments",
         "ActivityLogs",
         "ConversationMessages",
@@ -52,6 +56,7 @@ public sealed class LocalBackupService : IBackupService
         "Orders",
         "FollowUps",
         "CustomerNotes",
+        "ReplyTemplates",
         "PriceAdjustments",
         "ActivityLogs",
         "ConversationMessages",
@@ -71,17 +76,23 @@ public sealed class LocalBackupService : IBackupService
     private readonly ISyncService _syncService;
     private readonly ISyncRecordRepository _syncRecordRepository;
     private readonly IActivityLogRepository _activityLogRepository;
+    private readonly LauncherConnectionFactory? _launcherConnectionFactory;
+    private readonly ISessionContextService? _sessionContextService;
 
     public LocalBackupService(
         SqliteConnectionFactory connectionFactory,
         ISyncService syncService,
         ISyncRecordRepository syncRecordRepository,
-        IActivityLogRepository activityLogRepository)
+        IActivityLogRepository activityLogRepository,
+        LauncherConnectionFactory? launcherConnectionFactory = null,
+        ISessionContextService? sessionContextService = null)
     {
         _connectionFactory = connectionFactory;
         _syncService = syncService;
         _syncRecordRepository = syncRecordRepository;
         _activityLogRepository = activityLogRepository;
+        _launcherConnectionFactory = launcherConnectionFactory;
+        _sessionContextService = sessionContextService;
     }
 
     public async Task<BackupResult> ExportAsync(
@@ -256,6 +267,8 @@ public sealed class LocalBackupService : IBackupService
                 await InsertTableRowsAsync(connection, transaction, tableName, tableElement, cancellationToken);
             }
 
+            await RestoreLauncherSnapshotAsync(validation.Manifest, cancellationToken);
+
             await transaction.CommitAsync(cancellationToken);
 
             var restoredAt = DateTimeOffset.Now;
@@ -416,6 +429,8 @@ public sealed class LocalBackupService : IBackupService
             manifest.Counts[tableName] = rows.Count;
         }
 
+        await AppendLauncherSnapshotAsync(manifest, cancellationToken);
+
         return manifest;
     }
 
@@ -427,7 +442,7 @@ public sealed class LocalBackupService : IBackupService
     {
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = $"SELECT * FROM {tableName} WHERE DeletedAt IS NULL ORDER BY Id ASC;";
+        command.CommandText = $"SELECT * FROM {tableName} WHERE {BuildExportPredicate(tableName)} ORDER BY Id ASC;";
 
         var rows = new List<Dictionary<string, object?>>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -444,6 +459,133 @@ public sealed class LocalBackupService : IBackupService
         }
 
         return rows;
+    }
+
+    private async Task AppendLauncherSnapshotAsync(BackupManifest manifest, CancellationToken cancellationToken)
+    {
+        if (_launcherConnectionFactory is null)
+        {
+            return;
+        }
+
+        var accountId = await ResolveCurrentAccountIdAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(accountId))
+        {
+            return;
+        }
+
+        await using var connection = _launcherConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT
+                AccountId,
+                Username,
+                DisplayName,
+                PasswordHash,
+                PasswordSalt,
+                PasswordIterations,
+                PinHash,
+                PinSalt,
+                PinIterations,
+                RecoveryKeyHash,
+                RecoveryKeySalt,
+                RecoveryKeyIterations,
+                RecoveryEncryptedDataKey,
+                RecoveryDataKeyNonce,
+                RecoveryDataKeyTag,
+                EncryptedDataKey,
+                DataKeyNonce,
+                DataKeyTag,
+                AdminOwnerAccountId,
+                AdminEncryptedDataKey,
+                AdminDataKeyNonce,
+                AdminDataKeyTag,
+                DatabasePath,
+                Role,
+                IsEnabled,
+                CreatedAt,
+                UpdatedAt,
+                LastLoginAt
+            FROM LocalAccounts
+            WHERE AccountId = $accountId
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$accountId", accountId);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return;
+        }
+
+        var snapshotRows = new List<LauncherAccountBackupRow>
+        {
+            new()
+            {
+                AccountId = reader.GetString(0),
+                Username = reader.GetString(1),
+                DisplayName = reader.GetString(2),
+                PasswordHash = Convert.ToBase64String((byte[])reader[3]),
+                PasswordSalt = Convert.ToBase64String((byte[])reader[4]),
+                PasswordIterations = reader.GetInt32(5),
+                PinHash = Convert.ToBase64String((byte[])reader[6]),
+                PinSalt = Convert.ToBase64String((byte[])reader[7]),
+                PinIterations = reader.GetInt32(8),
+                RecoveryKeyHash = ToBase64Nullable(reader, 9),
+                RecoveryKeySalt = ToBase64Nullable(reader, 10),
+                RecoveryKeyIterations = reader.IsDBNull(11) ? null : reader.GetInt32(11),
+                RecoveryEncryptedDataKey = ToBase64Nullable(reader, 12),
+                RecoveryDataKeyNonce = ToBase64Nullable(reader, 13),
+                RecoveryDataKeyTag = ToBase64Nullable(reader, 14),
+                EncryptedDataKey = Convert.ToBase64String((byte[])reader[15]),
+                DataKeyNonce = Convert.ToBase64String((byte[])reader[16]),
+                DataKeyTag = Convert.ToBase64String((byte[])reader[17]),
+                AdminOwnerAccountId = reader.IsDBNull(18) ? null : reader.GetString(18),
+                AdminEncryptedDataKey = ToBase64Nullable(reader, 19),
+                AdminDataKeyNonce = ToBase64Nullable(reader, 20),
+                AdminDataKeyTag = ToBase64Nullable(reader, 21),
+                DatabasePath = reader.GetString(22),
+                Role = reader.GetInt32(23),
+                IsEnabled = reader.GetInt32(24) == 1,
+                CreatedAt = reader.GetString(25),
+                UpdatedAt = reader.GetString(26),
+                LastLoginAt = reader.IsDBNull(27) ? null : reader.GetString(27)
+            }
+        };
+
+        manifest.Tables[LauncherLocalAccountsTableName] = JsonSerializer.SerializeToElement(snapshotRows, SerializerOptions);
+        manifest.Counts[LauncherLocalAccountsTableName] = snapshotRows.Count;
+    }
+
+    private async Task<string?> ResolveCurrentAccountIdAsync(CancellationToken cancellationToken)
+    {
+        var sessionAccountId = _sessionContextService?.Current?.AccountId;
+        if (!string.IsNullOrWhiteSpace(sessionAccountId))
+        {
+            return sessionAccountId;
+        }
+
+        if (_launcherConnectionFactory is null)
+        {
+            return null;
+        }
+
+        await using var connection = _launcherConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT AccountId
+            FROM LocalAccounts
+            WHERE DatabasePath = $databasePath
+            ORDER BY UpdatedAt DESC
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$databasePath", _connectionFactory.DatabasePath);
+
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        return value as string;
     }
 
     private async Task<BackupValidationResult> ValidateCoreAsync(string backupPath, CancellationToken cancellationToken)
@@ -546,6 +688,21 @@ public sealed class LocalBackupService : IBackupService
                     if (tableElement.GetArrayLength() != count)
                     {
                         errors.Add($"表 {tableName} 的 counts 与实际记录数不一致。");
+                    }
+                }
+
+                if (manifest.Tables.TryGetValue(LauncherLocalAccountsTableName, out var launcherTableElement))
+                {
+                    if (launcherTableElement.ValueKind != JsonValueKind.Array)
+                    {
+                        errors.Add($"表 {LauncherLocalAccountsTableName} 不是数组。");
+                    }
+
+                    if (manifest.Counts.TryGetValue(LauncherLocalAccountsTableName, out var launcherCount)
+                        && launcherTableElement.ValueKind == JsonValueKind.Array
+                        && launcherTableElement.GetArrayLength() != launcherCount)
+                    {
+                        errors.Add($"表 {LauncherLocalAccountsTableName} 的 counts 与实际记录数不一致。");
                     }
                 }
             }
@@ -690,7 +847,7 @@ public sealed class LocalBackupService : IBackupService
     {
         var predicates = new List<string>
         {
-            "DeletedAt IS NULL"
+            BuildExportPredicate(tableName)
         };
 
         var auditExclusion = GetAuditExclusionPredicate(tableName);
@@ -709,6 +866,15 @@ public sealed class LocalBackupService : IBackupService
         }
 
         return string.Join(" AND ", predicates.Select(static predicate => $"({predicate})"));
+    }
+
+    private static string BuildExportPredicate(string tableName)
+    {
+        return tableName switch
+        {
+            "ReplyTemplates" => "1=1",
+            _ => "DeletedAt IS NULL"
+        };
     }
 
     private static string? GetQaScopePredicate(string tableName)
@@ -782,6 +948,199 @@ public sealed class LocalBackupService : IBackupService
             }
 
             await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    private async Task RestoreLauncherSnapshotAsync(BackupManifest manifest, CancellationToken cancellationToken)
+    {
+        if (_launcherConnectionFactory is null)
+        {
+            return;
+        }
+
+        if (!manifest.Tables.TryGetValue(LauncherLocalAccountsTableName, out var launcherTableElement))
+        {
+            return;
+        }
+
+        if (launcherTableElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 的备份结构无效。");
+        }
+
+        List<LauncherAccountBackupRow>? rows;
+        try
+        {
+            rows = JsonSerializer.Deserialize<List<LauncherAccountBackupRow>>(launcherTableElement.GetRawText());
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 解析失败：{ex.Message}");
+        }
+
+        if (rows is null || rows.Count == 0)
+        {
+            return;
+        }
+
+        if (rows.Count > 1)
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 包含多条账号快照，不允许恢复。");
+        }
+
+        var row = rows[0];
+        ValidateLauncherSnapshotRow(row);
+
+        var currentSessionAccountId = _sessionContextService?.Current?.AccountId;
+        if (!string.IsNullOrWhiteSpace(currentSessionAccountId)
+            && !string.Equals(currentSessionAccountId, row.AccountId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("备份中的账号标识与当前会话账号不一致，已拒绝恢复。");
+        }
+
+        var restoredDatabasePath = _connectionFactory.DatabasePath;
+
+        await using var connection = _launcherConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO LocalAccounts (
+                AccountId,
+                Username,
+                DisplayName,
+                PasswordHash,
+                PasswordSalt,
+                PasswordIterations,
+                PinHash,
+                PinSalt,
+                PinIterations,
+                RecoveryKeyHash,
+                RecoveryKeySalt,
+                RecoveryKeyIterations,
+                RecoveryEncryptedDataKey,
+                RecoveryDataKeyNonce,
+                RecoveryDataKeyTag,
+                EncryptedDataKey,
+                DataKeyNonce,
+                DataKeyTag,
+                AdminOwnerAccountId,
+                AdminEncryptedDataKey,
+                AdminDataKeyNonce,
+                AdminDataKeyTag,
+                DatabasePath,
+                Role,
+                IsEnabled,
+                CreatedAt,
+                UpdatedAt,
+                LastLoginAt
+            )
+            VALUES (
+                $accountId,
+                $username,
+                $displayName,
+                $passwordHash,
+                $passwordSalt,
+                $passwordIterations,
+                $pinHash,
+                $pinSalt,
+                $pinIterations,
+                $recoveryKeyHash,
+                $recoveryKeySalt,
+                $recoveryKeyIterations,
+                $recoveryEncryptedDataKey,
+                $recoveryDataKeyNonce,
+                $recoveryDataKeyTag,
+                $encryptedDataKey,
+                $dataKeyNonce,
+                $dataKeyTag,
+                $adminOwnerAccountId,
+                $adminEncryptedDataKey,
+                $adminDataKeyNonce,
+                $adminDataKeyTag,
+                $databasePath,
+                $role,
+                $isEnabled,
+                $createdAt,
+                $updatedAt,
+                $lastLoginAt
+            )
+            ON CONFLICT(AccountId) DO UPDATE SET
+                Username = excluded.Username,
+                DisplayName = excluded.DisplayName,
+                PasswordHash = excluded.PasswordHash,
+                PasswordSalt = excluded.PasswordSalt,
+                PasswordIterations = excluded.PasswordIterations,
+                PinHash = excluded.PinHash,
+                PinSalt = excluded.PinSalt,
+                PinIterations = excluded.PinIterations,
+                RecoveryKeyHash = excluded.RecoveryKeyHash,
+                RecoveryKeySalt = excluded.RecoveryKeySalt,
+                RecoveryKeyIterations = excluded.RecoveryKeyIterations,
+                RecoveryEncryptedDataKey = excluded.RecoveryEncryptedDataKey,
+                RecoveryDataKeyNonce = excluded.RecoveryDataKeyNonce,
+                RecoveryDataKeyTag = excluded.RecoveryDataKeyTag,
+                EncryptedDataKey = excluded.EncryptedDataKey,
+                DataKeyNonce = excluded.DataKeyNonce,
+                DataKeyTag = excluded.DataKeyTag,
+                AdminOwnerAccountId = excluded.AdminOwnerAccountId,
+                AdminEncryptedDataKey = excluded.AdminEncryptedDataKey,
+                AdminDataKeyNonce = excluded.AdminDataKeyNonce,
+                AdminDataKeyTag = excluded.AdminDataKeyTag,
+                DatabasePath = excluded.DatabasePath,
+                Role = excluded.Role,
+                IsEnabled = excluded.IsEnabled,
+                CreatedAt = excluded.CreatedAt,
+                UpdatedAt = excluded.UpdatedAt,
+                LastLoginAt = excluded.LastLoginAt;
+            """;
+        command.Parameters.AddWithValue("$accountId", row.AccountId);
+        command.Parameters.AddWithValue("$username", row.Username);
+        command.Parameters.AddWithValue("$displayName", row.DisplayName);
+        command.Parameters.AddWithValue("$passwordHash", FromBase64(row.PasswordHash, "PasswordHash"));
+        command.Parameters.AddWithValue("$passwordSalt", FromBase64(row.PasswordSalt, "PasswordSalt"));
+        command.Parameters.AddWithValue("$passwordIterations", row.PasswordIterations);
+        command.Parameters.AddWithValue("$pinHash", FromBase64(row.PinHash, "PinHash"));
+        command.Parameters.AddWithValue("$pinSalt", FromBase64(row.PinSalt, "PinSalt"));
+        command.Parameters.AddWithValue("$pinIterations", row.PinIterations);
+        command.Parameters.AddWithValue("$recoveryKeyHash", ToDbBlobFromBase64(row.RecoveryKeyHash));
+        command.Parameters.AddWithValue("$recoveryKeySalt", ToDbBlobFromBase64(row.RecoveryKeySalt));
+        command.Parameters.AddWithValue("$recoveryKeyIterations", row.RecoveryKeyIterations is null ? DBNull.Value : row.RecoveryKeyIterations.Value);
+        command.Parameters.AddWithValue("$recoveryEncryptedDataKey", ToDbBlobFromBase64(row.RecoveryEncryptedDataKey));
+        command.Parameters.AddWithValue("$recoveryDataKeyNonce", ToDbBlobFromBase64(row.RecoveryDataKeyNonce));
+        command.Parameters.AddWithValue("$recoveryDataKeyTag", ToDbBlobFromBase64(row.RecoveryDataKeyTag));
+        command.Parameters.AddWithValue("$encryptedDataKey", FromBase64(row.EncryptedDataKey, "EncryptedDataKey"));
+        command.Parameters.AddWithValue("$dataKeyNonce", FromBase64(row.DataKeyNonce, "DataKeyNonce"));
+        command.Parameters.AddWithValue("$dataKeyTag", FromBase64(row.DataKeyTag, "DataKeyTag"));
+        command.Parameters.AddWithValue("$adminOwnerAccountId", string.IsNullOrWhiteSpace(row.AdminOwnerAccountId) ? DBNull.Value : row.AdminOwnerAccountId);
+        command.Parameters.AddWithValue("$adminEncryptedDataKey", ToDbBlobFromBase64(row.AdminEncryptedDataKey));
+        command.Parameters.AddWithValue("$adminDataKeyNonce", ToDbBlobFromBase64(row.AdminDataKeyNonce));
+        command.Parameters.AddWithValue("$adminDataKeyTag", ToDbBlobFromBase64(row.AdminDataKeyTag));
+        command.Parameters.AddWithValue("$databasePath", restoredDatabasePath);
+        command.Parameters.AddWithValue("$role", row.Role);
+        command.Parameters.AddWithValue("$isEnabled", row.IsEnabled ? 1 : 0);
+        command.Parameters.AddWithValue("$createdAt", row.CreatedAt);
+        command.Parameters.AddWithValue("$updatedAt", row.UpdatedAt);
+        command.Parameters.AddWithValue("$lastLoginAt", string.IsNullOrWhiteSpace(row.LastLoginAt) ? DBNull.Value : row.LastLoginAt);
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static void ValidateLauncherSnapshotRow(LauncherAccountBackupRow row)
+    {
+        if (string.IsNullOrWhiteSpace(row.AccountId)
+            || string.IsNullOrWhiteSpace(row.Username)
+            || string.IsNullOrWhiteSpace(row.DisplayName)
+            || string.IsNullOrWhiteSpace(row.PasswordHash)
+            || string.IsNullOrWhiteSpace(row.PasswordSalt)
+            || string.IsNullOrWhiteSpace(row.PinHash)
+            || string.IsNullOrWhiteSpace(row.PinSalt)
+            || string.IsNullOrWhiteSpace(row.EncryptedDataKey)
+            || string.IsNullOrWhiteSpace(row.DataKeyNonce)
+            || string.IsNullOrWhiteSpace(row.DataKeyTag)
+            || string.IsNullOrWhiteSpace(row.CreatedAt)
+            || string.IsNullOrWhiteSpace(row.UpdatedAt))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在缺失关键字段的账号快照。");
         }
     }
 
@@ -881,6 +1240,38 @@ public sealed class LocalBackupService : IBackupService
             JsonValueKind.Array or JsonValueKind.Object => element.GetRawText(),
             _ => element.ToString()
         };
+    }
+
+    private static string? ToBase64Nullable(SqliteDataReader reader, int index)
+    {
+        if (reader.IsDBNull(index))
+        {
+            return null;
+        }
+
+        return Convert.ToBase64String((byte[])reader[index]);
+    }
+
+    private static byte[] FromBase64(string base64, string fieldName)
+    {
+        try
+        {
+            return Convert.FromBase64String(base64);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException($"字段 {fieldName} 的 Base64 数据无效：{ex.Message}");
+        }
+    }
+
+    private static object ToDbBlobFromBase64(string? base64)
+    {
+        if (string.IsNullOrWhiteSpace(base64))
+        {
+            return DBNull.Value;
+        }
+
+        return FromBase64(base64, "blob");
     }
 
     private static object? SanitizeValue(string tableName, string columnName, object value)
@@ -1208,6 +1599,93 @@ public sealed class LocalBackupService : IBackupService
     private static int GenerateBackupEntityId()
     {
         return Random.Shared.Next(1, int.MaxValue);
+    }
+
+    private sealed class LauncherAccountBackupRow
+    {
+        [JsonPropertyName("accountId")]
+        public string AccountId { get; set; } = string.Empty;
+
+        [JsonPropertyName("username")]
+        public string Username { get; set; } = string.Empty;
+
+        [JsonPropertyName("displayName")]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [JsonPropertyName("passwordHash")]
+        public string PasswordHash { get; set; } = string.Empty;
+
+        [JsonPropertyName("passwordSalt")]
+        public string PasswordSalt { get; set; } = string.Empty;
+
+        [JsonPropertyName("passwordIterations")]
+        public int PasswordIterations { get; set; }
+
+        [JsonPropertyName("pinHash")]
+        public string PinHash { get; set; } = string.Empty;
+
+        [JsonPropertyName("pinSalt")]
+        public string PinSalt { get; set; } = string.Empty;
+
+        [JsonPropertyName("pinIterations")]
+        public int PinIterations { get; set; }
+
+        [JsonPropertyName("recoveryKeyHash")]
+        public string? RecoveryKeyHash { get; set; }
+
+        [JsonPropertyName("recoveryKeySalt")]
+        public string? RecoveryKeySalt { get; set; }
+
+        [JsonPropertyName("recoveryKeyIterations")]
+        public int? RecoveryKeyIterations { get; set; }
+
+        [JsonPropertyName("recoveryEncryptedDataKey")]
+        public string? RecoveryEncryptedDataKey { get; set; }
+
+        [JsonPropertyName("recoveryDataKeyNonce")]
+        public string? RecoveryDataKeyNonce { get; set; }
+
+        [JsonPropertyName("recoveryDataKeyTag")]
+        public string? RecoveryDataKeyTag { get; set; }
+
+        [JsonPropertyName("encryptedDataKey")]
+        public string EncryptedDataKey { get; set; } = string.Empty;
+
+        [JsonPropertyName("dataKeyNonce")]
+        public string DataKeyNonce { get; set; } = string.Empty;
+
+        [JsonPropertyName("dataKeyTag")]
+        public string DataKeyTag { get; set; } = string.Empty;
+
+        [JsonPropertyName("adminOwnerAccountId")]
+        public string? AdminOwnerAccountId { get; set; }
+
+        [JsonPropertyName("adminEncryptedDataKey")]
+        public string? AdminEncryptedDataKey { get; set; }
+
+        [JsonPropertyName("adminDataKeyNonce")]
+        public string? AdminDataKeyNonce { get; set; }
+
+        [JsonPropertyName("adminDataKeyTag")]
+        public string? AdminDataKeyTag { get; set; }
+
+        [JsonPropertyName("databasePath")]
+        public string DatabasePath { get; set; } = string.Empty;
+
+        [JsonPropertyName("role")]
+        public int Role { get; set; }
+
+        [JsonPropertyName("isEnabled")]
+        public bool IsEnabled { get; set; }
+
+        [JsonPropertyName("createdAt")]
+        public string CreatedAt { get; set; } = string.Empty;
+
+        [JsonPropertyName("updatedAt")]
+        public string UpdatedAt { get; set; } = string.Empty;
+
+        [JsonPropertyName("lastLoginAt")]
+        public string? LastLoginAt { get; set; }
     }
 
     private sealed record TargetInspectionResult(

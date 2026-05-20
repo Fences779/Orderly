@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Core.Services;
+using Orderly.Data.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -9,86 +11,43 @@ namespace Orderly.Data.Repositories;
 public sealed class OrderRepository : IOrderRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
+    private readonly IFieldEncryptionService _fieldEncryptionService;
 
-    public OrderRepository(SqliteConnectionFactory connectionFactory)
+    public OrderRepository(SqliteConnectionFactory connectionFactory, IFieldEncryptionService fieldEncryptionService)
     {
         _connectionFactory = connectionFactory;
+        _fieldEncryptionService = fieldEncryptionService ?? throw new ArgumentNullException(nameof(fieldEncryptionService));
     }
 
     public async Task<IReadOnlyList<MerchantOrder>> GetRecentAsync(CancellationToken cancellationToken = default)
     {
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT
-                o.Id, o.CustomerId, o.DealId, o.Title, o.Status, o.Amount, o.Requirement, o.SourcePlatform, o.Channel,
-                o.ExternalId, o.RawPayload, o.NextFollowUpAt, o.CreatedAt, o.UpdatedAt, o.DeletedAt, o.RemoteId, o.IsSynced, o.Version,
-                c.Id, c.Name, c.Status, c.Priority, c.SourcePlatform, c.Channel, c.ContactHandle, c.Phone, c.Remark, c.ExternalId, c.RawPayload,
-                c.LastContactAt, c.CreatedAt, c.UpdatedAt, c.DeletedAt, c.RemoteId, c.IsSynced, c.Version
-            FROM Orders o
-            INNER JOIN Customers c ON c.Id = o.CustomerId
+        return await QueryOrdersAsync(
+            """
             WHERE o.DeletedAt IS NULL AND c.DeletedAt IS NULL
-            ORDER BY o.UpdatedAt DESC;
-            """;
-
-        var rows = new List<MerchantOrder>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            rows.Add(MapWithCustomer(reader));
-        }
-
-        return rows;
+            ORDER BY o.UpdatedAt DESC
+            """,
+            configure: null,
+            cancellationToken);
     }
 
     public async Task<IReadOnlyList<MerchantOrder>> ListByCustomerIdAsync(int customerId, CancellationToken cancellationToken = default)
     {
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT
-                o.Id, o.CustomerId, o.DealId, o.Title, o.Status, o.Amount, o.Requirement, o.SourcePlatform, o.Channel,
-                o.ExternalId, o.RawPayload, o.NextFollowUpAt, o.CreatedAt, o.UpdatedAt, o.DeletedAt, o.RemoteId, o.IsSynced, o.Version,
-                c.Id, c.Name, c.Status, c.Priority, c.SourcePlatform, c.Channel, c.ContactHandle, c.Phone, c.Remark, c.ExternalId, c.RawPayload,
-                c.LastContactAt, c.CreatedAt, c.UpdatedAt, c.DeletedAt, c.RemoteId, c.IsSynced, c.Version
-            FROM Orders o
-            INNER JOIN Customers c ON c.Id = o.CustomerId
+        return await QueryOrdersAsync(
+            """
             WHERE o.CustomerId = $customerId AND o.DeletedAt IS NULL AND c.DeletedAt IS NULL
-            ORDER BY o.UpdatedAt DESC;
-            """;
-        command.Parameters.AddWithValue("$customerId", customerId);
-
-        var rows = new List<MerchantOrder>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            rows.Add(MapWithCustomer(reader));
-        }
-
-        return rows;
+            ORDER BY o.UpdatedAt DESC
+            """,
+            configure: command => command.Parameters.AddWithValue("$customerId", customerId),
+            cancellationToken);
     }
 
     public async Task<MerchantOrder?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        await using var connection = _connectionFactory.CreateConnection();
-        await connection.OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT
-                o.Id, o.CustomerId, o.DealId, o.Title, o.Status, o.Amount, o.Requirement, o.SourcePlatform, o.Channel,
-                o.ExternalId, o.RawPayload, o.NextFollowUpAt, o.CreatedAt, o.UpdatedAt, o.DeletedAt, o.RemoteId, o.IsSynced, o.Version,
-                c.Id, c.Name, c.Status, c.Priority, c.SourcePlatform, c.Channel, c.ContactHandle, c.Phone, c.Remark, c.ExternalId, c.RawPayload,
-                c.LastContactAt, c.CreatedAt, c.UpdatedAt, c.DeletedAt, c.RemoteId, c.IsSynced, c.Version
-            FROM Orders o
-            INNER JOIN Customers c ON c.Id = o.CustomerId
-            WHERE o.Id = $id AND o.DeletedAt IS NULL AND c.DeletedAt IS NULL;
-            """;
-        command.Parameters.AddWithValue("$id", id);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? MapWithCustomer(reader) : null;
+        var rows = await QueryOrdersAsync(
+            "WHERE o.Id = $id AND o.DeletedAt IS NULL AND c.DeletedAt IS NULL",
+            configure: command => command.Parameters.AddWithValue("$id", id),
+            cancellationToken);
+        return rows.FirstOrDefault();
     }
 
     public async Task<MerchantOrder> CreateAsync(MerchantOrder order, CancellationToken cancellationToken = default)
@@ -109,18 +68,17 @@ public sealed class OrderRepository : IOrderRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO Orders (
-                CustomerId, DealId, Title, Status, Amount, Requirement, SourcePlatform, Channel,
-                ExternalId, RawPayload, NextFollowUpAt, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
+                CustomerId, DealId, Title, TitleCiphertext, Status, Amount, AmountCiphertext, Requirement, RequirementCiphertext, SourcePlatform, Channel,
+                ExternalId, ExternalIdCiphertext, RawPayload, RawPayloadCiphertext, NextFollowUpAt, NextFollowUpAtCiphertext, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             )
             VALUES (
-                $customerId, $dealId, $title, $status, $amount, $requirement, $sourcePlatform, $channel,
-                $externalId, $rawPayload, $nextFollowUpAt, $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
+                $customerId, $dealId, $title, $titleCiphertext, $status, $amount, $amountCiphertext, $requirement, $requirementCiphertext, $sourcePlatform, $channel,
+                $externalId, $externalIdCiphertext, $rawPayload, $rawPayloadCiphertext, $nextFollowUpAt, $nextFollowUpAtCiphertext, $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
             );
             SELECT last_insert_rowid();
             """;
-        AddParameters(command, order);
+        AddParameters(command, order, _fieldEncryptionService);
         order.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
-
         return await GetByIdAsync(order.Id, cancellationToken) ?? order;
     }
 
@@ -138,14 +96,20 @@ public sealed class OrderRepository : IOrderRepository
             SET CustomerId = $customerId,
                 DealId = $dealId,
                 Title = $title,
+                TitleCiphertext = $titleCiphertext,
                 Status = $status,
                 Amount = $amount,
+                AmountCiphertext = $amountCiphertext,
                 Requirement = $requirement,
+                RequirementCiphertext = $requirementCiphertext,
                 SourcePlatform = $sourcePlatform,
                 Channel = $channel,
                 ExternalId = $externalId,
+                ExternalIdCiphertext = $externalIdCiphertext,
                 RawPayload = $rawPayload,
+                RawPayloadCiphertext = $rawPayloadCiphertext,
                 NextFollowUpAt = $nextFollowUpAt,
+                NextFollowUpAtCiphertext = $nextFollowUpAtCiphertext,
                 UpdatedAt = $updatedAt,
                 DeletedAt = $deletedAt,
                 RemoteId = $remoteId,
@@ -153,7 +117,7 @@ public sealed class OrderRepository : IOrderRepository
                 Version = $version
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
-        AddParameters(command, order);
+        AddParameters(command, order, _fieldEncryptionService);
         command.Parameters.AddWithValue("$id", order.Id);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -178,45 +142,79 @@ public sealed class OrderRepository : IOrderRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static MerchantOrder MapWithCustomer(SqliteDataReader reader)
+    private async Task<IReadOnlyList<MerchantOrder>> QueryOrdersAsync(
+        string whereClause,
+        Action<SqliteCommand>? configure,
+        CancellationToken cancellationToken)
     {
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"{BaseSelectSql}\n{whereClause};";
+        configure?.Invoke(command);
+
+        var rows = new List<MerchantOrder>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            rows.Add(MapWithCustomer(reader, _fieldEncryptionService));
+        }
+
+        return rows;
+    }
+
+    private static MerchantOrder MapWithCustomer(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)
+    {
+        var title = EncryptedColumnReader.ReadRequiredString(reader, 4, fieldEncryptionService, "Orders.TitleCiphertext");
+        var requirement = EncryptedColumnReader.ReadRequiredString(reader, 9, fieldEncryptionService, "Orders.RequirementCiphertext");
+        var externalId = EncryptedColumnReader.ReadRequiredString(reader, 13, fieldEncryptionService, "Orders.ExternalIdCiphertext");
+        var rawPayload = EncryptedColumnReader.ReadRequiredString(reader, 15, fieldEncryptionService, "Orders.RawPayloadCiphertext");
+        var amount = EncryptedColumnReader.ReadRequiredDecimal(reader, 7, fieldEncryptionService, "Orders.AmountCiphertext");
+        var nextFollowUpAt = EncryptedColumnReader.ReadOptionalDateTime(reader, 17, fieldEncryptionService, "Orders.NextFollowUpAtCiphertext");
+
         return new MerchantOrder
         {
             Id = reader.GetInt32(0),
             CustomerId = reader.GetInt32(1),
             DealId = reader.IsDBNull(2) ? null : reader.GetInt32(2),
-            Title = reader.GetString(3),
-            Status = (OrderStatus)reader.GetInt32(4),
-            Amount = reader.GetDecimal(5),
-            Requirement = reader.GetString(6),
-            SourcePlatform = reader.GetString(7),
-            Channel = reader.GetString(8),
-            ExternalId = reader.GetString(9),
-            RawPayload = reader.GetString(10),
-            NextFollowUpAt = reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11), null, DateTimeStyles.RoundtripKind),
-            CreatedAt = DateTime.Parse(reader.GetString(12), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(13), null, DateTimeStyles.RoundtripKind),
-            DeletedAt = reader.IsDBNull(14) ? null : DateTime.Parse(reader.GetString(14), null, DateTimeStyles.RoundtripKind),
-            RemoteId = reader.GetString(15),
-            IsSynced = reader.GetInt32(16) == 1,
-            Version = reader.GetInt32(17),
-            Customer = CustomerRepository.Map(reader, 18)
+            Title = title,
+            Status = (OrderStatus)reader.GetInt32(5),
+            Amount = amount,
+            Requirement = requirement,
+            SourcePlatform = reader.GetString(10),
+            Channel = reader.GetString(11),
+            ExternalId = externalId,
+            RawPayload = rawPayload,
+            NextFollowUpAt = nextFollowUpAt,
+            CreatedAt = DateTime.Parse(reader.GetString(18), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(19), null, DateTimeStyles.RoundtripKind),
+            DeletedAt = reader.IsDBNull(20) ? null : DateTime.Parse(reader.GetString(20), null, DateTimeStyles.RoundtripKind),
+            RemoteId = reader.GetString(21),
+            IsSynced = reader.GetInt32(22) == 1,
+            Version = reader.GetInt32(23),
+            Customer = CustomerRepository.Map(reader, fieldEncryptionService, 24)
         };
     }
 
-    private static void AddParameters(SqliteCommand command, MerchantOrder order)
+    private static void AddParameters(SqliteCommand command, MerchantOrder order, IFieldEncryptionService fieldEncryptionService)
     {
         command.Parameters.AddWithValue("$customerId", order.CustomerId);
         command.Parameters.AddWithValue("$dealId", ToDbInt(order.DealId));
-        command.Parameters.AddWithValue("$title", order.Title);
+        command.Parameters.AddWithValue("$title", string.Empty);
+        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(order.Title));
         command.Parameters.AddWithValue("$status", (int)order.Status);
-        command.Parameters.AddWithValue("$amount", order.Amount);
-        command.Parameters.AddWithValue("$requirement", order.Requirement);
+        command.Parameters.AddWithValue("$amount", 0);
+        command.Parameters.AddWithValue("$amountCiphertext", fieldEncryptionService.Encrypt(order.Amount.ToString(CultureInfo.InvariantCulture)));
+        command.Parameters.AddWithValue("$requirement", string.Empty);
+        command.Parameters.AddWithValue("$requirementCiphertext", fieldEncryptionService.Encrypt(order.Requirement));
         command.Parameters.AddWithValue("$sourcePlatform", order.SourcePlatform);
         command.Parameters.AddWithValue("$channel", order.Channel);
-        command.Parameters.AddWithValue("$externalId", order.ExternalId);
-        command.Parameters.AddWithValue("$rawPayload", order.RawPayload);
-        command.Parameters.AddWithValue("$nextFollowUpAt", ToDbDate(order.NextFollowUpAt));
+        command.Parameters.AddWithValue("$externalId", string.Empty);
+        command.Parameters.AddWithValue("$externalIdCiphertext", fieldEncryptionService.Encrypt(order.ExternalId));
+        command.Parameters.AddWithValue("$rawPayload", string.Empty);
+        command.Parameters.AddWithValue("$rawPayloadCiphertext", fieldEncryptionService.Encrypt(order.RawPayload));
+        command.Parameters.AddWithValue("$nextFollowUpAt", DBNull.Value);
+        command.Parameters.AddWithValue("$nextFollowUpAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(order.NextFollowUpAt)));
         command.Parameters.AddWithValue("$createdAt", order.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", order.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(order.DeletedAt));
@@ -234,4 +232,19 @@ public sealed class OrderRepository : IOrderRepository
     {
         return value is null ? DBNull.Value : value.Value.ToString("O");
     }
+
+    private static string ToCipherDate(DateTime? value)
+    {
+        return value is null ? string.Empty : value.Value.ToString("O");
+    }
+
+    private const string BaseSelectSql = """
+        SELECT
+            o.Id, o.CustomerId, o.DealId, o.Title, o.TitleCiphertext, o.Status, o.Amount, o.AmountCiphertext, o.Requirement, o.RequirementCiphertext, o.SourcePlatform, o.Channel,
+            o.ExternalId, o.ExternalIdCiphertext, o.RawPayload, o.RawPayloadCiphertext, o.NextFollowUpAt, o.NextFollowUpAtCiphertext, o.CreatedAt, o.UpdatedAt, o.DeletedAt, o.RemoteId, o.IsSynced, o.Version,
+            c.Id, c.Name, c.NameCiphertext, c.Status, c.Priority, c.SourcePlatform, c.Channel, c.ContactHandle, c.ContactHandleCiphertext, c.Phone, c.PhoneCiphertext, c.Remark, c.RemarkCiphertext, c.ExternalId, c.ExternalIdCiphertext, c.RawPayload, c.RawPayloadCiphertext,
+            c.LastContactAt, c.LastContactAtCiphertext, c.CreatedAt, c.UpdatedAt, c.DeletedAt, c.RemoteId, c.IsSynced, c.Version
+        FROM Orders o
+        INNER JOIN Customers c ON c.Id = o.CustomerId
+        """;
 }

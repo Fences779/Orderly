@@ -8,6 +8,25 @@ namespace Orderly.App.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    public const string SectionWorkbench = "工作台";
+    public const string SectionFulfillment = "订单履约";
+    public const string SectionException = "异常处理";
+    public const string SectionSettings = "设置";
+
+    private static readonly HashSet<string> SupportedSections = new(StringComparer.Ordinal)
+    {
+        SectionWorkbench,
+        SectionFulfillment,
+        SectionException,
+        SectionSettings
+    };
+
+    private static readonly HashSet<string> LegacySections = new(StringComparer.Ordinal)
+    {
+        "客户/订单",
+        "话术库"
+    };
+
     private readonly ICustomerRepository _customerRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly ICustomerService _customerService;
@@ -25,9 +44,14 @@ public partial class MainViewModel : ObservableObject
     private readonly INavigationRouteService _navigationRouteService;
     private readonly IBackupService _backupService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
+    private readonly IStringNarrationOrderService _stringNarrationOrderService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
     private readonly IAppSettingRepository _settingRepository;
+    private readonly ISyncService _syncService;
+    private readonly ISyncRecordRepository _syncRecordRepository;
     private readonly IClipboardService _clipboardService;
+    private readonly ILocalAccountManagementService? _localAccountManagementService;
+    private readonly ISessionContextService? _sessionContextService;
 
     public MainViewModel(
         ICustomerRepository customerRepository,
@@ -44,10 +68,18 @@ public partial class MainViewModel : ObservableObject
         IActivityLogService activityLogService,
         IBackupService backupService,
         IPriceAdjustmentService priceAdjustmentService,
+        IStringNarrationOrderService? stringNarrationOrderService,
         IReplyTemplateRepository replyTemplateRepository,
         IAppSettingRepository settingRepository,
+        ISyncService syncService,
+        ISyncRecordRepository syncRecordRepository,
         IClipboardService clipboardService,
-        string databasePath)
+        string databasePath,
+        ILocalAccountManagementService? localAccountManagementService = null,
+        ISessionContextService? sessionContextService = null,
+        string stringNarrationGatewayEndpoint = "",
+        bool isStringNarrationGatewayTokenConfigured = false,
+        int stringNarrationGatewayTimeoutSeconds = 15)
         : this(
             customerRepository,
             orderRepository,
@@ -66,10 +98,18 @@ public partial class MainViewModel : ObservableObject
             EmptyNavigationRouteService.Instance,
             backupService,
             priceAdjustmentService,
+            stringNarrationOrderService ?? EmptyStringNarrationOrderService.Instance,
             replyTemplateRepository,
             settingRepository,
+            syncService,
+            syncRecordRepository,
             clipboardService,
-            databasePath)
+            databasePath,
+            localAccountManagementService,
+            sessionContextService,
+            stringNarrationGatewayEndpoint,
+            isStringNarrationGatewayTokenConfigured,
+            stringNarrationGatewayTimeoutSeconds)
     {
     }
 
@@ -91,10 +131,18 @@ public partial class MainViewModel : ObservableObject
         INavigationRouteService navigationRouteService,
         IBackupService backupService,
         IPriceAdjustmentService priceAdjustmentService,
+        IStringNarrationOrderService? stringNarrationOrderService,
         IReplyTemplateRepository replyTemplateRepository,
         IAppSettingRepository settingRepository,
+        ISyncService syncService,
+        ISyncRecordRepository syncRecordRepository,
         IClipboardService clipboardService,
-        string databasePath)
+        string databasePath,
+        ILocalAccountManagementService? localAccountManagementService = null,
+        ISessionContextService? sessionContextService = null,
+        string stringNarrationGatewayEndpoint = "",
+        bool isStringNarrationGatewayTokenConfigured = false,
+        int stringNarrationGatewayTimeoutSeconds = 15)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -113,10 +161,19 @@ public partial class MainViewModel : ObservableObject
         _navigationRouteService = navigationRouteService;
         _backupService = backupService;
         _priceAdjustmentService = priceAdjustmentService;
+        _stringNarrationOrderService = stringNarrationOrderService ?? EmptyStringNarrationOrderService.Instance;
         _replyTemplateRepository = replyTemplateRepository;
         _settingRepository = settingRepository;
+        _syncService = syncService;
+        _syncRecordRepository = syncRecordRepository;
         _clipboardService = clipboardService;
+        _localAccountManagementService = localAccountManagementService;
+        _sessionContextService = sessionContextService;
         DatabasePath = databasePath;
+        IsStringNarrationGatewayEndpointConfigured = !string.IsNullOrWhiteSpace(stringNarrationGatewayEndpoint);
+        StringNarrationGatewayEndpoint = IsStringNarrationGatewayEndpointConfigured ? stringNarrationGatewayEndpoint : "未配置";
+        IsStringNarrationGatewayTokenConfigured = isStringNarrationGatewayTokenConfigured;
+        StringNarrationGatewayTimeoutSeconds = stringNarrationGatewayTimeoutSeconds;
         InitializeFilterOptions();
     }
 
@@ -132,11 +189,15 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<ReplyTemplate> ReplyTemplates { get; } = new();
     public ObservableCollection<WorkbenchTaskListItem> WorkbenchTasks { get; } = new();
     public ObservableCollection<SearchResultListItem> SearchResults { get; } = new();
-    public ObservableCollection<string> Sections { get; } = new(new[] { "工作台", "客户/订单", "话术库", "设置" });
+    public ObservableCollection<string> Sections { get; } = new(new[] { SectionWorkbench, SectionFulfillment, SectionException, SectionSettings });
     public ObservableCollection<SearchFilterOption> SearchFilterOptions { get; } = new();
     public ObservableCollection<QuickFilterOption> QuickFilterOptions { get; } = new();
     public ObservableCollection<CustomerStatus> CustomerStatusOptions { get; } = new(Enum.GetValues<CustomerStatus>());
     public ObservableCollection<OrderStatus> OrderStatusOptions { get; } = new(Enum.GetValues<OrderStatus>());
+    public ObservableCollection<LocalAccountSummary> ManagedAccounts { get; } = new();
+
+    public event Action? LockSessionRequested;
+    public event Action? LogoutRequested;
 
     public string DatabasePath { get; }
 
@@ -147,7 +208,13 @@ public partial class MainViewModel : ObservableObject
     private List<CustomerNote> _allCustomerNotes = new();
 
     [ObservableProperty]
-    private string selectedSection = "工作台";
+    private string selectedSection = SectionWorkbench;
+
+    [ObservableProperty]
+    private bool isCurrentUserOwner;
+
+    [ObservableProperty]
+    private string currentAccountDisplayName = string.Empty;
 
     [ObservableProperty]
     private string searchKeyword = string.Empty;
@@ -466,6 +533,22 @@ public partial class MainViewModel : ObservableObject
     private bool _isSynchronizingSelection;
     private int _detailLoadVersion;
 
+    private static string NormalizeSection(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return SectionWorkbench;
+        }
+
+        var normalized = value.Trim();
+        if (SupportedSections.Contains(normalized))
+        {
+            return normalized;
+        }
+
+        return LegacySections.Contains(normalized) ? SectionWorkbench : SectionWorkbench;
+    }
+
     private sealed class EmptyWorkbenchTaskService : IWorkbenchTaskService
     {
         public static EmptyWorkbenchTaskService Instance { get; } = new();
@@ -534,6 +617,41 @@ public partial class MainViewModel : ObservableObject
                 DisabledReason = "Navigation route service is not configured.",
                 StatusMessage = "Navigation route service is not configured."
             });
+        }
+    }
+
+    private sealed class EmptyStringNarrationOrderService : IStringNarrationOrderService
+    {
+        public static EmptyStringNarrationOrderService Instance { get; } = new();
+
+        public Task<StringNarrationWhoamiResult> WhoamiAsync(CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述订单服务未配置。");
+        }
+
+        public Task<StringNarrationOrderListResult> GetOrdersAsync(StringNarrationOrderQuery query, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述订单服务未配置。");
+        }
+
+        public Task<StringNarrationFulfillmentStats> GetFulfillmentStatsAsync(StringNarrationOrderQuery query, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述订单服务未配置。");
+        }
+
+        public Task<StringNarrationOrderDetail> GetOrderDetailAsync(string orderNo, string tradeNo = "", string id = "", CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述订单服务未配置。");
+        }
+
+        public Task<StringNarrationOrderDetail> UpdateFulfillmentAsync(StringNarrationFulfillmentUpdateRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述订单服务未配置。");
+        }
+
+        public Task<StringNarrationOrderDetail> GenerateProductionOrderAsync(StringNarrationGenerateProductionOrderRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述订单服务未配置。");
         }
     }
 }

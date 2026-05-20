@@ -10,6 +10,13 @@
         ResizeMode="NoResize"
         Background="{StaticResource PageBackgroundBrush}"
         AutomationProperties.AutomationId="SnoozeFollowUpDialog">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/AppContentScrollResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

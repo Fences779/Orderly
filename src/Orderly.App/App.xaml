@@ -3,16 +3,28 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F7F5EF" />
-        <SolidColorBrush x:Key="PanelBrush" Color="#FFFDF8" />
-        <SolidColorBrush x:Key="MutedBrush" Color="#6F746F" />
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#1F7A5A" />
-        <SolidColorBrush x:Key="BorderBrushSoft" Color="#E6E1D6" />
+        <BitmapImage x:Key="OrderlyBrandLogoImage"
+                     UriSource="pack://application:,,,/Assets/Brand/Orderly%20Logo.png" />
+        <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F5F5F7" />
+        <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="MutedBrush" Color="#86868B" />
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#2B7A5C" />
+        <SolidColorBrush x:Key="PremiumDarkBrush" Color="#17181C" />
+        <SolidColorBrush x:Key="BorderBrushSoft" Color="#DFE3EA" />
 
         <!-- 全局 Window 字体 -->
         <Style TargetType="Window">
             <Setter Property="FontFamily" Value="Microsoft YaHei UI, Segoe UI" />
             <Setter Property="TextElement.FontSize" Value="13" />
+            <Setter Property="Icon" Value="pack://application:,,,/Assets/Brand/Orderly%20Logo.ico" />
+        </Style>
+
+        <!-- 全局隐藏所有 ScrollBar 滚动条 (防止被控件局部设置的 Visibility="Auto" 覆盖) -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="0"/>
+            <Setter Property="Height" Value="0"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
         </Style>
 
         <!-- 全局默认 Button -->
@@ -23,34 +35,140 @@
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
-        <!-- 全局 TextBox 基础样式：统一圆角/边框/内边距 -->
+        <!-- 全局 TextBox 基础样式：现代扁平化 Apple 风格 -->
         <Style TargetType="TextBox">
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Padding" Value="10,6" />
-            <Setter Property="BorderBrush" Value="#D6D1C4" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="#F7F7F9" />
+            <Setter Property="BorderBrush" Value="#DFE3EA" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Background" Value="#FAFAF7" />
-            <Setter Property="Foreground" Value="#17211D" />
+            <Setter Property="Foreground" Value="#1D1D1F" />
+            <Setter Property="Padding" Value="14,0" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
                         <Border x:Name="border"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
+                                CornerRadius="12"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
                                 SnapsToDevicePixels="True">
-                            <ScrollViewer x:Name="PART_ContentHost"
-                                          Margin="{TemplateBinding Padding}"
-                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                            <Border.Background>
+                                <SolidColorBrush x:Name="TextBoxBackgroundBrush" Color="#F7F7F9" />
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush x:Name="TextBoxBorderBrush" Color="#DFE3EA" />
+                            </Border.BorderBrush>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#1F7A5A" />
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="TextBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#FFFFFF" Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush" Storyboard.TargetProperty="Color" To="#8A9AB5" Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="TextBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#F7F7F9" Duration="0:0:0.22">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush" Storyboard.TargetProperty="Color" To="#DFE3EA" Duration="0:0:0.22">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsKeyboardFocusWithin" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#FAFAFB" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D4D9E2" />
+                            </MultiTrigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#F0EDE5" />
+                                <Setter TargetName="border" Property="Background" Value="#F1F2F5" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#E5E7EC" />
+                                <Setter Property="Foreground" Value="#A0A5AF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="PasswordBox">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="#F7F7F9" />
+            <Setter Property="BorderBrush" Value="#DFE3EA" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#1D1D1F" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <Border x:Name="border"
+                                CornerRadius="12"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="PasswordBoxBackgroundBrush" Color="#F7F7F9" />
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush x:Name="PasswordBoxBorderBrush" Color="#DFE3EA" />
+                            </Border.BorderBrush>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="PasswordBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#FFFFFF" Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <ColorAnimation Storyboard.TargetName="PasswordBoxBorderBrush" Storyboard.TargetProperty="Color" To="#8A9AB5" Duration="0:0:0.16">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="PasswordBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#F7F7F9" Duration="0:0:0.22">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                            <ColorAnimation Storyboard.TargetName="PasswordBoxBorderBrush" Storyboard.TargetProperty="Color" To="#DFE3EA" Duration="0:0:0.22">
+                                                <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                            </ColorAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsKeyboardFocusWithin" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#FAFAFB" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D4D9E2" />
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#F1F2F5" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#E5E7EC" />
+                                <Setter Property="Foreground" Value="#A0A5AF" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -60,12 +178,14 @@
 
         <!-- 全局 ComboBox 基础样式 -->
         <Style TargetType="ComboBox">
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Padding" Value="10,6" />
-            <Setter Property="BorderBrush" Value="#D6D1C4" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="#F7F7F9" />
+            <Setter Property="BorderBrush" Value="#DFE3EA" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Background" Value="#FAFAF7" />
-            <Setter Property="Foreground" Value="#17211D" />
+            <Setter Property="Foreground" Value="#1D1D1F" />
+            <Setter Property="Padding" Value="14,0,32,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
         <!-- 导航按钮 -->
@@ -82,40 +202,45 @@
             <Setter Property="Background" Value="{StaticResource PanelBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="14" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="32" ShadowDepth="6" Direction="270" Color="#111216" Opacity="0.05" />
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- 弹窗主按钮（确认） -->
         <Style x:Key="DialogPrimaryButtonStyle" TargetType="Button">
-            <Setter Property="MinHeight" Value="36" />
-            <Setter Property="MinWidth" Value="80" />
-            <Setter Property="Padding" Value="18,8" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="MinWidth" Value="88" />
+            <Setter Property="Padding" Value="20,0" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Background" Value="#1F7A5A" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="{StaticResource PremiumDarkBrush}" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Chrome"
                                 Background="{TemplateBinding Background}"
-                                CornerRadius="7"
+                                CornerRadius="12"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               Margin="{TemplateBinding Padding}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#186A4D" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#2D2F35" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#14553E" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#0F1014" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Chrome" Property="Background" Value="#C8CFC9" />
-                                <Setter Property="Foreground" Value="#7C857E" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#E4E7ED" />
+                                <Setter Property="Foreground" Value="#8F959E" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -125,33 +250,30 @@
 
         <!-- 弹窗次按钮（取消） -->
         <Style x:Key="DialogSecondaryButtonStyle" TargetType="Button">
-            <Setter Property="MinHeight" Value="36" />
-            <Setter Property="MinWidth" Value="80" />
-            <Setter Property="Padding" Value="18,8" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="MinWidth" Value="88" />
+            <Setter Property="Padding" Value="20,0" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Background" Value="#F4F0E7" />
-            <Setter Property="Foreground" Value="#36433D" />
-            <Setter Property="BorderBrush" Value="#D6D1C4" />
-            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="#F5F5F7" />
+            <Setter Property="Foreground" Value="#1D1D1F" />
+            <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Chrome"
                                 Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="7"
+                                CornerRadius="12"
                                 SnapsToDevicePixels="True">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                                               Margin="{TemplateBinding Padding}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#EAE5D8" />
+                                <Setter TargetName="Chrome" Property="Background" Value="#ECECF1" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#DDD7C8" />
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.78" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -162,9 +284,9 @@
         <!-- 弹窗字段标签 -->
         <Style x:Key="DialogFieldLabelStyle" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="#4A5250" />
-            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#1F2329" />
+            <Setter Property="Margin" Value="0,0,0,8" />
         </Style>
 
         <!-- 弹窗标题 -->

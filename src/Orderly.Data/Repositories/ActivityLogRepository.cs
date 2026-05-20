@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Core.Services;
 using Orderly.Data.Sqlite;
 using Orderly.Data.Services;
 using System.Globalization;
@@ -10,10 +11,12 @@ namespace Orderly.Data.Repositories;
 public sealed class ActivityLogRepository : IActivityLogRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
+    private readonly IFieldEncryptionService _fieldEncryptionService;
 
-    public ActivityLogRepository(SqliteConnectionFactory connectionFactory)
+    public ActivityLogRepository(SqliteConnectionFactory connectionFactory, IFieldEncryptionService fieldEncryptionService)
     {
         _connectionFactory = connectionFactory;
+        _fieldEncryptionService = fieldEncryptionService ?? throw new ArgumentNullException(nameof(fieldEncryptionService));
     }
 
     public async Task<ActivityLog> CreateAsync(ActivityLog activityLog, CancellationToken cancellationToken = default)
@@ -35,16 +38,16 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO ActivityLogs (
-                Type, CustomerId, DealId, OrderId, Title, Description, Operator, MetadataJson,
+                Type, CustomerId, DealId, OrderId, Title, TitleCiphertext, Description, DescriptionCiphertext, Operator, OperatorCiphertext, MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
             )
             VALUES (
-                $type, $customerId, $dealId, $orderId, $title, $description, $operator, $metadataJson,
+                $type, $customerId, $dealId, $orderId, $title, $titleCiphertext, $description, $descriptionCiphertext, $operator, $operatorCiphertext, $metadataJson, $metadataJsonCiphertext,
                 $createdAt, $updatedAt, $deletedAt, $remoteId, $isSynced, $version
             );
             SELECT last_insert_rowid();
             """;
-        AddParameters(command, activityLog);
+        AddParameters(command, activityLog, _fieldEncryptionService);
         activityLog.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
         return activityLog;
     }
@@ -58,7 +61,7 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         command.Parameters.AddWithValue("$id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public Task<IReadOnlyList<ActivityLog>> ListAsync(CancellationToken cancellationToken = default)
@@ -82,6 +85,29 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         });
     }
 
+    public async Task<int> SoftDeleteOlderThanAsync(DateTime cutoff, CancellationToken cancellationToken = default)
+    {
+        var cutoffText = cutoff.ToString("O");
+        var now = DateTime.Now.ToString("O");
+
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE ActivityLogs
+            SET DeletedAt = $deletedAt,
+                UpdatedAt = $updatedAt,
+                IsSynced = 0,
+                Version = Version + 1
+            WHERE DeletedAt IS NULL
+              AND CreatedAt < $cutoff;
+            """;
+        command.Parameters.AddWithValue("$deletedAt", now);
+        command.Parameters.AddWithValue("$updatedAt", now);
+        command.Parameters.AddWithValue("$cutoff", cutoffText);
+        return await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     public async Task UpdateAsync(ActivityLog activityLog, CancellationToken cancellationToken = default)
     {
         activityLog.UpdatedAt = DateTime.Now;
@@ -99,9 +125,13 @@ public sealed class ActivityLogRepository : IActivityLogRepository
                 DealId = $dealId,
                 OrderId = $orderId,
                 Title = $title,
+                TitleCiphertext = $titleCiphertext,
                 Description = $description,
+                DescriptionCiphertext = $descriptionCiphertext,
                 Operator = $operator,
+                OperatorCiphertext = $operatorCiphertext,
                 MetadataJson = $metadataJson,
+                MetadataJsonCiphertext = $metadataJsonCiphertext,
                 UpdatedAt = $updatedAt,
                 DeletedAt = $deletedAt,
                 RemoteId = $remoteId,
@@ -109,7 +139,7 @@ public sealed class ActivityLogRepository : IActivityLogRepository
                 Version = $version
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
-        AddParameters(command, activityLog);
+        AddParameters(command, activityLog, _fieldEncryptionService);
         command.Parameters.AddWithValue("$id", activityLog.Id);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -146,7 +176,7 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            rows.Add(Map(reader));
+            rows.Add(Map(reader, _fieldEncryptionService));
         }
 
         return rows;
@@ -197,21 +227,25 @@ public sealed class ActivityLogRepository : IActivityLogRepository
     }
 
     private const string SelectSql = """
-        SELECT Id, Type, CustomerId, DealId, OrderId, Title, Description, Operator, MetadataJson,
+        SELECT Id, Type, CustomerId, DealId, OrderId, Title, TitleCiphertext, Description, DescriptionCiphertext, Operator, OperatorCiphertext, MetadataJson, MetadataJsonCiphertext,
                CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
         FROM ActivityLogs
         """;
 
-    private static void AddParameters(SqliteCommand command, ActivityLog activityLog)
+    private static void AddParameters(SqliteCommand command, ActivityLog activityLog, IFieldEncryptionService fieldEncryptionService)
     {
         command.Parameters.AddWithValue("$type", (int)activityLog.Type);
         command.Parameters.AddWithValue("$customerId", ToDbInt(activityLog.CustomerId));
         command.Parameters.AddWithValue("$dealId", ToDbInt(activityLog.DealId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(activityLog.OrderId));
-        command.Parameters.AddWithValue("$title", activityLog.Title);
-        command.Parameters.AddWithValue("$description", activityLog.Description);
-        command.Parameters.AddWithValue("$operator", activityLog.Operator);
-        command.Parameters.AddWithValue("$metadataJson", activityLog.MetadataJson);
+        command.Parameters.AddWithValue("$title", string.Empty);
+        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(activityLog.Title));
+        command.Parameters.AddWithValue("$description", string.Empty);
+        command.Parameters.AddWithValue("$descriptionCiphertext", fieldEncryptionService.Encrypt(activityLog.Description));
+        command.Parameters.AddWithValue("$operator", string.Empty);
+        command.Parameters.AddWithValue("$operatorCiphertext", fieldEncryptionService.Encrypt(activityLog.Operator));
+        command.Parameters.AddWithValue("$metadataJson", string.Empty);
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(activityLog.MetadataJson));
         command.Parameters.AddWithValue("$createdAt", activityLog.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", activityLog.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(activityLog.DeletedAt));
@@ -220,8 +254,13 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         command.Parameters.AddWithValue("$version", activityLog.Version);
     }
 
-    private static ActivityLog Map(SqliteDataReader reader)
+    private static ActivityLog Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)
     {
+        var title = EncryptedColumnReader.ReadRequiredString(reader, 6, fieldEncryptionService, "ActivityLogs.TitleCiphertext");
+        var description = EncryptedColumnReader.ReadRequiredString(reader, 8, fieldEncryptionService, "ActivityLogs.DescriptionCiphertext");
+        var @operator = EncryptedColumnReader.ReadRequiredString(reader, 10, fieldEncryptionService, "ActivityLogs.OperatorCiphertext");
+        var metadataJson = EncryptedColumnReader.ReadRequiredString(reader, 12, fieldEncryptionService, "ActivityLogs.MetadataJsonCiphertext");
+
         return new ActivityLog
         {
             Id = reader.GetInt32(0),
@@ -229,16 +268,16 @@ public sealed class ActivityLogRepository : IActivityLogRepository
             CustomerId = reader.IsDBNull(2) ? null : reader.GetInt32(2),
             DealId = reader.IsDBNull(3) ? null : reader.GetInt32(3),
             OrderId = reader.IsDBNull(4) ? null : reader.GetInt32(4),
-            Title = reader.GetString(5),
-            Description = reader.GetString(6),
-            Operator = reader.GetString(7),
-            MetadataJson = reader.GetString(8),
-            CreatedAt = DateTime.Parse(reader.GetString(9), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(10), null, DateTimeStyles.RoundtripKind),
-            DeletedAt = reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11), null, DateTimeStyles.RoundtripKind),
-            RemoteId = reader.GetString(12),
-            IsSynced = reader.GetInt32(13) == 1,
-            Version = reader.GetInt32(14)
+            Title = title,
+            Description = description,
+            Operator = @operator,
+            MetadataJson = metadataJson,
+            CreatedAt = DateTime.Parse(reader.GetString(13), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(14), null, DateTimeStyles.RoundtripKind),
+            DeletedAt = reader.IsDBNull(15) ? null : DateTime.Parse(reader.GetString(15), null, DateTimeStyles.RoundtripKind),
+            RemoteId = reader.GetString(16),
+            IsSynced = reader.GetInt32(17) == 1,
+            Version = reader.GetInt32(18)
         };
     }
 
