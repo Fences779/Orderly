@@ -1112,6 +1112,7 @@
     
     <!-- Settings scroll viewer with opacity mask -->
     <Style x:Key="SettingsScrollViewerStyle" TargetType="ScrollViewer">
+        <Setter Property="helpers:ScrollViewerHelper.BindFadeEdges" Value="True"/>
         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
         <Setter Property="OpacityMask">
