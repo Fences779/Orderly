@@ -27,53 +27,73 @@
                     <TextBlock Text="Orderly" FontSize="26" FontWeight="Bold" Foreground="#17211D" />
                     <TextBlock Text="本地商家工作台" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,20" />
 
-                    <Button x:Name="Tab_Dashboard" AutomationProperties.AutomationId="Tab_Dashboard" Content="工作台" Command="{Binding SelectSectionCommand}" CommandParameter="工作台">
+                    <Button x:Name="Tab_Dashboard" AutomationProperties.AutomationId="Tab_Dashboard" Content="工作台" Tag="&#xE80F;" Command="{Binding SelectSectionCommand}" CommandParameter="工作台">
                         <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                            <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedSection}" Value="工作台">
-                                        <Setter Property="Background" Value="#EAF2EF" />
-                                        <Setter Property="Foreground" Value="#2B7A5C" />
+                                        <Setter Property="Background" Value="#FFFFFF" />
+                                        <Setter Property="Foreground" Value="#1D1D1F" />
                                         <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Button x:Name="Tab_Fulfillment" AutomationProperties.AutomationId="Tab_Fulfillment" Content="订单履约" Command="{Binding SelectSectionCommand}" CommandParameter="订单履约">
+                    <Button x:Name="Tab_Fulfillment" AutomationProperties.AutomationId="Tab_Fulfillment" Content="订单履约" Tag="&#xE8A1;" Command="{Binding SelectSectionCommand}" CommandParameter="订单履约">
                         <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                            <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedSection}" Value="订单履约">
-                                        <Setter Property="Background" Value="#EAF2EF" />
-                                        <Setter Property="Foreground" Value="#2B7A5C" />
+                                        <Setter Property="Background" Value="#FFFFFF" />
+                                        <Setter Property="Foreground" Value="#1D1D1F" />
                                         <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Button x:Name="Tab_ExceptionOrders" AutomationProperties.AutomationId="Tab_ExceptionOrders" Content="异常处理" Command="{Binding SelectSectionCommand}" CommandParameter="异常处理">
+                    <Button x:Name="Tab_ExceptionOrders" AutomationProperties.AutomationId="Tab_ExceptionOrders" Content="异常处理" Tag="&#xE7BA;" Command="{Binding SelectSectionCommand}" CommandParameter="异常处理">
                         <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                            <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedSection}" Value="异常处理">
-                                        <Setter Property="Background" Value="#EAF2EF" />
-                                        <Setter Property="Foreground" Value="#2B7A5C" />
+                                        <Setter Property="Background" Value="#FFFFFF" />
+                                        <Setter Property="Foreground" Value="#1D1D1F" />
                                         <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Button x:Name="Tab_Settings" AutomationProperties.AutomationId="Tab_Settings" Content="设置" Command="{Binding SelectSectionCommand}" CommandParameter="设置">
+                    <Button x:Name="Tab_Settings" AutomationProperties.AutomationId="Tab_Settings" Content="设置" Tag="&#xE713;" Command="{Binding SelectSectionCommand}" CommandParameter="设置">
                         <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+                            <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedSection}" Value="设置">
-                                        <Setter Property="Background" Value="#EAF2EF" />
-                                        <Setter Property="Foreground" Value="#2B7A5C" />
+                                        <Setter Property="Background" Value="#FFFFFF" />
+                                        <Setter Property="Foreground" Value="#1D1D1F" />
                                         <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -81,11 +101,6 @@
                     </Button>
                 </StackPanel>
 
-                <StackPanel DockPanel.Dock="Bottom">
-                    <TextBlock Text="全局快捷键" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Preferences.MainHotkey, StringFormat=主窗口：{0}}" Foreground="{StaticResource MutedBrush}" Margin="0,6,0,0" />
-                    <TextBlock Text="{Binding Preferences.FloatingHotkey, StringFormat=悬浮窗：{0}}" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" />
-                </StackPanel>
             </DockPanel>
         </Border>
 
@@ -111,28 +126,6 @@
                 <StackPanel DockPanel.Dock="Left">
                     <TextBlock Text="{Binding SelectedSection}" FontSize="29" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
                     <TextBlock Text="客户、订单、跟进和快捷回复集中处理" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
-                </StackPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button x:Name="AddCustomerButton" Content="+ 新增客户" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding AddCustomerCommand}" AutomationProperties.AutomationId="Btn_AddCustomer" />
-                    <Button x:Name="AddOrderButton" Content="+ 创建订单" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding AddOrderCommand}" AutomationProperties.AutomationId="Btn_AddOrder" />
-                    <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="10,0,0,0" MinWidth="108">
-                        <StackPanel>
-                            <TextBlock Text="待处理" Style="{StaticResource CaptionTextStyle}" />
-                            <TextBlock Text="{Binding PendingCount}" Style="{StaticResource MetricValueTextStyle}" Margin="0,3,0,0" />
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="10,0,0,0" MinWidth="108">
-                        <StackPanel>
-                            <TextBlock Text="已成交" Style="{StaticResource CaptionTextStyle}" />
-                            <TextBlock Text="{Binding WonCount}" Style="{StaticResource MetricValueTextStyle}" Margin="0,3,0,0" />
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="10,0,0,0" MinWidth="148">
-                        <StackPanel>
-                            <TextBlock Text="订单金额" Style="{StaticResource CaptionTextStyle}" />
-                            <TextBlock Text="{Binding TotalAmount, StringFormat=¥{0:N0}}" Style="{StaticResource MetricValueTextStyle}" Margin="0,3,0,0" Foreground="{StaticResource WarmTextBrush}" />
-                        </StackPanel>
-                    </Border>
                 </StackPanel>
             </DockPanel>
 
@@ -1134,40 +1127,6 @@
                     <!-- 3. List & Detail Content Area -->
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-
-                <!-- 0. Custom Header -->
-                <DockPanel Grid.Row="0" Margin="0,0,0,16">
-                    <StackPanel DockPanel.Dock="Left">
-                        <TextBlock Text="订单履约" FontSize="26" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
-                        <TextBlock Text="管理订单履约全流程，实现高效的备货、制作、包装与发货操作" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" />
-                    </StackPanel>
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <!-- Sync timestamp -->
-                        <Border Background="{StaticResource PrimaryLightBrush}" CornerRadius="12" Padding="12,6" Margin="0,0,12,0" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12" />
-                                <TextBlock Text="同步时间：" Foreground="{StaticResource PrimaryBrush}" FontSize="12" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding StringNarrationStatsCalculatedAtText}" Foreground="{StaticResource PrimaryBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
-                        
-                        <!-- Refresh Buttons -->
-                        <Button Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="36" Height="36" Padding="0" Command="{Binding LoadOrders}" ToolTip="刷新订单列表" Margin="0,0,8,0">
-                            <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Button>
-                        <Button Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="36" Height="36" Padding="0" Command="{Binding LoadStats}" ToolTip="刷新履约统计" Margin="0,0,8,0">
-                            <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Button>
-                        
-                        <!-- Notification Bell -->
-                        <Grid Margin="4,0,0,0">
-                            <Button Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="36" Height="36" Padding="0" ToolTip="通知消息">
-                                <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Button>
-                            <Border Background="{StaticResource DangerTextBrush}" Width="8" Height="8" CornerRadius="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" IsHitTestVisible="False" />
-                        </Grid>
-                    </StackPanel>
-                </DockPanel>
 
                 <!-- 1. Statistics Cards -->
                 <Grid Grid.Row="1" Margin="0,0,0,16">
@@ -2467,6 +2426,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="80"
                                                      Text="{Binding BackupRetentionCountInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_BackupRetentionCount" />
                                         </Grid>
                                     </Border>
@@ -2892,7 +2852,7 @@
                                                 <TextBlock Text="日志自动清理周期" Style="{StaticResource SettingsItemTitleStyle}" />
                                                 <TextBlock Text="自动清理设定天数前的旧审计日志" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
-                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBox Style="{StaticResource SettingsRowTextBoxStyle}" Width="80" Text="{Binding OperationLogRetentionDaysInput, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.AutomationId="Txt_OperationLogRetentionDays" /><TextBlock Text="&#x5929;" Margin="8,0,0,0" VerticalAlignment="Center" Style="{StaticResource SettingsItemTitleStyle}" Foreground="#6B7280" /></StackPanel>
+                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBox Style="{StaticResource SettingsRowTextBoxStyle}" Width="80" Text="{Binding OperationLogRetentionDaysInput, UpdateSourceTrigger=PropertyChanged}" LostFocus="SettingsTextInput_LostFocus" AutomationProperties.AutomationId="Txt_OperationLogRetentionDays" /><TextBlock Text="&#x5929;" Margin="8,0,0,0" VerticalAlignment="Center" Style="{StaticResource SettingsItemTitleStyle}" Foreground="#6B7280" /></StackPanel>
                                         </Grid>
                                     </Border>
 
@@ -3015,6 +2975,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="150"
                                                      Text="{Binding DefaultAiModelInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_DefaultAiModel" />
                                         </Grid>
                                     </Border>
@@ -3032,6 +2993,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="80"
                                                      Text="{Binding AiTimeoutSecondsInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_AiTimeoutSeconds" />
                                         </Grid>
                                     </Border>
@@ -3233,7 +3195,7 @@
                                     </StackPanel>
                                     <Button Grid.Column="1" Content="保存并应用" 
                                             Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="36" Padding="16,0" VerticalAlignment="Center"
-                                            Command="{Binding SaveP1SettingsCommand}"
+                                            Command="{Binding SaveP0SettingsCommand}"
                                             AutomationProperties.AutomationId="Btn_SavePreferences_Ai" />
                                 </Grid>
                             </Border>
@@ -3338,6 +3300,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="80"
                                                      Text="{Binding NotifyPaidUnconfirmedHoursInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_NotifyPaidUnconfirmedHours" />
                                         </Grid>
                                     </Border>
@@ -3354,6 +3317,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="80"
                                                      Text="{Binding NotifyPendingProductionHoursInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_NotifyPendingProductionHours" />
                                         </Grid>
                                     </Border>
@@ -3370,6 +3334,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="80"
                                                      Text="{Binding NotifyPendingShipmentHoursInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_NotifyPendingShipmentHours" />
                                         </Grid>
                                     </Border>
@@ -3404,6 +3369,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding NotifyDoNotDisturbRangeInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_NotifyDoNotDisturbRange" />
                                         </Grid>
                                     </Border>
@@ -3468,7 +3434,7 @@
                                     </StackPanel>
                                     <Button Grid.Column="1" Content="保存并应用" 
                                             Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="36" Padding="16,0" VerticalAlignment="Center"
-                                            Command="{Binding SaveP1SettingsCommand}"
+                                            Command="{Binding SaveP0SettingsCommand}"
                                             AutomationProperties.AutomationId="Btn_SavePreferences_Notifications" />
                                 </Grid>
                             </Border>
@@ -3506,6 +3472,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding MainWindowHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_MainWindowHotkey" />
                                         </Grid>
                                     </Border>
@@ -3523,6 +3490,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding FloatingWindowHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_FloatingWindowHotkey" />
                                         </Grid>
                                     </Border>
@@ -3540,6 +3508,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding GlobalSearchHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_GlobalSearchHotkey" />
                                         </Grid>
                                     </Border>
@@ -3557,6 +3526,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding TodayWorkbenchHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_TodayWorkbenchHotkey" />
                                         </Grid>
                                     </Border>
@@ -3574,6 +3544,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding CopyOrderSummaryHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_CopyOrderSummaryHotkey" />
                                         </Grid>
                                     </Border>
@@ -3591,6 +3562,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding OpenProductionSheetHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_OpenProductionSheetHotkey" />
                                         </Grid>
                                     </Border>
@@ -3608,6 +3580,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding MarkOrderExceptionHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_MarkOrderExceptionHotkey" />
                                         </Grid>
                                     </Border>
@@ -3625,6 +3598,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding AdvanceFulfillmentHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_AdvanceFulfillmentHotkey" />
                                         </Grid>
                                     </Border>
@@ -3642,6 +3616,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding OpenCustomerProfileHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_OpenCustomerProfileHotkey" />
                                         </Grid>
                                     </Border>
@@ -3659,6 +3634,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding NewCustomerNoteHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_NewCustomerNoteHotkey" />
                                         </Grid>
                                     </Border>
@@ -3676,6 +3652,7 @@
                                             </StackPanel>
                                             <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
                                                      Text="{Binding CopyCustomerPreferenceSummaryHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                     LostFocus="SettingsTextInput_LostFocus"
                                                      AutomationProperties.AutomationId="Txt_CopyCustomerPreferenceSummaryHotkey" />
                                         </Grid>
                                     </Border>
@@ -3720,7 +3697,7 @@
                                     </StackPanel>
                                     <Button Grid.Column="1" Content="保存并应用" 
                                             Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="36" Padding="16,0" VerticalAlignment="Center"
-                                            Command="{Binding SaveP1SettingsCommand}"
+                                            Command="{Binding SaveP0SettingsCommand}"
                                             AutomationProperties.AutomationId="Btn_SavePreferences_Hotkeys" />
                                 </Grid>
                             </Border>
@@ -3736,6 +3713,15 @@
                         <Setter Property="Visibility" Value="Visible" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding SelectedSection}" Value="工作台">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="订单履约">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="异常处理">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="设置">
                                 <Setter Property="Visibility" Value="Collapsed" />
                             </DataTrigger>
                         </Style.Triggers>

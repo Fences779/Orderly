@@ -1127,4 +1127,101 @@
         </Setter>
     </Style>
 
+    <!-- Main Navigation Button Style (Left sidebar) -->
+    <Style x:Key="MainMenuButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#55555C"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="Padding" Value="14,12"/>
+        <Setter Property="Margin" Value="2,5"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="TabBorder" Background="{TemplateBinding Background}"
+                            CornerRadius="12" Padding="{TemplateBinding Padding}" Margin="{TemplateBinding Margin}">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="IconBg" Width="30" Height="30" CornerRadius="8" Background="#F0F1F3" Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="IconScale" ScaleX="1" ScaleY="1"/>
+                                </Border.RenderTransform>
+                                <TextBlock x:Name="TabIcon" FontFamily="Segoe MDL2 Assets"
+                                           Text="{TemplateBinding Tag}" FontSize="13.5"
+                                           Foreground="#8B8D94"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ContentPresenter ContentSource="Content" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Individual colors for each tab item icon based on Content -->
+                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台">
+                            <Setter TargetName="IconBg" Property="Background" Value="#E0F2FE"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#0284C7"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="订单履约">
+                            <Setter TargetName="IconBg" Property="Background" Value="#DCFCE7"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#16A34A"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="异常处理">
+                            <Setter TargetName="IconBg" Property="Background" Value="#FFE4E6"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#E11D48"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置">
+                            <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
+                        </DataTrigger>
+
+                        <!-- Hover State when not selected: subtle background highlight -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="TabBorder" Property="Background" Value="#EAEAEA"/>
+                            <Setter Property="Foreground" Value="#1D1D1F"/>
+                        </MultiTrigger>
+
+                        <!-- Hover Animation: Icon scales up slightly -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleX" To="1.1" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleY" To="1.1" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

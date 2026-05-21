@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -17,7 +18,54 @@ public partial class MainViewModel
 {
     private const string SnSyncEntityType = "string-narration-orders";
     private const int SnSyncEntityId = 1;
+    private static readonly HashSet<string> ImmediateAutoSaveSettingsInputs = new(StringComparer.Ordinal)
+    {
+        nameof(StartupDefaultSectionInput),
+        nameof(StartWithWindowsInput),
+        nameof(ShowFloatingWindowOnStartupInput),
+        nameof(StartMinimizedToTrayInput),
+        nameof(RememberLastSectionInput),
+        nameof(RememberWindowBoundsInput),
+        nameof(DefaultWindowModeInput),
+        nameof(SidebarDefaultExpandedInput),
+        nameof(FontSizePresetInput),
+        nameof(ShowWindowsScaleHintInput),
+        nameof(ThemeModeInput),
+        nameof(AccentColorInput),
+        nameof(EnableLightAnimationInput),
+        nameof(BackupDirectoryInput),
+        nameof(AutoBackupEnabledInput),
+        nameof(AutoBackupFrequencyInput),
+        nameof(SnOrderSyncEnabledInput),
+        nameof(SnSyncModeInput),
+        nameof(SnSyncFrequencyInput),
+        nameof(MaskPhoneByDefaultInput),
+        nameof(MaskAddressByDefaultInput),
+        nameof(IncludeSensitiveInExportInput),
+        nameof(MaskOrderSummaryOnCopyInput),
+        nameof(OperationLogEnabledInput),
+        nameof(DebugModeEnabledInput),
+        nameof(EnableAiAssistantInput),
+        nameof(AllowAiOrderContextInput),
+        nameof(AllowAiCustomerProfileContextInput),
+        nameof(AiAutoRedactBeforeSendInput),
+        nameof(AiBlockPhoneInput),
+        nameof(AiBlockFullAddressInput),
+        nameof(AiBlockPaymentTransactionIdInput),
+        nameof(AiReplyToneInput),
+        nameof(AiReplyLengthInput),
+        nameof(AiAutoGenerateOrderSummaryInput),
+        nameof(NotifyNewOrderInput),
+        nameof(NotifyExceptionOrderInput),
+        nameof(NotifyOverdueUnhandledInput),
+        nameof(NotifySyncFailedInput),
+        nameof(NotifyMissingAddressInput),
+        nameof(NotifyHighPriorityOnlyInput)
+    };
+
     private bool _isApplyingSettingsInputs;
+    private bool _isRunningSettingsAutoSave;
+    private bool _hasQueuedSettingsAutoSave;
     private bool _hasAppliedStartupSection;
 
     public ObservableCollection<string> StartupSectionOptions { get; } = new([SectionWorkbench, SectionFulfillment, SectionException]);
@@ -204,6 +252,93 @@ public partial class MainViewModel
     partial void OnBackupDirectoryInputChanged(string value)
     {
         OnPropertyChanged(nameof(EffectiveBackupDirectory));
+    }
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        HandleImmediateSettingsAutoSave(e.PropertyName);
+    }
+
+    internal void CommitDeferredSettingsAutoSave()
+    {
+        QueueSettingsAutoSave();
+    }
+
+    internal void ReportDeferredSettingsAutoSaveValidationError(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        SettingsStatusMessage = message;
+        StatusMessage = message;
+    }
+
+    private void HandleImmediateSettingsAutoSave(string? propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(propertyName)
+            || _isApplyingSettingsInputs
+            || !ImmediateAutoSaveSettingsInputs.Contains(propertyName))
+        {
+            return;
+        }
+
+        QueueSettingsAutoSave();
+    }
+
+    private void QueueSettingsAutoSave()
+    {
+        if (_isApplyingSettingsInputs)
+        {
+            return;
+        }
+
+        _hasQueuedSettingsAutoSave = true;
+        if (_isRunningSettingsAutoSave)
+        {
+            return;
+        }
+
+        _ = ProcessQueuedSettingsAutoSaveAsync();
+    }
+
+    private async Task ProcessQueuedSettingsAutoSaveAsync()
+    {
+        if (_isRunningSettingsAutoSave)
+        {
+            return;
+        }
+
+        _isRunningSettingsAutoSave = true;
+        try
+        {
+            while (_hasQueuedSettingsAutoSave)
+            {
+                _hasQueuedSettingsAutoSave = false;
+
+                while (!_isApplyingSettingsInputs && IsBusy)
+                {
+                    await Task.Delay(50);
+                }
+
+                if (_isApplyingSettingsInputs)
+                {
+                    continue;
+                }
+
+                await SaveP0SettingsAsync();
+            }
+        }
+        finally
+        {
+            _isRunningSettingsAutoSave = false;
+            if (_hasQueuedSettingsAutoSave && !_isApplyingSettingsInputs)
+            {
+                _ = ProcessQueuedSettingsAutoSaveAsync();
+            }
+        }
     }
 
     partial void OnSelectedSectionChanged(string value)
@@ -1160,6 +1295,22 @@ public partial class MainViewModel
         var logDirectory = Path.Combine(DatabasePaths.GetAppRootPath(), "logs");
         Directory.CreateDirectory(logDirectory);
         return logDirectory;
+    }
+
+    [RelayCommand]
+    private void BrowseBackupDirectory()
+    {
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "选择备份目录",
+            SelectedPath = ResolveBackupDirectory(BackupDirectoryInput),
+            UseDescriptionForTitle = true
+        };
+
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            BackupDirectoryInput = dialog.SelectedPath;
+        }
     }
 
     [RelayCommand]

@@ -94,6 +94,7 @@ public static class StringNarrationFulfillmentStatusCatalog
     public const string Making = "making";
     public const string ReadyToShip = "ready_to_ship";
     public const string Shipped = "shipped";
+    // 注意：exception 仅表示履约异常，不表示取消订单语义。
     public const string Exception = "exception";
     public const string Completed = "completed";
 
@@ -515,6 +516,24 @@ public sealed class StringNarrationOrderDetail : StringNarrationOrderSummary
 
 public sealed class StringNarrationOrderItemSnapshot
 {
+    private static readonly string[] SpecificationFieldNames =
+    [
+        "size",
+        "craft",
+        "spec",
+        "specs",
+        "specification",
+        "options",
+        "attributes",
+        "skuText"
+    ];
+
+    private static readonly string[] QuantityFieldNames =
+    [
+        "quantity",
+        "count"
+    ];
+
     public string DesignId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Cover { get; set; } = string.Empty;
@@ -525,7 +544,227 @@ public sealed class StringNarrationOrderItemSnapshot
     public string CoverText => string.IsNullOrWhiteSpace(Cover) ? "无封面" : Cover.Trim();
     public string DesignIdText => string.IsNullOrWhiteSpace(DesignId) ? "无 designId" : DesignId.Trim();
     public string CountText => $"{Count} 件";
+    public string SpecificationText => BuildSpecificationText();
+    public string SpecSummaryText => SpecificationText;
     public string RawText => Raw is null ? "无原始商品快照" : JsonSerializer.Serialize(Raw.Value, new JsonSerializerOptions { WriteIndented = true });
+
+    private string BuildSpecificationText()
+    {
+        var parts = new List<string>();
+        if (Raw is JsonElement raw && raw.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var fieldName in SpecificationFieldNames)
+            {
+                if (!TryGetPropertyIgnoreCase(raw, fieldName, out var value))
+                {
+                    continue;
+                }
+
+                AddTokensFromValue(parts, fieldName, value);
+            }
+        }
+
+        var stableFallback = $"{DesignIdText} / {ResolveCountText()}";
+        if (parts.Count == 0)
+        {
+            return stableFallback;
+        }
+
+        var distinctParts = DistinctPreserveOrder(parts);
+        return distinctParts.Count == 0
+            ? stableFallback
+            : $"{string.Join(" / ", distinctParts)} / {ResolveCountText()}";
+    }
+
+    private string ResolveCountText()
+    {
+        if (Raw is JsonElement raw && raw.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var name in QuantityFieldNames)
+            {
+                if (!TryGetPropertyIgnoreCase(raw, name, out var value))
+                {
+                    continue;
+                }
+
+                var parsed = ParsePositiveInt(value);
+                if (parsed > 0)
+                {
+                    return $"{parsed} 件";
+                }
+            }
+        }
+
+        return CountText;
+    }
+
+    private static void AddTokensFromValue(List<string> parts, string fieldName, JsonElement value)
+    {
+        switch (value.ValueKind)
+        {
+            case JsonValueKind.String:
+            case JsonValueKind.Number:
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                AddToken(parts, NormalizeScalar(value));
+                return;
+            case JsonValueKind.Array:
+                foreach (var item in value.EnumerateArray())
+                {
+                    AddTokensFromValue(parts, fieldName, item);
+                }
+
+                return;
+            case JsonValueKind.Object:
+                AddTokensFromObject(parts, fieldName, value);
+                return;
+            default:
+                return;
+        }
+    }
+
+    private static void AddTokensFromObject(List<string> parts, string fieldName, JsonElement value)
+    {
+        if (TryBuildNamedOption(value, out var namedOption))
+        {
+            AddToken(parts, namedOption);
+            return;
+        }
+
+        foreach (var property in value.EnumerateObject())
+        {
+            var scalar = NormalizeScalar(property.Value);
+            if (!string.IsNullOrWhiteSpace(scalar))
+            {
+                AddToken(parts, $"{property.Name}:{scalar}");
+                continue;
+            }
+
+            if (property.Value.ValueKind is JsonValueKind.Array or JsonValueKind.Object)
+            {
+                AddTokensFromValue(parts, fieldName, property.Value);
+            }
+        }
+    }
+
+    private static bool TryBuildNamedOption(JsonElement value, out string text)
+    {
+        text = string.Empty;
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        var name = ReadScalarProperty(value, "name", "label", "key", "title");
+        var optionValue = ReadScalarProperty(value, "value", "text", "val", "option");
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(optionValue))
+        {
+            return false;
+        }
+
+        text = $"{name}:{optionValue}";
+        return true;
+    }
+
+    private static string ReadScalarProperty(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!TryGetPropertyIgnoreCase(element, name, out var value))
+            {
+                continue;
+            }
+
+            var scalar = NormalizeScalar(value);
+            if (!string.IsNullOrWhiteSpace(scalar))
+            {
+                return scalar;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static int ParsePositiveInt(JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var parsedByNumber))
+        {
+            return parsedByNumber > 0 ? parsedByNumber : 0;
+        }
+
+        var scalar = NormalizeScalar(value);
+        if (int.TryParse(scalar, out var parsedByString) && parsedByString > 0)
+        {
+            return parsedByString;
+        }
+
+        return 0;
+    }
+
+    private static string NormalizeScalar(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString()?.Trim() ?? string.Empty,
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            _ => string.Empty
+        };
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement element, string name, out JsonElement value)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in element.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static void AddToken(List<string> parts, string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return;
+        }
+
+        parts.Add(token.Trim());
+    }
+
+    private static IReadOnlyList<string> DistinctPreserveOrder(IEnumerable<string> values)
+    {
+        var result = new List<string>();
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var value in values)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            var normalized = value.Trim();
+            if (!set.Add(normalized))
+            {
+                continue;
+            }
+
+            result.Add(normalized);
+        }
+
+        return result;
+    }
 }
 
 public sealed class StringNarrationAddressSnapshot
