@@ -1950,8 +1950,8 @@
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                                        <TextBlock Text="{Binding AmountText}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                        <TextBlock Text="{Binding CreatedAtText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding CreatedAt, Converter={StaticResource TimestampToDateTimeConverter}, StringFormat={}{0:MM-dd HH:mm}}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                        <TextBlock Text="{Binding AmountText}" FontSize="14" FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </DockPanel>
                             </Grid>
