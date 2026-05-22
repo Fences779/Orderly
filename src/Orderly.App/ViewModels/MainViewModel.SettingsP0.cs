@@ -350,6 +350,11 @@ public partial class MainViewModel
             return;
         }
 
+        if (string.Equals(value, SectionFulfillment, StringComparison.Ordinal) && StringNarrationOrders.Count > 0 && SelectedStringNarrationOrder == null)
+        {
+            SelectedStringNarrationOrder = StringNarrationOrders.FirstOrDefault();
+        }
+
         if (_isApplyingSettingsInputs || !RememberLastSectionInput)
         {
             if (string.Equals(value, SectionFulfillment, StringComparison.Ordinal) && StringNarrationOrders.Count == 0 && !IsStringNarrationBusy)
