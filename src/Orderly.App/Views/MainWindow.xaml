@@ -1870,8 +1870,8 @@
                                 <DockPanel Grid.Row="0" Margin="0,0,0,8">
                                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                                         <Button Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="20" Height="20" Padding="0" Margin="0,0,6,0"
-                                                Command="{Binding DataContext.CopyStringNarrationOrderFieldCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                CommandParameter="orderNo" ToolTip="复制订单号">
+                                                Command="{Binding DataContext.CopyStringNarrationOrderSummaryOrderNoCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                CommandParameter="{Binding}" ToolTip="复制订单号">
                                             <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
                                         </Button>
                                         <TextBlock Text="{Binding OrderNoText}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
@@ -3105,6 +3105,89 @@
                             </StackPanel>
                         </ScrollViewer>
                     </Border>
+                </Grid>
+
+                <!-- 首次加载数据同步初始化遮罩层 -->
+                <Grid Grid.Row="0" Grid.RowSpan="4" Panel.ZIndex="999" Background="{StaticResource PageBackgroundBrush}">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Setter Property="Opacity" Value="0" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsStringNarrationInitializing}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.25" Duration="0">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE72C;" 
+                                   FontFamily="Segoe MDL2 Assets" 
+                                   FontSize="36" 
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource HeadingBrush}" 
+                                   HorizontalAlignment="Center" 
+                                   RenderTransformOrigin="0.5,0.5" 
+                                   Margin="0,0,0,16">
+                            <TextBlock.RenderTransform>
+                                <RotateTransform Angle="0" />
+                            </TextBlock.RenderTransform>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStringNarrationInitializing}" Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard x:Name="RotateStoryboardInit">
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                         From="0" To="360" Duration="0:0:1"
+                                                                         RepeatBehavior="Forever" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <StopStoryboard BeginStoryboardName="RotateStoryboardInit" />
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        
+                        <TextBlock Text="正在初始化..." 
+                                   FontSize="15" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="{StaticResource HeadingBrush}" 
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
                 </Grid>
             </Grid>
 

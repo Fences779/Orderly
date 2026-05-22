@@ -10,6 +10,7 @@ public partial class MainViewModel
     private bool _isSynchronizingStringNarrationSelection;
     private bool _hasDismissedStringNarrationDetailsThisSession;
     private bool _isDetectingCarrier;
+    private bool _hasLoadedStringNarrationOnce;
 
     public ObservableCollection<StringNarrationOrderSummary> StringNarrationOrders { get; } = new();
     public ObservableCollection<StringNarrationOrderItemSnapshot> StringNarrationOrderItems { get; } = new();
@@ -137,6 +138,9 @@ public partial class MainViewModel
     [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
     private bool isStringNarrationSaving;
+
+    [ObservableProperty]
+    private bool isStringNarrationInitializing;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StringNarrationEmptyStateText))]
@@ -288,26 +292,43 @@ public partial class MainViewModel
     [RelayCommand(CanExecute = nameof(CanRunStringNarrationReadAction))]
     private async Task LoadStringNarrationOrdersAsync()
     {
-        await ExecuteStringNarrationReadActionAsync("正在加载串述订单...", async () =>
+        var isFirstLoad = !_hasLoadedStringNarrationOnce;
+        if (isFirstLoad)
         {
-            var previousSelection = CaptureStringNarrationSelection();
-            var query = BuildStringNarrationQuery();
-            ValidateTimeRangeOrThrow(query);
-            var result = await _stringNarrationOrderService.GetOrdersAsync(query);
+            IsStringNarrationInitializing = true;
+        }
 
-            ReplaceCollection(StringNarrationOrders, result.Orders);
-            SyncExceptionOrdersFromOrders(result.Orders);
-            var statsLoaded = await TryLoadStatsWithoutThrowAsync(query);
-            if (!statsLoaded)
+        try
+        {
+            await ExecuteStringNarrationReadActionAsync("正在加载串述订单...", async () =>
             {
-                ApplyStringNarrationStats(result.Stats);
-            }
+                var previousSelection = CaptureStringNarrationSelection();
+                var query = BuildStringNarrationQuery();
+                ValidateTimeRangeOrThrow(query);
+                var result = await _stringNarrationOrderService.GetOrdersAsync(query);
 
-            RestoreStringNarrationSelection(previousSelection);
-            var statsSuffix = statsLoaded ? string.Empty : "；统计未更新";
-            StringNarrationStatusMessage = $"已加载 {StringNarrationOrders.Count} 单，总数 {result.PageInfo.Total}{statsSuffix}";
-            OnStringNarrationCollectionStateChanged();
-        });
+                ReplaceCollection(StringNarrationOrders, result.Orders);
+                SyncExceptionOrdersFromOrders(result.Orders);
+                var statsLoaded = await TryLoadStatsWithoutThrowAsync(query);
+                if (!statsLoaded)
+                {
+                    ApplyStringNarrationStats(result.Stats);
+                }
+
+                RestoreStringNarrationSelection(previousSelection);
+                var statsSuffix = statsLoaded ? string.Empty : "；统计未更新";
+                StringNarrationStatusMessage = $"已加载 {StringNarrationOrders.Count} 单，总数 {result.PageInfo.Total}{statsSuffix}";
+                OnStringNarrationCollectionStateChanged();
+            });
+        }
+        finally
+        {
+            if (isFirstLoad)
+            {
+                _hasLoadedStringNarrationOnce = true;
+                IsStringNarrationInitializing = false;
+            }
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanRunStringNarrationReadAction))]
@@ -492,6 +513,20 @@ public partial class MainViewModel
         StringNarrationStatusMessage = $"已复制{label}";
     }
 
+    [RelayCommand(CanExecute = nameof(CanCopyStringNarrationOrderSummaryOrderNo))]
+    private void CopyStringNarrationOrderSummaryOrderNo(StringNarrationOrderSummary? summary)
+    {
+        var orderNo = summary?.OrderNo;
+        if (string.IsNullOrWhiteSpace(orderNo))
+        {
+            StringNarrationStatusMessage = "订单号为空，未复制";
+            return;
+        }
+
+        _clipboardService.SetText(orderNo);
+        StringNarrationStatusMessage = "已复制订单号";
+    }
+
     private async Task LoadStringNarrationOrderDetailAsync(StringNarrationOrderSummary summary)
     {
         await LoadStringNarrationOrderDetailAsync(summary.OrderNo, summary.WxOutTradeNo, summary.Id);
@@ -562,6 +597,11 @@ public partial class MainViewModel
     private bool CanCopyStringNarrationOrderField(string? field)
     {
         return SelectedStringNarrationOrderDetail is not null && !string.IsNullOrWhiteSpace(field);
+    }
+
+    private bool CanCopyStringNarrationOrderSummaryOrderNo(StringNarrationOrderSummary? summary)
+    {
+        return !IsStringNarrationBusy && !string.IsNullOrWhiteSpace(summary?.OrderNo);
     }
 
     private void PopulateStringNarrationFulfillmentForm(StringNarrationOrderDetail? detail)
@@ -753,13 +793,8 @@ public partial class MainViewModel
             return;
         }
 
-        if (_hasDismissedStringNarrationDetailsThisSession || StringNarrationOrders.Count == 0)
-        {
-            ClearStringNarrationSelection();
-            return;
-        }
-
-        _ = OpenStringNarrationOrderDetailAsync(StringNarrationOrders.FirstOrDefault());
+        // 找不到历史选择时，默认不再选中第一个，而是清除选择状态
+        ClearStringNarrationSelection();
     }
 
     private StringNarrationOrderSummary? FindStringNarrationOrder(StringNarrationSelectionSnapshot snapshot)

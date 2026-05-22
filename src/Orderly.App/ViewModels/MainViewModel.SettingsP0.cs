@@ -352,7 +352,8 @@ public partial class MainViewModel
 
         if (string.Equals(value, SectionFulfillment, StringComparison.Ordinal))
         {
-            EnsureStringNarrationDetailSelection();
+            // 不再自动默认选中第一个卡片
+            // EnsureStringNarrationDetailSelection();
         }
 
         if (_isApplyingSettingsInputs || !RememberLastSectionInput)
