@@ -2,6 +2,13 @@
 
 ## CRITICAL RULES - DO NOT MODIFY
 
+### -1. Explicit Implementation Keyword Gate
+- **Status**: Active and strict.
+- **Constraint**: Unless the user explicitly gives a standalone implementation trigger such as `施工`, `修改`, `改代码`, `implement`, `fix`, or `apply changes`, Codex must stay in discussion mode only.
+- **Required Behavior**: Without an explicit implementation trigger, **DO NOT** modify files, edit code, write patches, run change-causing commands, or perform implementation by implication.
+- **Default Interpretation**: Requests such as `看看`, `检查`, `分析`, `排查`, `评估`, `方案`, `怎么改`, or similar wording must be treated as discussion-only, even if the likely technical solution is already clear.
+- **Escalation Rule**: When the user's intent is ambiguous, resolve it as non-implementation by default and discuss scope, goal, and approach first.
+
 ### 0. UI Modification Ban
 - **Status**: Strict default restriction.
 - **Constraint**: **DO NOT** modify any UI-related content by default. Codex is strictly forbidden from changing layout, styles, bindings, visuals, interaction flow, UI-adjacent logic, or UI interfaces/APIs unless the user explicitly and unambiguously requests that exact UI change.

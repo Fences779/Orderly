@@ -8,6 +8,7 @@ namespace Orderly.App.ViewModels;
 public partial class MainViewModel
 {
     private bool _isSynchronizingStringNarrationSelection;
+    private bool _hasDismissedStringNarrationDetailsThisSession;
 
     public ObservableCollection<StringNarrationOrderSummary> StringNarrationOrders { get; } = new();
     public ObservableCollection<StringNarrationOrderItemSnapshot> StringNarrationOrderItems { get; } = new();
@@ -56,6 +57,8 @@ public partial class MainViewModel
         : "需要配置 ADMIN_PC_GATEWAY_ENDPOINT / ADMIN_PC_GATEWAY_TOKEN 后才能调用；页面不会显示 token 明文。";
     public bool HasStringNarrationOrders => StringNarrationOrders.Count > 0;
     public bool HasSelectedStringNarrationOrderDetail => SelectedStringNarrationOrderDetail is not null;
+    public bool IsStringNarrationDetailPanelVisible => SelectedStringNarrationOrderDetail is not null;
+    public bool IsStringNarrationListExpanded => SelectedStringNarrationOrderDetail is null;
     public bool HasStringNarrationOrderItems => StringNarrationOrderItems.Count > 0;
     public bool HasStringNarrationStatusLogs => StringNarrationStatusLogs.Count > 0;
     public bool HasStringNarrationWorkOrders => StringNarrationWorkOrders.Count > 0;
@@ -113,6 +116,8 @@ public partial class MainViewModel
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
     [NotifyCanExecuteChangedFor(nameof(TestStringNarrationGatewayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyStringNarrationFulfillmentFilterCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearStringNarrationFiltersCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchStringNarrationOrderDetailCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
@@ -124,6 +129,8 @@ public partial class MainViewModel
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
     [NotifyCanExecuteChangedFor(nameof(TestStringNarrationGatewayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyStringNarrationFulfillmentFilterCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearStringNarrationFiltersCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchStringNarrationOrderDetailCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
@@ -162,6 +169,8 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedStringNarrationOrderDetail))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationListExpanded))]
     [NotifyPropertyChangedFor(nameof(StringNarrationSelectedTitle))]
     [NotifyPropertyChangedFor(nameof(StringNarrationSelectedOrderNo))]
     [NotifyPropertyChangedFor(nameof(StringNarrationSelectedTradeNo))]
@@ -231,7 +240,21 @@ public partial class MainViewModel
             return;
         }
 
-        _ = LoadStringNarrationOrderDetailAsync(value);
+        var currentDetail = SelectedStringNarrationOrderDetail;
+        if (currentDetail is null)
+        {
+            return;
+        }
+
+        var isSameOrder = string.Equals(currentDetail.OrderNo, value.OrderNo, StringComparison.Ordinal)
+            || string.Equals(currentDetail.Id, value.Id, StringComparison.Ordinal)
+            || string.Equals(currentDetail.WxOutTradeNo, value.WxOutTradeNo, StringComparison.Ordinal);
+        if (isSameOrder)
+        {
+            return;
+        }
+
+        _ = OpenStringNarrationOrderDetailAsync(value);
     }
 
     partial void OnSelectedStringNarrationOrderDetailChanged(StringNarrationOrderDetail? value)
@@ -266,6 +289,7 @@ public partial class MainViewModel
     {
         await ExecuteStringNarrationReadActionAsync("正在加载串述订单...", async () =>
         {
+            var previousSelection = CaptureStringNarrationSelection();
             var query = BuildStringNarrationQuery();
             ValidateTimeRangeOrThrow(query);
             var result = await _stringNarrationOrderService.GetOrdersAsync(query);
@@ -278,7 +302,7 @@ public partial class MainViewModel
                 ApplyStringNarrationStats(result.Stats);
             }
 
-            SelectedStringNarrationOrder = StringNarrationOrders.FirstOrDefault();
+            RestoreStringNarrationSelection(previousSelection);
             var statsSuffix = statsLoaded ? string.Empty : "；统计未更新";
             StringNarrationStatusMessage = $"已加载 {StringNarrationOrders.Count} 单，总数 {result.PageInfo.Total}{statsSuffix}";
             OnStringNarrationCollectionStateChanged();
@@ -298,15 +322,27 @@ public partial class MainViewModel
         });
     }
 
-    [RelayCommand]
-    private void ClearStringNarrationFilters()
+    [RelayCommand(CanExecute = nameof(CanRunStringNarrationReadAction))]
+    private async Task ApplyStringNarrationFulfillmentFilterAsync(string? fulfillmentStatus)
+    {
+        var normalizedStatus = NormalizeStringNarrationFilter(fulfillmentStatus ?? string.Empty);
+        SelectedStringNarrationFulfillmentStatusFilter = string.Equals(SelectedStringNarrationFulfillmentStatusFilter, normalizedStatus, StringComparison.OrdinalIgnoreCase)
+            ? "全部"
+            : normalizedStatus;
+
+        await LoadStringNarrationOrdersAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunStringNarrationReadAction))]
+    private async Task ClearStringNarrationFiltersAsync()
     {
         StringNarrationListKeyword = string.Empty;
         SelectedStringNarrationStatusFilter = "全部";
         SelectedStringNarrationFulfillmentStatusFilter = "全部";
         StringNarrationStartAt = 0;
         StringNarrationEndAt = 0;
-        StringNarrationStatusMessage = "筛选已清空，点击刷新列表重新加载。";
+
+        await LoadStringNarrationOrdersAsync();
     }
 
     [RelayCommand(CanExecute = nameof(CanSearchStringNarrationOrderDetail))]
@@ -315,6 +351,7 @@ public partial class MainViewModel
         var lookup = StringNarrationLookupInput.Trim();
         await ExecuteStringNarrationReadActionAsync("正在查询串述订单详情...", async () =>
         {
+            _hasDismissedStringNarrationDetailsThisSession = false;
             try
             {
                 SelectedStringNarrationOrderDetail = await _stringNarrationOrderService.GetOrderDetailAsync(orderNo: lookup);
@@ -628,6 +665,42 @@ public partial class MainViewModel
         }
     }
 
+    public void DismissStringNarrationDetailsForSession()
+    {
+        _hasDismissedStringNarrationDetailsThisSession = true;
+        ClearStringNarrationSelection();
+        StringNarrationStatusMessage = "已关闭订单详情，本次会话内不会自动展开。";
+    }
+
+    public void EnsureStringNarrationDetailSelection()
+    {
+        if (_hasDismissedStringNarrationDetailsThisSession
+            || StringNarrationOrders.Count == 0
+            || SelectedStringNarrationOrder is not null
+            || SelectedStringNarrationOrderDetail is not null)
+        {
+            return;
+        }
+
+        _ = OpenStringNarrationOrderDetailAsync(StringNarrationOrders.FirstOrDefault());
+    }
+
+    public async Task OpenStringNarrationOrderDetailAsync(StringNarrationOrderSummary? summary)
+    {
+        if (summary is null)
+        {
+            return;
+        }
+
+        _hasDismissedStringNarrationDetailsThisSession = false;
+        if (SelectedStringNarrationOrder != summary)
+        {
+            SelectedStringNarrationOrder = summary;
+        }
+
+        await LoadStringNarrationOrderDetailAsync(summary);
+    }
+
     private void UpdateStringNarrationSummary(StringNarrationOrderDetail detail)
     {
         var index = StringNarrationOrders.ToList().FindIndex(item =>
@@ -651,10 +724,76 @@ public partial class MainViewModel
         }
     }
 
+    private void ClearStringNarrationSelection()
+    {
+        _isSynchronizingStringNarrationSelection = true;
+        try
+        {
+            SelectedStringNarrationOrder = null;
+        }
+        finally
+        {
+            _isSynchronizingStringNarrationSelection = false;
+        }
+
+        SelectedStringNarrationOrderDetail = null;
+    }
+
+    private void RestoreStringNarrationSelection(StringNarrationSelectionSnapshot previousSelection)
+    {
+        var matchedOrder = FindStringNarrationOrder(previousSelection);
+        if (matchedOrder is not null)
+        {
+            SelectedStringNarrationOrder = matchedOrder;
+            if (previousSelection.ShouldOpenDetail)
+            {
+                _ = OpenStringNarrationOrderDetailAsync(matchedOrder);
+            }
+            return;
+        }
+
+        if (_hasDismissedStringNarrationDetailsThisSession || StringNarrationOrders.Count == 0)
+        {
+            ClearStringNarrationSelection();
+            return;
+        }
+
+        _ = OpenStringNarrationOrderDetailAsync(StringNarrationOrders.FirstOrDefault());
+    }
+
+    private StringNarrationOrderSummary? FindStringNarrationOrder(StringNarrationSelectionSnapshot snapshot)
+    {
+        if (snapshot.IsEmpty)
+        {
+            return null;
+        }
+
+        return StringNarrationOrders.FirstOrDefault(item =>
+            (!string.IsNullOrWhiteSpace(snapshot.OrderNo) && string.Equals(item.OrderNo, snapshot.OrderNo, StringComparison.Ordinal))
+            || (!string.IsNullOrWhiteSpace(snapshot.Id) && string.Equals(item.Id, snapshot.Id, StringComparison.Ordinal))
+            || (!string.IsNullOrWhiteSpace(snapshot.TradeNo) && string.Equals(item.WxOutTradeNo, snapshot.TradeNo, StringComparison.Ordinal)));
+    }
+
+    private StringNarrationSelectionSnapshot CaptureStringNarrationSelection()
+    {
+        var detail = SelectedStringNarrationOrderDetail;
+        if (detail is not null)
+        {
+            return new StringNarrationSelectionSnapshot(detail.OrderNo, detail.WxOutTradeNo, detail.Id, true);
+        }
+
+        var summary = SelectedStringNarrationOrder;
+        return summary is null
+            ? StringNarrationSelectionSnapshot.Empty
+            : new StringNarrationSelectionSnapshot(summary.OrderNo, summary.WxOutTradeNo, summary.Id, false);
+    }
+
     private void OnStringNarrationCollectionStateChanged()
     {
         OnPropertyChanged(nameof(HasStringNarrationOrders));
         OnPropertyChanged(nameof(HasSelectedStringNarrationOrderDetail));
+        OnPropertyChanged(nameof(IsStringNarrationDetailPanelVisible));
+        OnPropertyChanged(nameof(IsStringNarrationListExpanded));
         OnPropertyChanged(nameof(HasStringNarrationOrderItems));
         OnPropertyChanged(nameof(HasStringNarrationStatusLogs));
         OnPropertyChanged(nameof(HasStringNarrationWorkOrders));
@@ -753,5 +892,14 @@ public partial class MainViewModel
         {
             return "暂无";
         }
+    }
+
+    private readonly record struct StringNarrationSelectionSnapshot(string OrderNo, string TradeNo, string Id, bool ShouldOpenDetail)
+    {
+        public static readonly StringNarrationSelectionSnapshot Empty = new(string.Empty, string.Empty, string.Empty, false);
+
+        public bool IsEmpty => string.IsNullOrWhiteSpace(OrderNo)
+            && string.IsNullOrWhiteSpace(TradeNo)
+            && string.IsNullOrWhiteSpace(Id);
     }
 }
