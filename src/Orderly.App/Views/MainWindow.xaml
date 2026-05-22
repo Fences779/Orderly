@@ -1456,7 +1456,12 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding FulfillmentStatus}" Value="paid_pending_confirm">
                                         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1487,7 +1492,12 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding FulfillmentStatus}" Value="pending_make">
                                         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1518,7 +1528,12 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding FulfillmentStatus}" Value="making">
                                         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1549,7 +1564,12 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding FulfillmentStatus}" Value="ready_to_ship">
                                         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1580,7 +1600,12 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding FulfillmentStatus}" Value="shipped">
                                         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1611,7 +1636,12 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding FulfillmentStatus}" Value="exception">
                                         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1642,7 +1672,12 @@
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding FulfillmentStatus}" Value="completed">
                                         <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
+                                            </Setter.Value>
+                                        </Setter>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -1738,22 +1773,84 @@
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
-                                        <Grid Margin="0,0,12,12">
-                                            <Border x:Name="CardBorder" Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="14">
+                                        <Grid Margin="6">
+                                            <Border x:Name="CardBorder" Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="14" RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform x:Name="CardTransform" Y="0" />
+                                                </Border.RenderTransform>
                                                 <Border.Effect>
-                                                    <DropShadowEffect BlurRadius="12" ShadowDepth="1" Direction="270" Color="#111216" Opacity="0.02" />
+                                                    <DropShadowEffect x:Name="CardShadow" BlurRadius="12" ShadowDepth="1" Direction="270" Color="#111216" Opacity="0.02" />
                                                 </Border.Effect>
                                                 <ContentPresenter />
                                             </Border>
-                                            <Border x:Name="ActiveIndicator" Width="4" Height="36" Background="{StaticResource PrimaryBrush}" CornerRadius="2" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" Margin="1,0,0,0" />
+                                            <Border x:Name="ActiveIndicator" Width="4" Height="36" Background="#17181C" CornerRadius="2" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" Margin="1,0,0,0" />
                                         </Grid>
                                         <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
+                                            <!-- 状态 A：未选中但悬停，触发浮起与落回 -->
+                                            <MultiTrigger>
+                                                <MultiTrigger.Conditions>
+                                                    <Condition Property="IsMouseOver" Value="True" />
+                                                    <Condition Property="IsSelected" Value="False" />
+                                                </MultiTrigger.Conditions>
+                                                <MultiTrigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardTransform" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.1">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="Opacity" To="0.10" Duration="0" />
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="BlurRadius" To="16" Duration="0" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </MultiTrigger.EnterActions>
+                                                <MultiTrigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardTransform" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="Opacity" To="0.02" Duration="0" />
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="BlurRadius" To="12" Duration="0" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </MultiTrigger.ExitActions>
                                                 <Setter TargetName="CardBorder" Property="Background" Value="#F8F9FA" />
-                                            </Trigger>
+                                            </MultiTrigger>
+
+                                            <!-- 状态 B：选中状态，保持浮起，直到取消选中 -->
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="CardBorder" Property="Background" Value="#EBF4EF" />
-                                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardTransform" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.1">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="Opacity" To="0.06" Duration="0" />
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="BlurRadius" To="16" Duration="0" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardTransform" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="Opacity" To="0.02" Duration="0" />
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="BlurRadius" To="12" Duration="0" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.ExitActions>
+                                                <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+                                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
                                                 <Setter TargetName="ActiveIndicator" Property="Visibility" Value="Visible" />
                                             </Trigger>
                                         </ControlTemplate.Triggers>
@@ -1892,14 +1989,189 @@
                                 </Grid>
                             </Border>
 
-                            <ListBox ItemsSource="{Binding StringNarrationOrders}"
-                                     SelectedItem="{Binding SelectedStringNarrationOrder}"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     MouseDoubleClick="StringNarrationOrdersList_MouseDoubleClick"
-                                     ItemContainerStyle="{StaticResource StringNarrationOrderCardListItemStyle}"
-                                     ItemTemplate="{StaticResource StringNarrationOrderCardTemplate}" />
+                            <Grid>
+                                <!-- Empty state UI -->
+                                <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,40">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Setter Property="Opacity" Value="0" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasStringNarrationOrders}" Value="False">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut" />
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut" />
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.15" Duration="0">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource SurfaceSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,16">
+                                            <TextBlock Text="&#xE90A;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" Margin="0,0,0,6">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="暂无订单数据" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="paid_pending_confirm">
+                                                            <Setter Property="Text" Value="暂无已支付待确认的订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="pending_make">
+                                                            <Setter Property="Text" Value="暂无待制作订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="making">
+                                                            <Setter Property="Text" Value="暂无制作中订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="ready_to_ship">
+                                                            <Setter Property="Text" Value="暂无待发货订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="shipped">
+                                                            <Setter Property="Text" Value="暂无已发货订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="exception">
+                                                            <Setter Property="Text" Value="暂无异常订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="completed">
+                                                            <Setter Property="Text" Value="暂无已完成订单" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="切换分类卡片或重置筛选条件试试" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <ListBox ItemsSource="{Binding StringNarrationOrders}"
+                                         SelectedItem="{Binding SelectedStringNarrationOrder}"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         MouseDoubleClick="StringNarrationOrdersList_MouseDoubleClick"
+                                         ItemContainerStyle="{StaticResource StringNarrationOrderCardListItemStyle}"
+                                         ItemTemplate="{StaticResource StringNarrationOrderCardTemplate}"
+                                         Padding="2,4,2,2"
+                                         ClipToBounds="False">
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasStringNarrationOrders}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                </ListBox>
+
+                                <!-- Loading Overlay -->
+                                <Grid x:Name="LoadingOverlay1" Background="White" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Setter Property="Opacity" Value="0" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStringNarrationBusy}" Value="True">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut" />
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut" />
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.2" Duration="0">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="&#xE72C;" 
+                                                   FontFamily="Segoe MDL2 Assets" 
+                                                   FontSize="30" 
+                                                   FontWeight="Bold"
+                                                   Foreground="Black" 
+                                                   HorizontalAlignment="Center" 
+                                                   RenderTransformOrigin="0.5,0.5" 
+                                                   Margin="0,0,0,12">
+                                            <TextBlock.RenderTransform>
+                                                <RotateTransform Angle="0" />
+                                            </TextBlock.RenderTransform>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsStringNarrationBusy}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard x:Name="RotateStoryboard1">
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                         From="0" To="360" Duration="0:0:1"
+                                                                                         RepeatBehavior="Forever" />
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <StopStoryboard BeginStoryboardName="RotateStoryboard1" />
+                                                            </DataTrigger.ExitActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="正在同步..." 
+                                                   FontSize="13" 
+                                                   FontWeight="Bold"
+                                                   Foreground="Black" 
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
                         </DockPanel>
                     </Border>
 
@@ -1929,26 +2201,227 @@
                                 </Grid>
                             </Border>
 
-                            <ListBox ItemsSource="{Binding StringNarrationOrders}"
-                                     SelectedItem="{Binding SelectedStringNarrationOrder}"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     MouseDoubleClick="StringNarrationOrdersList_MouseDoubleClick"
-                                     ItemContainerStyle="{StaticResource StringNarrationOrderCardListItemStyle}"
-                                     ItemTemplate="{StaticResource StringNarrationOrderCardTemplate}">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="2" />
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                            </ListBox>
+                            <Grid>
+                                <!-- Empty state UI -->
+                                <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,40">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Setter Property="Opacity" Value="0" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasStringNarrationOrders}" Value="False">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut" />
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut" />
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.15" Duration="0">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource SurfaceSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,16">
+                                            <TextBlock Text="&#xE90A;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" Margin="0,0,0,6">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="暂无订单数据" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="paid_pending_confirm">
+                                                            <Setter Property="Text" Value="暂无已支付待确认的订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="pending_make">
+                                                            <Setter Property="Text" Value="暂无待制作订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="making">
+                                                            <Setter Property="Text" Value="暂无制作中订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="ready_to_ship">
+                                                            <Setter Property="Text" Value="暂无待发货订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="shipped">
+                                                            <Setter Property="Text" Value="暂无已发货订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="exception">
+                                                            <Setter Property="Text" Value="暂无异常订单" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding FulfillmentStatus}" Value="completed">
+                                                            <Setter Property="Text" Value="暂无已完成订单" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="切换分类卡片或重置筛选条件试试" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <ListBox ItemsSource="{Binding StringNarrationOrders}"
+                                         SelectedItem="{Binding SelectedStringNarrationOrder}"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         MouseDoubleClick="StringNarrationOrdersList_MouseDoubleClick"
+                                         ItemContainerStyle="{StaticResource StringNarrationOrderCardListItemStyle}"
+                                         ItemTemplate="{StaticResource StringNarrationOrderCardTemplate}"
+                                         Padding="2,4,2,2"
+                                         ClipToBounds="False">
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasStringNarrationOrders}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="2" />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                </ListBox>
+
+                                <!-- Loading Overlay -->
+                                <Grid x:Name="LoadingOverlay2" Background="White" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Setter Property="Opacity" Value="0" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStringNarrationBusy}" Value="True">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut" />
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                                    <DoubleAnimation.EasingFunction>
+                                                                        <CubicEase EasingMode="EaseOut" />
+                                                                    </DoubleAnimation.EasingFunction>
+                                                                </DoubleAnimation>
+                                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.2" Duration="0">
+                                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                                </ObjectAnimationUsingKeyFrames>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="&#xE72C;" 
+                                                   FontFamily="Segoe MDL2 Assets" 
+                                                   FontSize="30" 
+                                                   FontWeight="Bold"
+                                                   Foreground="Black" 
+                                                   HorizontalAlignment="Center" 
+                                                   RenderTransformOrigin="0.5,0.5" 
+                                                   Margin="0,0,0,12">
+                                            <TextBlock.RenderTransform>
+                                                <RotateTransform Angle="0" />
+                                            </TextBlock.RenderTransform>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsStringNarrationBusy}" Value="True">
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard x:Name="RotateStoryboard2">
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                         From="0" To="360" Duration="0:0:1"
+                                                                                         RepeatBehavior="Forever" />
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                            <DataTrigger.ExitActions>
+                                                                <StopStoryboard BeginStoryboardName="RotateStoryboard2" />
+                                                            </DataTrigger.ExitActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="正在同步..." 
+                                                   FontSize="13" 
+                                                   FontWeight="Bold"
+                                                   Foreground="Black" 
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
                         </DockPanel>
                     </Border>
 
                     <!-- Right: Selected Order Detail Panel -->
-                    <Border Grid.Column="1" Style="{StaticResource SettingsGroupCardStyle}" Padding="18" Margin="0"
+                    <Border x:Name="DetailPanel" Grid.Column="1" Padding="18" Margin="0" RenderTransformOrigin="0.5,0.5"
                             Visibility="{Binding IsStringNarrationDetailPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border.RenderTransform>
+                            <TranslateTransform X="40" />
+                        </Border.RenderTransform>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource SettingsGroupCardStyle}">
+                                <Style.Triggers>
+                                    <Trigger Property="Visibility" Value="Visible">
+                                        <Trigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" From="40" To="0" Duration="0:0:0.25">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.EnterActions>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                                 <!-- Header -->
@@ -1996,7 +2469,7 @@
                                         </Grid.ColumnDefinitions>
 
                                         <!-- Node 1: 待确认 -->
-                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                        <StackPanel Grid.Column="0" HorizontalAlignment="Center" Cursor="Hand" Tag="paid_pending_confirm" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为待确认状态">
                                             <Border Width="24" Height="24" CornerRadius="12" BorderThickness="2" HorizontalAlignment="Center" Background="{StaticResource PrimaryLightBrush}" BorderBrush="{StaticResource PrimaryBrush}" TextElement.Foreground="{StaticResource PrimaryBrush}">
                                                 <TextBlock Text="1" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
@@ -2019,7 +2492,7 @@
                                         </Rectangle>
 
                                         <!-- Node 2: 待制作 -->
-                                        <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                        <StackPanel Grid.Column="2" HorizontalAlignment="Center" Cursor="Hand" Tag="pending_make" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为待制作状态">
                                             <Border Width="24" Height="24" CornerRadius="12" BorderThickness="2" HorizontalAlignment="Center">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
@@ -2075,7 +2548,7 @@
                                         </Rectangle>
 
                                         <!-- Node 3: 制作中 -->
-                                        <StackPanel Grid.Column="4" HorizontalAlignment="Center">
+                                        <StackPanel Grid.Column="4" HorizontalAlignment="Center" Cursor="Hand" Tag="making" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为制作中状态">
                                             <Border Width="24" Height="24" CornerRadius="12" BorderThickness="2" HorizontalAlignment="Center">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
@@ -2125,7 +2598,7 @@
                                         </Rectangle>
 
                                         <!-- Node 4: 待发货 -->
-                                        <StackPanel Grid.Column="6" HorizontalAlignment="Center">
+                                        <StackPanel Grid.Column="6" HorizontalAlignment="Center" Cursor="Hand" Tag="ready_to_ship" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为待发货状态">
                                             <Border Width="24" Height="24" CornerRadius="12" BorderThickness="2" HorizontalAlignment="Center">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
@@ -2169,7 +2642,7 @@
                                         </Rectangle>
 
                                         <!-- Node 5: 已发货 -->
-                                        <StackPanel Grid.Column="8" HorizontalAlignment="Center">
+                                        <StackPanel Grid.Column="8" HorizontalAlignment="Center" Cursor="Hand" Tag="shipped" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为已发货状态">
                                             <Border Width="24" Height="24" CornerRadius="12" BorderThickness="2" HorizontalAlignment="Center">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
@@ -2207,7 +2680,7 @@
                                         </Rectangle>
 
                                         <!-- Node 6: 已完成 -->
-                                        <StackPanel Grid.Column="10" HorizontalAlignment="Center">
+                                        <StackPanel Grid.Column="10" HorizontalAlignment="Center" Cursor="Hand" Tag="completed" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为已完成状态">
                                             <Border Width="24" Height="24" CornerRadius="12" BorderThickness="2" HorizontalAlignment="Center">
                                                 <Border.Style>
                                                     <Style TargetType="Border">
@@ -2462,7 +2935,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <Grid Grid.Column="0">
                                                     <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Text="{Binding StringNarrationCarrierInput, Mode=TwoWay}"
-                                                             AutomationProperties.AutomationId="Input_FulfillmentCarrier" />
+                                                             AutomationProperties.AutomationId="Input_FulfillmentCarrier" KeyDown="FulfillmentInput_KeyDown" />
                                                     <TextBlock Text="快递公司 (如 顺丰)" Foreground="{StaticResource CaptionTextBrush}" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0" IsHitTestVisible="False">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
@@ -2482,7 +2955,7 @@
 
                                                 <Grid Grid.Column="2">
                                                     <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Text="{Binding StringNarrationTrackingNoInput, Mode=TwoWay}"
-                                                             AutomationProperties.AutomationId="Input_FulfillmentTrackingNo" />
+                                                             AutomationProperties.AutomationId="Input_FulfillmentTrackingNo" KeyDown="FulfillmentInput_KeyDown" />
                                                     <TextBlock Text="快递单号" Foreground="{StaticResource CaptionTextBrush}" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0" IsHitTestVisible="False">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
@@ -2503,7 +2976,7 @@
                                             
                                             <Grid Margin="0,0,0,10">
                                                 <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Text="{Binding StringNarrationAdminRemarkInput, Mode=TwoWay}"
-                                                         AutomationProperties.AutomationId="Input_FulfillmentAdminRemark" />
+                                                         AutomationProperties.AutomationId="Input_FulfillmentAdminRemark" KeyDown="FulfillmentInput_KeyDown" />
                                                 <TextBlock Text="后台备注 (如 加急制作)" Foreground="{StaticResource CaptionTextBrush}" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0" IsHitTestVisible="False">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
@@ -4236,6 +4709,18 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
+            <!-- 复制成功气泡提示 -->
+            <Popup x:Name="Popup_CopyToast" Placement="Mouse" AllowsTransparency="True" HorizontalOffset="10" VerticalOffset="10">
+                <Border Background="#2B7A5C" CornerRadius="8" Padding="12,6" BorderThickness="0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.15"/>
+                    </Border.Effect>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock x:Name="Text_CopyToast" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </Popup>
         </Grid>
     </Grid>
 </Window>
