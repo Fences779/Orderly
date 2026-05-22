@@ -1869,15 +1869,15 @@
 
                                 <DockPanel Grid.Row="0" Margin="0,0,0,8">
                                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                                        <Button Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="20" Height="20" Padding="0" Margin="0,0,6,0"
+                                        <TextBlock Text="{Binding OrderNoText}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
+                                        <Button Style="{StaticResource IconCopyButtonStyle}" Width="18" Height="18" Padding="0" Margin="6,0,0,0"
                                                 Command="{Binding DataContext.CopyStringNarrationOrderSummaryOrderNoCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                 CommandParameter="{Binding}" ToolTip="复制订单号">
                                             <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" />
                                         </Button>
-                                        <TextBlock Text="{Binding OrderNoText}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
                                     </StackPanel>
 
-                                    <Border DockPanel.Dock="Right" CornerRadius="8" Padding="8,4" VerticalAlignment="Center">
+                                     <Border DockPanel.Dock="Right" CornerRadius="6" Padding="6,2.5" VerticalAlignment="Center" HorizontalAlignment="Right">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
@@ -1906,7 +1906,7 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <TextBlock Text="{Binding FulfillmentStatusLabel}" FontSize="11" FontWeight="SemiBold">
+                                        <TextBlock Text="{Binding FulfillmentStatusLabel}" FontSize="10" FontWeight="SemiBold">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
