@@ -305,7 +305,7 @@ public partial class MainViewModel
         SelectedStringNarrationProductionSheet = StringNarrationProductionSheetSnapshot.Create(value);
         ReplaceCollection(StringNarrationProductionSheetMaterials, SelectedStringNarrationProductionSheet?.Materials ?? []);
         PopulateStringNarrationFulfillmentForm(value);
-        if (value is null || (IsStringNarrationProductionSheetVisible && !HasStringNarrationProductionSheet))
+        if (value is null)
         {
             StringNarrationLeftPaneMode = StringNarrationLeftPaneOrderList;
         }
@@ -504,6 +504,8 @@ public partial class MainViewModel
             return;
         }
 
+        ShowStringNarrationProductionSheet();
+
         try
         {
             IsStringNarrationSaving = true;
@@ -520,10 +522,7 @@ public partial class MainViewModel
             });
 
             UpdateStringNarrationSummary(SelectedStringNarrationOrderDetail);
-            if (HasStringNarrationProductionSheet)
-            {
-                StringNarrationLeftPaneMode = StringNarrationLeftPaneProductionSheet;
-            }
+            ShowStringNarrationProductionSheet();
             StringNarrationStatusMessage = "制作单请求已提交并刷新详情。";
         }
         catch (Exception ex)
@@ -576,6 +575,19 @@ public partial class MainViewModel
     private void ShowStringNarrationOrderList()
     {
         StringNarrationLeftPaneMode = StringNarrationLeftPaneOrderList;
+    }
+
+    private void ShowStringNarrationProductionSheet()
+    {
+        if (SelectedStringNarrationOrderDetail is null)
+        {
+            return;
+        }
+
+        SelectedStringNarrationProductionSheet = StringNarrationProductionSheetSnapshot.Create(SelectedStringNarrationOrderDetail);
+        ReplaceCollection(StringNarrationProductionSheetMaterials, SelectedStringNarrationProductionSheet.Materials);
+        OnPropertyChanged(nameof(HasStringNarrationProductionSheetMaterials));
+        StringNarrationLeftPaneMode = StringNarrationLeftPaneProductionSheet;
     }
 
     private async Task LoadStringNarrationOrderDetailAsync(StringNarrationOrderSummary summary)
