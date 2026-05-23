@@ -3695,7 +3695,7 @@
                                             </Style>
                                         </TextBlock.Style>
                                     </TextBlock>
-                                    <TextBlock Text="正在同步..." 
+                                    <TextBlock Text="{Binding StringNarrationStatusMessage}" 
                                                FontSize="13" 
                                                FontWeight="Bold"
                                                Foreground="{StaticResource HeadingBrush}" 
