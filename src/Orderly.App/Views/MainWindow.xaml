@@ -2841,11 +2841,11 @@
                                         <StackPanel Grid.Column="0">
                                             <TextBlock Text="订单详情" FontSize="18" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
                                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                <TextBlock Text="订单号：" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
-                                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.OrderNoText}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
-                                                <Button Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="20" Height="20" Padding="0" Margin="6,0,0,0"
+                                                <TextBlock Text="订单号：" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.OrderNoText}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
+                                                <Button Style="{StaticResource IconCopyButtonStyle}" Width="20" Height="20" Padding="0" Margin="6,0,0,2" VerticalAlignment="Center"
                                                         Command="{Binding CopyStringNarrationOrderFieldCommand}" CommandParameter="orderNo" ToolTip="复制订单号">
-                                                    <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                                                    <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
                                                 </Button>
                                             </StackPanel>
                                         </StackPanel>
@@ -3386,7 +3386,7 @@
                                             <Button Style="{StaticResource ToolbarSecondaryButtonStyle}" Height="24" Padding="8,0" DockPanel.Dock="Right" HorizontalAlignment="Right"
                                                     Command="{Binding CopyStringNarrationOrderFieldCommand}" CommandParameter="receiverInfo" ToolTip="复制完整收货信息">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                                    <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="0,0,4,0" VerticalAlignment="Center" />
                                                     <TextBlock Text="复制整单" FontSize="11" VerticalAlignment="Center" />
                                                 </StackPanel>
                                             </Button>
@@ -3409,9 +3409,9 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="联系电话" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1" Text="{Binding SelectedStringNarrationOrderDetail.Address.ReceiverPhone}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
-                                            <Button Grid.Column="2" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="20" Height="20" Padding="0"
+                                            <Button Grid.Column="2" Style="{StaticResource IconCopyButtonStyle}" Width="20" Height="20" Padding="0" Margin="0,0,0,2" VerticalAlignment="Center"
                                                     Command="{Binding CopyStringNarrationOrderFieldCommand}" CommandParameter="phone" ToolTip="复制电话">
-                                                <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                                                <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
                                             </Button>
                                         </Grid>
                                         
@@ -3421,11 +3421,11 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="详细地址" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Top" />
-                                            <TextBlock Grid.Column="1" Text="{Binding SelectedStringNarrationOrderDetail.Address.FullAddressText}" Foreground="{StaticResource HeadingBrush}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                            <Button Grid.Column="2" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="20" Height="20" Padding="0" VerticalAlignment="Top"
+                                            <TextBlock Grid.Column="0" Text="详细地址" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Top" Margin="0,3,0,0" />
+                                            <TextBlock Grid.Column="1" Text="{Binding SelectedStringNarrationOrderDetail.Address.FullAddressText}" Foreground="{StaticResource HeadingBrush}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Top" Margin="0,3,0,0" />
+                                            <Button Grid.Column="2" Style="{StaticResource IconCopyButtonStyle}" Width="20" Height="20" Padding="0" Margin="0,1,0,0" VerticalAlignment="Top"
                                                     Command="{Binding CopyStringNarrationOrderFieldCommand}" CommandParameter="address" ToolTip="复制地址">
-                                                <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="10" />
+                                                <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
                                             </Button>
                                         </Grid>
                                         
