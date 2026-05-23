@@ -285,6 +285,7 @@ public partial class MainViewModel
         var currentDetail = SelectedStringNarrationOrderDetail;
         if (currentDetail is null)
         {
+            _ = OpenStringNarrationOrderDetailAsync(value);
             return;
         }
 
