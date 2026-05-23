@@ -7,6 +7,8 @@ namespace Orderly.App.ViewModels;
 
 public partial class MainViewModel
 {
+    private const string StringNarrationLeftPaneOrderList = "OrderList";
+    private const string StringNarrationLeftPaneProductionSheet = "ProductionSheet";
     private bool _isSynchronizingStringNarrationSelection;
     private bool _hasDismissedStringNarrationDetailsThisSession;
     private bool _isDetectingCarrier;
@@ -16,6 +18,7 @@ public partial class MainViewModel
     public ObservableCollection<StringNarrationOrderItemSnapshot> StringNarrationOrderItems { get; } = new();
     public ObservableCollection<StringNarrationStatusLog> StringNarrationStatusLogs { get; } = new();
     public ObservableCollection<StringNarrationWorkOrderSnapshot> StringNarrationWorkOrders { get; } = new();
+    public ObservableCollection<StringNarrationProductionSheetMaterialItem> StringNarrationProductionSheetMaterials { get; } = new();
     public ObservableCollection<StringNarrationFulfillmentStatusMetric> StringNarrationFulfillmentMetrics { get; } = new();
     public ObservableCollection<string> StringNarrationStatusFilterOptions { get; } = new(new[]
     {
@@ -61,9 +64,13 @@ public partial class MainViewModel
     public bool HasSelectedStringNarrationOrderDetail => SelectedStringNarrationOrderDetail is not null;
     public bool IsStringNarrationDetailPanelVisible => SelectedStringNarrationOrderDetail is not null;
     public bool IsStringNarrationListExpanded => SelectedStringNarrationOrderDetail is null;
+    public bool IsStringNarrationOrderListVisible => SelectedStringNarrationOrderDetail is null || string.Equals(StringNarrationLeftPaneMode, StringNarrationLeftPaneOrderList, StringComparison.Ordinal);
+    public bool IsStringNarrationProductionSheetVisible => SelectedStringNarrationOrderDetail is not null && string.Equals(StringNarrationLeftPaneMode, StringNarrationLeftPaneProductionSheet, StringComparison.Ordinal);
     public bool HasStringNarrationOrderItems => StringNarrationOrderItems.Count > 0;
     public bool HasStringNarrationStatusLogs => StringNarrationStatusLogs.Count > 0;
     public bool HasStringNarrationWorkOrders => StringNarrationWorkOrders.Count > 0;
+    public bool HasStringNarrationProductionSheet => SelectedStringNarrationProductionSheet?.HasDisplayableContent == true;
+    public bool HasStringNarrationProductionSheetMaterials => StringNarrationProductionSheetMaterials.Count > 0;
     public bool HasStringNarrationFulfillmentMetrics => StringNarrationFulfillmentMetrics.Count > 0;
     public bool IsStringNarrationBusy => IsStringNarrationLoading || IsStringNarrationSaving;
     public string StringNarrationOrdersCountText => $"{StringNarrationOrders.Count} 单";
@@ -112,6 +119,14 @@ public partial class MainViewModel
         ? "暂无收货信息"
         : $"{SelectedStringNarrationOrderDetail.ReceiverSummaryText}{Environment.NewLine}{SelectedStringNarrationOrderDetail.FullAddressText}";
     public string StringNarrationDetailProduction => SelectedStringNarrationOrderDetail?.ProductionOrderSummaryText ?? "暂无制作单";
+    public string StringNarrationProductionSheetOrderNoText => SelectedStringNarrationOrderDetail?.OrderNoText ?? "无 orderNo";
+    public string StringNarrationProductionSheetProductionOrderNoText => SelectedStringNarrationProductionSheet?.ProductionOrderNoText ?? "无制作单号";
+    public string StringNarrationProductionSheetWorkOrderNoText => SelectedStringNarrationProductionSheet?.WorkOrderNoText ?? "无工单号";
+    public string StringNarrationProductionSheetStatusText => SelectedStringNarrationProductionSheet?.WorkOrderStatusText ?? "未知工单状态";
+    public string StringNarrationProductionSheetArrangementText => SelectedStringNarrationProductionSheet?.ArrangementDisplayText ?? "未提供排列方式";
+    public string StringNarrationProductionSheetRemarkText => SelectedStringNarrationProductionSheet?.RemarkText ?? "无制作备注";
+    public string StringNarrationProductionSheetExampleImageUrl => SelectedStringNarrationProductionSheet?.ExampleImageUrl ?? string.Empty;
+    public string StringNarrationProductionSheetExampleFallbackText => SelectedStringNarrationProductionSheet?.ExampleImageFallbackText ?? "未提供例图";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationBusy))]
@@ -229,6 +244,22 @@ public partial class MainViewModel
     [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
     private bool stringNarrationProductionOrderForceRegenerate;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationOrderListVisible))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationProductionSheetVisible))]
+    private string stringNarrationLeftPaneMode = StringNarrationLeftPaneOrderList;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStringNarrationProductionSheet))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationProductionSheetProductionOrderNoText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationProductionSheetWorkOrderNoText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationProductionSheetStatusText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationProductionSheetArrangementText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationProductionSheetRemarkText))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationProductionSheetExampleImageUrl))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationProductionSheetExampleFallbackText))]
+    private StringNarrationProductionSheetSnapshot? selectedStringNarrationProductionSheet;
+
     partial void OnSelectedStringNarrationOrderChanged(StringNarrationOrderSummary? value)
     {
         if (_isSynchronizingStringNarrationSelection)
@@ -238,10 +269,13 @@ public partial class MainViewModel
 
         if (value is null)
         {
+            StringNarrationLeftPaneMode = StringNarrationLeftPaneOrderList;
             SelectedStringNarrationOrderDetail = null;
             ReplaceCollection(StringNarrationOrderItems, []);
             ReplaceCollection(StringNarrationStatusLogs, []);
             ReplaceCollection(StringNarrationWorkOrders, []);
+            ReplaceCollection(StringNarrationProductionSheetMaterials, []);
+            SelectedStringNarrationProductionSheet = null;
             return;
         }
 
@@ -268,7 +302,14 @@ public partial class MainViewModel
         ReplaceCollection(StringNarrationStatusLogs, value is null ? [] : value.StatusLogs.OrderByDescending(log => log.At));
         var workOrders = value?.WorkOrders ?? value?.ProductionOrder.WorkOrders ?? [];
         ReplaceCollection(StringNarrationWorkOrders, workOrders);
+        SelectedStringNarrationProductionSheet = StringNarrationProductionSheetSnapshot.Create(value);
+        ReplaceCollection(StringNarrationProductionSheetMaterials, SelectedStringNarrationProductionSheet?.Materials ?? []);
         PopulateStringNarrationFulfillmentForm(value);
+        if (value is null || (IsStringNarrationProductionSheetVisible && !HasStringNarrationProductionSheet))
+        {
+            StringNarrationLeftPaneMode = StringNarrationLeftPaneOrderList;
+        }
+
         if (value is not null)
         {
             UpsertExceptionOrder(value);
@@ -479,6 +520,10 @@ public partial class MainViewModel
             });
 
             UpdateStringNarrationSummary(SelectedStringNarrationOrderDetail);
+            if (HasStringNarrationProductionSheet)
+            {
+                StringNarrationLeftPaneMode = StringNarrationLeftPaneProductionSheet;
+            }
             StringNarrationStatusMessage = "制作单请求已提交并刷新详情。";
         }
         catch (Exception ex)
@@ -525,6 +570,12 @@ public partial class MainViewModel
 
         _clipboardService.SetText(orderNo);
         StringNarrationStatusMessage = "已复制订单号";
+    }
+
+    [RelayCommand]
+    private void ShowStringNarrationOrderList()
+    {
+        StringNarrationLeftPaneMode = StringNarrationLeftPaneOrderList;
     }
 
     private async Task LoadStringNarrationOrderDetailAsync(StringNarrationOrderSummary summary)
@@ -778,6 +829,7 @@ public partial class MainViewModel
         }
 
         SelectedStringNarrationOrderDetail = null;
+        StringNarrationLeftPaneMode = StringNarrationLeftPaneOrderList;
     }
 
     private void RestoreStringNarrationSelection(StringNarrationSelectionSnapshot previousSelection)
@@ -830,9 +882,13 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasSelectedStringNarrationOrderDetail));
         OnPropertyChanged(nameof(IsStringNarrationDetailPanelVisible));
         OnPropertyChanged(nameof(IsStringNarrationListExpanded));
+        OnPropertyChanged(nameof(IsStringNarrationOrderListVisible));
+        OnPropertyChanged(nameof(IsStringNarrationProductionSheetVisible));
         OnPropertyChanged(nameof(HasStringNarrationOrderItems));
         OnPropertyChanged(nameof(HasStringNarrationStatusLogs));
         OnPropertyChanged(nameof(HasStringNarrationWorkOrders));
+        OnPropertyChanged(nameof(HasStringNarrationProductionSheet));
+        OnPropertyChanged(nameof(HasStringNarrationProductionSheetMaterials));
         OnPropertyChanged(nameof(HasStringNarrationFulfillmentMetrics));
         OnPropertyChanged(nameof(StringNarrationOrdersCountText));
         OnPropertyChanged(nameof(StringNarrationStatsTotalText));
@@ -855,6 +911,14 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(StringNarrationDetailProduct));
         OnPropertyChanged(nameof(StringNarrationDetailReceiver));
         OnPropertyChanged(nameof(StringNarrationDetailProduction));
+        OnPropertyChanged(nameof(StringNarrationProductionSheetOrderNoText));
+        OnPropertyChanged(nameof(StringNarrationProductionSheetProductionOrderNoText));
+        OnPropertyChanged(nameof(StringNarrationProductionSheetWorkOrderNoText));
+        OnPropertyChanged(nameof(StringNarrationProductionSheetStatusText));
+        OnPropertyChanged(nameof(StringNarrationProductionSheetArrangementText));
+        OnPropertyChanged(nameof(StringNarrationProductionSheetRemarkText));
+        OnPropertyChanged(nameof(StringNarrationProductionSheetExampleImageUrl));
+        OnPropertyChanged(nameof(StringNarrationProductionSheetExampleFallbackText));
     }
 
     private bool ConfirmStringNarrationFulfillmentUpdate(StringNarrationOrderDetail detail)
