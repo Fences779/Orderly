@@ -1004,6 +1004,7 @@ public sealed class StringNarrationProductionSheetSnapshot
     public string ProductionOrderNo { get; set; } = string.Empty;
     public string WorkOrderNo { get; set; } = string.Empty;
     public string WorkOrderStatus { get; set; } = string.Empty;
+    public string WorkOrderStatusColorKey { get; set; } = string.Empty;
     public string Remark { get; set; } = string.Empty;
     public string ArrangementText { get; set; } = string.Empty;
     public string ExampleImageUrl { get; set; } = string.Empty;
@@ -1017,6 +1018,109 @@ public sealed class StringNarrationProductionSheetSnapshot
     public string RemarkText => BuildValue(Remark, "无制作备注");
     public string ArrangementDisplayText => BuildValue(ArrangementText, "未提供排列方式");
     public string ExampleImageFallbackText => HasExampleImage ? string.Empty : "未提供例图";
+    
+    public string WristSizeText
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(ArrangementText)) return "暂无";
+            var parts = ArrangementText.Split('/');
+            foreach (var part in parts)
+            {
+                var trimmed = part.Trim();
+                if (trimmed.Contains("手围"))
+                {
+                    return trimmed.Replace("手围", "").Trim();
+                }
+            }
+            return "暂无";
+        }
+    }
+
+    public string LoopTypeText
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(ArrangementText)) return "暂无";
+            var parts = ArrangementText.Split('/');
+            foreach (var part in parts)
+            {
+                var trimmed = part.Trim();
+                if (trimmed.Contains("结构"))
+                {
+                    return trimmed.Replace("结构", "").Trim();
+                }
+            }
+            return "暂无";
+        }
+    }
+
+    public System.Collections.Generic.IReadOnlyList<string> ArrangementSteps
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(ArrangementText)) return System.Array.Empty<string>();
+            
+            var parts = ArrangementText.Split('/');
+            string sequencePart = string.Empty;
+            foreach (var part in parts)
+            {
+                var trimmed = part.Trim();
+                if (trimmed.Contains("顺序："))
+                {
+                    sequencePart = trimmed.Substring(trimmed.IndexOf("顺序：") + 3).Trim();
+                    break;
+                }
+                if (trimmed.Contains("顺序:"))
+                {
+                    sequencePart = trimmed.Substring(trimmed.IndexOf("顺序:") + 3).Trim();
+                    break;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(sequencePart))
+            {
+                var remainingParts = parts
+                    .Select(p => p.Trim())
+                    .Where(p => !p.Contains("手围") && !p.Contains("结构"))
+                    .Where(p => !string.IsNullOrWhiteSpace(p));
+                sequencePart = string.Join(" ", remainingParts);
+            }
+
+            if (string.IsNullOrWhiteSpace(sequencePart))
+            {
+                return System.Array.Empty<string>();
+            }
+
+            var separators = new[] { "->", "→", "=>", "," };
+            var rawSteps = sequencePart.Split(separators, System.StringSplitOptions.RemoveEmptyEntries);
+            return rawSteps.Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
+        }
+    }
+
+    public System.Collections.Generic.IReadOnlyList<string> ArrangementFlowItems
+    {
+        get
+        {
+            var steps = ArrangementSteps;
+            if (steps.Count == 0) return System.Array.Empty<string>();
+            var flow = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < steps.Count; i++)
+            {
+                flow.Add(steps[i]);
+                if (i < steps.Count - 1)
+                {
+                    flow.Add("→");
+                }
+            }
+            return flow;
+        }
+    }
+
+    public bool HasArrangementSteps => ArrangementSteps.Count > 0;
+    public bool HasWristSize => WristSizeText != "暂无";
+    public bool HasLoopType => LoopTypeText != "暂无";
+
     public bool HasDisplayableContent => HasMaterials || !string.IsNullOrWhiteSpace(ArrangementText) || HasExampleImage || !string.IsNullOrWhiteSpace(ProductionOrderNo) || !string.IsNullOrWhiteSpace(WorkOrderNo);
 
     public static StringNarrationProductionSheetSnapshot Create(StringNarrationOrderDetail? detail)
@@ -1061,11 +1165,15 @@ public sealed class StringNarrationProductionSheetSnapshot
             arrangementText = BuildArrangementFromProduct(detail);
         }
 
+        var statusColorKey = MapStatusTextToCode(primaryWorkOrder?.Status, 
+            MapStatusTextToCode(detail.ProductionOrder.Status, detail.FulfillmentStatus));
+
         return new StringNarrationProductionSheetSnapshot
         {
             ProductionOrderNo = FirstNonEmpty(primaryWorkOrder?.ProductionOrderNo, detail.ProductionOrder.ProductionOrderNo),
             WorkOrderNo = primaryWorkOrder?.WorkOrderNo ?? string.Empty,
             WorkOrderStatus = FirstNonEmpty(primaryWorkOrder?.Status, detail.ProductionOrder.Status, detail.FulfillmentStatusLabel),
+            WorkOrderStatusColorKey = statusColorKey,
             Remark = FirstNonEmpty(primaryWorkOrder?.Remark, detail.ProductionOrder.Remark, detail.AdminRemark),
             ArrangementText = arrangementText,
             ExampleImageUrl = ResolveExampleImageUrl(rawCandidates, firstCover),
@@ -1625,6 +1733,23 @@ public sealed class StringNarrationProductionSheetSnapshot
     private static string FirstNonEmpty(params string?[] values)
     {
         return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? string.Empty;
+    }
+
+    private static string MapStatusTextToCode(string? statusText, string defaultCode)
+    {
+        if (string.IsNullOrWhiteSpace(statusText)) return defaultCode;
+        statusText = statusText.Trim();
+        return statusText switch
+        {
+            "已支付待确认" or "paid_pending_confirm" => "paid_pending_confirm",
+            "待制作" or "pending_make" => "pending_make",
+            "制作中" or "making" => "making",
+            "待发货" or "ready_to_ship" => "ready_to_ship",
+            "已发货" or "shipped" => "shipped",
+            "已完成" or "completed" => "completed",
+            "异常" or "exception" => "exception",
+            _ => defaultCode
+        };
     }
 
     private static string BuildValue(string? value, string fallback)

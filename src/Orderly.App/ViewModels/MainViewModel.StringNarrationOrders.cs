@@ -245,6 +245,9 @@ public partial class MainViewModel
     private bool stringNarrationProductionOrderForceRegenerate;
 
     [ObservableProperty]
+    private bool isStringNarrationProductionRemarkEditing;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationOrderListVisible))]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationProductionSheetVisible))]
     private string stringNarrationLeftPaneMode = StringNarrationLeftPaneOrderList;
@@ -529,6 +532,60 @@ public partial class MainViewModel
         {
             StringNarrationError = ex.Message;
             StringNarrationStatusMessage = $"生成制作单失败：{ex.Message}";
+        }
+        finally
+        {
+            IsStringNarrationSaving = false;
+            OnStringNarrationCollectionStateChanged();
+        }
+    }
+
+    [RelayCommand]
+    private void StartEditStringNarrationProductionRemark()
+    {
+        StringNarrationProductionOrderRemarkInput = SelectedStringNarrationProductionSheet?.Remark ?? string.Empty;
+        IsStringNarrationProductionRemarkEditing = true;
+    }
+
+    [RelayCommand]
+    private void CancelEditStringNarrationProductionRemark()
+    {
+        IsStringNarrationProductionRemarkEditing = false;
+    }
+
+    [RelayCommand]
+    private async Task SaveStringNarrationProductionRemarkAsync()
+    {
+        var detail = SelectedStringNarrationOrderDetail;
+        if (detail is null)
+        {
+            return;
+        }
+
+        try
+        {
+            IsStringNarrationSaving = true;
+            StringNarrationError = string.Empty;
+            StringNarrationStatusMessage = "正在保存制作备注...";
+
+            SelectedStringNarrationOrderDetail = await _stringNarrationOrderService.GenerateProductionOrderAsync(new StringNarrationGenerateProductionOrderRequest
+            {
+                Id = detail.Id,
+                OrderNo = detail.OrderNo,
+                TradeNo = detail.WxOutTradeNo,
+                Remark = StringNarrationProductionOrderRemarkInput,
+                ForceRegenerate = true
+            });
+
+            UpdateStringNarrationSummary(SelectedStringNarrationOrderDetail);
+            ShowStringNarrationProductionSheet();
+            IsStringNarrationProductionRemarkEditing = false;
+            StringNarrationStatusMessage = "制作备注已更新。";
+        }
+        catch (Exception ex)
+        {
+            StringNarrationError = ex.Message;
+            StringNarrationStatusMessage = $"更新制作备注失败：{ex.Message}";
         }
         finally
         {
