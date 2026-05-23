@@ -29,6 +29,9 @@
                                     CornerRadius="10"
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     SnapsToDevicePixels="True">
+                                <Border.Effect>
+                                    <DropShadowEffect x:Name="TextBoxShadow" BlurRadius="8" ShadowDepth="1.5" Direction="270" Color="#111216" Opacity="0" />
+                                </Border.Effect>
                                 <Border.Background>
                                     <SolidColorBrush x:Name="TextBoxBackgroundBrush" Color="#F7F7F9" />
                                 </Border.Background>
@@ -45,9 +48,12 @@
                                                 <ColorAnimation Storyboard.TargetName="TextBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#FFFFFF" Duration="0:0:0.16">
                                                     <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
                                                 </ColorAnimation>
-                                                <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush" Storyboard.TargetProperty="Color" To="#2B7A5C" Duration="0:0:0.16">
+                                                <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush" Storyboard.TargetProperty="Color" To="#86868B" Duration="0:0:0.16">
                                                     <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
                                                 </ColorAnimation>
+                                                <DoubleAnimation Storyboard.TargetName="TextBoxShadow" Storyboard.TargetProperty="Opacity" To="0.08" Duration="0:0:0.16">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
                                             </Storyboard>
                                         </BeginStoryboard>
                                     </Trigger.EnterActions>
@@ -60,6 +66,9 @@
                                                 <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush" Storyboard.TargetProperty="Color" To="#DFE3EA" Duration="0:0:0.22">
                                                     <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
                                                 </ColorAnimation>
+                                                <DoubleAnimation Storyboard.TargetName="TextBoxShadow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.22">
+                                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
                                             </Storyboard>
                                         </BeginStoryboard>
                                     </Trigger.ExitActions>
@@ -1710,11 +1719,10 @@
                         </Grid.ColumnDefinitions>
 
                         <Grid Grid.Column="0" Margin="0,0,10,0">
-                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Padding="32,0,10,0"
+                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Padding="14,0,10,0"
                                      Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}"
                                      AutomationProperties.AutomationId="Input_FulfillmentSearchKeyword" />
-                            <TextBlock Text="🔍" Foreground="{StaticResource CaptionTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0" IsHitTestVisible="False" />
-                            <TextBlock Text="搜索订单号/客户昵称/收件人姓名/微信号..." Foreground="{StaticResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="32,0,0,0" IsHitTestVisible="False">
+                            <TextBlock Text="🔍 搜索订单号/客户昵称/收件人姓名/微信号..." Foreground="{StaticResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="14,0,0,0" IsHitTestVisible="False">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed" />
