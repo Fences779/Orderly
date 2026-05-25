@@ -14,5 +14,9 @@ public interface IStringNarrationOrderService
 
     Task<StringNarrationOrderDetail> UpdateFulfillmentAsync(StringNarrationFulfillmentUpdateRequest request, CancellationToken cancellationToken = default);
 
+    Task<StringNarrationExceptionActionResult> ApplyExceptionActionAsync(StringNarrationExceptionActionRequest request, CancellationToken cancellationToken = default);
+
+    Task<StringNarrationExceptionSampleReplayResult> ReplayExceptionSamplesAsync(StringNarrationExceptionSampleReplayRequest request, CancellationToken cancellationToken = default);
+
     Task<StringNarrationOrderDetail> GenerateProductionOrderAsync(StringNarrationGenerateProductionOrderRequest request, CancellationToken cancellationToken = default);
 }

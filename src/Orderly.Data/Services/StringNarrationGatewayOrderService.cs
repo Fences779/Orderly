@@ -9,6 +9,7 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
     private const string OrderListAction = "orderList";
     private const string OrderDetailAction = "orderDetail";
     private const string UpdateFulfillmentAction = "updateFulfillment";
+    private const string UpdateExceptionAction = "updateException";
     private const string FulfillmentStatsAction = "fulfillmentStats";
     private const string GenerateProductionOrderAction = "generateProductionOrder";
     private static readonly HashSet<string> ShippingSyncFailureStates = new(StringComparer.OrdinalIgnoreCase)
@@ -131,6 +132,53 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         return await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
     }
 
+    public async Task<StringNarrationExceptionActionResult> ApplyExceptionActionAsync(StringNarrationExceptionActionRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var payload = BuildLookupPayload(request.OrderNo, request.TradeNo, request.Id);
+        AddIfPresent(payload, "action", request.NormalizedAction);
+        AddIfPresent(payload, "resolutionStatus", request.TargetResolutionStatus);
+        AddIfPresent(payload, "resolutionAction", request.ResolutionAction);
+        AddIfPresent(payload, "adminResolutionRemark", request.AdminResolutionRemark);
+        AddIfPresent(payload, "owner", request.Owner);
+        AddIfPresent(payload, "assignee", request.Assignee);
+        AddIfPresent(payload, "priority", request.Priority);
+        AddIfPresent(payload, "resolvedBy", request.ResolvedBy);
+        AddIfPresent(payload, "operatorId", request.OperatorId);
+        AddIfPresent(payload, "operatorOpenid", request.OperatorOpenid);
+        AddIfPositive(payload, "slaDueAt", request.SlaDueAt);
+        AddIfPositive(payload, "lastCheckedAt", request.LastCheckedAt);
+        AddIfPositive(payload, "actionAt", request.ActionAt);
+
+        await _client.InvokeAsync(UpdateExceptionAction, payload, cancellationToken);
+        var detail = await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
+        return new StringNarrationExceptionActionResult
+        {
+            Ok = true,
+            Message = $"异常处理动作已提交：{request.NormalizedAction}",
+            Detail = detail,
+            AuditEntry = BuildAuditEntryFromRequest(request, detail.Exception)
+        };
+    }
+
+    public Task<StringNarrationExceptionSampleReplayResult> ReplayExceptionSamplesAsync(StringNarrationExceptionSampleReplayRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var items = new List<StringNarrationExceptionSampleReplayItem>();
+        foreach (var sample in request.Samples)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            items.Add(ReplayExceptionSample(sample));
+        }
+
+        return Task.FromResult(new StringNarrationExceptionSampleReplayResult
+        {
+            Items = items
+        });
+    }
+
     public async Task<StringNarrationOrderDetail> GenerateProductionOrderAsync(StringNarrationGenerateProductionOrderRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -149,6 +197,89 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         }
 
         return await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
+    }
+
+    private static StringNarrationExceptionAuditEntry BuildAuditEntryFromRequest(
+        StringNarrationExceptionActionRequest request,
+        StringNarrationExceptionSnapshot snapshot)
+    {
+        var at = request.ActionAt > 0
+            ? request.ActionAt
+            : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        return new StringNarrationExceptionAuditEntry
+        {
+            Action = request.NormalizedAction,
+            FromStatus = snapshot.ResolutionStatus,
+            ToStatus = request.TargetResolutionStatus,
+            OperatorId = request.OperatorId,
+            OperatorOpenid = request.OperatorOpenid,
+            Remark = request.AdminResolutionRemark,
+            ResolutionAction = request.ResolutionAction,
+            Assignee = request.Assignee,
+            Priority = request.Priority,
+            Source = "orderly_desktop",
+            At = at
+        };
+    }
+
+    private static StringNarrationExceptionSampleReplayItem ReplayExceptionSample(StringNarrationExceptionSample sample)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(sample.PayloadJson);
+            var payloadRoot = GetPayloadRoot(document.RootElement);
+            var summaries = ParseSummaryList(payloadRoot);
+            var parsed = summaries.Count > 0
+                ? summaries
+                : [ParseDetail(payloadRoot)];
+            var first = parsed.FirstOrDefault();
+            if (first is null)
+            {
+                return new StringNarrationExceptionSampleReplayItem
+                {
+                    Name = sample.Name,
+                    Success = false,
+                    ErrorMessage = "No order payload parsed."
+                };
+            }
+
+            return new StringNarrationExceptionSampleReplayItem
+            {
+                Name = sample.Name,
+                Success = true,
+                ParsedOrderCount = parsed.Count,
+                OrderNo = first.OrderNo,
+                HasException = first.HasException,
+                EffectiveCode = first.Exception.EffectiveCode,
+                EffectiveReason = first.Exception.EffectiveReason,
+                NormalizedPriority = first.Exception.NormalizedPriority,
+                NormalizedResolutionStatus = first.Exception.NormalizedResolutionStatus,
+                PrioritySortOrder = first.Exception.PrioritySortOrder,
+                ResolutionStatusSortOrder = first.Exception.ResolutionStatusSortOrder,
+                SlaDueSortTimestamp = first.Exception.SlaDueSortTimestamp,
+                DetectedSortTimestamp = first.ExceptionDetectedSortTimestamp,
+                SummaryText = first.ExceptionSummaryText
+            };
+        }
+        catch (JsonException ex)
+        {
+            return new StringNarrationExceptionSampleReplayItem
+            {
+                Name = sample.Name,
+                Success = false,
+                ErrorMessage = $"JSON parse failed: {ex.Message}"
+            };
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new StringNarrationExceptionSampleReplayItem
+            {
+                Name = sample.Name,
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
     }
 
     private static Dictionary<string, object?> BuildLookupPayload(string orderNo, string tradeNo, string id)
@@ -732,6 +863,8 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
                 string.IsNullOrWhiteSpace(code) ? inferredCode : code);
         }
 
+        var auditLogs = ParseExceptionAuditLogs(root, primaryExceptionElement, fulfillmentElement);
+
         return new StringNarrationExceptionSnapshot
         {
             Type = type,
@@ -761,6 +894,7 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             HasShippingSyncFailure = hasShippingSyncFailure,
             HasProductionOrderMissing = hasProductionOrderMissing,
             HasWorkOrderMissing = hasWorkOrderMissing,
+            AuditLogs = auditLogs,
             Tags = tags,
             Raw = primaryExceptionElement.ValueKind == JsonValueKind.Object ? primaryExceptionElement.Clone() : null
         };
@@ -985,6 +1119,72 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
                 OperatorId = ReadString(log, "operatorId"),
                 OperatorOpenid = ReadString(log, "operatorOpenid"),
                 Changes = CloneElement(log, "changes") ?? CloneElement(log, "payload")
+            });
+        }
+
+        return logs;
+    }
+
+    private static IReadOnlyList<StringNarrationExceptionAuditEntry> ParseExceptionAuditLogs(
+        JsonElement root,
+        JsonElement exceptionElement,
+        JsonElement fulfillmentElement)
+    {
+        var logsElement = GetFirstArray(
+            exceptionElement,
+            "auditLogs",
+            "resolutionLogs",
+            "processLogs",
+            "handlingLogs",
+            "history");
+
+        if (logsElement.ValueKind != JsonValueKind.Array)
+        {
+            logsElement = GetFirstArray(
+                fulfillmentElement,
+                "exceptionAuditLogs",
+                "exceptionLogs",
+                "resolutionLogs",
+                "handlingLogs");
+        }
+
+        if (logsElement.ValueKind != JsonValueKind.Array)
+        {
+            logsElement = GetFirstArray(
+                root,
+                "exceptionAuditLogs",
+                "exceptionLogs",
+                "resolutionLogs",
+                "handlingLogs");
+        }
+
+        if (logsElement.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var logs = new List<StringNarrationExceptionAuditEntry>();
+        foreach (var item in logsElement.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            logs.Add(new StringNarrationExceptionAuditEntry
+            {
+                Action = ReadString(item, "action", "type", "eventType"),
+                FromStatus = ReadString(item, "fromStatus", "previousStatus", "beforeStatus"),
+                ToStatus = ReadString(item, "toStatus", "nextStatus", "afterStatus", "resolutionStatus"),
+                OperatorId = ReadString(item, "operatorId", "handlerId", "resolvedBy"),
+                OperatorOpenid = ReadString(item, "operatorOpenid"),
+                Remark = ReadString(item, "remark", "note", "comment", "adminResolutionRemark"),
+                ResolutionAction = ReadString(item, "resolutionAction", "handleAction", "processAction"),
+                Assignee = ReadString(item, "assignee", "owner", "handler"),
+                Priority = ReadString(item, "priority"),
+                Source = ReadString(item, "source", "from", "system"),
+                At = ReadLong(item, "at", "createdAt", "updatedAt", "actionAt"),
+                Raw = item.Clone()
             });
         }
 

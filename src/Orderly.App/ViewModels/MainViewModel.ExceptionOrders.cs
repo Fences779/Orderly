@@ -12,11 +12,16 @@ public partial class MainViewModel
 
     public ObservableCollection<StringNarrationOrderSummary> ExceptionOrders { get; } = new();
     public ObservableCollection<string> ExceptionStatusFilterOptions { get; } = new(new[] { "全部", "待处理", "已解决" });
+    public ObservableCollection<StringNarrationExceptionAuditEntry> ExceptionAuditLogs { get; } = new();
+    public ObservableCollection<StringNarrationExceptionSampleReplayItem> ExceptionSampleReplayResults { get; } = new();
 
     public bool HasExceptionOrders => ExceptionOrders.Count > 0;
     public bool HasSelectedExceptionOrderDetail => SelectedExceptionOrderDetail is not null;
+    public bool HasExceptionAuditLogs => ExceptionAuditLogs.Count > 0;
+    public bool HasExceptionSampleReplayResults => ExceptionSampleReplayResults.Count > 0;
     public bool IsExceptionOrdersBusy => IsExceptionOrdersLoading;
     public string ExceptionOrdersCountText => $"{ExceptionOrders.Count} 单";
+    public string ExceptionAuditLogsCountText => $"{ExceptionAuditLogs.Count} 条";
     public string ExceptionOrdersEmptyStateText => string.IsNullOrWhiteSpace(ExceptionError)
         ? "暂无异常订单，点击刷新拉取。"
         : ExceptionError;
@@ -42,6 +47,27 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private string selectedExceptionStatusFilter = "全部";
+
+    [ObservableProperty]
+    private string exceptionActionRemarkInput = string.Empty;
+
+    [ObservableProperty]
+    private string exceptionActionAssigneeInput = string.Empty;
+
+    [ObservableProperty]
+    private string exceptionActionPriorityInput = string.Empty;
+
+    [ObservableProperty]
+    private string exceptionActionResolutionActionInput = string.Empty;
+
+    [ObservableProperty]
+    private string exceptionActionOperatorIdInput = string.Empty;
+
+    [ObservableProperty]
+    private string exceptionSampleReplayJson = string.Empty;
+
+    [ObservableProperty]
+    private string exceptionSampleReplayStatusMessage = "异常样本未回放";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedExceptionOrderDetail))]
@@ -78,6 +104,23 @@ public partial class MainViewModel
         }
 
         _ = LoadExceptionOrderDetailAsync(value.OrderNo, value.WxOutTradeNo, value.Id);
+    }
+
+    partial void OnSelectedExceptionOrderDetailChanged(StringNarrationOrderDetail? value)
+    {
+        IEnumerable<StringNarrationExceptionAuditEntry> auditLogs = value is null
+            ? Array.Empty<StringNarrationExceptionAuditEntry>()
+            : value.Exception.AuditLogs.OrderByDescending(log => log.At);
+        ReplaceCollection(ExceptionAuditLogs, auditLogs);
+        if (value is not null)
+        {
+            ExceptionActionAssigneeInput = value.Exception.OwnerText == "未分配" ? string.Empty : value.Exception.OwnerText;
+            ExceptionActionPriorityInput = value.Exception.NormalizedPriority;
+            ExceptionActionResolutionActionInput = value.Exception.ResolutionAction;
+            ExceptionActionRemarkInput = value.Exception.AdminResolutionRemark;
+        }
+
+        OnExceptionOrdersCollectionStateChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanRunExceptionOrdersReadAction))]
@@ -135,6 +178,66 @@ public partial class MainViewModel
         ExceptionStatusMessage = "异常筛选已清空";
     }
 
+    [RelayCommand]
+    private async Task StartSelectedExceptionProcessingAsync()
+    {
+        await ApplySelectedExceptionActionAsync(StringNarrationExceptionFieldCatalog.ActionStartProcessing);
+    }
+
+    [RelayCommand]
+    private async Task ResolveSelectedExceptionAsync()
+    {
+        await ApplySelectedExceptionActionAsync(StringNarrationExceptionFieldCatalog.ActionResolve);
+    }
+
+    [RelayCommand]
+    private async Task IgnoreSelectedExceptionAsync()
+    {
+        await ApplySelectedExceptionActionAsync(StringNarrationExceptionFieldCatalog.ActionIgnore);
+    }
+
+    [RelayCommand]
+    private async Task ReopenSelectedExceptionAsync()
+    {
+        await ApplySelectedExceptionActionAsync(StringNarrationExceptionFieldCatalog.ActionReopen);
+    }
+
+    [RelayCommand]
+    private async Task AssignSelectedExceptionAsync()
+    {
+        await ApplySelectedExceptionActionAsync(StringNarrationExceptionFieldCatalog.ActionAssign);
+    }
+
+    [RelayCommand]
+    private async Task ReplayExceptionSampleAsync()
+    {
+        var payload = ExceptionSampleReplayJson.Trim();
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            ExceptionSampleReplayStatusMessage = "请先提供异常样本 JSON。";
+            return;
+        }
+
+        await ExecuteExceptionOrdersReadActionAsync("正在回放异常样本...", async () =>
+        {
+            var result = await _stringNarrationOrderService.ReplayExceptionSamplesAsync(new StringNarrationExceptionSampleReplayRequest
+            {
+                Samples =
+                [
+                    new StringNarrationExceptionSample
+                    {
+                        Name = "manual-sample",
+                        PayloadJson = payload
+                    }
+                ]
+            });
+
+            ReplaceCollection(ExceptionSampleReplayResults, result.Items);
+            ExceptionSampleReplayStatusMessage = result.SummaryText;
+            ExceptionStatusMessage = $"异常样本回放完成：{result.SummaryText}";
+        });
+    }
+
     private bool CanRunExceptionOrdersReadAction()
     {
         return !IsExceptionOrdersBusy;
@@ -143,6 +246,41 @@ public partial class MainViewModel
     private bool CanRefreshExceptionOrderDetail()
     {
         return !IsExceptionOrdersBusy && (SelectedExceptionOrder is not null || SelectedExceptionOrderDetail is not null || !string.IsNullOrWhiteSpace(ExceptionLookupInput));
+    }
+
+    private async Task ApplySelectedExceptionActionAsync(string action)
+    {
+        var detail = SelectedExceptionOrderDetail;
+        var summary = SelectedExceptionOrder;
+        if (detail is null && summary is null)
+        {
+            ExceptionStatusMessage = "请先选择异常订单。";
+            return;
+        }
+
+        await ExecuteExceptionOrdersReadActionAsync("正在提交异常处理动作...", async () =>
+        {
+            var result = await _stringNarrationOrderService.ApplyExceptionActionAsync(new StringNarrationExceptionActionRequest
+            {
+                Id = detail?.Id ?? summary?.Id ?? string.Empty,
+                OrderNo = detail?.OrderNo ?? summary?.OrderNo ?? string.Empty,
+                TradeNo = detail?.WxOutTradeNo ?? summary?.WxOutTradeNo ?? string.Empty,
+                Action = action,
+                ResolutionAction = ExceptionActionResolutionActionInput,
+                AdminResolutionRemark = ExceptionActionRemarkInput,
+                Assignee = ExceptionActionAssigneeInput,
+                Owner = ExceptionActionAssigneeInput,
+                Priority = ExceptionActionPriorityInput,
+                ResolvedBy = ExceptionActionOperatorIdInput,
+                OperatorId = ExceptionActionOperatorIdInput,
+                LastCheckedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                ActionAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            });
+
+            ApplyExceptionDetail(result.Detail);
+            ExceptionAuditLogs.Insert(0, result.AuditEntry);
+            ExceptionStatusMessage = result.Message;
+        });
     }
 
     private async Task ExecuteExceptionOrdersReadActionAsync(string busyMessage, Func<Task> action)
@@ -343,8 +481,11 @@ public partial class MainViewModel
     {
         OnPropertyChanged(nameof(HasExceptionOrders));
         OnPropertyChanged(nameof(HasSelectedExceptionOrderDetail));
+        OnPropertyChanged(nameof(HasExceptionAuditLogs));
+        OnPropertyChanged(nameof(HasExceptionSampleReplayResults));
         OnPropertyChanged(nameof(IsExceptionOrdersBusy));
         OnPropertyChanged(nameof(ExceptionOrdersCountText));
+        OnPropertyChanged(nameof(ExceptionAuditLogsCountText));
         OnPropertyChanged(nameof(ExceptionOrdersEmptyStateText));
     }
 }

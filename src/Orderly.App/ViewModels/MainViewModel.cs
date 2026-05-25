@@ -649,6 +649,16 @@ public partial class MainViewModel : ObservableObject
             throw new InvalidOperationException("串述订单服务未配置。");
         }
 
+        public Task<StringNarrationExceptionActionResult> ApplyExceptionActionAsync(StringNarrationExceptionActionRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述订单服务未配置。");
+        }
+
+        public Task<StringNarrationExceptionSampleReplayResult> ReplayExceptionSamplesAsync(StringNarrationExceptionSampleReplayRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述订单服务未配置。");
+        }
+
         public Task<StringNarrationOrderDetail> GenerateProductionOrderAsync(StringNarrationGenerateProductionOrderRequest request, CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("串述订单服务未配置。");

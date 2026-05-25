@@ -809,7 +809,7 @@ public partial class MainViewModel
         return new StringNarrationOrderQuery
         {
             Page = StringNarrationCurrentPage,
-            PageSize = 20,
+            PageSize = StringNarrationPageSize,
             Keyword = StringNarrationListKeyword,
             Status = NormalizeStringNarrationFilter(SelectedStringNarrationStatusFilter),
             FulfillmentStatus = NormalizeStringNarrationFilter(SelectedStringNarrationFulfillmentStatusFilter),
@@ -1258,7 +1258,20 @@ public partial class MainViewModel
     [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationNextPageCommand))]
     private int stringNarrationTotalCount = 0;
 
-    public int StringNarrationTotalPages => Math.Max(1, (int)Math.Ceiling((double)StringNarrationTotalCount / 20));
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StringNarrationTotalPages))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationPageLabel))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationPrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationNextPageCommand))]
+    private int stringNarrationPageSize = 20;
+
+    [ObservableProperty]
+    private bool isStringNarrationPageSizePopupOpen;
+
+    [ObservableProperty]
+    private bool isStringNarrationPageSizePopupExpandedOpen;
+
+    public int StringNarrationTotalPages => Math.Max(1, (int)Math.Ceiling((double)StringNarrationTotalCount / StringNarrationPageSize));
 
     public string StringNarrationPageLabel => $"{StringNarrationCurrentPage} / {StringNarrationTotalPages}";
 
@@ -1284,5 +1297,18 @@ public partial class MainViewModel
     {
         StringNarrationCurrentPage++;
         await LoadStringNarrationOrdersAsync();
+    }
+
+    [RelayCommand]
+    private async Task ChangeStringNarrationPageSizeAsync(string pageSizeStr)
+    {
+        if (int.TryParse(pageSizeStr, out var pageSize))
+        {
+            StringNarrationPageSize = pageSize;
+            StringNarrationCurrentPage = 1;
+            IsStringNarrationPageSizePopupOpen = false;
+            IsStringNarrationPageSizePopupExpandedOpen = false;
+            await LoadStringNarrationOrdersAsync();
+        }
     }
 }

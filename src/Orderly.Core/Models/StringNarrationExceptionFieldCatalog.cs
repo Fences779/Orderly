@@ -12,6 +12,13 @@ public static class StringNarrationExceptionFieldCatalog
     public const string ResolutionResolved = "resolved";
     public const string ResolutionIgnored = "ignored";
 
+    public const string ActionAssign = "assign";
+    public const string ActionStartProcessing = "start_processing";
+    public const string ActionResolve = "resolve";
+    public const string ActionIgnore = "ignore";
+    public const string ActionReopen = "reopen";
+    public const string ActionComment = "comment";
+
     public const string CodeMissingAddress = "missing_address";
     public const string CodeMissingReceiverPhone = "missing_receiver_phone";
     public const string CodeMissingTrackingNo = "missing_tracking_no";
@@ -155,6 +162,33 @@ public static class StringNarrationExceptionFieldCatalog
             NormalizeResolutionStatus(resolutionStatus),
             ResolutionResolved,
             StringComparison.Ordinal);
+    }
+
+    public static string NormalizeAction(string? action)
+    {
+        var token = NormalizeAliasToken(action);
+        return token switch
+        {
+            "assign" or "claim" or "认领" or "分配" => ActionAssign,
+            "start_processing" or "processing" or "handle" or "handling" or "处理中" => ActionStartProcessing,
+            "resolve" or "resolved" or "close" or "fixed" or "解决" or "已解决" => ActionResolve,
+            "ignore" or "ignored" or "dismiss" or "dismissed" or "无需处理" => ActionIgnore,
+            "reopen" or "open" or "重新打开" => ActionReopen,
+            "comment" or "remark" or "note" or "备注" => ActionComment,
+            _ => token
+        };
+    }
+
+    public static string GetActionTargetStatus(string? action, string? fallbackStatus)
+    {
+        return NormalizeAction(action) switch
+        {
+            ActionStartProcessing => ResolutionProcessing,
+            ActionResolve => ResolutionResolved,
+            ActionIgnore => ResolutionIgnored,
+            ActionReopen => ResolutionOpen,
+            _ => NormalizeResolutionStatus(fallbackStatus)
+        };
     }
 
     public static string InferExceptionCode(

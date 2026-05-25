@@ -1801,6 +1801,59 @@
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
+                        <!-- 每页条数选择器 ToggleButton 样式 -->
+                        <Style x:Key="PageSizeSelectorToggleButtonStyle" TargetType="ToggleButton">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Padding" Value="6,4"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+
+                        <!-- 每页条数气泡选项按钮样式 -->
+                        <Style x:Key="PageSizeMenuButtonStyle" TargetType="Button">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Height" Value="30"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            <Setter Property="FontSize" Value="12"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="BgBorder" Background="{TemplateBinding Background}" CornerRadius="6">
+                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="BgBorder" Property="Background" Value="{StaticResource SurfaceSoftBrush}"/>
+                                                <Setter Property="Foreground" Value="{StaticResource HeadingBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
                         <Style x:Key="StringNarrationOrderCardListItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource CardListBoxItemStyle}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             <Setter Property="Template">
@@ -2025,7 +2078,52 @@
                                         </StackPanel>
                                     </Border>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="20 条/页" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+                                        <ToggleButton x:Name="Btn_PageSizeSelector"
+                                                      Style="{StaticResource PageSizeSelectorToggleButtonStyle}"
+                                                      IsChecked="{Binding IsStringNarrationPageSizePopupOpen, Mode=TwoWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding StringNarrationPageSize, StringFormat={}{0} 条/页}"
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           FontSize="12"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text=" ▾"
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           FontSize="10"
+                                                           VerticalAlignment="Center"
+                                                           Margin="2,0,0,0"/>
+                                            </StackPanel>
+                                        </ToggleButton>
+                                        <Popup x:Name="Popup_PageSizeSelector"
+                                               PlacementTarget="{Binding ElementName=Btn_PageSizeSelector}"
+                                               Placement="Top"
+                                               IsOpen="{Binding IsStringNarrationPageSizePopupOpen, Mode=TwoWay}"
+                                               StaysOpen="False"
+                                               AllowsTransparency="True">
+                                            <Border Background="{StaticResource SurfaceRaisedBrush}"
+                                                    BorderBrush="{StaticResource BorderBrushSoft}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="4"
+                                                    Margin="0,0,0,4">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="12" ShadowDepth="3" Direction="90" Color="#111216" Opacity="0.08" />
+                                                </Border.Effect>
+                                                <StackPanel Width="90">
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="10 条/页"
+                                                            Command="{Binding ChangeStringNarrationPageSizeCommand}"
+                                                            CommandParameter="10"/>
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="16 条/页"
+                                                            Command="{Binding ChangeStringNarrationPageSizeCommand}"
+                                                            CommandParameter="16"/>
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="20 条/页"
+                                                            Command="{Binding ChangeStringNarrationPageSizeCommand}"
+                                                            CommandParameter="20"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -2674,7 +2772,52 @@
                                         </StackPanel>
                                     </Border>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="20 条/页" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+                                        <ToggleButton x:Name="Btn_PageSizeSelectorExpanded"
+                                                      Style="{StaticResource PageSizeSelectorToggleButtonStyle}"
+                                                      IsChecked="{Binding IsStringNarrationPageSizePopupExpandedOpen, Mode=TwoWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding StringNarrationPageSize, StringFormat={}{0} 条/页}"
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           FontSize="12"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text=" ▾"
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           FontSize="10"
+                                                           VerticalAlignment="Center"
+                                                           Margin="2,0,0,0"/>
+                                            </StackPanel>
+                                        </ToggleButton>
+                                        <Popup x:Name="Popup_PageSizeSelectorExpanded"
+                                               PlacementTarget="{Binding ElementName=Btn_PageSizeSelectorExpanded}"
+                                               Placement="Top"
+                                               IsOpen="{Binding IsStringNarrationPageSizePopupExpandedOpen, Mode=TwoWay}"
+                                               StaysOpen="False"
+                                               AllowsTransparency="True">
+                                            <Border Background="{StaticResource SurfaceRaisedBrush}"
+                                                    BorderBrush="{StaticResource BorderBrushSoft}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="4"
+                                                    Margin="0,0,0,4">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="12" ShadowDepth="3" Direction="90" Color="#111216" Opacity="0.08" />
+                                                </Border.Effect>
+                                                <StackPanel Width="90">
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="10 条/页"
+                                                            Command="{Binding ChangeStringNarrationPageSizeCommand}"
+                                                            CommandParameter="10"/>
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="16 条/页"
+                                                            Command="{Binding ChangeStringNarrationPageSizeCommand}"
+                                                            CommandParameter="16"/>
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="20 条/页"
+                                                            Command="{Binding ChangeStringNarrationPageSizeCommand}"
+                                                            CommandParameter="20"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
                                     </StackPanel>
                                 </Grid>
                             </Border>
