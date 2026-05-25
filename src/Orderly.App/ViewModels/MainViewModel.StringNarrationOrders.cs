@@ -73,6 +73,7 @@ public partial class MainViewModel
     public bool HasStringNarrationProductionSheetMaterials => StringNarrationProductionSheetMaterials.Count > 0;
     public bool HasStringNarrationFulfillmentMetrics => StringNarrationFulfillmentMetrics.Count > 0;
     public bool IsStringNarrationBusy => IsStringNarrationLoading || IsStringNarrationSaving || IsStringNarrationProductionOrderErrorVisible;
+    public bool IsStringNarrationWorkAreaBusy => IsStringNarrationLoading || (IsStringNarrationSaving && !IsStringNarrationGeneratingProductionOrder);
     public bool IsStringNarrationDetailBusyVisible => IsStringNarrationBusy && !IsStringNarrationProductionOrderOverlayVisible;
     public bool IsStringNarrationProductionOrderOverlayVisible => IsStringNarrationGeneratingProductionOrder || IsStringNarrationProductionOrderErrorVisible;
     public string StringNarrationOrdersCountText => $"{StringNarrationOrders.Count} 单";
@@ -132,6 +133,7 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationBusy))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationWorkAreaBusy))]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailBusyVisible))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
@@ -148,6 +150,7 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationBusy))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationWorkAreaBusy))]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailBusyVisible))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
@@ -175,6 +178,7 @@ public partial class MainViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailBusyVisible))]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationProductionOrderOverlayVisible))]
+[NotifyPropertyChangedFor(nameof(IsStringNarrationWorkAreaBusy))]
     private bool isStringNarrationGeneratingProductionOrder;
 
     [ObservableProperty]

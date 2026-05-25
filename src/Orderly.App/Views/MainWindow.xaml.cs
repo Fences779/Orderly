@@ -166,6 +166,24 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void ExceptionOrdersList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.ListBox listBox || DataContext is not MainViewModel vm)
+        {
+            return;
+        }
+
+        if (e.OriginalSource is DependencyObject source && FindAncestor<System.Windows.Controls.Button>(source) is not null)
+        {
+            return;
+        }
+
+        if (listBox.SelectedItem is Orderly.Core.Models.StringNarrationOrderSummary summary)
+        {
+            await vm.OpenExceptionOrderDetailAsync(summary);
+        }
+    }
+
     private void SettingsTextInput_LostFocus(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm || sender is not System.Windows.Controls.TextBox textBox)

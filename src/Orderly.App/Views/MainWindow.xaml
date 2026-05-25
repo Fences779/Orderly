@@ -2929,13 +2929,13 @@
                                 </ListBox>
 
                                 <!-- Loading Overlay -->
-                                <Grid x:Name="LoadingOverlay2" Background="White" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <Grid x:Name="LoadingOverlay2" Visibility="Collapsed">
                                     <Grid.Style>
                                         <Style TargetType="Grid">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Setter Property="Opacity" Value="0" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsStringNarrationBusy}" Value="True">
+                                                <DataTrigger Binding="{Binding IsStringNarrationBusy_Disabled}" Value="True">
                                                     <DataTrigger.EnterActions>
                                                         <BeginStoryboard>
                                                             <Storyboard>
@@ -3829,13 +3829,13 @@
                             </ScrollViewer>
 
                             <!-- Detail loading overlay -->
-                            <Grid x:Name="DetailLoadingOverlay" Background="#D8FFFFFF" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Panel.ZIndex="10">
+                            <Grid x:Name="DetailLoadingOverlay" Visibility="Collapsed">
                                 <Grid.Style>
                                     <Style TargetType="Grid">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Setter Property="Opacity" Value="0" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsStringNarrationDetailBusyVisible}" Value="True">
+                                            <DataTrigger Binding="{Binding IsStringNarrationDetailBusyVisible_Disabled}" Value="True">
                                                 <DataTrigger.EnterActions>
                                                     <BeginStoryboard>
                                                         <Storyboard>
@@ -3911,6 +3911,87 @@
                             </Grid>
                         </Grid>
                     </Border>
+                    <!-- 统一工作区加载遮罩（覆盖左侧列表+右侧详情） -->
+                    <Grid x:Name="StringNarrationWorkAreaBusyOverlay" Grid.Column="0" Grid.ColumnSpan="2" Background="#D8FFFFFF" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Panel.ZIndex="10">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Setter Property="Opacity" Value="0" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsStringNarrationWorkAreaBusy}" Value="True">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                        <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                    </ObjectAnimationUsingKeyFrames>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                        <DataTrigger.ExitActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.2" Duration="0">
+                                                        <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                    </ObjectAnimationUsingKeyFrames>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.ExitActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE72C;" 
+                                       FontFamily="Segoe MDL2 Assets" 
+                                       FontSize="30" 
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource HeadingBrush}" 
+                                       HorizontalAlignment="Center" 
+                                       RenderTransformOrigin="0.5,0.5" 
+                                       Margin="0,0,0,12">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="0" />
+                                </TextBlock.RenderTransform>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ElementName=StringNarrationWorkAreaBusyOverlay, Path=Visibility}" Value="Visible">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard x:Name="RotateStoryboardWorkArea">
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                             From="0" To="360" Duration="0:0:1"
+                                                                             RepeatBehavior="Forever" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <StopStoryboard BeginStoryboardName="RotateStoryboardWorkArea" />
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding StringNarrationStatusMessage}" 
+                                       FontSize="13" 
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource HeadingBrush}" 
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
                 </Grid>
 
                 <!-- 首次加载数据同步初始化遮罩层 -->
@@ -4097,6 +4178,7 @@
                                      Tag="{Binding HasExceptionOrders}"
                                      ItemContainerStyle="{StaticResource CardListBoxItemStyle}"
                                      BorderThickness="0" Background="Transparent"
+                                     MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
                                 <ListBox.ItemTemplate>

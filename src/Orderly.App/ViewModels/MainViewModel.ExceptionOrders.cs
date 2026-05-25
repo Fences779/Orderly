@@ -103,7 +103,36 @@ public partial class MainViewModel
             return;
         }
 
+        var currentDetail = SelectedExceptionOrderDetail;
+        if (currentDetail is null)
+        {
+            return;
+        }
+
+        var isSameOrder = string.Equals(currentDetail.OrderNo, value.OrderNo, StringComparison.Ordinal)
+            || string.Equals(currentDetail.Id, value.Id, StringComparison.Ordinal)
+            || string.Equals(currentDetail.WxOutTradeNo, value.WxOutTradeNo, StringComparison.Ordinal);
+        if (isSameOrder)
+        {
+            return;
+        }
+
         _ = LoadExceptionOrderDetailAsync(value.OrderNo, value.WxOutTradeNo, value.Id);
+    }
+
+    public async Task OpenExceptionOrderDetailAsync(StringNarrationOrderSummary? summary)
+    {
+        if (summary is null)
+        {
+            return;
+        }
+
+        if (SelectedExceptionOrder != summary)
+        {
+            SelectedExceptionOrder = summary;
+        }
+
+        await LoadExceptionOrderDetailAsync(summary.OrderNo, summary.WxOutTradeNo, summary.Id);
     }
 
     partial void OnSelectedExceptionOrderDetailChanged(StringNarrationOrderDetail? value)

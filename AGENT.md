@@ -42,7 +42,19 @@
   - `miniprogram/pages/settings/settings.json`
   - Any other files or views directly impacting Settings Page UI/UX, settings persistence, settings commands, or settings runtime behavior, unless explicitly requested by the user.
 
-### 3. Order Fulfillment Backend Fields (订单履约后端字段)
+### 3. Order Fulfillment Page (订单履约页)
+- **Status**: Closed / accepted by the USER.
+- **Constraint**: **DO NOT** modify, refactor, polish, restructure, or touch any order fulfillment page code, layout, styles, bindings, commands, interaction flow, page state, or related runtime behavior unless the user explicitly asks for an order-fulfillment-page change.
+- **Related Files**:
+  - `src/Orderly.App/Views/MainWindow.xaml` order fulfillment section only
+  - `src/Orderly.App/Views/MainWindow.xaml.cs` fulfillment-page handlers only
+  - `src/Orderly.App/ViewModels/MainViewModel.StringNarrationOrders.cs`
+  - `src/Orderly.App/ViewModels/MainViewModel.StringNarrationOrders.Bindings.cs`
+  - `src/Orderly.App/Converters/FulfillmentStatusLabelConverter.cs`
+  - `src/Orderly.App/Views/Resources/MainWindowResources.xaml` fulfillment-related resources only
+  - Any other files or views directly impacting Order Fulfillment Page UI/UX, bindings, commands, page state, or fulfillment-page runtime behavior, unless explicitly requested by the user.
+
+### 4. Order Fulfillment Backend Fields (订单履约后端字段)
 - **Status**: Completed by the USER.
 - **Constraint**: **DO NOT** modify, refactor, rename, remove, or otherwise touch any completed backend fields for order fulfillment unless the user explicitly asks for that area.
 - **Related Files**:
