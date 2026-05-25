@@ -72,8 +72,9 @@ public partial class MainViewModel
     public bool HasStringNarrationProductionSheet => SelectedStringNarrationProductionSheet?.HasDisplayableContent == true;
     public bool HasStringNarrationProductionSheetMaterials => StringNarrationProductionSheetMaterials.Count > 0;
     public bool HasStringNarrationFulfillmentMetrics => StringNarrationFulfillmentMetrics.Count > 0;
-    public bool IsStringNarrationBusy => IsStringNarrationLoading || IsStringNarrationSaving;
-    public bool IsStringNarrationDetailBusyVisible => IsStringNarrationBusy && !IsStringNarrationGeneratingProductionOrder;
+    public bool IsStringNarrationBusy => IsStringNarrationLoading || IsStringNarrationSaving || IsStringNarrationProductionOrderErrorVisible;
+    public bool IsStringNarrationDetailBusyVisible => IsStringNarrationBusy && !IsStringNarrationProductionOrderOverlayVisible;
+    public bool IsStringNarrationProductionOrderOverlayVisible => IsStringNarrationGeneratingProductionOrder || IsStringNarrationProductionOrderErrorVisible;
     public string StringNarrationOrdersCountText => $"{StringNarrationOrders.Count} 单";
     public string StringNarrationStatsTotalText => $"{StringNarrationFulfillmentStats.TotalCount} 单";
     public string StringNarrationEmptyStateText => string.IsNullOrWhiteSpace(StringNarrationError)
@@ -169,7 +170,23 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailBusyVisible))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationProductionOrderOverlayVisible))]
     private bool isStringNarrationGeneratingProductionOrder;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationBusy))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailBusyVisible))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationProductionOrderOverlayVisible))]
+    [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TestStringNarrationGatewayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyStringNarrationFulfillmentFilterCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearStringNarrationFiltersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchStringNarrationOrderDetailCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
+    [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
+    private bool isStringNarrationProductionOrderErrorVisible;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StringNarrationStatsTotalText))]
@@ -518,6 +535,7 @@ public partial class MainViewModel
         {
             IsStringNarrationSaving = true;
             IsStringNarrationGeneratingProductionOrder = true;
+            IsStringNarrationProductionOrderErrorVisible = false;
             StringNarrationError = string.Empty;
             StringNarrationStatusMessage = "正在生成制作单...";
 
@@ -538,6 +556,7 @@ public partial class MainViewModel
         {
             StringNarrationError = ex.Message;
             StringNarrationStatusMessage = $"生成制作单失败：{ex.Message}";
+            IsStringNarrationProductionOrderErrorVisible = true;
         }
         finally
         {
@@ -545,6 +564,13 @@ public partial class MainViewModel
             IsStringNarrationSaving = false;
             OnStringNarrationCollectionStateChanged();
         }
+    }
+
+    [RelayCommand]
+    private void DismissStringNarrationProductionOrderError()
+    {
+        IsStringNarrationProductionOrderErrorVisible = false;
+        IsStringNarrationGeneratingProductionOrder = false;
     }
 
     [RelayCommand]
