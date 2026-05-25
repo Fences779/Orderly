@@ -73,6 +73,7 @@ public partial class MainViewModel
     public bool HasStringNarrationProductionSheetMaterials => StringNarrationProductionSheetMaterials.Count > 0;
     public bool HasStringNarrationFulfillmentMetrics => StringNarrationFulfillmentMetrics.Count > 0;
     public bool IsStringNarrationBusy => IsStringNarrationLoading || IsStringNarrationSaving;
+    public bool IsStringNarrationDetailBusyVisible => IsStringNarrationBusy && !IsStringNarrationGeneratingProductionOrder;
     public string StringNarrationOrdersCountText => $"{StringNarrationOrders.Count} 单";
     public string StringNarrationStatsTotalText => $"{StringNarrationFulfillmentStats.TotalCount} 单";
     public string StringNarrationEmptyStateText => string.IsNullOrWhiteSpace(StringNarrationError)
@@ -130,6 +131,7 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationBusy))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailBusyVisible))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
     [NotifyCanExecuteChangedFor(nameof(TestStringNarrationGatewayCommand))]
@@ -143,6 +145,7 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStringNarrationBusy))]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailBusyVisible))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoadStringNarrationStatsCommand))]
     [NotifyCanExecuteChangedFor(nameof(TestStringNarrationGatewayCommand))]
@@ -163,6 +166,10 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private string stringNarrationStatusMessage = "串述订单未加载";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStringNarrationDetailBusyVisible))]
+    private bool isStringNarrationGeneratingProductionOrder;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StringNarrationStatsTotalText))]
@@ -507,11 +514,10 @@ public partial class MainViewModel
             return;
         }
 
-        ShowStringNarrationProductionSheet();
-
         try
         {
             IsStringNarrationSaving = true;
+            IsStringNarrationGeneratingProductionOrder = true;
             StringNarrationError = string.Empty;
             StringNarrationStatusMessage = "正在生成制作单...";
 
@@ -535,6 +541,7 @@ public partial class MainViewModel
         }
         finally
         {
+            IsStringNarrationGeneratingProductionOrder = false;
             IsStringNarrationSaving = false;
             OnStringNarrationCollectionStateChanged();
         }

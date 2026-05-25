@@ -2511,7 +2511,7 @@
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Setter Property="Opacity" Value="0" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsStringNarrationBusy}" Value="NeverTrue_Disabled">
+                                                <DataTrigger Binding="{Binding IsStringNarrationGeneratingProductionOrder}" Value="True">
                                                     <DataTrigger.EnterActions>
                                                         <BeginStoryboard>
                                                             <Storyboard>
@@ -2578,7 +2578,7 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Text="正在同步..." 
+                                        <TextBlock Text="{Binding StringNarrationStatusMessage}" 
                                                    FontSize="13" 
                                                    FontWeight="Bold"
                                                    Foreground="Black" 
@@ -2795,7 +2795,7 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Text="正在同步..." 
+                                        <TextBlock Text="{Binding StringNarrationStatusMessage}" 
                                                    FontSize="13" 
                                                    FontWeight="Bold"
                                                    Foreground="Black" 
@@ -3628,7 +3628,7 @@
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Setter Property="Opacity" Value="0" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsStringNarrationBusy}" Value="True">
+                                            <DataTrigger Binding="{Binding IsStringNarrationDetailBusyVisible}" Value="True">
                                                 <DataTrigger.EnterActions>
                                                     <BeginStoryboard>
                                                         <Storyboard>
