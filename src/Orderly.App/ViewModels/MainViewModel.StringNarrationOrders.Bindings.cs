@@ -7,6 +7,7 @@ public partial class MainViewModel
 {
     partial void OnStringNarrationListKeywordChanged(string value)
     {
+        StringNarrationCurrentPage = 1;
         OnPropertyChanged(nameof(Keyword));
     }
 

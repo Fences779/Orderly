@@ -142,6 +142,8 @@ public partial class MainViewModel
     [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationPrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationNextPageCommand))]
     private bool isStringNarrationLoading;
 
     [ObservableProperty]
@@ -156,6 +158,8 @@ public partial class MainViewModel
     [NotifyCanExecuteChangedFor(nameof(RefreshStringNarrationOrderDetailCommand))]
     [NotifyCanExecuteChangedFor(nameof(UpdateStringNarrationFulfillmentCommand))]
     [NotifyCanExecuteChangedFor(nameof(GenerateStringNarrationProductionOrderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationPrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationNextPageCommand))]
     private bool isStringNarrationSaving;
 
     [ObservableProperty]
@@ -375,6 +379,7 @@ public partial class MainViewModel
                 ValidateTimeRangeOrThrow(query);
                 var result = await _stringNarrationOrderService.GetOrdersAsync(query);
 
+                StringNarrationTotalCount = result.PageInfo.Total;
                 ReplaceCollection(StringNarrationOrders, result.Orders);
                 SyncExceptionOrdersFromOrders(result.Orders);
                 var statsLoaded = await TryLoadStatsWithoutThrowAsync(query);
@@ -420,6 +425,7 @@ public partial class MainViewModel
             ? "全部"
             : normalizedStatus;
 
+        StringNarrationCurrentPage = 1;
         await LoadStringNarrationOrdersAsync();
     }
 
@@ -432,6 +438,7 @@ public partial class MainViewModel
         StringNarrationStartAt = 0;
         StringNarrationEndAt = 0;
 
+        StringNarrationCurrentPage = 1;
         await LoadStringNarrationOrdersAsync();
     }
 
@@ -801,7 +808,7 @@ public partial class MainViewModel
     {
         return new StringNarrationOrderQuery
         {
-            Page = 1,
+            Page = StringNarrationCurrentPage,
             PageSize = 20,
             Keyword = StringNarrationListKeyword,
             Status = NormalizeStringNarrationFilter(SelectedStringNarrationStatusFilter),
@@ -1236,5 +1243,46 @@ public partial class MainViewModel
                 StringNarrationTrackingNoInput = cleanTrackingNo;
             }
         }
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StringNarrationPageLabel))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationPrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationNextPageCommand))]
+    private int stringNarrationCurrentPage = 1;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StringNarrationTotalPages))]
+    [NotifyPropertyChangedFor(nameof(StringNarrationPageLabel))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationPrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateStringNarrationNextPageCommand))]
+    private int stringNarrationTotalCount = 0;
+
+    public int StringNarrationTotalPages => Math.Max(1, (int)Math.Ceiling((double)StringNarrationTotalCount / 20));
+
+    public string StringNarrationPageLabel => $"{StringNarrationCurrentPage} / {StringNarrationTotalPages}";
+
+    private bool CanNavigateStringNarrationPrevPage()
+    {
+        return !IsStringNarrationBusy && StringNarrationCurrentPage > 1;
+    }
+
+    private bool CanNavigateStringNarrationNextPage()
+    {
+        return !IsStringNarrationBusy && StringNarrationCurrentPage < StringNarrationTotalPages;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanNavigateStringNarrationPrevPage))]
+    private async Task NavigateStringNarrationPrevPageAsync()
+    {
+        StringNarrationCurrentPage--;
+        await LoadStringNarrationOrdersAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanNavigateStringNarrationNextPage))]
+    private async Task NavigateStringNarrationNextPageAsync()
+    {
+        StringNarrationCurrentPage++;
+        await LoadStringNarrationOrdersAsync();
     }
 }
