@@ -251,6 +251,41 @@ public partial class MainWindow : Window
         }
     }
 
+    private void CloseExceptionDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            vm.SelectedExceptionOrder = null;
+            vm.SelectedExceptionOrderDetail = null;
+        }
+    }
+
+    private async void JumpToOrderFulfillment_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm && vm.SelectedExceptionOrderDetail is not null)
+        {
+            var targetOrder = vm.SelectedExceptionOrderDetail;
+            vm.SelectedSection = MainViewModel.SectionFulfillment;
+            await vm.OpenStringNarrationOrderDetailAsync(targetOrder);
+        }
+    }
+
+    private void CopyText_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement element && element.Tag is string text && !string.IsNullOrEmpty(text))
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+                ShowCopyToast("已复制");
+            }
+            catch (System.Exception)
+            {
+                // ignore
+            }
+        }
+    }
+
     private static T? FindAncestor<T>(DependencyObject? source) where T : DependencyObject
     {
         while (source is not null)

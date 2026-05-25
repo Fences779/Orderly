@@ -382,10 +382,10 @@ public partial class MainViewModel
                 StringNarrationTotalCount = result.PageInfo.Total;
                 ReplaceCollection(StringNarrationOrders, result.Orders);
                 SyncExceptionOrdersFromOrders(result.Orders);
-                var statsLoaded = await TryLoadStatsWithoutThrowAsync(query);
+                var statsLoaded = await TryLoadStatsWithoutThrowAsync(BuildStringNarrationStatsQuery(), result.Orders.Count);
                 if (!statsLoaded)
                 {
-                    ApplyStringNarrationStats(result.Stats);
+                    ApplyStringNarrationStats(ResolveStringNarrationStatsFallback(result.Stats, result.Orders));
                 }
 
                 RestoreStringNarrationSelection(previousSelection);
@@ -409,7 +409,7 @@ public partial class MainViewModel
     {
         await ExecuteStringNarrationReadActionAsync("正在加载履约统计...", async () =>
         {
-            var query = BuildStringNarrationQuery();
+            var query = BuildStringNarrationStatsQuery();
             ValidateTimeRangeOrThrow(query);
             var stats = await _stringNarrationOrderService.GetFulfillmentStatsAsync(query);
             ApplyStringNarrationStats(stats);
@@ -818,6 +818,13 @@ public partial class MainViewModel
         };
     }
 
+    private StringNarrationOrderQuery BuildStringNarrationStatsQuery()
+    {
+        var query = BuildStringNarrationQuery();
+        query.FulfillmentStatus = string.Empty;
+        return query;
+    }
+
     private static void ValidateTimeRangeOrThrow(StringNarrationOrderQuery query)
     {
         if (query.StartAt > 0 && query.EndAt > 0 && query.StartAt > query.EndAt)
@@ -826,11 +833,17 @@ public partial class MainViewModel
         }
     }
 
-    private async Task<bool> TryLoadStatsWithoutThrowAsync(StringNarrationOrderQuery query)
+    private async Task<bool> TryLoadStatsWithoutThrowAsync(StringNarrationOrderQuery query, int fallbackOrderCount)
     {
         try
         {
             var stats = await _stringNarrationOrderService.GetFulfillmentStatsAsync(query);
+            if (!HasStringNarrationStatsData(stats, fallbackOrderCount))
+            {
+                StringNarrationStatusMessage = "列表已加载，统计接口返回空数据，已使用列表统计回退。";
+                return false;
+            }
+
             ApplyStringNarrationStats(stats);
             return true;
         }
@@ -839,6 +852,64 @@ public partial class MainViewModel
             StringNarrationStatusMessage = $"列表已加载，统计单独拉取失败：{ex.Message}";
             return false;
         }
+    }
+
+    private static bool HasStringNarrationStatsData(StringNarrationFulfillmentStats? stats, int fallbackOrderCount)
+    {
+        if (stats?.Metrics.Count > 0 && (stats.TotalCount > 0 || stats.Metrics.Any(item => item.Count > 0)))
+        {
+            return true;
+        }
+
+        return fallbackOrderCount == 0 && stats?.Metrics.Count > 0;
+    }
+
+    private static StringNarrationFulfillmentStats ResolveStringNarrationStatsFallback(
+        StringNarrationFulfillmentStats? stats,
+        IReadOnlyList<StringNarrationOrderSummary> orders)
+    {
+        if (HasStringNarrationStatsData(stats, orders.Count))
+        {
+            return stats!;
+        }
+
+        var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var order in orders)
+        {
+            var status = StringNarrationFulfillmentStatusCatalog.Normalize(order.FulfillmentStatus);
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                continue;
+            }
+
+            counts.TryGetValue(status, out var current);
+            counts[status] = current + 1;
+        }
+
+        var metrics = StringNarrationFulfillmentStatusCatalog.GetDefinitions()
+            .OrderBy(item => item.SortOrder)
+            .Select(item =>
+            {
+                counts.TryGetValue(item.FulfillmentStatus, out var count);
+                return new StringNarrationFulfillmentStatusMetric
+                {
+                    FulfillmentStatus = item.FulfillmentStatus,
+                    Label = item.Label,
+                    SortOrder = item.SortOrder,
+                    Count = count,
+                    IsTerminal = item.IsTerminal,
+                    IsException = item.IsException,
+                    IsUnknown = item.IsUnknown
+                };
+            })
+            .ToArray();
+
+        return new StringNarrationFulfillmentStats
+        {
+            Metrics = metrics,
+            TotalCount = counts.Values.Sum(),
+            CalculatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
     }
 
     private void SelectStringNarrationSummaryByDetail(StringNarrationOrderDetail? detail)
@@ -915,9 +986,11 @@ public partial class MainViewModel
         _isSynchronizingStringNarrationSelection = true;
         try
         {
+            var previousSummary = StringNarrationOrders[index];
             StringNarrationOrders[index] = detail;
             SelectedStringNarrationOrder = StringNarrationOrders[index];
             UpsertExceptionOrder(detail);
+            SynchronizeStringNarrationStatsForSummaryChange(previousSummary, detail);
         }
         finally
         {
@@ -1101,6 +1174,77 @@ public partial class MainViewModel
         {
             return "暂无";
         }
+    }
+
+    private void SynchronizeStringNarrationStatsForSummaryChange(
+        StringNarrationOrderSummary previousSummary,
+        StringNarrationOrderSummary currentSummary)
+    {
+        var previousStatus = StringNarrationFulfillmentStatusCatalog.Normalize(previousSummary.FulfillmentStatus);
+        var currentStatus = StringNarrationFulfillmentStatusCatalog.Normalize(currentSummary.FulfillmentStatus);
+        if (string.Equals(previousStatus, currentStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var metrics = StringNarrationFulfillmentStats.Metrics
+            .Select(metric => new StringNarrationFulfillmentStatusMetric
+            {
+                FulfillmentStatus = metric.FulfillmentStatus,
+                Label = metric.Label,
+                SortOrder = metric.SortOrder,
+                Count = metric.Count,
+                IsTerminal = metric.IsTerminal,
+                IsException = metric.IsException,
+                IsUnknown = metric.IsUnknown
+            })
+            .ToList();
+
+        AdjustStringNarrationMetricCount(metrics, previousStatus, -1);
+        AdjustStringNarrationMetricCount(metrics, currentStatus, 1);
+
+        ApplyStringNarrationStats(new StringNarrationFulfillmentStats
+        {
+            Metrics = metrics,
+            TotalCount = StringNarrationFulfillmentStats.TotalCount,
+            CalculatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
+    }
+
+    private static void AdjustStringNarrationMetricCount(
+        ICollection<StringNarrationFulfillmentStatusMetric> metrics,
+        string fulfillmentStatus,
+        int delta)
+    {
+        if (string.IsNullOrWhiteSpace(fulfillmentStatus) || delta == 0)
+        {
+            return;
+        }
+
+        var metric = metrics.FirstOrDefault(item =>
+            string.Equals(item.FulfillmentStatus, fulfillmentStatus, StringComparison.OrdinalIgnoreCase));
+        if (metric is not null)
+        {
+            metric.Count = Math.Max(0, metric.Count + delta);
+            return;
+        }
+
+        if (delta < 0)
+        {
+            return;
+        }
+
+        var definition = StringNarrationFulfillmentStatusCatalog.Resolve(fulfillmentStatus);
+        metrics.Add(new StringNarrationFulfillmentStatusMetric
+        {
+            FulfillmentStatus = fulfillmentStatus,
+            Label = definition.Label,
+            SortOrder = definition.SortOrder,
+            Count = delta,
+            IsTerminal = definition.IsTerminal,
+            IsException = definition.IsException,
+            IsUnknown = definition.IsUnknown
+        });
     }
 
     private readonly record struct StringNarrationSelectionSnapshot(string OrderNo, string TradeNo, string Id, bool ShouldOpenDetail)
