@@ -1776,6 +1776,31 @@
                 <!-- 3. List & Detail Content Area -->
                 <Grid Grid.Row="3">
                     <Grid.Resources>
+                        <!-- 胶囊翻页按钮样式 -->
+                        <Style x:Key="CapsulePageButtonStyle" TargetType="Button">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Width" Value="28"/>
+                            <Setter Property="Height" Value="28"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="14">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.3"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
                         <Style x:Key="StringNarrationOrderCardListItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource CardListBoxItemStyle}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             <Setter Property="Template">
@@ -1983,14 +2008,22 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="共 " Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
-                                        <TextBlock Text="{Binding StringNarrationOrders.Count, FallbackValue=0}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
+                                        <TextBlock Text="{Binding StringNarrationTotalCount, FallbackValue=0}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
                                         <TextBlock Text=" 条数据" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
                                     </StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Button Content="&lt;" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="28" Height="28" Padding="0" Command="{Binding NavigateStringNarrationPrevPageCommand}" Margin="0,0,4,0" />
-                                        <Button Content="{Binding StringNarrationPageLabel}" Style="{StaticResource DialogPrimaryButtonStyle}" Height="28" Padding="6,0" Margin="0,0,4,0" />
-                                        <Button Content="&gt;" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="28" Height="28" Padding="0" Command="{Binding NavigateStringNarrationNextPageCommand}" />
-                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="15" Height="30" Padding="1,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateStringNarrationPrevPageCommand}" ToolTip="上一页">
+                                                <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </Button>
+                                            <Border Padding="10,0" Background="Transparent" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding StringNarrationPageLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                            </Border>
+                                            <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateStringNarrationNextPageCommand}" ToolTip="下一页">
+                                                <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="20 条/页" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
                                     </StackPanel>
@@ -2624,14 +2657,22 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="共 " Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
-                                        <TextBlock Text="{Binding StringNarrationOrders.Count, FallbackValue=0}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
+                                        <TextBlock Text="{Binding StringNarrationTotalCount, FallbackValue=0}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
                                         <TextBlock Text=" 条数据" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
                                     </StackPanel>
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Button Content="&lt;" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="28" Height="28" Padding="0" Command="{Binding NavigateStringNarrationPrevPageCommand}" Margin="0,0,4,0" />
-                                        <Button Content="{Binding StringNarrationPageLabel}" Style="{StaticResource DialogPrimaryButtonStyle}" Height="28" Padding="6,0" Margin="0,0,4,0" />
-                                        <Button Content="&gt;" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="28" Height="28" Padding="0" Command="{Binding NavigateStringNarrationNextPageCommand}" />
-                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="15" Height="30" Padding="1,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateStringNarrationPrevPageCommand}" ToolTip="上一页">
+                                                <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </Button>
+                                            <Border Padding="10,0" Background="Transparent" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding StringNarrationPageLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                            </Border>
+                                            <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateStringNarrationNextPageCommand}" ToolTip="下一页">
+                                                <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                         <TextBlock Text="20 条/页" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
                                     </StackPanel>
