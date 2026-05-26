@@ -1776,31 +1776,6 @@
                 <!-- 3. List & Detail Content Area -->
                 <Grid Grid.Row="3">
                     <Grid.Resources>
-                        <!-- 胶囊翻页按钮样式 -->
-                        <Style x:Key="CapsulePageButtonStyle" TargetType="Button">
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="Width" Value="28"/>
-                            <Setter Property="Height" Value="28"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="14">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}"/>
-                                </Trigger>
-                                <Trigger Property="IsEnabled" Value="False">
-                                    <Setter Property="Opacity" Value="0.3"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
                         <!-- 每页条数选择器 ToggleButton 样式 -->
                         <Style x:Key="PageSizeSelectorToggleButtonStyle" TargetType="ToggleButton">
                             <Setter Property="Background" Value="Transparent"/>
@@ -4088,530 +4063,750 @@
 
             <!-- ==================== 异常处理面板 ==================== -->
             <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=异常处理}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <!-- 0. Search & Filters -->
+                    <RowDefinition Height="Auto" />
+                    <!-- 1. List & Detail Content Area -->
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                <!-- 左侧异常订单列表 -->
-                <Border Grid.Column="0" Background="{StaticResource SurfaceRaisedBrush}" CornerRadius="16" BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}" Padding="20" Margin="0,0,8,0">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Color="#111216" Opacity="0.05" />
-                    </Border.Effect>
+                <!-- 0. Search & Filters 独立筛选栏 -->
+                <Border Grid.Row="0" Style="{StaticResource SettingsGroupCardStyle}" Padding="14,10" Margin="0,0,0,14">
                     <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <!-- 1. 顶栏筛选 -->
-                        <Grid Grid.Row="0" Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="10" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="10" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="10" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <!-- 全部类型占位 -->
-                            <ComboBox Grid.Column="0" Width="130" Height="36" Style="{StaticResource FulfillmentInputComboBoxStyle}" SelectedIndex="0">
-                                <ComboBoxItem Content="全部类型" />
-                                <ComboBoxItem Content="收货地址缺失" />
-                                <ComboBoxItem Content="收件手机缺失" />
-                                <ComboBoxItem Content="物流单号缺失" />
-                                <ComboBoxItem Content="微信同步失败" />
-                                <ComboBoxItem Content="制作单缺失" />
-                                <ComboBoxItem Content="工单缺失" />
-                            </ComboBox>
-
-                            <!-- 状态过滤 (全部/待处理/已解决) -->
-                            <ComboBox Grid.Column="2" Width="130" Height="36" Style="{StaticResource FulfillmentInputComboBoxStyle}"
-                                      ItemsSource="{Binding ExceptionStatusFilterOptions}"
-                                      SelectedItem="{Binding SelectedExceptionStatusFilter, Mode=TwoWay}">
-                            </ComboBox>
-
+                        <Grid.ColumnDefinitions>
+                            <!-- 全部类型 -->
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="10" />
+                            <!-- 状态过滤 -->
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="10" />
                             <!-- 搜索输入框 -->
-                            <Grid Grid.Column="4">
-                                <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="36" Padding="32,0,10,0"
-                                         Text="{Binding ExceptionKeyword, UpdateSourceTrigger=PropertyChanged}" />
-                                <TextBlock Text="搜索订单号/客户/异常原因" Foreground="{StaticResource CaptionTextBrush}" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="34,0,0,0" IsHitTestVisible="False">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding ExceptionKeyword}" Value="">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding ExceptionKeyword}" Value="{x:Null}">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource CaptionTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,0,0,0" IsHitTestVisible="False" />
-                            </Grid>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <!-- 重置筛选 -->
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-                            <!-- 状态信息 -->
-                            <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding ExceptionStatusMessage}" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,0,0" MaxWidth="320" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </Grid>
+                        <!-- 全部类型下拉 -->
+                        <ComboBox Grid.Column="0" Width="140" Height="36" Style="{StaticResource FulfillmentInputComboBoxStyle}" SelectedIndex="0">
+                            <ComboBoxItem Content="全部类型" />
+                            <ComboBoxItem Content="收货地址缺失" />
+                            <ComboBoxItem Content="收件手机缺失" />
+                            <ComboBoxItem Content="物流单号缺失" />
+                            <ComboBoxItem Content="微信同步失败" />
+                            <ComboBoxItem Content="制作单缺失" />
+                            <ComboBoxItem Content="工单缺失" />
+                        </ComboBox>
 
-                        <!-- 2. 卡片列表 -->
-                        <Grid Grid.Row="1">
-                            <!-- 空状态 -->
-                            <TextBlock Text="{Binding ExceptionOrdersEmptyStateText}">
+                        <!-- 状态过滤 -->
+                        <ComboBox Grid.Column="2" Width="140" Height="36" Style="{StaticResource FulfillmentInputComboBoxStyle}"
+                                  ItemsSource="{Binding ExceptionStatusFilterOptions}"
+                                  SelectedItem="{Binding SelectedExceptionStatusFilter, Mode=TwoWay}">
+                        </ComboBox>
+
+                        <!-- 搜索框 -->
+                        <Grid Grid.Column="4">
+                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="36" Padding="32,0,10,0"
+                                     Text="{Binding ExceptionKeyword, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="🔍 搜索订单号/客户昵称/异常原因..." Foreground="{StaticResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="32,0,0,0" IsHitTestVisible="False">
                                 <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+                                    <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasExceptionOrders}" Value="False">
+                                            <DataTrigger Binding="{Binding ExceptionKeyword}" Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding ExceptionKeyword}" Value="{x:Null}">
                                                 <Setter Property="Visibility" Value="Visible" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-
-                            <!-- 异常订单 ListBox -->
-                            <ListBox ItemsSource="{Binding ExceptionOrders}"
-                                     SelectedItem="{Binding SelectedExceptionOrder, Mode=TwoWay}"
-                                     Style="{StaticResource HasItemsListBoxStyle}"
-                                     Tag="{Binding HasExceptionOrders}"
-                                     BorderThickness="0" Background="Transparent"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
-                                     ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border x:Name="ExceptionCardBorder"
-                                                Style="{StaticResource ListItemBorderStyle}"
-                                                Margin="0,0,0,10"
-                                                Background="#FFFFFF">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" /> <!-- 警告图标 -->
-                                                    <ColumnDefinition Width="12" />
-                                                    <ColumnDefinition Width="*" />    <!-- 主要信息 -->
-                                                    <ColumnDefinition Width="Auto" /> <!-- 时间 / 操作 -->
-                                                </Grid.ColumnDefinitions>
-
-                                                <!-- 警告图标 -->
-                                                <Border x:Name="IconBorder" Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource DangerSoftBrush}" VerticalAlignment="Center">
-                                                    <TextBlock x:Name="IconText" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource DangerTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                </Border>
-
-                                                <!-- 主要信息 -->
-                                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                        <TextBlock Text="{Binding Exception.ExceptionCategoryLabel}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
-                                                        <Border x:Name="PriorityTag" Margin="10,0,0,0" Padding="8,2" CornerRadius="4" Background="{StaticResource DangerSoftBrush}" VerticalAlignment="Center">
-                                                            <TextBlock x:Name="PriorityTagText" Text="{Binding Exception.LevelText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource DangerTextBrush}" />
-                                                        </Border>
-                                                    </StackPanel>
-
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding OrderNoText}" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="Medium" />
-                                                        <TextBlock Text="|" Foreground="{StaticResource BorderBrushSoft}" Margin="8,0" />
-                                                        <TextBlock Text="{Binding ReceiverSummaryText}" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                                    </StackPanel>
-                                                </StackPanel>
-
-                                                <!-- 时间与操作 -->
-                                                <StackPanel Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                                    <TextBlock Text="{Binding Exception.DetectedAtText}" FontSize="12" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Right" Margin="0,0,0,4" />
-                                                    <TextBlock Text="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Right" IsHitTestVisible="False" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
-                                        <DataTemplate.Triggers>
-                                            <!-- 根据严重程度改变 Icon 和 Tag 颜色 -->
-                                            <DataTrigger Binding="{Binding Exception.PriorityLabel}" Value="普通">
-                                                <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource WarmSoftBrush}" />
-                                                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
-                                                <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource WarmSoftBrush}" />
-                                                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Exception.PriorityLabel}" Value="低">
-                                                <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource BlueSoftBrush}" />
-                                                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource BlueTextBrush}" />
-                                                <Setter TargetName="IconText" Property="Text" Value="&#xE946;" /> <!-- Info icon -->
-                                                <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource BlueSoftBrush}" />
-                                                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource BlueTextBrush}" />
-                                            </DataTrigger>
-
-                                            <!-- 如果已解决，淡化卡片 -->
-                                            <DataTrigger Binding="{Binding Exception.IsResolved}" Value="True">
-                                                <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource AccentSoftBrush}" />
-                                                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource AccentTextBrush}" />
-                                                <Setter TargetName="IconText" Property="Text" Value="&#xE73E;" /> <!-- Checkmark icon -->
-                                                <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource AccentSoftBrush}" />
-                                                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource AccentTextBrush}" />
-                                                <Setter TargetName="PriorityTagText" Property="Text" Value="已解决" />
-                                            </DataTrigger>
-
-                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                <Setter TargetName="ExceptionCardBorder" Property="Background" Value="{StaticResource AccentSoftBrush}" />
-                                                <Setter TargetName="ExceptionCardBorder" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
                         </Grid>
 
-                        <!-- 3. 底栏分页 -->
-                        <Grid Grid.Row="2" Margin="0,12,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="共 " Foreground="{StaticResource SecondaryTextBrush}" FontSize="12.5" />
-                                <TextBlock Text="{Binding ExceptionTotalCount}" Foreground="{StaticResource PrimaryBrush}" FontSize="12.5" FontWeight="Bold" />
-                                <TextBlock Text=" 条" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12.5" />
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border Style="{StaticResource OutlinePillBorderStyle}" Padding="10,2" Background="#FFFFFF" Margin="0,0,10,0">
-                                    <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0}条/页}" FontSize="11.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                </Border>
-                                <Button Content="&#xE0E2;" FontFamily="Segoe MDL2 Assets" FontSize="10" Style="{StaticResource SmallTextCopyButtonStyle}" Width="28" Height="28" Padding="0" Margin="0,0,4,0" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" Command="{Binding NavigateExceptionPrevPageCommand}" />
-                                <Border MinWidth="48" Height="28" CornerRadius="6" Background="{StaticResource PrimaryBrush}" Margin="0,0,4,0" Padding="10,0">
-                                    <TextBlock Text="{Binding ExceptionPageLabel}" Foreground="#FFFFFF" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <Button Content="&#xE0E3;" FontFamily="Segoe MDL2 Assets" FontSize="10" Style="{StaticResource SmallTextCopyButtonStyle}" Width="28" Height="28" Padding="0" Margin="0,0,0,0" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" Command="{Binding NavigateExceptionNextPageCommand}" />
-                            </StackPanel>
-                        </Grid>
+                        <!-- 重置筛选按钮 -->
+                        <StackPanel Grid.Column="6" Orientation="Horizontal">
+                            <Button Content="重置筛选" Style="{StaticResource ToolbarSecondaryButtonStyle}" Height="36" Padding="14,0" Command="{Binding ClearExceptionFiltersCommand}" />
+                        </StackPanel>
                     </Grid>
                 </Border>
 
-                <!-- 右侧异常详情面板 -->
-                <Border x:Name="ExceptionDetailPanel"
-                        Grid.Column="1"
-                        Width="450"
-                        Padding="20"
-                        Margin="8,0,0,0"
-                        RenderTransformOrigin="0.5,0.5"
-                        Visibility="{Binding IsExceptionDetailPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Border.RenderTransform>
-                        <TranslateTransform X="40" />
-                    </Border.RenderTransform>
-                    <Border.Style>
-                        <Style TargetType="Border" BasedOn="{StaticResource SettingsGroupCardStyle}">
-                            <Setter Property="CornerRadius" Value="16" />
-                            <Setter Property="BorderThickness" Value="1" />
-                            <Setter Property="Padding" Value="20" />
-                            <Setter Property="Margin" Value="8,0,0,0" />
-                            <Style.Triggers>
-                                <Trigger Property="Visibility" Value="Visible">
-                                    <Trigger.EnterActions>
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <CubicEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" From="40" To="0" Duration="0:0:0.25">
-                                                    <DoubleAnimation.EasingFunction>
-                                                        <CubicEase EasingMode="EaseOut" />
-                                                    </DoubleAnimation.EasingFunction>
-                                                </DoubleAnimation>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </Trigger.EnterActions>
-                                </Trigger>
-                            </Style.Triggers>
+                <!-- 1. List & Detail Content Area -->
+                <Grid Grid.Row="1">
+                    <Grid.Resources>
+                        <!-- 异常卡片样式 -->
+                        <Style x:Key="ExceptionOrderCardListItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource CardListBoxItemStyle}">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Grid Margin="6">
+                                            <Border x:Name="CardBorder" Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="14" RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <TranslateTransform x:Name="CardTransform" Y="0" />
+                                                </Border.RenderTransform>
+                                                <Border.Effect>
+                                                    <DropShadowEffect x:Name="CardShadow" BlurRadius="12" ShadowDepth="1" Direction="270" Color="#111216" Opacity="0.02" />
+                                                </Border.Effect>
+                                                <ContentPresenter />
+                                            </Border>
+                                            <Border x:Name="ActiveIndicator" Width="4" Height="36" Background="#17181C" CornerRadius="2" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="Collapsed" Margin="1,0,0,0" />
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <!-- 悬停动画 -->
+                                            <MultiTrigger>
+                                                <MultiTrigger.Conditions>
+                                                    <Condition Property="IsMouseOver" Value="True" />
+                                                    <Condition Property="IsSelected" Value="False" />
+                                                </MultiTrigger.Conditions>
+                                                <MultiTrigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardTransform" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.1">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="Opacity" To="0.10" Duration="0" />
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="BlurRadius" To="16" Duration="0" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </MultiTrigger.EnterActions>
+                                                <MultiTrigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardTransform" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="Opacity" To="0.02" Duration="0" />
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="BlurRadius" To="12" Duration="0" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </MultiTrigger.ExitActions>
+                                                <Setter TargetName="CardBorder" Property="Background" Value="#F8F9FA" />
+                                            </MultiTrigger>
+
+                                            <!-- 选中状态 -->
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardTransform" Storyboard.TargetProperty="Y" To="-2" Duration="0:0:0.1">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="Opacity" To="0.06" Duration="0" />
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="BlurRadius" To="16" Duration="0" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetName="CardTransform" Storyboard.TargetProperty="Y" To="0" Duration="0:0:0.12">
+                                                                <DoubleAnimation.EasingFunction>
+                                                                    <CubicEase EasingMode="EaseOut" />
+                                                                </DoubleAnimation.EasingFunction>
+                                                            </DoubleAnimation>
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="Opacity" To="0.02" Duration="0" />
+                                                            <DoubleAnimation Storyboard.TargetName="CardShadow" Storyboard.TargetProperty="BlurRadius" To="12" Duration="0" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.ExitActions>
+                                                <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+                                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                                <Setter TargetName="ActiveIndicator" Property="Visibility" Value="Visible" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
-                    </Border.Style>
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Color="#111216" Opacity="0.05" />
-                    </Border.Effect>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
 
-                        <!-- 1. 头部标题 & 关闭 -->
-                        <DockPanel Grid.Row="0" Margin="0,0,0,16">
-                            <TextBlock Text="异常详情" FontSize="17" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
-                            <Button DockPanel.Dock="Right" Content="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12" Style="{StaticResource IconCopyButtonStyle}" Width="28" Height="28" Cursor="Hand" Click="CloseExceptionDetails_Click" />
-                        </DockPanel>
-
-                        <!-- 2. 滚动详情内容 -->
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
-                            <StackPanel>
-                                <!-- 核心警告 Banner -->
-                                <Border Background="{StaticResource DangerSoftBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,16">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="12" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource DangerTextBrush}" VerticalAlignment="Center" />
-                                        <StackPanel Grid.Column="2">
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
-                                                <Border Margin="8,0,0,0" Padding="6,2" CornerRadius="4" Background="{StaticResource DangerTextBrush}">
-                                                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="10.5" FontWeight="Bold" Foreground="#FFFFFF" />
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.DetectedAtText, StringFormat=发现时间：{0}}" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-
-                                <!-- 异常原因 -->
-                                <TextBlock Text="异常原因" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,6" />
-                                <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,14" BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}">
-                                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.EffectiveReason}" FontSize="13" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" LineHeight="18" />
-                                </Border>
-
-                                <!-- 影响范围 -->
-                                <TextBlock Text="影响范围" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,6" />
-                                <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderThickness="1" BorderBrush="{StaticResource DangerBorderBrush}">
-                                    <TextBlock Text="将阻断订单履约流程，如果不处理可能导致发货延迟，影响微信发货同步或用户投诉。" FontSize="13" Foreground="{StaticResource WarmTextBrush}" TextWrapping="Wrap" LineHeight="18" />
-                                </Border>
-
-                                <!-- 关联订单表格 -->
-                                <TextBlock Text="关联订单" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
-                                <Border BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}" CornerRadius="10" Margin="0,0,0,16" Background="#FFFFFF">
-                                    <Grid Margin="12">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="8" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="8" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="8" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="8" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="8" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Row 0: 订单号 -->
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="订单号" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                                        <DockPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
-                                            <Button DockPanel.Dock="Right" Style="{StaticResource IconCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.OrderNo}" Click="CopyText_Click" ToolTip="复制订单号">
-                                                <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
-                                            </Button>
-                                            <TextBlock Text="{Binding SelectedExceptionOrderDetail.OrderNoText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
-                                        </DockPanel>
-
-                                        <!-- Row 2: 下单时间 -->
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="下单时间" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.CreatedAtText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
-
-                                        <!-- Row 4: 支付订单号 -->
-                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="支付订单号" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                                        <DockPanel Grid.Row="4" Grid.Column="1" VerticalAlignment="Center">
-                                            <Button DockPanel.Dock="Right" Style="{StaticResource IconCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.WxOutTradeNo}" Click="CopyText_Click" ToolTip="复制支付单号">
-                                                <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
-                                            </Button>
-                                            <TextBlock Text="{Binding SelectedExceptionOrderDetail.WxOutTradeNoText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
-                                        </DockPanel>
-
-                                        <!-- Row 6: 支付时间 -->
-                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="支付时间" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.PaidAtText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
-
-                                        <!-- Row 8: 客户昵称 -->
-                                        <TextBlock Grid.Row="8" Grid.Column="0" Text="客户昵称" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.ReceiverSummaryText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
-
-                                        <!-- Row 10: 订单金额 -->
-                                        <TextBlock Grid.Row="10" Grid.Column="0" Text="订单金额" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.AmountText}" FontSize="12.5" FontWeight="Bold" Foreground="{StaticResource WarmTextBrush}" />
-                                    </Grid>
-                                </Border>
-
-                                <!-- 异常详情 -->
-                                <TextBlock Text="异常参数" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
-                                <Border BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}" CornerRadius="10" Margin="0,0,0,16" Background="#FFFFFF">
-                                    <Grid Margin="12">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="8" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="8" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="8" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="异常类型" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
-
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="严重程度" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource DangerTextBrush}" />
-
-                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="当前状态" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ResolutionStatusLabel}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
-
-                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="异常描述" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.EffectiveReason}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
-                                    </Grid>
-                                </Border>
-
-                                <!-- 推荐处理动作 -->
-                                <TextBlock Text="推荐处理动作" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
-                                <Grid Margin="0,0,0,16">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="1*" />
-                                        <ColumnDefinition Width="10" />
-                                        <ColumnDefinition Width="1*" />
-                                        <ColumnDefinition Width="10" />
-                                        <ColumnDefinition Width="1*" />
-                                        <ColumnDefinition Width="10" />
-                                        <ColumnDefinition Width="1*" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- 补充地址 -->
-                                    <Button Grid.Column="0" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                            <TextBlock Text="去补充地址" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <!-- 联系客户 -->
-                                    <Button Grid.Column="2" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="ContactCustomer_Click">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#2B7A5C" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                            <TextBlock Text="联系客户" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <!-- 跳转订单 -->
-                                    <Button Grid.Column="4" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource WarmTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                            <TextBlock Text="跳转订单" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-
-                                    <!-- 标记已处理 -->
-                                    <Button Grid.Column="6" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Command="{Binding ResolveSelectedExceptionCommand}">
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                            <TextBlock Text="标记已处理" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-
-                                <!-- 操作日志 -->
-                                <TextBlock Text="操作日志" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
-                                <ItemsControl ItemsSource="{Binding ExceptionAuditLogs}" Margin="4,0,0,16">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,0,0,12">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="14" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <!-- 时间轴节点线和点 -->
-                                                <Grid Grid.Column="0" VerticalAlignment="Stretch">
-                                                    <Rectangle Width="1.5" Fill="{StaticResource BorderBrushSoft}" HorizontalAlignment="Center" Margin="0,14,0,-14" />
-                                                    <Ellipse Width="8" Height="8" Fill="{StaticResource PrimaryBrush}" VerticalAlignment="Top" Margin="0,5,0,0" />
-                                                </Grid>
-
-                                                <StackPanel Grid.Column="2">
-                                                    <TextBlock x:Name="ActionText" Text="{Binding Action}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding Action}" Value="assign">
-                                                                        <Setter Property="Text" Value="分配处理人" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Action}" Value="start_processing">
-                                                                        <Setter Property="Text" Value="开始处理异常" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Action}" Value="resolve">
-                                                                        <Setter Property="Text" Value="标记异常已解决" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Action}" Value="ignore">
-                                                                        <Setter Property="Text" Value="忽略异常" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Action}" Value="reopen">
-                                                                        <Setter Property="Text" Value="重新打开异常" />
-                                                                    </DataTrigger>
-                                                                    <DataTrigger Binding="{Binding Action}" Value="comment">
-                                                                        <Setter Property="Text" Value="添加备注" />
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                    <TextBlock Text="{Binding Remark}" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Visibility" Value="Visible" />
-                                                                <Style.Triggers>
-                                                                    <Trigger Property="Text" Value="">
-                                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                                    </Trigger>
-                                                                    <Trigger Property="Text" Value="{x:Null}">
-                                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                                    </Trigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                        <TextBlock Text="{Binding OperatorText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
-                                                        <TextBlock Text="•" Foreground="{StaticResource CaptionTextBrush}" Margin="6,0" />
-                                                        <TextBlock Text="{Binding AtText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-
-                        <!-- 3. 底部确定处理按钮 -->
-                        <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrushSoft}" Padding="0,16,0,0">
+                        <!-- 单个异常卡片数据模板 -->
+                        <DataTemplate x:Key="ExceptionOrderCardTemplate">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" /> <!-- 警告图标 -->
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />    <!-- 主要信息 -->
+                                    <ColumnDefinition Width="Auto" /> <!-- 时间 -->
                                 </Grid.ColumnDefinitions>
 
-                                <Button Grid.Column="2" Content="取消" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="90" Height="36" Padding="0" Margin="0" Click="CloseExceptionDetails_Click" />
-                                <Button Grid.Column="4" Content="标记已处理" Style="{StaticResource ToolbarPrimaryButtonStyle}" Width="110" Height="36" Padding="0" Margin="0" Command="{Binding ResolveSelectedExceptionCommand}" Background="#0066cc" />
+                                <!-- 警告图标 -->
+                                <Border x:Name="IconBorder" Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource DangerSoftBrush}" VerticalAlignment="Center">
+                                    <TextBlock x:Name="IconText" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource DangerTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+
+                                <!-- 主要信息 -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding Exception.ExceptionCategoryLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
+                                        <Border x:Name="PriorityTag" Margin="8,0,0,0" Padding="6,1.5" CornerRadius="4" Background="{StaticResource DangerSoftBrush}" VerticalAlignment="Center">
+                                            <TextBlock x:Name="PriorityTagText" Text="{Binding Exception.LevelText}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource DangerTextBrush}" />
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding OrderNoText}" FontSize="11.5" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="Medium" />
+                                        <TextBlock Text="|" Foreground="{StaticResource BorderBrushSoft}" Margin="6,0" />
+                                        <TextBlock Text="{Binding ReceiverSummaryText}" FontSize="11.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- 时间与操作 -->
+                                <StackPanel Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding Exception.DetectedAtText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Right" Margin="0,0,0,4" />
+                                    <TextBlock Text="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Right" IsHitTestVisible="False" />
+                                </StackPanel>
                             </Grid>
-                        </Border>
-                    </Grid>
-                </Border>
+                            <DataTemplate.Triggers>
+                                <!-- 根据严重程度改变颜色 -->
+                                <DataTrigger Binding="{Binding Exception.PriorityLabel}" Value="普通">
+                                    <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource WarmSoftBrush}" />
+                                    <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                    <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource WarmSoftBrush}" />
+                                    <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Exception.PriorityLabel}" Value="低">
+                                    <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource BlueSoftBrush}" />
+                                    <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource BlueTextBrush}" />
+                                    <Setter TargetName="IconText" Property="Text" Value="&#xE946;" />
+                                    <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource BlueSoftBrush}" />
+                                    <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource BlueTextBrush}" />
+                                </DataTrigger>
+                                <!-- 已解决，淡化 -->
+                                <DataTrigger Binding="{Binding Exception.IsResolved}" Value="True">
+                                    <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                                    <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                    <Setter TargetName="IconText" Property="Text" Value="&#xE73E;" />
+                                    <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                                    <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                    <Setter TargetName="PriorityTagText" Property="Text" Value="已解决" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </Grid.Resources>
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="3*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- A. 列表收起模式 (选中详情时，左边占 2/5 宽度，单列) -->
+                    <Border Grid.Column="0" Style="{StaticResource SettingsGroupCardStyle}" Padding="16" Margin="0,0,14,0"
+                            Visibility="{Binding IsExceptionDetailPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <DockPanel>
+                            <!-- 分页 -->
+                            <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="共 " Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+                                        <TextBlock Text="{Binding ExceptionTotalCount, FallbackValue=0}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
+                                        <TextBlock Text=" 条数据" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="15" Height="30" Padding="1,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateExceptionPrevPageCommand}" ToolTip="上一页">
+                                                <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </Button>
+                                            <Border Padding="10,0" Background="Transparent" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding ExceptionPageLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                            </Border>
+                                            <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateExceptionNextPageCommand}" ToolTip="下一页">
+                                                <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Style="{StaticResource OutlinePillBorderStyle}" Padding="10,2" Background="#FFFFFF">
+                                            <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0}条/页}" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Grid>
+                                <!-- 空状态 -->
+                                <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,40">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasExceptionOrders}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource SurfaceSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,16">
+                                            <TextBlock Text="&#xE90A;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="{Binding ExceptionOrdersEmptyStateText}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- 列表 -->
+                                <ListBox ItemsSource="{Binding ExceptionOrders}"
+                                         SelectedItem="{Binding SelectedExceptionOrder}"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
+                                         ItemContainerStyle="{StaticResource ExceptionOrderCardListItemStyle}"
+                                         ItemTemplate="{StaticResource ExceptionOrderCardTemplate}"
+                                         Padding="2,4,2,2"
+                                         ClipToBounds="False">
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasExceptionOrders}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                </ListBox>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- B. 列表展开模式 (无详情时，占满两列，双列) -->
+                    <Border Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource SettingsGroupCardStyle}" Padding="16" Margin="0"
+                            Visibility="{Binding IsExceptionListExpanded, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <DockPanel>
+                            <!-- 分页 -->
+                            <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="共 " Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+                                        <TextBlock Text="{Binding ExceptionTotalCount, FallbackValue=0}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
+                                        <TextBlock Text=" 条数据" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="15" Height="30" Padding="1,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateExceptionPrevPageCommand}" ToolTip="上一页">
+                                                <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </Button>
+                                            <Border Padding="10,0" Background="Transparent" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding ExceptionPageLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                            </Border>
+                                            <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateExceptionNextPageCommand}" ToolTip="下一页">
+                                                <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Style="{StaticResource OutlinePillBorderStyle}" Padding="10,2" Background="#FFFFFF">
+                                            <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0}条/页}" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Grid>
+                                <!-- 空状态 -->
+                                <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,40">
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasExceptionOrders}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource SurfaceSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,16">
+                                            <TextBlock Text="&#xE90A;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="{Binding ExceptionOrdersEmptyStateText}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- 列表 (双列 UniformGrid) -->
+                                <ListBox ItemsSource="{Binding ExceptionOrders}"
+                                         SelectedItem="{Binding SelectedExceptionOrder}"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
+                                         ItemContainerStyle="{StaticResource ExceptionOrderCardListItemStyle}"
+                                         ItemTemplate="{StaticResource ExceptionOrderCardTemplate}"
+                                         Padding="2,4,2,2"
+                                         ClipToBounds="False">
+                                    <ListBox.Style>
+                                        <Style TargetType="ListBox">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasExceptionOrders}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ListBox.Style>
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="2" />
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                </ListBox>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- C. 右侧异常详情面板 -->
+                    <Border x:Name="ExceptionDetailPanel"
+                            Grid.Column="1"
+                            Padding="20"
+                            Margin="0"
+                            RenderTransformOrigin="0.5,0.5"
+                            Visibility="{Binding IsExceptionDetailPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border.RenderTransform>
+                            <TranslateTransform X="40" />
+                        </Border.RenderTransform>
+                        <Border.Style>
+                            <Style TargetType="Border" BasedOn="{StaticResource SettingsGroupCardStyle}">
+                                <Style.Triggers>
+                                    <Trigger Property="Visibility" Value="Visible">
+                                        <Trigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" From="40" To="0" Duration="0:0:0.25">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.EnterActions>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- 1. 头部标题 & 关闭 (双行紧凑布局以和履约一致) -->
+                            <Border BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,0,0,1" Padding="0,0,0,14" Margin="0,0,0,14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="异常详情" FontSize="18" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <TextBlock Text="订单号：" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding SelectedExceptionOrderDetail.OrderNoText}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
+                                            <Button Style="{StaticResource IconCopyButtonStyle}" Width="20" Height="20" Padding="0" Margin="6,0,0,2" VerticalAlignment="Center"
+                                                    Tag="{Binding SelectedExceptionOrderDetail.OrderNo}" Click="CopyText_Click" ToolTip="复制订单号">
+                                                <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                            </Button>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    
+                                    <Button Grid.Column="1" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="32" Height="32" Padding="0" VerticalAlignment="Top"
+                                            Click="CloseExceptionDetails_Click" ToolTip="关闭详情">
+                                        <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12" />
+                                    </Button>
+                                </Grid>
+                            </Border>
+
+                            <!-- 2. 滚动详情内容 -->
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
+                                <StackPanel>
+                                    <!-- 核心警告 Banner -->
+                                    <Border Background="{StaticResource DangerSoftBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,16">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="12" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource DangerTextBrush}" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="2">
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                                                    <Border Margin="8,0,0,0" Padding="6,2" CornerRadius="4" Background="{StaticResource DangerTextBrush}">
+                                                        <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="10.5" FontWeight="Bold" Foreground="#FFFFFF" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.DetectedAtText, StringFormat=发现时间：{0}}" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 异常原因 -->
+                                    <TextBlock Text="异常原因" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,6" />
+                                    <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,14" BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}">
+                                        <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.EffectiveReason}" FontSize="13" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" LineHeight="18" />
+                                    </Border>
+
+                                    <!-- 影响范围 -->
+                                    <TextBlock Text="影响范围" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,6" />
+                                    <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderThickness="1" BorderBrush="{StaticResource DangerBorderBrush}">
+                                        <TextBlock Text="将阻断订单履约流程，如果不处理可能导致发货延迟，影响微信发货同步或用户投诉。" FontSize="13" Foreground="{StaticResource WarmTextBrush}" TextWrapping="Wrap" LineHeight="18" />
+                                    </Border>
+
+                                    <!-- 关联订单表格 -->
+                                    <TextBlock Text="关联订单" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
+                                    <Border BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}" CornerRadius="10" Margin="0,0,0,16" Background="#FFFFFF">
+                                        <Grid Margin="12">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="8" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="8" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="8" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="8" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="8" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Row 0: 订单号 -->
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="订单号" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                            <DockPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.OrderNo}" Click="CopyText_Click" ToolTip="复制订单号">
+                                                    <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
+                                                </Button>
+                                                <TextBlock Text="{Binding SelectedExceptionOrderDetail.OrderNoText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
+                                            </DockPanel>
+
+                                            <!-- Row 2: 下单时间 -->
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="下单时间" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.CreatedAtText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+
+                                            <!-- Row 4: 支付订单号 -->
+                                            <TextBlock Grid.Row="4" Grid.Column="0" Text="支付订单号" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                            <DockPanel Grid.Row="4" Grid.Column="1" VerticalAlignment="Center">
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.WxOutTradeNo}" Click="CopyText_Click" ToolTip="复制支付单号">
+                                                    <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
+                                                </Button>
+                                                <TextBlock Text="{Binding SelectedExceptionOrderDetail.WxOutTradeNoText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
+                                            </DockPanel>
+
+                                            <!-- Row 6: 支付时间 -->
+                                            <TextBlock Grid.Row="6" Grid.Column="0" Text="支付时间" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.PaidAtText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+
+                                            <!-- Row 8: 客户昵称 -->
+                                            <TextBlock Grid.Row="8" Grid.Column="0" Text="客户昵称" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.ReceiverSummaryText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+
+                                            <!-- Row 10: 订单金额 -->
+                                            <TextBlock Grid.Row="10" Grid.Column="0" Text="订单金额" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.AmountText}" FontSize="12.5" FontWeight="Bold" Foreground="{StaticResource WarmTextBrush}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 异常详情 -->
+                                    <TextBlock Text="异常参数" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
+                                    <Border BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}" CornerRadius="10" Margin="0,0,0,16" Background="#FFFFFF">
+                                        <Grid Margin="12">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="8" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="8" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="8" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="异常类型" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="严重程度" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource DangerTextBrush}" />
+
+                                            <TextBlock Grid.Row="4" Grid.Column="0" Text="当前状态" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ResolutionStatusLabel}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+
+                                            <TextBlock Grid.Row="6" Grid.Column="0" Text="异常描述" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.EffectiveReason}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 推荐处理动作 -->
+                                    <TextBlock Text="推荐处理动作" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*" />
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="1*" />
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="1*" />
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="1*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- 补充地址 -->
+                                        <Button Grid.Column="0" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                                                <TextBlock Text="去补充地址" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <!-- 联系客户 -->
+                                        <Button Grid.Column="2" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="ContactCustomer_Click">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#2B7A5C" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                                                <TextBlock Text="联系客户" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <!-- 跳转订单 -->
+                                        <Button Grid.Column="4" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource WarmTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                                                <TextBlock Text="跳转订单" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <!-- 标记已处理 -->
+                                        <Button Grid.Column="6" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Command="{Binding ResolveSelectedExceptionCommand}">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                                                <TextBlock Text="标记已处理" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+
+                                    <!-- 操作日志 -->
+                                    <TextBlock Text="操作日志" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
+                                    <ItemsControl ItemsSource="{Binding ExceptionAuditLogs}" Margin="4,0,0,16">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="14" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <Grid Grid.Column="0" VerticalAlignment="Stretch">
+                                                        <Rectangle Width="1.5" Fill="{StaticResource BorderBrushSoft}" HorizontalAlignment="Center" Margin="0,14,0,-14" />
+                                                        <Ellipse Width="8" Height="8" Fill="{StaticResource PrimaryBrush}" VerticalAlignment="Top" Margin="0,5,0,0" />
+                                                    </Grid>
+
+                                                    <StackPanel Grid.Column="2">
+                                                        <TextBlock x:Name="ActionText" Text="{Binding Action}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding Action}" Value="assign">
+                                                                            <Setter Property="Text" Value="分配处理人" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Action}" Value="start_processing">
+                                                                            <Setter Property="Text" Value="开始处理异常" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Action}" Value="resolve">
+                                                                            <Setter Property="Text" Value="标记异常已解决" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Action}" Value="ignore">
+                                                                            <Setter Property="Text" Value="忽略异常" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Action}" Value="reopen">
+                                                                            <Setter Property="Text" Value="重新打开异常" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding Action}" Value="comment">
+                                                                            <Setter Property="Text" Value="添加备注" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <TextBlock Text="{Binding Remark}" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                    <Style.Triggers>
+                                                                        <Trigger Property="Text" Value="">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </Trigger>
+                                                                        <Trigger Property="Text" Value="{x:Null}">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </Trigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                            <TextBlock Text="{Binding OperatorText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
+                                                            <TextBlock Text="•" Foreground="{StaticResource CaptionTextBrush}" Margin="6,0" />
+                                                            <TextBlock Text="{Binding AtText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+
+                            <!-- 3. 底部确定处理按钮 -->
+                            <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrushSoft}" Padding="0,16,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="10" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="10" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Button Grid.Column="2" Content="取消" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="90" Height="36" Padding="0" Margin="0" Click="CloseExceptionDetails_Click" />
+                                    <Button Grid.Column="4" Content="标记已处理" Style="{StaticResource ToolbarPrimaryButtonStyle}" Width="110" Height="36" Padding="0" Margin="0" Command="{Binding ResolveSelectedExceptionCommand}" Background="#0066cc" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
+
+
+
+
 
             <TabControl Grid.Row="1" Style="{StaticResource SettingsTabControlStyle}" 
                         Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=设置}">
