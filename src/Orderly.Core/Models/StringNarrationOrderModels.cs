@@ -295,6 +295,19 @@ public sealed class StringNarrationExceptionSnapshot
             };
         }
     }
+    public int SeveritySortOrder
+    {
+        get
+        {
+            return SeverityCategory switch
+            {
+                "Money" => 0,
+                "Warning" => 1,
+                "General" => 2,
+                _ => 3
+            };
+        }
+    }
     public string EffectiveType => BuildValue(Type, EffectiveCode);
     public string EffectiveReason => BuildValue(Reason, StringNarrationExceptionFieldCatalog.GetExceptionReason(EffectiveCode));
     public string ExceptionCategoryLabel => StringNarrationExceptionFieldCatalog.GetExceptionLabel(EffectiveCode);
@@ -450,6 +463,7 @@ public class StringNarrationOrderSummary
     public string ExceptionStatusText => Exception.StatusText;
     public int ExceptionResolvedSortOrder => Exception.ResolvedSortOrder;
     public int ExceptionPrioritySortOrder => Exception.PrioritySortOrder;
+    public int ExceptionSeveritySortOrder => Exception.SeveritySortOrder;
     public int ExceptionResolutionStatusSortOrder => Exception.ResolutionStatusSortOrder;
     public long ExceptionSlaDueSortTimestamp => Exception.SlaDueSortTimestamp;
     public long ExceptionDetectedSortTimestamp =>

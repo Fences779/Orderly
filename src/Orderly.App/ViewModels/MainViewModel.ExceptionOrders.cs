@@ -630,7 +630,7 @@ public partial class MainViewModel
                 _ => true
             })
             .OrderBy(item => item.ExceptionResolvedSortOrder)
-            .ThenBy(item => item.ExceptionPrioritySortOrder)
+            .ThenBy(item => item.ExceptionSeveritySortOrder)
             .ThenBy(item => item.ExceptionSlaDueSortTimestamp > 0 ? item.ExceptionSlaDueSortTimestamp : long.MaxValue)
             .ThenBy(item => item.ExceptionResolutionStatusSortOrder)
             .ThenByDescending(item => item.ExceptionDetectedSortTimestamp)
