@@ -4073,59 +4073,24 @@
                 <!-- 0. Search & Filters 独立筛选栏 -->
                 <Border Grid.Row="0" Style="{StaticResource SettingsGroupCardStyle}" Padding="14,10" Margin="0,0,0,14">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <!-- 全部类型 -->
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="10" />
-                            <!-- 搜索输入框 -->
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="10" />
-                            <!-- 重置筛选 -->
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- 全部类型下拉 -->
-                        <ComboBox Grid.Column="0" Width="140" Height="36" Style="{StaticResource FulfillmentInputComboBoxStyle}" SelectedIndex="0">
-                            <ComboBoxItem Content="全部类型" />
-                            <ComboBoxItem Content="收货地址缺失" />
-                            <ComboBoxItem Content="收件手机缺失" />
-                            <ComboBoxItem Content="物流单号缺失" />
-                            <ComboBoxItem Content="微信同步失败" />
-                            <ComboBoxItem Content="制作单缺失" />
-                            <ComboBoxItem Content="工单缺失" />
-                        </ComboBox>
-
-
-
-
-
-
-
                         <!-- 搜索框 -->
-                        <Grid Grid.Column="2">
-                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="36" Padding="32,0,10,0"
-                                     Text="{Binding ExceptionKeyword, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Text="🔍 搜索订单号/客户昵称/异常原因..." Foreground="{StaticResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="32,0,0,0" IsHitTestVisible="False">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ExceptionKeyword}" Value="">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding ExceptionKeyword}" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
-
-                        <!-- 重置筛选按钮 -->
-                        <StackPanel Grid.Column="4" Orientation="Horizontal">
-                            <Button Content="重置筛选" Style="{StaticResource ToolbarSecondaryButtonStyle}" Height="36" Padding="14,0" Command="{Binding ClearExceptionFiltersCommand}" />
-                        </StackPanel>
+                        <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="36" Padding="32,0,10,0"
+                                 Text="{Binding ExceptionKeyword, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="🔍 搜索订单号/客户昵称/异常原因..." Foreground="{StaticResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="32,0,0,0" IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ExceptionKeyword}" Value="">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding ExceptionKeyword}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
                 </Border>
 
