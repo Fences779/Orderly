@@ -4077,9 +4077,6 @@
                             <!-- 全部类型 -->
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="10" />
-                            <!-- 状态过滤 -->
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="10" />
                             <!-- 搜索输入框 -->
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="10" />
@@ -4098,14 +4095,14 @@
                             <ComboBoxItem Content="工单缺失" />
                         </ComboBox>
 
-                        <!-- 状态过滤 -->
-                        <ComboBox Grid.Column="2" Width="140" Height="36" Style="{StaticResource FulfillmentInputComboBoxStyle}"
-                                  ItemsSource="{Binding ExceptionStatusFilterOptions}"
-                                  SelectedItem="{Binding SelectedExceptionStatusFilter, Mode=TwoWay}">
-                        </ComboBox>
+
+
+
+
+
 
                         <!-- 搜索框 -->
-                        <Grid Grid.Column="4">
+                        <Grid Grid.Column="2">
                             <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="36" Padding="32,0,10,0"
                                      Text="{Binding ExceptionKeyword, UpdateSourceTrigger=PropertyChanged}" />
                             <TextBlock Text="🔍 搜索订单号/客户昵称/异常原因..." Foreground="{StaticResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="32,0,0,0" IsHitTestVisible="False">
@@ -4126,7 +4123,7 @@
                         </Grid>
 
                         <!-- 重置筛选按钮 -->
-                        <StackPanel Grid.Column="6" Orientation="Horizontal">
+                        <StackPanel Grid.Column="4" Orientation="Horizontal">
                             <Button Content="重置筛选" Style="{StaticResource ToolbarSecondaryButtonStyle}" Height="36" Padding="14,0" Command="{Binding ClearExceptionFiltersCommand}" />
                         </StackPanel>
                     </Grid>
@@ -4138,6 +4135,7 @@
                         <!-- 异常卡片样式 -->
                         <Style x:Key="ExceptionOrderCardListItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource CardListBoxItemStyle}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <EventSetter Event="MouseDoubleClick" Handler="ExceptionOrderCard_MouseDoubleClick" />
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
@@ -4362,7 +4360,6 @@
                                          BorderThickness="0"
                                          Background="Transparent"
                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                         MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
                                          ItemContainerStyle="{StaticResource ExceptionOrderCardListItemStyle}"
                                          ItemTemplate="{StaticResource ExceptionOrderCardTemplate}"
                                          Padding="2,4,2,2"
@@ -4447,7 +4444,6 @@
                                          BorderThickness="0"
                                          Background="Transparent"
                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                         MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
                                          ItemContainerStyle="{StaticResource ExceptionOrderCardListItemStyle}"
                                          ItemTemplate="{StaticResource ExceptionOrderCardTemplate}"
                                          Padding="2,4,2,2"

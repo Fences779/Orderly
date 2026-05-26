@@ -36,7 +36,6 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsExceptionOrdersBusy))]
     [NotifyCanExecuteChangedFor(nameof(LoadExceptionOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshExceptionOrderDetailCommand))]
-    [NotifyCanExecuteChangedFor(nameof(ForceOpenExceptionDetailCommand))]
     private bool isExceptionOrdersLoading;
 
     [ObservableProperty]
@@ -251,30 +250,6 @@ public partial class MainViewModel
         await LoadExceptionOrderDetailByLookupAsync(lookup);
     }
 
-    [RelayCommand(CanExecute = nameof(CanRunExceptionOrdersReadAction))]
-    private async Task ForceOpenExceptionDetailAsync()
-    {
-        var summary = SelectedExceptionOrder;
-        if (summary is null)
-        {
-            summary = ExceptionOrders.FirstOrDefault();
-            if (summary is null)
-            {
-                ExceptionStatusMessage = "异常列表为空，无法强制打开异常详情。";
-                return;
-            }
-
-            SelectedExceptionOrder = summary;
-        }
-
-        await ExecuteExceptionOrdersReadActionAsync("正在强制打开异常详情...", async () =>
-        {
-            var detail = await _stringNarrationOrderService.GetOrderDetailAsync(summary.OrderNo, summary.WxOutTradeNo, summary.Id);
-            SetExceptionDetailPanelState(detail);
-            ExceptionStatusMessage = $"已强制打开异常详情：{detail.OrderNoText}";
-        });
-    }
-
     [RelayCommand]
     private void ClearExceptionFilters()
     {
@@ -363,6 +338,7 @@ public partial class MainViewModel
     [RelayCommand(CanExecute = nameof(CanNavigateExceptionPrevPage))]
     private async Task NavigateExceptionPrevPageAsync()
     {
+        ResetExceptionDetailForPageChange();
         ExceptionCurrentPage--;
         await LoadExceptionOrdersAsync();
     }
@@ -370,6 +346,7 @@ public partial class MainViewModel
     [RelayCommand(CanExecute = nameof(CanNavigateExceptionNextPage))]
     private async Task NavigateExceptionNextPageAsync()
     {
+        ResetExceptionDetailForPageChange();
         ExceptionCurrentPage++;
         await LoadExceptionOrdersAsync();
     }
@@ -513,6 +490,23 @@ public partial class MainViewModel
         SelectedExceptionOrderDetail = detail;
         OnPropertyChanged(nameof(IsExceptionDetailPanelVisible));
         OnPropertyChanged(nameof(IsExceptionListExpanded));
+    }
+
+    private void ResetExceptionDetailForPageChange()
+    {
+        _selectedExceptionOrderLoadVersion++;
+        _isSynchronizingExceptionSelection = true;
+        try
+        {
+            SelectedExceptionOrder = null;
+        }
+        finally
+        {
+            _isSynchronizingExceptionSelection = false;
+        }
+
+        SelectedExceptionOrderDetail = null;
+        OnExceptionOrdersCollectionStateChanged();
     }
 
     private void EnsureExceptionDetailKeepsListContext(StringNarrationOrderDetail detail)

@@ -166,9 +166,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void ExceptionOrdersList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private async void ExceptionOrderCard_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (sender is not System.Windows.Controls.ListBox listBox || DataContext is not MainViewModel vm)
+        if (sender is not System.Windows.Controls.ListBoxItem item || DataContext is not MainViewModel vm)
         {
             return;
         }
@@ -178,9 +178,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (listBox.SelectedItem is Orderly.Core.Models.StringNarrationOrderSummary summary)
+        if (item.DataContext is Orderly.Core.Models.StringNarrationOrderSummary summary)
         {
             await vm.OpenExceptionOrderDetailAsync(summary);
+            e.Handled = true;
         }
     }
 
