@@ -4071,7 +4071,7 @@
                 </Grid.RowDefinitions>
 
                 <!-- 0. Search & Filters 独立筛选栏 -->
-                <Border Grid.Row="0" Style="{StaticResource SettingsGroupCardStyle}" Padding="14,10" Margin="0,0,0,14">
+                <Border Grid.Row="0" Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,14">
                     <Grid>
                         <!-- 搜索框 -->
                         <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="36" Padding="32,0,10,0"
