@@ -24,10 +24,13 @@ public partial class MainViewModel
     public bool HasExceptionSampleReplayResults => ExceptionSampleReplayResults.Count > 0;
     public bool IsExceptionOrdersBusy => IsExceptionOrdersLoading;
     public string ExceptionOrdersCountText => $"{ExceptionOrders.Count} 单";
+    public string ExceptionTotalCountText => $"{ExceptionTotalCount} 单";
     public string ExceptionAuditLogsCountText => $"{ExceptionAuditLogs.Count} 条";
     public string ExceptionOrdersEmptyStateText => string.IsNullOrWhiteSpace(ExceptionError)
         ? "暂无异常订单，点击刷新拉取。"
         : ExceptionError;
+    public int ExceptionTotalPages => Math.Max(1, (int)Math.Ceiling((double)ExceptionTotalCount / ExceptionPageSize));
+    public string ExceptionPageLabel => $"{ExceptionCurrentPage} / {ExceptionTotalPages}";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsExceptionOrdersBusy))]
@@ -72,6 +75,27 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private string exceptionSampleReplayStatusMessage = "异常样本未回放";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExceptionPageLabel))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateExceptionPrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateExceptionNextPageCommand))]
+    private int exceptionCurrentPage = 1;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExceptionTotalCountText))]
+    [NotifyPropertyChangedFor(nameof(ExceptionTotalPages))]
+    [NotifyPropertyChangedFor(nameof(ExceptionPageLabel))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateExceptionPrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateExceptionNextPageCommand))]
+    private int exceptionTotalCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ExceptionTotalPages))]
+    [NotifyPropertyChangedFor(nameof(ExceptionPageLabel))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateExceptionPrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NavigateExceptionNextPageCommand))]
+    private int exceptionPageSize = 20;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedExceptionOrderDetail))]
@@ -185,12 +209,13 @@ public partial class MainViewModel
         await ExecuteExceptionOrdersReadActionAsync("正在加载异常订单...", async () =>
         {
             var query = BuildStringNarrationQuery();
-            query.Page = 1;
-            query.PageSize = 50;
+            query.Page = ExceptionCurrentPage;
+            query.PageSize = ExceptionPageSize;
             ValidateTimeRangeOrThrow(query);
             var result = await _stringNarrationOrderService.GetOrdersAsync(query);
+            ExceptionTotalCount = result.PageInfo.Total;
             SyncExceptionOrdersFromOrders(result.Orders);
-            ExceptionStatusMessage = $"已加载异常订单 {ExceptionOrders.Count} 单（原始列表 {result.Orders.Count} 单）";
+            ExceptionStatusMessage = $"已加载异常订单 {ExceptionOrders.Count} 单，第 {ExceptionCurrentPage} 页 / 共 {ExceptionTotalPages} 页（总数 {result.PageInfo.Total} 单）";
         });
     }
 
@@ -323,6 +348,30 @@ public partial class MainViewModel
     private bool CanRunExceptionOrdersReadAction()
     {
         return !IsExceptionOrdersBusy;
+    }
+
+    private bool CanNavigateExceptionPrevPage()
+    {
+        return !IsExceptionOrdersBusy && ExceptionCurrentPage > 1;
+    }
+
+    private bool CanNavigateExceptionNextPage()
+    {
+        return !IsExceptionOrdersBusy && ExceptionCurrentPage < ExceptionTotalPages;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanNavigateExceptionPrevPage))]
+    private async Task NavigateExceptionPrevPageAsync()
+    {
+        ExceptionCurrentPage--;
+        await LoadExceptionOrdersAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanNavigateExceptionNextPage))]
+    private async Task NavigateExceptionNextPageAsync()
+    {
+        ExceptionCurrentPage++;
+        await LoadExceptionOrdersAsync();
     }
 
     private bool CanRefreshExceptionOrderDetail()
@@ -651,6 +700,9 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasExceptionSampleReplayResults));
         OnPropertyChanged(nameof(IsExceptionOrdersBusy));
         OnPropertyChanged(nameof(ExceptionOrdersCountText));
+        OnPropertyChanged(nameof(ExceptionTotalCountText));
+        OnPropertyChanged(nameof(ExceptionTotalPages));
+        OnPropertyChanged(nameof(ExceptionPageLabel));
         OnPropertyChanged(nameof(ExceptionAuditLogsCountText));
         OnPropertyChanged(nameof(ExceptionOrdersEmptyStateText));
     }

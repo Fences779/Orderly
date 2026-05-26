@@ -2137,8 +2137,12 @@
                                                 <Setter Property="Visibility" Value="Collapsed" />
                                                 <Setter Property="Opacity" Value="0" />
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasStringNarrationOrders}" Value="False">
-                                                        <DataTrigger.EnterActions>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding HasStringNarrationOrders}" Value="False" />
+                                                            <Condition Binding="{Binding IsStringNarrationLoading}" Value="False" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <MultiDataTrigger.EnterActions>
                                                             <BeginStoryboard>
                                                                 <Storyboard>
                                                                     <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
@@ -2151,8 +2155,8 @@
                                                                     </DoubleAnimation>
                                                                 </Storyboard>
                                                             </BeginStoryboard>
-                                                        </DataTrigger.EnterActions>
-                                                        <DataTrigger.ExitActions>
+                                                        </MultiDataTrigger.EnterActions>
+                                                        <MultiDataTrigger.ExitActions>
                                                             <BeginStoryboard>
                                                                 <Storyboard>
                                                                     <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15">
@@ -2165,8 +2169,8 @@
                                                                     </ObjectAnimationUsingKeyFrames>
                                                                 </Storyboard>
                                                             </BeginStoryboard>
-                                                        </DataTrigger.ExitActions>
-                                                    </DataTrigger>
+                                                        </MultiDataTrigger.ExitActions>
+                                                    </MultiDataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Grid.Style>
@@ -2830,8 +2834,12 @@
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Setter Property="Opacity" Value="0" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasStringNarrationOrders}" Value="False">
-                                                    <DataTrigger.EnterActions>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding HasStringNarrationOrders}" Value="False" />
+                                                        <Condition Binding="{Binding IsStringNarrationLoading}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <MultiDataTrigger.EnterActions>
                                                         <BeginStoryboard>
                                                             <Storyboard>
                                                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
@@ -2844,8 +2852,8 @@
                                                                 </DoubleAnimation>
                                                             </Storyboard>
                                                         </BeginStoryboard>
-                                                    </DataTrigger.EnterActions>
-                                                    <DataTrigger.ExitActions>
+                                                    </MultiDataTrigger.EnterActions>
+                                                    <MultiDataTrigger.ExitActions>
                                                         <BeginStoryboard>
                                                             <Storyboard>
                                                                 <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15">
@@ -2858,8 +2866,8 @@
                                                                 </ObjectAnimationUsingKeyFrames>
                                                             </Storyboard>
                                                         </BeginStoryboard>
-                                                    </DataTrigger.ExitActions>
-                                                </DataTrigger>
+                                                    </MultiDataTrigger.ExitActions>
+                                                </MultiDataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Grid.Style>
@@ -4148,11 +4156,9 @@
                                 <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource CaptionTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,0,0,0" IsHitTestVisible="False" />
                             </Grid>
 
-                            <!-- 刷新按钮 -->
+                            <!-- 状态信息 -->
                             <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding ExceptionStatusMessage}" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0" MaxWidth="220" TextTrimming="CharacterEllipsis" />
-                                <Button Content="强制打开异常详情" Style="{StaticResource ToolbarSecondaryButtonStyle}" Margin="0,0,8,0" Height="36" Padding="14,0" Command="{Binding ForceOpenExceptionDetailCommand}" />
-                                <Button Content="刷新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Margin="0,0,0,0" Height="36" Padding="14,0" Command="{Binding LoadExceptionOrdersCommand}" />
+                                <TextBlock Text="{Binding ExceptionStatusMessage}" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,0,0" MaxWidth="320" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Grid>
 
@@ -4180,7 +4186,6 @@
                                      BorderThickness="0" Background="Transparent"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     PreviewMouseLeftButtonUp="ExceptionOrdersList_PreviewMouseLeftButtonUp"
                                      MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
                                      ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
                                 <ListBox.ItemTemplate>
@@ -4188,8 +4193,7 @@
                                         <Border x:Name="ExceptionCardBorder"
                                                 Style="{StaticResource ListItemBorderStyle}"
                                                 Margin="0,0,0,10"
-                                                Background="#FFFFFF"
-                                                PreviewMouseLeftButtonDown="ExceptionOrderCard_PreviewMouseLeftButtonDown">
+                                                Background="#FFFFFF">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" /> <!-- 警告图标 -->
@@ -4272,22 +4276,19 @@
 
                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="共 " Foreground="{StaticResource SecondaryTextBrush}" FontSize="12.5" />
-                                <TextBlock Text="{Binding ExceptionOrders.Count}" Foreground="{StaticResource PrimaryBrush}" FontSize="12.5" FontWeight="Bold" />
+                                <TextBlock Text="{Binding ExceptionTotalCount}" Foreground="{StaticResource PrimaryBrush}" FontSize="12.5" FontWeight="Bold" />
                                 <TextBlock Text=" 条" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12.5" />
                             </StackPanel>
 
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Border Style="{StaticResource OutlinePillBorderStyle}" Padding="10,2" Background="#FFFFFF" Cursor="Hand" Margin="0,0,10,0">
-                                    <TextBlock Text="20条/页" FontSize="11.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                                <Border Style="{StaticResource OutlinePillBorderStyle}" Padding="10,2" Background="#FFFFFF" Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0}条/页}" FontSize="11.5" Foreground="{StaticResource SecondaryTextBrush}" />
                                 </Border>
-                                <Button Content="&#xE0E2;" FontFamily="Segoe MDL2 Assets" FontSize="10" Style="{StaticResource SmallTextCopyButtonStyle}" Width="28" Height="28" Padding="0" Margin="0,0,4,0" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
-                                <Border Width="28" Height="28" CornerRadius="6" Background="{StaticResource PrimaryBrush}" Margin="0,0,4,0">
-                                    <TextBlock Text="1" Foreground="#FFFFFF" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Button Content="&#xE0E2;" FontFamily="Segoe MDL2 Assets" FontSize="10" Style="{StaticResource SmallTextCopyButtonStyle}" Width="28" Height="28" Padding="0" Margin="0,0,4,0" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" Command="{Binding NavigateExceptionPrevPageCommand}" />
+                                <Border MinWidth="48" Height="28" CornerRadius="6" Background="{StaticResource PrimaryBrush}" Margin="0,0,4,0" Padding="10,0">
+                                    <TextBlock Text="{Binding ExceptionPageLabel}" Foreground="#FFFFFF" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
-                                <Button Content="&#xE0E3;" FontFamily="Segoe MDL2 Assets" FontSize="10" Style="{StaticResource SmallTextCopyButtonStyle}" Width="28" Height="28" Padding="0" Margin="0,0,10,0" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" />
-                                <TextBlock Text="前往" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Width="32" Height="28" Text="1" TextAlignment="Center" Padding="0" VerticalContentAlignment="Center" />
-                                <TextBlock Text="页" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                <Button Content="&#xE0E3;" FontFamily="Segoe MDL2 Assets" FontSize="10" Style="{StaticResource SmallTextCopyButtonStyle}" Width="28" Height="28" Padding="0" Margin="0,0,0,0" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" Command="{Binding NavigateExceptionNextPageCommand}" />
                             </StackPanel>
                         </Grid>
                     </Grid>

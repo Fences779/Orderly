@@ -184,49 +184,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void ExceptionOrdersList_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.ListBox || DataContext is not MainViewModel vm)
-        {
-            return;
-        }
-
-        if (e.OriginalSource is not DependencyObject source)
-        {
-            return;
-        }
-
-        if (FindAncestor<System.Windows.Controls.Button>(source) is not null)
-        {
-            return;
-        }
-
-        var listBoxItem = FindAncestor<System.Windows.Controls.ListBoxItem>(source);
-        if (listBoxItem?.DataContext is Orderly.Core.Models.StringNarrationOrderSummary summary)
-        {
-            await vm.OpenExceptionOrderDetailAsync(summary);
-        }
-    }
-
-    private async void ExceptionOrderCard_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (DataContext is not MainViewModel vm || sender is not FrameworkElement element)
-        {
-            return;
-        }
-
-        if (e.OriginalSource is DependencyObject source && FindAncestor<System.Windows.Controls.Button>(source) is not null)
-        {
-            return;
-        }
-
-        if (element.DataContext is Orderly.Core.Models.StringNarrationOrderSummary summary)
-        {
-            await vm.OpenExceptionOrderDetailAsync(summary);
-            e.Handled = true;
-        }
-    }
-
     private void SettingsTextInput_LostFocus(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm || sender is not System.Windows.Controls.TextBox textBox)

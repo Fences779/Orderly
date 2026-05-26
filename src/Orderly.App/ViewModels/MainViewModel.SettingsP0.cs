@@ -362,7 +362,7 @@ public partial class MainViewModel
             {
                 _ = LoadStringNarrationOrdersAsync();
             }
-            else if (string.Equals(value, SectionException, StringComparison.Ordinal) && ExceptionOrders.Count == 0 && !IsExceptionOrdersBusy)
+            else if (string.Equals(value, SectionException, StringComparison.Ordinal) && !IsExceptionOrdersBusy)
             {
                 _ = LoadExceptionOrdersAsync();
             }
@@ -376,7 +376,7 @@ public partial class MainViewModel
             {
                 _ = LoadStringNarrationOrdersAsync();
             }
-            else if (string.Equals(value, SectionException, StringComparison.Ordinal) && ExceptionOrders.Count == 0 && !IsExceptionOrdersBusy)
+            else if (string.Equals(value, SectionException, StringComparison.Ordinal) && !IsExceptionOrdersBusy)
             {
                 _ = LoadExceptionOrdersAsync();
             }
@@ -391,7 +391,7 @@ public partial class MainViewModel
         {
             _ = LoadStringNarrationOrdersAsync();
         }
-        else if (string.Equals(value, SectionException, StringComparison.Ordinal) && ExceptionOrders.Count == 0 && !IsExceptionOrdersBusy)
+        else if (string.Equals(value, SectionException, StringComparison.Ordinal) && !IsExceptionOrdersBusy)
         {
             _ = LoadExceptionOrdersAsync();
         }
