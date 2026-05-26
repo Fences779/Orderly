@@ -4151,6 +4151,7 @@
                             <!-- 刷新按钮 -->
                             <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding ExceptionStatusMessage}" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0" MaxWidth="220" TextTrimming="CharacterEllipsis" />
+                                <Button Content="强制打开异常详情" Style="{StaticResource ToolbarSecondaryButtonStyle}" Margin="0,0,8,0" Height="36" Padding="14,0" Command="{Binding ForceOpenExceptionDetailCommand}" />
                                 <Button Content="刷新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Margin="0,0,0,0" Height="36" Padding="14,0" Command="{Binding LoadExceptionOrdersCommand}" />
                             </StackPanel>
                         </Grid>
@@ -4176,11 +4177,10 @@
                                      SelectedItem="{Binding SelectedExceptionOrder, Mode=TwoWay}"
                                      Style="{StaticResource HasItemsListBoxStyle}"
                                      Tag="{Binding HasExceptionOrders}"
-                                     ItemContainerStyle="{StaticResource CardListBoxItemStyle}"
                                      BorderThickness="0" Background="Transparent"
-                                     MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Border x:Name="ExceptionCardBorder" Style="{StaticResource ListItemBorderStyle}" Margin="0,0,0,10" Background="#FFFFFF">
@@ -4287,9 +4287,45 @@
                     </Grid>
                 </Border>
 
-                <!-- 右侧异常详情抽屉 -->
-                <Border Grid.Column="1" Width="450" Background="{StaticResource SurfaceRaisedBrush}" CornerRadius="16" BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}" Padding="20" Margin="8,0,0,0"
-                        Visibility="{Binding HasSelectedExceptionOrderDetail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <!-- 右侧异常详情面板 -->
+                <Border x:Name="ExceptionDetailPanel"
+                        Grid.Column="1"
+                        Width="450"
+                        Padding="20"
+                        Margin="8,0,0,0"
+                        RenderTransformOrigin="0.5,0.5"
+                        Visibility="{Binding IsExceptionDetailPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Border.RenderTransform>
+                        <TranslateTransform X="40" />
+                    </Border.RenderTransform>
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource SettingsGroupCardStyle}">
+                            <Setter Property="CornerRadius" Value="16" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="Padding" Value="20" />
+                            <Setter Property="Margin" Value="8,0,0,0" />
+                            <Style.Triggers>
+                                <Trigger Property="Visibility" Value="Visible">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" From="40" To="0" Duration="0:0:0.25">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Color="#111216" Opacity="0.05" />
                     </Border.Effect>

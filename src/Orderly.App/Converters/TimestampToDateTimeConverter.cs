@@ -6,7 +6,7 @@ namespace Orderly.App.Converters;
 
 public sealed class TimestampToDateTimeConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         long timestamp = 0;
         if (value is long valLong)
@@ -33,7 +33,7 @@ public sealed class TimestampToDateTimeConverter : IValueConverter
         return null;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is DateTime dt)
         {

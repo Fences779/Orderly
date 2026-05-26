@@ -9,6 +9,7 @@ public partial class MainViewModel
 {
     private readonly List<StringNarrationOrderSummary> _exceptionOrdersSource = [];
     private bool _isSynchronizingExceptionSelection;
+    private long _selectedExceptionOrderLoadVersion;
 
     public ObservableCollection<StringNarrationOrderSummary> ExceptionOrders { get; } = new();
     public ObservableCollection<string> ExceptionStatusFilterOptions { get; } = new(new[] { "全部", "待处理", "已解决" });
@@ -17,6 +18,8 @@ public partial class MainViewModel
 
     public bool HasExceptionOrders => ExceptionOrders.Count > 0;
     public bool HasSelectedExceptionOrderDetail => SelectedExceptionOrderDetail is not null;
+    public bool IsExceptionDetailPanelVisible => SelectedExceptionOrderDetail is not null;
+    public bool IsExceptionListExpanded => SelectedExceptionOrderDetail is null;
     public bool HasExceptionAuditLogs => ExceptionAuditLogs.Count > 0;
     public bool HasExceptionSampleReplayResults => ExceptionSampleReplayResults.Count > 0;
     public bool IsExceptionOrdersBusy => IsExceptionOrdersLoading;
@@ -71,11 +74,15 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedExceptionOrderDetail))]
+    [NotifyPropertyChangedFor(nameof(IsExceptionDetailPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsExceptionListExpanded))]
     [NotifyCanExecuteChangedFor(nameof(RefreshExceptionOrderDetailCommand))]
     private StringNarrationOrderSummary? selectedExceptionOrder;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedExceptionOrderDetail))]
+    [NotifyPropertyChangedFor(nameof(IsExceptionDetailPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsExceptionListExpanded))]
     [NotifyCanExecuteChangedFor(nameof(RefreshExceptionOrderDetailCommand))]
     private StringNarrationOrderDetail? selectedExceptionOrderDetail;
 
@@ -96,6 +103,8 @@ public partial class MainViewModel
             return;
         }
 
+        var selectionVersion = ++_selectedExceptionOrderLoadVersion;
+
         if (value is null)
         {
             SelectedExceptionOrderDetail = null;
@@ -104,35 +113,32 @@ public partial class MainViewModel
         }
 
         var currentDetail = SelectedExceptionOrderDetail;
-        if (currentDetail is null)
+        if (currentDetail is not null
+            && (string.Equals(currentDetail.OrderNo, value.OrderNo, StringComparison.Ordinal)
+                || string.Equals(currentDetail.Id, value.Id, StringComparison.Ordinal)
+                || string.Equals(currentDetail.WxOutTradeNo, value.WxOutTradeNo, StringComparison.Ordinal)))
         {
             return;
         }
 
-        var isSameOrder = string.Equals(currentDetail.OrderNo, value.OrderNo, StringComparison.Ordinal)
-            || string.Equals(currentDetail.Id, value.Id, StringComparison.Ordinal)
-            || string.Equals(currentDetail.WxOutTradeNo, value.WxOutTradeNo, StringComparison.Ordinal);
-        if (isSameOrder)
-        {
-            return;
-        }
-
-        _ = LoadExceptionOrderDetailAsync(value.OrderNo, value.WxOutTradeNo, value.Id);
+        _ = LoadExceptionOrderDetailAsync(value.OrderNo, value.WxOutTradeNo, value.Id, selectionVersion);
     }
 
-    public async Task OpenExceptionOrderDetailAsync(StringNarrationOrderSummary? summary)
+    public void DismissExceptionDetailsForSession()
     {
-        if (summary is null)
+        _isSynchronizingExceptionSelection = true;
+        try
         {
-            return;
+            SelectedExceptionOrder = null;
+        }
+        finally
+        {
+            _isSynchronizingExceptionSelection = false;
         }
 
-        if (SelectedExceptionOrder != summary)
-        {
-            SelectedExceptionOrder = summary;
-        }
-
-        await LoadExceptionOrderDetailAsync(summary.OrderNo, summary.WxOutTradeNo, summary.Id);
+        SelectedExceptionOrderDetail = null;
+        ExceptionStatusMessage = "已关闭异常详情";
+        OnExceptionOrdersCollectionStateChanged();
     }
 
     partial void OnSelectedExceptionOrderDetailChanged(StringNarrationOrderDetail? value)
@@ -175,7 +181,8 @@ public partial class MainViewModel
             await LoadExceptionOrderDetailAsync(
                 SelectedExceptionOrderDetail.OrderNo,
                 SelectedExceptionOrderDetail.WxOutTradeNo,
-                SelectedExceptionOrderDetail.Id);
+                SelectedExceptionOrderDetail.Id,
+                _selectedExceptionOrderLoadVersion);
             return;
         }
 
@@ -184,7 +191,8 @@ public partial class MainViewModel
             await LoadExceptionOrderDetailAsync(
                 SelectedExceptionOrder.OrderNo,
                 SelectedExceptionOrder.WxOutTradeNo,
-                SelectedExceptionOrder.Id);
+                SelectedExceptionOrder.Id,
+                _selectedExceptionOrderLoadVersion);
             return;
         }
 
@@ -195,6 +203,33 @@ public partial class MainViewModel
         }
 
         await LoadExceptionOrderDetailByLookupAsync(lookup);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunExceptionOrdersReadAction))]
+    private async Task ForceOpenExceptionDetailAsync()
+    {
+        var summary = SelectedExceptionOrder;
+        if (summary is null)
+        {
+            summary = ExceptionOrders.FirstOrDefault();
+            if (summary is null)
+            {
+                ExceptionStatusMessage = "异常列表为空，无法强制打开异常详情。";
+                return;
+            }
+
+            SelectedExceptionOrder = summary;
+        }
+
+        await ExecuteExceptionOrdersReadActionAsync("正在强制打开异常详情...", async () =>
+        {
+            var detail = await _stringNarrationOrderService.GetOrderDetailAsync(summary.OrderNo, summary.WxOutTradeNo, summary.Id);
+            EnsureExceptionDetailKeepsListContext(detail);
+            SelectedExceptionOrderDetail = detail;
+            OnPropertyChanged(nameof(IsExceptionDetailPanelVisible));
+            OnPropertyChanged(nameof(IsExceptionListExpanded));
+            ExceptionStatusMessage = $"已强制打开异常详情：{detail.OrderNoText}";
+        });
     }
 
     [RelayCommand]
@@ -357,22 +392,70 @@ public partial class MainViewModel
         });
     }
 
-    private async Task LoadExceptionOrderDetailAsync(string orderNo, string tradeNo, string id)
+    private async Task LoadExceptionOrderDetailAsync(string orderNo, string tradeNo, string id, long? selectionVersion = null)
     {
-        await ExecuteExceptionOrdersReadActionAsync("正在加载异常订单详情...", async () =>
+        while (true)
         {
-            var detail = await _stringNarrationOrderService.GetOrderDetailAsync(orderNo, tradeNo, id);
-            ApplyExceptionDetail(detail);
-            ExceptionStatusMessage = $"已加载异常详情：{detail.OrderNoText}";
-        });
+            if (selectionVersion.HasValue && !IsCurrentExceptionSelection(orderNo, tradeNo, id, selectionVersion.Value))
+            {
+                return;
+            }
+
+            var started = false;
+            await ExecuteExceptionOrdersReadActionAsync("正在加载异常订单详情...", async () =>
+            {
+                started = true;
+                var detail = await _stringNarrationOrderService.GetOrderDetailAsync(orderNo, tradeNo, id);
+                if (selectionVersion.HasValue && !IsCurrentExceptionSelection(orderNo, tradeNo, id, selectionVersion.Value))
+                {
+                    return;
+                }
+
+                ApplyExceptionDetail(detail);
+                ExceptionStatusMessage = $"已加载异常详情：{detail.OrderNoText}";
+            });
+
+            if (started || !selectionVersion.HasValue)
+            {
+                return;
+            }
+
+            await Task.Delay(50);
+        }
     }
 
     private void ApplyExceptionDetail(StringNarrationOrderDetail detail)
     {
+        EnsureExceptionDetailKeepsListContext(detail);
         SelectedExceptionOrderDetail = detail;
         UpsertExceptionOrder(detail);
         UpdateStringNarrationSummary(detail);
         SelectExceptionSummaryByDetail(detail);
+    }
+
+    private void EnsureExceptionDetailKeepsListContext(StringNarrationOrderDetail detail)
+    {
+        if (detail.HasException)
+        {
+            return;
+        }
+
+        var selectedSummary = SelectedExceptionOrder;
+        if (selectedSummary is null || !selectedSummary.HasException)
+        {
+            return;
+        }
+
+        var isSameOrder = string.Equals(selectedSummary.OrderNo, detail.OrderNo, StringComparison.Ordinal)
+            || string.Equals(selectedSummary.Id, detail.Id, StringComparison.Ordinal)
+            || string.Equals(selectedSummary.WxOutTradeNo, detail.WxOutTradeNo, StringComparison.Ordinal);
+        if (!isSameOrder)
+        {
+            return;
+        }
+
+        detail.HasException = true;
+        detail.Exception = selectedSummary.Exception;
     }
 
     private void SyncExceptionOrdersFromOrders(IReadOnlyList<StringNarrationOrderSummary> orders)
@@ -439,6 +522,24 @@ public partial class MainViewModel
         }
     }
 
+    private bool IsCurrentExceptionSelection(string orderNo, string tradeNo, string id, long selectionVersion)
+    {
+        if (selectionVersion != _selectedExceptionOrderLoadVersion)
+        {
+            return false;
+        }
+
+        var selectedSummary = SelectedExceptionOrder;
+        if (selectedSummary is null)
+        {
+            return false;
+        }
+
+        return string.Equals(selectedSummary.OrderNo, orderNo, StringComparison.Ordinal)
+            || string.Equals(selectedSummary.WxOutTradeNo, tradeNo, StringComparison.Ordinal)
+            || string.Equals(selectedSummary.Id, id, StringComparison.Ordinal);
+    }
+
     private void ApplyExceptionOrdersFilter()
     {
         var keyword = ExceptionKeyword.Trim();
@@ -465,15 +566,16 @@ public partial class MainViewModel
         _isSynchronizingExceptionSelection = true;
         try
         {
-            SelectedExceptionOrder = ExceptionOrders.FirstOrDefault(item => string.Equals(item.OrderNo, selectedOrderNo, StringComparison.Ordinal))
-                ?? ExceptionOrders.FirstOrDefault();
+            SelectedExceptionOrder = string.IsNullOrWhiteSpace(selectedOrderNo)
+                ? null
+                : ExceptionOrders.FirstOrDefault(item => string.Equals(item.OrderNo, selectedOrderNo, StringComparison.Ordinal));
         }
         finally
         {
             _isSynchronizingExceptionSelection = false;
         }
 
-        if (SelectedExceptionOrder is null)
+        if (SelectedExceptionOrder is null && SelectedExceptionOrderDetail is null)
         {
             SelectedExceptionOrderDetail = null;
         }
@@ -510,6 +612,8 @@ public partial class MainViewModel
     {
         OnPropertyChanged(nameof(HasExceptionOrders));
         OnPropertyChanged(nameof(HasSelectedExceptionOrderDetail));
+        OnPropertyChanged(nameof(IsExceptionDetailPanelVisible));
+        OnPropertyChanged(nameof(IsExceptionListExpanded));
         OnPropertyChanged(nameof(HasExceptionAuditLogs));
         OnPropertyChanged(nameof(HasExceptionSampleReplayResults));
         OnPropertyChanged(nameof(IsExceptionOrdersBusy));
