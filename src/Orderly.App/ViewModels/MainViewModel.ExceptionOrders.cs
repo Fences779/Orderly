@@ -33,6 +33,7 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsExceptionOrdersBusy))]
     [NotifyCanExecuteChangedFor(nameof(LoadExceptionOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshExceptionOrderDetailCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ForceOpenExceptionDetailCommand))]
     private bool isExceptionOrdersLoading;
 
     [ObservableProperty]
@@ -103,8 +104,6 @@ public partial class MainViewModel
             return;
         }
 
-        var selectionVersion = ++_selectedExceptionOrderLoadVersion;
-
         if (value is null)
         {
             SelectedExceptionOrderDetail = null;
@@ -120,8 +119,30 @@ public partial class MainViewModel
         {
             return;
         }
+    }
 
-        _ = LoadExceptionOrderDetailAsync(value.OrderNo, value.WxOutTradeNo, value.Id, selectionVersion);
+    public async Task OpenExceptionOrderDetailAsync(StringNarrationOrderSummary? summary)
+    {
+        if (summary is null)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(SelectedExceptionOrder, summary))
+        {
+            _isSynchronizingExceptionSelection = true;
+            try
+            {
+                SelectedExceptionOrder = summary;
+            }
+            finally
+            {
+                _isSynchronizingExceptionSelection = false;
+            }
+        }
+
+        var selectionVersion = ++_selectedExceptionOrderLoadVersion;
+        await LoadExceptionOrderDetailAsync(summary.OrderNo, summary.WxOutTradeNo, summary.Id, selectionVersion);
     }
 
     public void DismissExceptionDetailsForSession()
@@ -224,10 +245,7 @@ public partial class MainViewModel
         await ExecuteExceptionOrdersReadActionAsync("正在强制打开异常详情...", async () =>
         {
             var detail = await _stringNarrationOrderService.GetOrderDetailAsync(summary.OrderNo, summary.WxOutTradeNo, summary.Id);
-            EnsureExceptionDetailKeepsListContext(detail);
-            SelectedExceptionOrderDetail = detail;
-            OnPropertyChanged(nameof(IsExceptionDetailPanelVisible));
-            OnPropertyChanged(nameof(IsExceptionListExpanded));
+            SetExceptionDetailPanelState(detail);
             ExceptionStatusMessage = $"已强制打开异常详情：{detail.OrderNoText}";
         });
     }
@@ -426,11 +444,26 @@ public partial class MainViewModel
 
     private void ApplyExceptionDetail(StringNarrationOrderDetail detail)
     {
+        _isSynchronizingExceptionSelection = true;
+        try
+        {
+            SetExceptionDetailPanelState(detail);
+            UpsertExceptionOrder(detail);
+            UpdateStringNarrationSummary(detail);
+            SelectExceptionSummaryByDetail(detail);
+        }
+        finally
+        {
+            _isSynchronizingExceptionSelection = false;
+        }
+    }
+
+    private void SetExceptionDetailPanelState(StringNarrationOrderDetail detail)
+    {
         EnsureExceptionDetailKeepsListContext(detail);
         SelectedExceptionOrderDetail = detail;
-        UpsertExceptionOrder(detail);
-        UpdateStringNarrationSummary(detail);
-        SelectExceptionSummaryByDetail(detail);
+        OnPropertyChanged(nameof(IsExceptionDetailPanelVisible));
+        OnPropertyChanged(nameof(IsExceptionListExpanded));
     }
 
     private void EnsureExceptionDetailKeepsListContext(StringNarrationOrderDetail detail)

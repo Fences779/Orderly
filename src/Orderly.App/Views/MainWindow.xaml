@@ -4180,10 +4180,16 @@
                                      BorderThickness="0" Background="Transparent"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     PreviewMouseLeftButtonUp="ExceptionOrdersList_PreviewMouseLeftButtonUp"
+                                     MouseDoubleClick="ExceptionOrdersList_MouseDoubleClick"
                                      ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border x:Name="ExceptionCardBorder" Style="{StaticResource ListItemBorderStyle}" Margin="0,0,0,10" Background="#FFFFFF">
+                                        <Border x:Name="ExceptionCardBorder"
+                                                Style="{StaticResource ListItemBorderStyle}"
+                                                Margin="0,0,0,10"
+                                                Background="#FFFFFF"
+                                                PreviewMouseLeftButtonDown="ExceptionOrderCard_PreviewMouseLeftButtonDown">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="Auto" /> <!-- 警告图标 -->
