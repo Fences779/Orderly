@@ -26,6 +26,8 @@
     <SolidColorBrush x:Key="DangerSoftBrush" Color="#FFEDED" />
     <SolidColorBrush x:Key="DangerBorderBrush" Color="#FDE2E2" />
     <SolidColorBrush x:Key="DangerTextBrush" Color="#DE4C4A" />
+    <SolidColorBrush x:Key="GreySoftBrush" Color="#F2F4F7" />
+    <SolidColorBrush x:Key="GreyTextBrush" Color="#667085" />
     <SolidColorBrush x:Key="BorderBrushSoft" Color="#DFE3EA" />
     <SolidColorBrush x:Key="TimelineBrush" Color="#DFE3EA" />
     <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F5F5F7" />

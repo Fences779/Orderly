@@ -4201,16 +4201,16 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- 警告图标 -->
-                                <Border x:Name="IconBorder" Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource DangerSoftBrush}" VerticalAlignment="Center">
-                                    <TextBlock x:Name="IconText" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource DangerTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Border x:Name="IconBorder" Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource GreySoftBrush}" VerticalAlignment="Center">
+                                    <TextBlock x:Name="IconText" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource GreyTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
 
                                 <!-- 主要信息 -->
                                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                         <TextBlock Text="{Binding Exception.ExceptionCategoryLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
-                                        <Border x:Name="PriorityTag" Margin="8,0,0,0" Padding="6,1.5" CornerRadius="4" Background="{StaticResource DangerSoftBrush}" VerticalAlignment="Center">
-                                            <TextBlock x:Name="PriorityTagText" Text="{Binding Exception.LevelText}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource DangerTextBrush}" />
+                                        <Border x:Name="PriorityTag" Margin="8,0,0,0" Padding="6,1.5" CornerRadius="4" Background="{StaticResource GreySoftBrush}" VerticalAlignment="Center">
+                                            <TextBlock x:Name="PriorityTagText" Text="{Binding Exception.LevelText}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource GreyTextBrush}" />
                                         </Border>
                                     </StackPanel>
 
@@ -4229,18 +4229,17 @@
                             </Grid>
                             <DataTemplate.Triggers>
                                 <!-- 根据严重程度改变颜色 -->
-                                <DataTrigger Binding="{Binding Exception.PriorityLabel}" Value="普通">
+                                <DataTrigger Binding="{Binding Exception.SeverityCategory}" Value="Money">
+                                    <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource DangerSoftBrush}" />
+                                    <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                    <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource DangerSoftBrush}" />
+                                    <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Exception.SeverityCategory}" Value="Warning">
                                     <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource WarmSoftBrush}" />
                                     <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
                                     <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource WarmSoftBrush}" />
                                     <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Exception.PriorityLabel}" Value="低">
-                                    <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource BlueSoftBrush}" />
-                                    <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource BlueTextBrush}" />
-                                    <Setter TargetName="IconText" Property="Text" Value="&#xE946;" />
-                                    <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource BlueSoftBrush}" />
-                                    <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource BlueTextBrush}" />
                                 </DataTrigger>
                                 <!-- 已解决，淡化 -->
                                 <DataTrigger Binding="{Binding Exception.IsResolved}" Value="True">
@@ -4505,18 +4504,72 @@
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,-8,0" Padding="0,0,8,0">
                                 <StackPanel>
                                     <!-- 核心警告 Banner -->
-                                    <Border Background="{StaticResource DangerSoftBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,16">
+                                    <Border CornerRadius="12" Padding="14" Margin="0,0,0,16">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <!-- 默认一般问题（灰色） -->
+                                                <Setter Property="Background" Value="{StaticResource GreySoftBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Money">
+                                                        <Setter Property="Background" Value="{StaticResource DangerSoftBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Warning">
+                                                        <Setter Property="Background" Value="{StaticResource WarmSoftBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.IsResolved}" Value="True">
+                                                        <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="12" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource DangerTextBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="0" FontFamily="Segoe MDL2 Assets" FontSize="28" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <!-- 默认一般问题（灰色） -->
+                                                        <Setter Property="Text" Value="&#xE7BA;" />
+                                                        <Setter Property="Foreground" Value="{StaticResource GreyTextBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Money">
+                                                                <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Warning">
+                                                                <Setter Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.IsResolved}" Value="True">
+                                                                <Setter Property="Text" Value="&#xE73E;" />
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                             <StackPanel Grid.Column="2">
                                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                                     <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
-                                                    <Border Margin="8,0,0,0" Padding="6,2" CornerRadius="4" Background="{StaticResource DangerTextBrush}">
+                                                    <Border Margin="8,0,0,0" Padding="6,2" CornerRadius="4">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <!-- 默认一般问题（灰色） -->
+                                                                <Setter Property="Background" Value="{StaticResource GreyTextBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Money">
+                                                                        <Setter Property="Background" Value="{StaticResource DangerTextBrush}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Warning">
+                                                                        <Setter Property="Background" Value="{StaticResource WarmTextBrush}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.IsResolved}" Value="True">
+                                                                        <Setter Property="Background" Value="{StaticResource AccentTextBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
                                                         <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="10.5" FontWeight="Bold" Foreground="#FFFFFF" />
                                                     </Border>
                                                 </StackPanel>
@@ -4617,7 +4670,24 @@
                                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
 
                                             <TextBlock Grid.Row="2" Grid.Column="0" Text="严重程度" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource DangerTextBrush}" />
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="12.5" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource GreyTextBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Money">
+                                                                <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Warning">
+                                                                <Setter Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.IsResolved}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
 
                                             <TextBlock Grid.Row="4" Grid.Column="0" Text="当前状态" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
                                             <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ResolutionStatusLabel}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />

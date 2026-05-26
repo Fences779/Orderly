@@ -281,10 +281,46 @@ public sealed class StringNarrationExceptionSnapshot
             HasProductionOrderMissing,
             HasWorkOrderMissing,
             fulfillmentStatus: string.Empty));
+    public string SeverityCategory
+    {
+        get
+        {
+            return EffectiveCode switch
+            {
+                StringNarrationExceptionFieldCatalog.CodeShippingSyncFailure => "Money",
+                StringNarrationExceptionFieldCatalog.CodeMissingAddress or
+                StringNarrationExceptionFieldCatalog.CodeMissingReceiverPhone or
+                StringNarrationExceptionFieldCatalog.CodeMissingTrackingNo => "Warning",
+                _ => "General"
+            };
+        }
+    }
     public string EffectiveType => BuildValue(Type, EffectiveCode);
     public string EffectiveReason => BuildValue(Reason, StringNarrationExceptionFieldCatalog.GetExceptionReason(EffectiveCode));
     public string ExceptionCategoryLabel => StringNarrationExceptionFieldCatalog.GetExceptionLabel(EffectiveCode);
-    public string LevelText => BuildValue(Level, HasException ? "待判级" : "无");
+    public string LevelText
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Level))
+            {
+                return Level.Trim();
+            }
+
+            if (!HasException)
+            {
+                return "无";
+            }
+
+            return SeverityCategory switch
+            {
+                "Money" => "资金阻断",
+                "Warning" => "流程阻断",
+                "General" => "一般异常",
+                _ => "待判级"
+            };
+        }
+    }
     public string StatusText => BuildValue(Status, IsResolved ? "已解决" : (HasException ? "待处理" : "无"));
     public string OwnerText => BuildValue(Owner, BuildValue(Assignee, "未分配"));
     public string AssigneeText => BuildValue(Assignee, "未分配");
