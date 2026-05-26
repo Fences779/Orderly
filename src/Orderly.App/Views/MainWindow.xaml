@@ -1776,59 +1776,6 @@
                 <!-- 3. List & Detail Content Area -->
                 <Grid Grid.Row="3">
                     <Grid.Resources>
-                        <!-- 每页条数选择器 ToggleButton 样式 -->
-                        <Style x:Key="PageSizeSelectorToggleButtonStyle" TargetType="ToggleButton">
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="Padding" Value="6,4"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ToggleButton">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}"/>
-                                </Trigger>
-                                <Trigger Property="IsChecked" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-
-                        <!-- 每页条数气泡选项按钮样式 -->
-                        <Style x:Key="PageSizeMenuButtonStyle" TargetType="Button">
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="Height" Value="30"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                            <Setter Property="VerticalContentAlignment" Value="Center"/>
-                            <Setter Property="FontSize" Value="12"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="BgBorder" Background="{TemplateBinding Background}" CornerRadius="6">
-                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="BgBorder" Property="Background" Value="{StaticResource SurfaceSoftBrush}"/>
-                                                <Setter Property="Foreground" Value="{StaticResource HeadingBrush}"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-
                         <Style x:Key="StringNarrationOrderCardListItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource CardListBoxItemStyle}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             <Setter Property="Template">
@@ -4234,12 +4181,28 @@
                                     <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource DangerTextBrush}" />
                                     <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource DangerSoftBrush}" />
                                     <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="IconBorder" Storyboard.TargetProperty="Opacity" From="0.4" To="1" Duration="0:0:0.25" />
+                                                <DoubleAnimation Storyboard.TargetName="PriorityTag" Storyboard.TargetProperty="Opacity" From="0.4" To="1" Duration="0:0:0.25" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Exception.SeverityCategory}" Value="Warning">
                                     <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource WarmSoftBrush}" />
                                     <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
                                     <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource WarmSoftBrush}" />
                                     <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="IconBorder" Storyboard.TargetProperty="Opacity" From="0.4" To="1" Duration="0:0:0.25" />
+                                                <DoubleAnimation Storyboard.TargetName="PriorityTag" Storyboard.TargetProperty="Opacity" From="0.4" To="1" Duration="0:0:0.25" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
                                 </DataTrigger>
                                 <!-- 已解决，淡化 -->
                                 <DataTrigger Binding="{Binding Exception.IsResolved}" Value="True">
@@ -4249,6 +4212,14 @@
                                     <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource AccentSoftBrush}" />
                                     <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource AccentTextBrush}" />
                                     <Setter TargetName="PriorityTagText" Property="Text" Value="已解决" />
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="IconBorder" Storyboard.TargetProperty="Opacity" From="0.4" To="1" Duration="0:0:0.25" />
+                                                <DoubleAnimation Storyboard.TargetName="PriorityTag" Storyboard.TargetProperty="Opacity" From="0.4" To="1" Duration="0:0:0.25" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
                                 </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>
@@ -4290,9 +4261,52 @@
                                         </StackPanel>
                                     </Border>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Style="{StaticResource OutlinePillBorderStyle}" Padding="10,2" Background="#FFFFFF">
-                                            <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0}条/页}" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        </Border>
+                                        <ToggleButton x:Name="Btn_ExceptionPageSizeSelector1"
+                                                      Style="{StaticResource PageSizeSelectorToggleButtonStyle}"
+                                                      IsChecked="{Binding IsExceptionPageSizePopupOpen1, Mode=TwoWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0} 条/页}"
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           FontSize="12"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text=" ▾"
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           FontSize="10"
+                                                           VerticalAlignment="Center"
+                                                           Margin="2,0,0,0"/>
+                                            </StackPanel>
+                                        </ToggleButton>
+                                        <Popup x:Name="Popup_ExceptionPageSizeSelector1"
+                                               PlacementTarget="{Binding ElementName=Btn_ExceptionPageSizeSelector1}"
+                                               Placement="Top"
+                                               IsOpen="{Binding IsExceptionPageSizePopupOpen1, Mode=TwoWay}"
+                                               StaysOpen="False"
+                                               AllowsTransparency="True">
+                                            <Border Background="{StaticResource SurfaceRaisedBrush}"
+                                                    BorderBrush="{StaticResource BorderBrushSoft}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="4"
+                                                    Margin="0,0,0,4">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="12" ShadowDepth="3" Direction="90" Color="#111216" Opacity="0.08" />
+                                                </Border.Effect>
+                                                <StackPanel Width="90">
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="10 条/页"
+                                                            Command="{Binding ChangeExceptionPageSizeCommand}"
+                                                            CommandParameter="10"/>
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="16 条/页"
+                                                            Command="{Binding ChangeExceptionPageSizeCommand}"
+                                                            CommandParameter="16"/>
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="20 条/页"
+                                                            Command="{Binding ChangeExceptionPageSizeCommand}"
+                                                            CommandParameter="20"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -4374,9 +4388,52 @@
                                         </StackPanel>
                                     </Border>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Border Style="{StaticResource OutlinePillBorderStyle}" Padding="10,2" Background="#FFFFFF">
-                                            <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0}条/页}" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                        </Border>
+                                        <ToggleButton x:Name="Btn_ExceptionPageSizeSelector2"
+                                                      Style="{StaticResource PageSizeSelectorToggleButtonStyle}"
+                                                      IsChecked="{Binding IsExceptionPageSizePopupOpen2, Mode=TwoWay}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0} 条/页}"
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           FontSize="12"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text=" ▾"
+                                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                                           FontSize="10"
+                                                           VerticalAlignment="Center"
+                                                           Margin="2,0,0,0"/>
+                                            </StackPanel>
+                                        </ToggleButton>
+                                        <Popup x:Name="Popup_ExceptionPageSizeSelector2"
+                                               PlacementTarget="{Binding ElementName=Btn_ExceptionPageSizeSelector2}"
+                                               Placement="Top"
+                                               IsOpen="{Binding IsExceptionPageSizePopupOpen2, Mode=TwoWay}"
+                                               StaysOpen="False"
+                                               AllowsTransparency="True">
+                                            <Border Background="{StaticResource SurfaceRaisedBrush}"
+                                                    BorderBrush="{StaticResource BorderBrushSoft}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="4"
+                                                    Margin="0,0,0,4">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="12" ShadowDepth="3" Direction="90" Color="#111216" Opacity="0.08" />
+                                                </Border.Effect>
+                                                <StackPanel Width="90">
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="10 条/页"
+                                                            Command="{Binding ChangeExceptionPageSizeCommand}"
+                                                            CommandParameter="10"/>
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="16 条/页"
+                                                            Command="{Binding ChangeExceptionPageSizeCommand}"
+                                                            CommandParameter="16"/>
+                                                    <Button Style="{StaticResource PageSizeMenuButtonStyle}"
+                                                            Content="20 条/页"
+                                                            Command="{Binding ChangeExceptionPageSizeCommand}"
+                                                            CommandParameter="20"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -4493,7 +4550,7 @@
                                         </StackPanel>
                                     </StackPanel>
                                     
-                                    <Button Grid.Column="1" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="32" Height="32" Padding="0" VerticalAlignment="Top"
+                                    <Button Grid.Column="1" Style="{StaticResource ExceptionCloseButtonStyle}" Width="32" Height="32" Padding="0" VerticalAlignment="Top"
                                             Click="CloseExceptionDetails_Click" ToolTip="关闭详情">
                                         <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12" />
                                     </Button>
@@ -4615,7 +4672,7 @@
                                             <!-- Row 0: 订单号 -->
                                             <TextBlock Grid.Row="0" Grid.Column="0" Text="订单号" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
                                             <DockPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
-                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.OrderNo}" Click="CopyText_Click" ToolTip="复制订单号">
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource ExceptionTableCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.OrderNo}" Click="CopyText_Click" ToolTip="复制订单号">
                                                     <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
                                                 </Button>
                                                 <TextBlock Text="{Binding SelectedExceptionOrderDetail.OrderNoText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
@@ -4628,7 +4685,7 @@
                                             <!-- Row 4: 支付订单号 -->
                                             <TextBlock Grid.Row="4" Grid.Column="0" Text="支付订单号" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
                                             <DockPanel Grid.Row="4" Grid.Column="1" VerticalAlignment="Center">
-                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.WxOutTradeNo}" Click="CopyText_Click" ToolTip="复制支付单号">
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource ExceptionTableCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.WxOutTradeNo}" Click="CopyText_Click" ToolTip="复制支付单号">
                                                     <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
                                                 </Button>
                                                 <TextBlock Text="{Binding SelectedExceptionOrderDetail.WxOutTradeNoText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
@@ -4711,7 +4768,7 @@
                                         </Grid.ColumnDefinitions>
 
                                         <!-- 补充地址 -->
-                                        <Button Grid.Column="0" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
+                                        <Button Grid.Column="0" Height="68" Style="{StaticResource ExceptionActionCardButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
                                                 <TextBlock Text="去补充地址" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
@@ -4719,7 +4776,7 @@
                                         </Button>
 
                                         <!-- 联系客户 -->
-                                        <Button Grid.Column="2" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="ContactCustomer_Click">
+                                        <Button Grid.Column="2" Height="68" Style="{StaticResource ExceptionActionCardButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="ContactCustomer_Click">
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#2B7A5C" HorizontalAlignment="Center" Margin="0,0,0,4" />
                                                 <TextBlock Text="联系客户" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
@@ -4727,7 +4784,7 @@
                                         </Button>
 
                                         <!-- 跳转订单 -->
-                                        <Button Grid.Column="4" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
+                                        <Button Grid.Column="4" Height="68" Style="{StaticResource ExceptionActionCardButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource WarmTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
                                                 <TextBlock Text="跳转订单" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
@@ -4735,7 +4792,7 @@
                                         </Button>
 
                                         <!-- 标记已处理 -->
-                                        <Button Grid.Column="6" Height="68" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Command="{Binding ResolveSelectedExceptionCommand}">
+                                        <Button Grid.Column="6" Height="68" Style="{StaticResource ExceptionActionCardButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Command="{Binding ResolveSelectedExceptionCommand}">
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
                                                 <TextBlock Text="标记已处理" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
@@ -6442,7 +6499,7 @@
             </TextBlock>
             <!-- 复制成功气泡提示 -->
             <Popup x:Name="Popup_CopyToast" Placement="Mouse" AllowsTransparency="True" HorizontalOffset="10" VerticalOffset="10">
-                <Border Background="#2B7A5C" CornerRadius="8" Padding="12,6" BorderThickness="0">
+                <Border Background="#222224" CornerRadius="8" Padding="12,6" BorderThickness="0">
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.15"/>
                     </Border.Effect>

@@ -97,6 +97,12 @@ public partial class MainViewModel
     private int exceptionPageSize = 20;
 
     [ObservableProperty]
+    private bool isExceptionPageSizePopupOpen1;
+
+    [ObservableProperty]
+    private bool isExceptionPageSizePopupOpen2;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedExceptionOrderDetail))]
     [NotifyPropertyChangedFor(nameof(IsExceptionDetailPanelVisible))]
     [NotifyPropertyChangedFor(nameof(IsExceptionListExpanded))]
@@ -349,6 +355,19 @@ public partial class MainViewModel
         ResetExceptionDetailForPageChange();
         ExceptionCurrentPage++;
         await LoadExceptionOrdersAsync();
+    }
+
+    [RelayCommand]
+    private async Task ChangeExceptionPageSizeAsync(string sizeStr)
+    {
+        if (int.TryParse(sizeStr, out var size))
+        {
+            ExceptionPageSize = size;
+            ExceptionCurrentPage = 1;
+            IsExceptionPageSizePopupOpen1 = false;
+            IsExceptionPageSizePopupOpen2 = false;
+            await LoadExceptionOrdersAsync();
+        }
     }
 
     private bool CanRefreshExceptionOrderDetail()
