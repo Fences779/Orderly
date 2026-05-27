@@ -22,7 +22,9 @@ public partial class MainViewModel
     public bool IsExceptionListExpanded => SelectedExceptionOrderDetail is null;
     public bool HasExceptionAuditLogs => ExceptionAuditLogs.Count > 0;
     public bool HasExceptionSampleReplayResults => ExceptionSampleReplayResults.Count > 0;
-    public bool IsExceptionOrdersBusy => IsExceptionOrdersLoading;
+    public bool IsExceptionOrdersBusy => IsExceptionOrdersListLoading || IsExceptionOrderDetailLoading;
+    public bool IsExceptionOrdersListBusy => IsExceptionOrdersListLoading;
+    public bool IsExceptionOrderDetailBusy => IsExceptionOrderDetailLoading;
     public string ExceptionOrdersCountText => $"{ExceptionOrders.Count} 单";
     public string ExceptionTotalCountText => $"{ExceptionTotalCount} 单";
     public string ExceptionAuditLogsCountText => $"{ExceptionAuditLogs.Count} 条";
@@ -34,9 +36,17 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsExceptionOrdersBusy))]
+    [NotifyPropertyChangedFor(nameof(IsExceptionOrdersListBusy))]
     [NotifyCanExecuteChangedFor(nameof(LoadExceptionOrdersCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshExceptionOrderDetailCommand))]
-    private bool isExceptionOrdersLoading;
+    private bool isExceptionOrdersListLoading;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsExceptionOrdersBusy))]
+    [NotifyPropertyChangedFor(nameof(IsExceptionOrderDetailBusy))]
+    [NotifyCanExecuteChangedFor(nameof(LoadExceptionOrdersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshExceptionOrderDetailCommand))]
+    private bool isExceptionOrderDetailLoading;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ExceptionOrdersEmptyStateText))]
@@ -148,6 +158,11 @@ public partial class MainViewModel
         {
             return;
         }
+
+        if (currentDetail is not null)
+        {
+            _ = OpenExceptionOrderDetailAsync(value);
+        }
     }
 
     public async Task OpenExceptionOrderDetailAsync(StringNarrationOrderSummary? summary)
@@ -211,7 +226,7 @@ public partial class MainViewModel
     [RelayCommand(CanExecute = nameof(CanRunExceptionOrdersReadAction))]
     private async Task LoadExceptionOrdersAsync()
     {
-        await ExecuteExceptionOrdersReadActionAsync("正在加载异常订单...", async () =>
+        await ExecuteExceptionOrdersReadActionAsync("正在同步订单信息", true, async () =>
         {
             var query = BuildStringNarrationQuery();
             query.Page = ExceptionCurrentPage;
@@ -306,7 +321,7 @@ public partial class MainViewModel
             return;
         }
 
-        await ExecuteExceptionOrdersReadActionAsync("正在回放异常样本...", async () =>
+        await ExecuteExceptionOrdersReadActionAsync("正在回放异常样本...", false, async () =>
         {
             var result = await _stringNarrationOrderService.ReplayExceptionSamplesAsync(new StringNarrationExceptionSampleReplayRequest
             {
@@ -385,7 +400,7 @@ public partial class MainViewModel
             return;
         }
 
-        await ExecuteExceptionOrdersReadActionAsync("正在提交异常处理动作...", async () =>
+        await ExecuteExceptionOrdersReadActionAsync("正在提交异常处理动作...", false, async () =>
         {
             var result = await _stringNarrationOrderService.ApplyExceptionActionAsync(new StringNarrationExceptionActionRequest
             {
@@ -410,7 +425,7 @@ public partial class MainViewModel
         });
     }
 
-    private async Task ExecuteExceptionOrdersReadActionAsync(string busyMessage, Func<Task> action)
+    private async Task ExecuteExceptionOrdersReadActionAsync(string busyMessage, bool isListOperation, Func<Task> action)
     {
         if (IsExceptionOrdersBusy)
         {
@@ -419,7 +434,7 @@ public partial class MainViewModel
 
         try
         {
-            IsExceptionOrdersLoading = true;
+            SetExceptionOrdersBusyState(isListOperation, true);
             ExceptionError = string.Empty;
             ExceptionStatusMessage = busyMessage;
             await action();
@@ -431,14 +446,14 @@ public partial class MainViewModel
         }
         finally
         {
-            IsExceptionOrdersLoading = false;
+            SetExceptionOrdersBusyState(isListOperation, false);
             OnExceptionOrdersCollectionStateChanged();
         }
     }
 
     private async Task LoadExceptionOrderDetailByLookupAsync(string lookup)
     {
-        await ExecuteExceptionOrdersReadActionAsync("正在查询异常订单详情...", async () =>
+        await ExecuteExceptionOrdersReadActionAsync("正在查询异常订单详情...", false, async () =>
         {
             StringNarrationOrderDetail detail;
             try
@@ -465,7 +480,7 @@ public partial class MainViewModel
             }
 
             var started = false;
-            await ExecuteExceptionOrdersReadActionAsync("正在加载异常订单详情...", async () =>
+            await ExecuteExceptionOrdersReadActionAsync("正在加载异常订单详情...", false, async () =>
             {
                 started = true;
                 var detail = await _stringNarrationOrderService.GetOrderDetailAsync(orderNo, tradeNo, id);
@@ -526,6 +541,17 @@ public partial class MainViewModel
 
         SelectedExceptionOrderDetail = null;
         OnExceptionOrdersCollectionStateChanged();
+    }
+
+    private void SetExceptionOrdersBusyState(bool isListOperation, bool isBusy)
+    {
+        if (isListOperation)
+        {
+            IsExceptionOrdersListLoading = isBusy;
+            return;
+        }
+
+        IsExceptionOrderDetailLoading = isBusy;
     }
 
     private void EnsureExceptionDetailKeepsListContext(StringNarrationOrderDetail detail)
@@ -670,7 +696,7 @@ public partial class MainViewModel
             _isSynchronizingExceptionSelection = false;
         }
 
-        if (SelectedExceptionOrder is null && SelectedExceptionOrderDetail is null)
+        if (SelectedExceptionOrder is null)
         {
             SelectedExceptionOrderDetail = null;
         }
@@ -712,6 +738,8 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasExceptionAuditLogs));
         OnPropertyChanged(nameof(HasExceptionSampleReplayResults));
         OnPropertyChanged(nameof(IsExceptionOrdersBusy));
+        OnPropertyChanged(nameof(IsExceptionOrdersListBusy));
+        OnPropertyChanged(nameof(IsExceptionOrderDetailBusy));
         OnPropertyChanged(nameof(ExceptionOrdersCountText));
         OnPropertyChanged(nameof(ExceptionTotalCountText));
         OnPropertyChanged(nameof(ExceptionTotalPages));

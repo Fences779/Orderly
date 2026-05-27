@@ -365,991 +365,8 @@
                     <TextBlock Text="客户、订单、跟进和快捷回复集中处理" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
                 </StackPanel>
             </DockPanel>
-
             <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=工作台}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="320" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="330" />
-                </Grid.ColumnDefinitions>
-
-                <Grid Grid.Column="0" Margin="0,0,14,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
-                        <StackPanel>
-                            <DockPanel Margin="0,0,0,10">
-                                <StackPanel>
-                                    <TextBlock Text="今日行动" Style="{StaticResource SectionHeaderTextStyle}" />
-                                    <TextBlock Text="只读推导当前待处理项" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" />
-                                </StackPanel>
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                                    <Button Content="刷新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="10,4" Margin="0,0,8,0" Command="{Binding RefreshWorkbenchTasksCommand}" />
-                                    <Border Style="{StaticResource CountBadgeBorderStyle}">
-                                        <TextBlock Text="{Binding WorkbenchTasks.Count, StringFormat={}{0} 项}" Style="{StaticResource CaptionTextStyle}" />
-                                    </Border>
-                                </StackPanel>
-                            </DockPanel>
-
-                            <TextBlock Text="当前没有待处理工作台任务。">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasWorkbenchTasks}" Value="False">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-
-                            <ListBox x:Name="WorkbenchTasksList"
-                                     AutomationProperties.AutomationId="WorkbenchTasksList"
-                                     ItemsSource="{Binding WorkbenchTasks}"
-                                     SelectedItem="{Binding SelectedWorkbenchTask}"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     MaxHeight="280"
-                                     ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                <ListBox.Style>
-                                    <Style TargetType="ListBox">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasWorkbenchTasks}" Value="False">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ListBox.Style>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border x:Name="WorkbenchTaskCard" Padding="12" Margin="0,0,0,10" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="#ECE5D9" BorderThickness="1" CornerRadius="8">
-                                            <StackPanel>
-                                                <DockPanel>
-                                                    <WrapPanel>
-                                                        <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2" Margin="0,0,6,0">
-                                                            <TextBlock Text="{Binding TypeText}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                        </Border>
-                                                        <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="9" Padding="8,2">
-                                                            <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding HasPipelineStage}" Value="True">
-                                                                            <Setter Property="Visibility" Value="Visible" />
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Border.Style>
-                                                            <TextBlock Text="{Binding PipelineStageText}" Foreground="{StaticResource WarmTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                        </Border>
-                                                    </WrapPanel>
-                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OccurredAtText}" Foreground="{StaticResource SecondaryTextBrush}" />
-                                                </DockPanel>
-                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,8,0,0" />
-                                                <TextBlock Text="{Binding Summary}" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
-                                                <TextBlock Text="{Binding RelatedContextText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
-                                                <TextBlock Text="{Binding PriorityText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0" />
-                                            </StackPanel>
-                                        </Border>
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                <Setter TargetName="WorkbenchTaskCard" Property="Background" Value="#EEF4F0" />
-                                                <Setter TargetName="WorkbenchTaskCard" Property="BorderBrush" Value="#D5E4DA" />
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
-                        <DockPanel>
-                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                                <TextBlock Text="客户/订单列表" Style="{StaticResource SectionHeaderTextStyle}" />
-                                <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                    <TextBlock Text="{Binding Orders.Count, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                                </Border>
-                            </DockPanel>
-                            <ListBox ItemsSource="{Binding Orders}" SelectedItem="{Binding SelectedOrderItem}" BorderThickness="0" Background="Transparent" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border x:Name="OrderListItemCard" Padding="12" Margin="0,0,0,10" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="#ECE5D9" BorderThickness="1" CornerRadius="8">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
-                                                <TextBlock Text="{Binding CustomerName}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0" />
-                                                <DockPanel Margin="0,8,0,0">
-                                                    <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2">
-                                                        <TextBlock Text="{Binding StatusLabel}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                    </Border>
-                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding AmountText}" HorizontalAlignment="Right" Foreground="{StaticResource WarmTextBrush}" FontWeight="SemiBold" />
-                                                </DockPanel>
-                                                <TextBlock Text="{Binding FollowUpText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                        </Border>
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                <Setter TargetName="OrderListItemCard" Property="Background" Value="#EEF4F0" />
-                                                <Setter TargetName="OrderListItemCard" Property="BorderBrush" Value="#D5E4DA" />
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </DockPanel>
-                    </Border>
-                </Grid>
-
-                <Grid Grid.Column="1" Margin="0,0,14,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="280" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel>
-                                <TextBlock Text="当前处理对象" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
-                                <TextBlock Text="{Binding SelectedCustomerNameText}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding SelectedOrderHeadline}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
-                                <WrapPanel Margin="0,12,0,0">
-                                    <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="10" Padding="10,4" Margin="0,0,8,8">
-                                        <TextBlock Text="{Binding SelectedOrderStatusText}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                    </Border>
-                                    <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="10" Padding="10,4" Margin="0,0,8,8">
-                                        <TextBlock Text="{Binding CurrentDealStage, StringFormat=阶段 {0}}" Foreground="{StaticResource WarmTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                    </Border>
-                                    <Border Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="10" Padding="10,4" Margin="0,0,8,8">
-                                        <TextBlock Text="{Binding SelectedSourcePlatformText}" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                    </Border>
-                                </WrapPanel>
-                                <TextBlock Text="{Binding SelectedOrderRequirementSummary}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" LineHeight="20" Margin="0,12,0,0" />
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Margin="24,0,0,0">
-                                <UniformGrid Columns="2" Margin="0,0,0,12">
-                                    <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,6,0">
-                                        <StackPanel>
-                                            <TextBlock Text="订单状态" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Text="{Binding SelectedOrderStatusText}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="6,0,0,0">
-                                        <StackPanel>
-                                            <TextBlock Text="订单金额" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Text="{Binding SelectedOrderAmountText}" Foreground="{StaticResource WarmTextBrush}" FontSize="20" FontWeight="Bold" Margin="0,5,0,0" />
-                                        </StackPanel>
-                                    </Border>
-                                </UniformGrid>
-                                <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,0,12">
-                                    <StackPanel>
-                                        <TextBlock Text="下次跟进" Style="{StaticResource CaptionTextStyle}" />
-                                        <TextBlock Text="{Binding SelectedNextFollowUpText}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" Margin="0,6,0,0" />
-                                    </StackPanel>
-                                </Border>
-                                <Border Style="{StaticResource StatusPanelStyle}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding StatusMessageTitle}" Style="{StaticResource StatusMessageTitleTextStyle}" />
-                                        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{StaticResource HeadingBrush}" />
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel>
-                                <TextBlock Text="主操作" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
-                                <TextBlock Text="围绕当前客户和订单快速推进" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" />
-                                <WrapPanel Margin="0,10,0,0">
-                                    <Button Content="新增备注" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding DataContext.AddNoteCommand, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.AutomationId="Btn_AddNote" />
-                                    <Button Content="新增跟进" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding DataContext.AddFollowUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.AutomationId="Btn_AddFollowUp" />
-                                    <Button Content="新增改价" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding DataContext.AddPriceAdjustmentCommand, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.AutomationId="Btn_AddPriceAdjustment" />
-                                    <Button Content="推进阶段" Style="{StaticResource ToolbarPrimaryButtonStyle}" Command="{Binding DataContext.ChangeDealStageCommand, RelativeSource={RelativeSource AncestorType=Window}}" AutomationProperties.AutomationId="Btn_ChangeDealStage" />
-                                </WrapPanel>
-                                <!-- 状态切换区：显示当前状态 + ComboBox 选择 + 操作按钮 -->
-                                <Border Background="#F8F6F0" CornerRadius="8" Padding="10,8" Margin="0,4,0,0">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="14" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <!-- 客户状态 -->
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="客户状态" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            <WrapPanel>
-                                                <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="6" Padding="8,3" Margin="0,0,6,6">
-                                                    <TextBlock Text="{Binding CustomerStatusLabel, StringFormat=当前：{0}}" Foreground="{StaticResource AccentTextBrush}" FontSize="11" FontWeight="SemiBold" />
-                                                </Border>
-                                            </WrapPanel>
-                                            <DockPanel Margin="0,4,0,0">
-                                                <ComboBox x:Name="Input_CustomerStatus"
-                                                          AutomationProperties.AutomationId="Input_CustomerStatus"
-                                                          Width="120"
-                                                          Margin="0,0,6,0"
-                                                          ItemsSource="{Binding CustomerStatusOptions}"
-                                                          SelectedItem="{Binding SelectedCustomerStatusInput}">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <TextBlock Text="{Binding Converter={StaticResource EnumLabelConverter}}" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
-                                                <Button x:Name="Btn_ChangeCustomerStatus"
-                                                        AutomationProperties.AutomationId="Btn_ChangeCustomerStatus"
-                                                        Content="更新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="10,4" Margin="0"
-                                                        Command="{Binding ChangeCustomerStatusCommand}" />
-                                            </DockPanel>
-                                        </StackPanel>
-                                        <!-- 订单状态 -->
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="订单状态" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" Margin="0,0,0,4" />
-                                            <WrapPanel>
-                                                <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="6" Padding="8,3" Margin="0,0,6,6">
-                                                    <TextBlock Text="{Binding SelectedOrderStatusText, StringFormat=当前：{0}}" Foreground="{StaticResource WarmTextBrush}" FontSize="11" FontWeight="SemiBold" />
-                                                </Border>
-                                            </WrapPanel>
-                                            <DockPanel Margin="0,4,0,0">
-                                                <ComboBox x:Name="Input_OrderStatus"
-                                                          AutomationProperties.AutomationId="Input_OrderStatus"
-                                                          Width="140"
-                                                          Margin="0,0,6,0"
-                                                          ItemsSource="{Binding OrderStatusOptions}"
-                                                          SelectedItem="{Binding SelectedOrderStatusInput}">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <TextBlock Text="{Binding Converter={StaticResource EnumLabelConverter}}" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
-                                                <Button x:Name="Btn_ChangeOrderStatus"
-                                                        AutomationProperties.AutomationId="Btn_ChangeOrderStatus"
-                                                        Content="更新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Padding="10,4" Margin="0"
-                                                        Command="{Binding ChangeOrderStatusCommand}" />
-                                            </DockPanel>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Margin="24,0,0,0" VerticalAlignment="Top">
-                                <TextBlock Text="辅助操作" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
-                                <TextBlock Text="重新加载本地数据" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" />
-                                <WrapPanel Margin="0,10,0,0">
-                                    <Button Content="刷新" Style="{StaticResource ToolbarSecondaryButtonStyle}" Command="{Binding DataContext.RefreshCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                </WrapPanel>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel>
-                                <TextBlock Text="订单详情" Style="{StaticResource SectionHeaderTextStyle}" />
-                                <TextBlock Text="当前订单的需求、阶段和辅助信息" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" />
-                                <TextBlock Text="{Binding OrderDetailsEmptyMessage}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasSelectedOrder}" Value="False">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-
-                                <StackPanel Margin="0,14,0,0">
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasSelectedOrder}" Value="False">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-
-                                    <WrapPanel Margin="0,0,0,18">
-                                        <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="14" Padding="10,4" Margin="0,0,8,8">
-                                            <TextBlock Text="{Binding SelectedOrderStatusText}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" />
-                                        </Border>
-                                        <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="14" Padding="10,4" Margin="0,0,8,8">
-                                            <TextBlock Text="{Binding CurrentDealStage, StringFormat=阶段：{0}}" Foreground="{StaticResource WarmTextBrush}" FontWeight="SemiBold" />
-                                        </Border>
-                                        <Border Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="14" Padding="10,4" Margin="0,0,8,8">
-                                            <TextBlock Text="{Binding SelectedSourcePlatformText}" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="SemiBold" />
-                                        </Border>
-                                    </WrapPanel>
-
-                                    <TextBlock Text="需求记录" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
-                                    <TextBlock Text="{Binding SelectedOrderRequirementText}" TextWrapping="Wrap" LineHeight="22" Margin="0,8,0,18" Foreground="{StaticResource HeadingBrush}" />
-
-                                    <Grid Margin="0,0,0,18">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,8,0">
-                                            <StackPanel>
-                                                <TextBlock Text="最近备注" Style="{StaticResource CaptionTextStyle}" />
-                                                <TextBlock Text="{Binding LatestNote}" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{StaticResource HeadingBrush}" />
-                                            </StackPanel>
-                                        </Border>
-                                        <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}" Margin="8,0,0,0">
-                                            <StackPanel>
-                                                <TextBlock Text="下次跟进" Style="{StaticResource CaptionTextStyle}" />
-                                                <TextBlock Text="{Binding SelectedNextFollowUpText}" Margin="0,6,0,0" Foreground="{StaticResource HeadingBrush}" />
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
-
-                                    <TextBlock Text="补充信息" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
-                                    <UniformGrid Columns="2" Margin="0,8,0,0">
-                                        <TextBlock Text="{Binding SelectedChannelText, StringFormat=渠道：{0}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,16,4" />
-                                        <TextBlock Text="{Binding SelectedExternalIdText, StringFormat=外部ID：{0}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,4" />
-                                    </UniformGrid>
-                                </StackPanel>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Border>
-                </Grid>
-
-                <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
-                    <Grid>
-                        <TextBlock Text="选择左侧客户或订单后，这里会显示当前客户的业务信息和活动记录。">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasSelectedCustomer}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <ScrollViewer.Style>
-                                <Style TargetType="ScrollViewer">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasSelectedCustomer}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ScrollViewer.Style>
-                            <StackPanel>
-                                <Border Style="{StaticResource SectionBlockBorderStyle}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="客户信息" Style="{StaticResource SectionHeaderTextStyle}" />
-                                        </DockPanel>
-                                        <TextBlock Text="{Binding SelectedCustomerNameText}" FontSize="23" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
-                                        <WrapPanel Margin="0,10,0,0">
-                                            <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="10" Padding="10,4" Margin="0,0,8,8">
-                                                <TextBlock Text="{Binding CustomerStatusLabel, StringFormat=状态 {0}}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                            </Border>
-                                            <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="10" Padding="10,4" Margin="0,0,8,8">
-                                                <TextBlock Text="{Binding CustomerPriorityLabel, StringFormat=优先级 {0}}" Foreground="{StaticResource WarmTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                            </Border>
-                                        </WrapPanel>
-                                        <TextBlock Text="{Binding SelectedCustomer.ContactHandle, StringFormat=账号：{0}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0" />
-                                        <TextBlock Text="{Binding SelectedCustomer.Phone, StringFormat=电话：{0}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0" />
-                                        <Border Style="{StaticResource SummaryMetricCardStyle}" Margin="0,12,0,0">
-                                            <StackPanel>
-                                                <TextBlock Text="客户备注" Style="{StaticResource CaptionTextStyle}" />
-                                                <TextBlock Text="{Binding CustomerRemarkText}" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{StaticResource HeadingBrush}" />
-                                            </StackPanel>
-                                        </Border>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBlockBorderStyle}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="成交机会 Deals" Style="{StaticResource SectionHeaderTextStyle}" />
-                                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                                <TextBlock Text="{Binding DealsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                                            </Border>
-                                        </DockPanel>
-                                        <TextBlock Text="当前客户还没有成交机会记录" Margin="0,6,0,6">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasDeals}" Value="False">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <ListBox ItemsSource="{Binding Deals}" SelectedItem="{Binding SelectedDeal}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                            <ListBox.Style>
-                                                <Style TargetType="ListBox">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasDeals}" Value="False">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ListBox.Style>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border x:Name="DealItemCard" Style="{StaticResource ListItemBorderStyle}" AutomationProperties.AutomationId="{Binding RemoteId}">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
-                                                            <WrapPanel Margin="0,8,0,0">
-                                                                <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2" Margin="0,0,8,6">
-                                                                    <TextBlock Text="{Binding Stage, Converter={StaticResource EnumLabelConverter}, StringFormat=阶段 {0}}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                                </Border>
-                                                                <TextBlock Text="{Binding EstimatedAmount, StringFormat=预计金额 ¥{0:N0}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0" />
-                                                            </WrapPanel>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <DataTemplate.Triggers>
-                                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                            <Setter TargetName="DealItemCard" Property="Background" Value="#EEF4F0" />
-                                                            <Setter TargetName="DealItemCard" Property="BorderBrush" Value="#D5E4DA" />
-                                                        </DataTrigger>
-                                                    </DataTemplate.Triggers>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBlockBorderStyle}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="跟进 FollowUps" Style="{StaticResource SectionHeaderTextStyle}" />
-                                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                                <TextBlock Text="{Binding FollowUpsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                                            </Border>
-                                        </DockPanel>
-                                        <TextBlock Text="当前客户还没有跟进记录" Margin="0,6,0,6">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasFollowUps}" Value="False">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <ListBox ItemsSource="{Binding FollowUps}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                            <ListBox.Style>
-                                                <Style TargetType="ListBox">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasFollowUps}" Value="False">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ListBox.Style>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Style="{StaticResource ListItemBorderStyle}" AutomationProperties.AutomationId="{Binding RemoteId}">
-                                                        <StackPanel>
-                                                            <WrapPanel>
-                                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,0,8,0" />
-                                                                <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2" Margin="0,0,0,6">
-                                                                    <TextBlock Text="{Binding Status, Converter={StaticResource EnumLabelConverter}}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                                </Border>
-                                                            </WrapPanel>
-                                                            <TextBlock Text="{Binding ScheduledAt, StringFormat=计划时间：{0:yyyy-MM-dd HH:mm}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,0" />
-                                                             <TextBlock Text="{Binding Content}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20">
-                                                                 <TextBlock.Style>
-                                                                     <Style TargetType="TextBlock">
-                                                                         <Setter Property="Visibility" Value="Visible" />
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding Content}" Value="">
-                                                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                     </Style>
-                                                                 </TextBlock.Style>
-                                                             </TextBlock>
-                                                             <WrapPanel x:Name="FollowUpActionPanel" Margin="0,10,0,0">
-                                                                 <Button AutomationProperties.AutomationId="FollowUp_Complete" Content="完成" Style="{StaticResource ToolbarSecondaryButtonStyle}" Command="{Binding DataContext.CompleteFollowUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,6,0" Padding="10,4" />
-                                                                 <Button AutomationProperties.AutomationId="FollowUp_Snooze" Content="延期" Style="{StaticResource ToolbarSecondaryButtonStyle}" Command="{Binding DataContext.SnoozeFollowUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,6,0" Padding="10,4" />
-                                                                 <Button AutomationProperties.AutomationId="FollowUp_Cancel" Content="取消" Style="{StaticResource ToolbarSecondaryButtonStyle}" Command="{Binding DataContext.CancelFollowUpCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="10,4" />
-                                                                 <WrapPanel.Style>
-                                                                     <Style TargetType="WrapPanel">
-                                                                         <Setter Property="Visibility" Value="Visible" />
-                                                                         <Style.Triggers>
-                                                                             <DataTrigger Binding="{Binding Status}" Value="Completed">
-                                                                                 <Setter Property="Visibility" Value="Collapsed" />
-                                                                             </DataTrigger>
-                                                                             <DataTrigger Binding="{Binding Status}" Value="Cancelled">
-                                                                                 <Setter Property="Visibility" Value="Collapsed" />
-                                                                             </DataTrigger>
-                                                                         </Style.Triggers>
-                                                                     </Style>
-                                                                 </WrapPanel.Style>
-                                                             </WrapPanel>
-                                                         </StackPanel>
-                                                     </Border>
-                                                 </DataTemplate>
-                                             </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBlockBorderStyle}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="备注 CustomerNotes" Style="{StaticResource SectionHeaderTextStyle}" />
-                                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                                <TextBlock Text="{Binding CustomerNotesCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                                            </Border>
-                                        </DockPanel>
-                                        <TextBlock Text="当前客户还没有备注" Margin="0,6,0,6">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasCustomerNotes}" Value="False">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <ListBox ItemsSource="{Binding CustomerNotes}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                            <ListBox.Style>
-                                                <Style TargetType="ListBox">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasCustomerNotes}" Value="False">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ListBox.Style>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Style="{StaticResource ListItemBorderStyle}">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Foreground="{StaticResource HeadingBrush}" LineHeight="20" />
-                                                            <WrapPanel Margin="0,8,0,0">
-                                                                <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2" Margin="0,0,8,6">
-                                                                    <TextBlock Text="{Binding Type, Converter={StaticResource EnumLabelConverter}}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                                </Border>
-                                                                <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0" />
-                                                            </WrapPanel>
-                                                        </StackPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBlockBorderStyle}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="改价 PriceAdjustments" Style="{StaticResource SectionHeaderTextStyle}" />
-                                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                                <TextBlock Text="{Binding PriceAdjustmentsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                                            </Border>
-                                        </DockPanel>
-                                        <TextBlock Text="当前客户还没有改价记录" Margin="0,6,0,6">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasPriceAdjustments}" Value="False">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <ListBox ItemsSource="{Binding PriceAdjustments}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                            <ListBox.Style>
-                                                <Style TargetType="ListBox">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasPriceAdjustments}" Value="False">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ListBox.Style>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Style="{StaticResource ListItemBorderStyle}">
-                                                        <StackPanel>
-                                                            <WrapPanel>
-                                                                <TextBlock Text="{Binding OriginalAmount, StringFormat=原价 ¥{0:N0}}" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="SemiBold" Margin="0,0,10,0" />
-                                                                <TextBlock Text="{Binding AdjustedAmount, StringFormat=调整后 ¥{0:N0}}" Foreground="{StaticResource WarmTextBrush}" FontWeight="Bold" />
-                                                            </WrapPanel>
-                                                            <WrapPanel Margin="0,8,0,0">
-                                                                <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2" Margin="0,0,8,6">
-                                                                    <TextBlock Text="{Binding Status, Converter={StaticResource EnumLabelConverter}}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                                </Border>
-                                                                <TextBlock Text="{Binding Reason, StringFormat=原因：{0}}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
-                                                            </WrapPanel>
-                                                        </StackPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBlockBorderStyle}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="消息 / 沟通记录" Style="{StaticResource SectionHeaderTextStyle}" />
-                                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                                <TextBlock Text="{Binding ConversationMessagesCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                                            </Border>
-                                        </DockPanel>
-                                        <TextBlock Text="最小入口：支持手工录入消息和手动导入图片做本地 OCR fallback，仅用于沉淀上下文，不连接真实自动发送。"
-                                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                                   TextWrapping="Wrap"
-                                                   LineHeight="20" />
-                                        <Border Background="#F8F6F0" CornerRadius="8" Padding="10" Margin="0,10,0,0">
-                                            <StackPanel>
-                                                <TextBlock Text="手动 OCR 入口" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding SelectedConversationContextText}" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" />
-                                                <Button x:Name="Btn_SelectOcrImage"
-                                                        AutomationProperties.AutomationId="Btn_SelectOcrImage"
-                                                        Content="选择图片 / 导入截图"
-                                                        Command="{Binding SelectOcrImageCommand}"
-                                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
-                                                        Margin="0,10,0,0" />
-                                                <TextBlock Text="{Binding CurrentOcrFileNameText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,10,0,0" TextWrapping="Wrap" />
-                                                <TextBlock Text="{Binding CurrentOcrStatusText, StringFormat=OCR 状态：{0}}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" Margin="0,6,0,0" />
-                                                <TextBlock Text="{Binding CurrentOcrHintText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="18" />
-                                                <TextBox x:Name="Output_OcrTextPreview"
-                                                         AutomationProperties.AutomationId="Output_OcrTextPreview"
-                                                         Margin="0,8,0,0"
-                                                         MinHeight="72"
-                                                         IsReadOnly="True"
-                                                         TextWrapping="Wrap"
-                                                         VerticalScrollBarVisibility="Auto"
-                                                         Text="{Binding CurrentOcrPreviewText, Mode=OneWay}" />
-                                                <Button x:Name="Btn_ConvertOcrToConversationMessage"
-                                                        AutomationProperties.AutomationId="Btn_ConvertOcrToConversationMessage"
-                                                        Content="转为沟通记录"
-                                                        Command="{Binding ConvertOcrToConversationMessageCommand}"
-                                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
-                                                        Margin="0,10,0,0" />
-                                            </StackPanel>
-                                        </Border>
-                                        <Border Background="#F8F6F0" CornerRadius="8" Padding="10" Margin="0,10,0,0">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding SelectedConversationContextText}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
-                                                <TextBox x:Name="Input_ConversationMessage"
-                                                         AutomationProperties.AutomationId="Input_ConversationMessage"
-                                                         Margin="0,8,0,0"
-                                                         MinHeight="80"
-                                                         AcceptsReturn="True"
-                                                         TextWrapping="Wrap"
-                                                         VerticalScrollBarVisibility="Auto"
-                                                         Text="{Binding ConversationMessageInput, UpdateSourceTrigger=PropertyChanged}" />
-                                                <Button x:Name="Btn_AddConversationMessage"
-                                                        AutomationProperties.AutomationId="Btn_AddConversationMessage"
-                                                        Content="保存沟通记录"
-                                                        Command="{Binding AddConversationMessageCommand}"
-                                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
-                                                        Margin="0,10,0,0" />
-                                            </StackPanel>
-                                        </Border>
-                                        <TextBlock Text="当前上下文还没有沟通记录" Margin="0,12,0,6">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasConversationMessages}" Value="False">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <ListBox ItemsSource="{Binding ConversationMessages}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                            <ListBox.Style>
-                                                <Style TargetType="ListBox">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasConversationMessages}" Value="False">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ListBox.Style>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Style="{StaticResource ListItemBorderStyle}">
-                                                        <StackPanel>
-                                                            <DockPanel>
-                                                                <TextBlock Text="{Binding SenderName}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
-                                                                <TextBlock DockPanel.Dock="Right" Text="{Binding MessageTimeText}" Foreground="{StaticResource SecondaryTextBrush}" />
-                                                            </DockPanel>
-                                                            <TextBlock Text="{Binding MetaText}" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,4,0,0" />
-                                                            <TextBlock Text="{Binding Content}" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20" />
-                                                        </StackPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,14,0,0">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="AI 建议" Style="{StaticResource SectionHeaderTextStyle}" />
-                                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                                <TextBlock Text="{Binding AiSuggestionsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                                            </Border>
-                                        </DockPanel>
-                                        <TextBlock Text="默认使用 Local Stub；已预留 DeepSeek / OpenAI-compatible Provider；复制草稿只写入系统剪贴板，本软件不会自动发送，请手动粘贴到微信/闲鱼等平台。"
-                                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                                   TextWrapping="Wrap"
-                                                   LineHeight="20" />
-                                        <Border Background="#F8F6F0" CornerRadius="8" Padding="10" Margin="0,10,0,0">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding SelectedConversationContextText}" Style="{StaticResource CaptionTextStyle}" FontWeight="SemiBold" />
-                                                <Button x:Name="Btn_GenerateAiSuggestion"
-                                                        AutomationProperties.AutomationId="Btn_GenerateAiSuggestion"
-                                                        Content="生成建议"
-                                                        Command="{Binding GenerateAiSuggestionCommand}"
-                                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
-                                                        Margin="0,10,0,0" />
-                                            </StackPanel>
-                                        </Border>
-                                        <TextBlock Text="当前上下文还没有 AI 建议" Margin="0,12,0,6">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasAiSuggestions}" Value="False">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <ListBox ItemsSource="{Binding AiSuggestions}"
-                                                 SelectedItem="{Binding SelectedAiSuggestion}"
-                                                 BorderThickness="0"
-                                                 Background="Transparent"
-                                                 ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                                 ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                            <ListBox.Style>
-                                                <Style TargetType="ListBox">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasAiSuggestions}" Value="False">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ListBox.Style>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Style="{StaticResource ListItemBorderStyle}">
-                                                        <StackPanel>
-                                                            <DockPanel>
-                                                                <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
-                                                                <TextBlock DockPanel.Dock="Right" Text="{Binding CreatedAtText}" Foreground="{StaticResource SecondaryTextBrush}" />
-                                                            </DockPanel>
-                                                            <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="9" Padding="8,2" Margin="0,8,0,0" HorizontalAlignment="Left">
-                                                                <TextBlock Text="{Binding ProviderBadgeText}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                            </Border>
-                                                            <TextBlock Text="{Binding SuggestionText}" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20" />
-                                                            <TextBlock Text="{Binding Reason}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="18" />
-                                                            <TextBlock Text="{Binding DraftStateHint}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="18">
-                                                                <TextBlock.Style>
-                                                                    <Style TargetType="TextBlock">
-                                                                        <Setter Property="Visibility" Value="Visible" />
-                                                                        <Style.Triggers>
-                                                                            <DataTrigger Binding="{Binding DraftStateHint}" Value="">
-                                                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                                            </DataTrigger>
-                                                                        </Style.Triggers>
-                                                                    </Style>
-                                                                </TextBlock.Style>
-                                                            </TextBlock>
-                                                            <WrapPanel Margin="0,10,0,0">
-                                                                <Button Content="接受"
-                                                                        Command="{Binding DataContext.AcceptAiSuggestionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        CommandParameter="{Binding}"
-                                                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
-                                                                        IsEnabled="{Binding CanReview}" />
-                                                                <Button Content="拒绝"
-                                                                        Command="{Binding DataContext.RejectAiSuggestionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        CommandParameter="{Binding}"
-                                                                        Style="{StaticResource ToolbarSecondaryButtonStyle}"
-                                                                        IsEnabled="{Binding CanReview}"
-                                                                        Margin="8,0,0,0" />
-                                                                <Button Content="准备回复草稿"
-                                                                         Command="{Binding DataContext.PrepareAutoReplyDraftCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                         CommandParameter="{Binding}"
-                                                                         Style="{StaticResource ToolbarSecondaryButtonStyle}"
-                                                                         IsEnabled="{Binding CanPrepareDraft}"
-                                                                         Margin="8,0,0,0" />
-                                                                <Button Content="复制草稿"
-                                                                        AutomationProperties.AutomationId="Btn_CopyAutoReplyDraft"
-                                                                        Command="{Binding DataContext.CopyAutoReplyDraftCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        CommandParameter="{Binding}"
-                                                                        Style="{StaticResource ToolbarSecondaryButtonStyle}"
-                                                                        IsEnabled="{Binding CanCopyDraft}"
-                                                                        Margin="8,0,0,0" />
-                                                                <Button Content="标记已发送"
-                                                                        AutomationProperties.AutomationId="Btn_MarkAutoReplySent"
-                                                                        Command="{Binding DataContext.MarkAutoReplySentCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        CommandParameter="{Binding}"
-                                                                        Style="{StaticResource ToolbarSecondaryButtonStyle}"
-                                                                        IsEnabled="{Binding CanMarkSent}"
-                                                                        Margin="8,0,0,0" />
-                                                                <Button Content="拒绝草稿"
-                                                                        Command="{Binding DataContext.RejectAutoReplyDraftCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                        CommandParameter="{Binding}"
-                                                                        Style="{StaticResource ToolbarSecondaryButtonStyle}"
-                                                                        IsEnabled="{Binding CanRejectDraft}"
-                                                                        Margin="8,0,0,0" />
-                                                            </WrapPanel>
-                                                        </StackPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBlockBorderStyle}">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="ActivityLog" Style="{StaticResource SectionHeaderTextStyle}" />
-                                            <Border DockPanel.Dock="Right" Style="{StaticResource CountBadgeBorderStyle}">
-                                                <TextBlock Text="{Binding ActivityLogsCount, StringFormat={}{0} 条}" Style="{StaticResource CaptionTextStyle}" />
-                                            </Border>
-                                        </DockPanel>
-                                        <TextBlock Text="当前客户还没有活动记录" Margin="0,6,0,6">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasActivityLogs}" Value="False">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <ListBox ItemsSource="{Binding ActivityLogs}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                            <ListBox.Style>
-                                                <Style TargetType="ListBox">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HasActivityLogs}" Value="False">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ListBox.Style>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid Margin="0,0,0,12">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="72" />
-                                                            <ColumnDefinition Width="18" />
-                                                            <ColumnDefinition Width="*" />
-                                                        </Grid.ColumnDefinitions>
-                                                        <StackPanel Margin="0,3,10,0">
-                                                            <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:MM-dd}}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Right" />
-                                                            <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:HH:mm}}" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Right" Margin="0,3,0,0" />
-                                                        </StackPanel>
-                                                        <Grid Grid.Column="1">
-                                                            <Border Width="1" Background="{StaticResource TimelineBrush}" HorizontalAlignment="Center" Margin="0,14,0,0" />
-                                                            <Ellipse Width="10" Height="10" Fill="{StaticResource AccentSoftBrush}" Stroke="#9FB7AA" StrokeThickness="1" VerticalAlignment="Top" Margin="0,4,0,0" />
-                                                        </Grid>
-                                                        <Border Grid.Column="2" Style="{StaticResource ListItemBorderStyle}">
-                                                            <StackPanel>
-                                                                <WrapPanel>
-                                                                    <Border Background="#EEF2EE" CornerRadius="9" Padding="8,2" Margin="0,0,8,8">
-                                                                        <TextBlock Text="{Binding TypeLabel}" Foreground="#55665D" FontWeight="SemiBold" FontSize="11" />
-                                                                    </Border>
-                                                                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,1,0,0" />
-                                                                </WrapPanel>
-                                                                <TextBlock Text="{Binding Description}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,0" LineHeight="20">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock">
-                                                                            <Setter Property="Visibility" Value="Visible" />
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding Description}" Value="">
-                                                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,0,0">
-                                    <StackPanel>
-                                        <DockPanel Margin="0,0,0,10">
-                                            <TextBlock Text="快捷回复" Style="{StaticResource SectionHeaderTextStyle}" />
-                                        </DockPanel>
-                                        <ListBox ItemsSource="{Binding ReplyTemplates}" BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource CardListBoxItemStyle}">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Style="{StaticResource ListItemBorderStyle}">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
-                                                            <TextBlock Text="{Binding Content}" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" MaxHeight="58" Margin="0,6,0,10" LineHeight="20" />
-                                                            <Button Content="复制话术" Command="{Binding DataContext.CopyTemplateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Style="{StaticResource ToolbarPrimaryButtonStyle}" />
-                                                        </StackPanel>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
+                <Border Style="{StaticResource CardBorderStyle}" Background="Transparent" />
             </Grid>
 
             <!-- 订单履约 -->
@@ -4144,7 +3161,6 @@
                                     <ColumnDefinition Width="Auto" /> <!-- 警告图标 -->
                                     <ColumnDefinition Width="12" />
                                     <ColumnDefinition Width="*" />    <!-- 主要信息 -->
-                                    <ColumnDefinition Width="Auto" /> <!-- 时间 -->
                                 </Grid.ColumnDefinitions>
 
                                 <!-- 警告图标 -->
@@ -4168,11 +3184,6 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <!-- 时间与操作 -->
-                                <StackPanel Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                    <TextBlock Text="{Binding Exception.DetectedAtText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Right" Margin="0,0,0,4" />
-                                    <TextBlock Text="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Right" IsHitTestVisible="False" />
-                                </StackPanel>
                             </Grid>
                             <DataTemplate.Triggers>
                                 <!-- 根据严重程度改变颜色 -->
@@ -4233,7 +3244,8 @@
                     <!-- A. 列表收起模式 (选中详情时，左边占 2/5 宽度，单列) -->
                     <Border Grid.Column="0" Style="{StaticResource SettingsGroupCardStyle}" Padding="16" Margin="0,0,14,0"
                             Visibility="{Binding IsExceptionDetailPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
+                        <Grid>
+                            <DockPanel>
                             <!-- 分页 -->
                             <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
                                 <Grid>
@@ -4318,9 +3330,13 @@
                                         <Style TargetType="Grid">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasExceptionOrders}" Value="False">
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding HasExceptionOrders}" Value="False" />
+                                                        <Condition Binding="{Binding IsExceptionOrdersListBusy}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
+                                                </MultiDataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Grid.Style>
@@ -4355,12 +3371,98 @@
                                 </ListBox>
                             </Grid>
                         </DockPanel>
-                    </Border>
+
+                        <!-- Loading Overlay -->
+                        <Grid x:Name="ExceptionListCollapsedLoadingOverlay" Visibility="Collapsed">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsExceptionOrdersListBusy}" Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                        </ObjectAnimationUsingKeyFrames>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.2" Duration="0">
+                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                        </ObjectAnimationUsingKeyFrames>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <Border Background="#80FFFFFF" CornerRadius="12" />
+
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE72C;" 
+                                           FontFamily="Segoe MDL2 Assets" 
+                                           FontSize="30" 
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource HeadingBrush}" 
+                                           HorizontalAlignment="Center" 
+                                           RenderTransformOrigin="0.5,0.5" 
+                                           Margin="0,0,0,12">
+                                    <TextBlock.RenderTransform>
+                                        <RotateTransform Angle="0" />
+                                    </TextBlock.RenderTransform>
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ElementName=ExceptionListCollapsedLoadingOverlay, Path=Visibility}" Value="Visible">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard x:Name="RotateStoryboardListCollapsed">
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                 From="0" To="360" Duration="0:0:1"
+                                                                                 RepeatBehavior="Forever" />
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <StopStoryboard BeginStoryboardName="RotateStoryboardListCollapsed" />
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding ExceptionStatusMessage}" 
+                                           FontSize="13" 
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource HeadingBrush}" 
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
 
                     <!-- B. 列表展开模式 (无详情时，占满两列，双列) -->
                     <Border Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource SettingsGroupCardStyle}" Padding="16" Margin="0"
                             Visibility="{Binding IsExceptionListExpanded, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <DockPanel>
+                        <Grid>
+                            <DockPanel>
                             <!-- 分页 -->
                             <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
                                 <Grid>
@@ -4445,9 +3547,13 @@
                                         <Style TargetType="Grid">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasExceptionOrders}" Value="False">
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding HasExceptionOrders}" Value="False" />
+                                                        <Condition Binding="{Binding IsExceptionOrdersListBusy}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
                                                     <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
+                                                </MultiDataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Grid.Style>
@@ -4487,48 +3593,134 @@
                                 </ListBox>
                             </Grid>
                         </DockPanel>
-                    </Border>
 
-                    <!-- C. 右侧异常详情面板 -->
-                    <Border x:Name="ExceptionDetailPanel"
-                            Grid.Column="1"
-                            Padding="20"
-                            Margin="0"
-                            RenderTransformOrigin="0.5,0.5"
-                            Visibility="{Binding IsExceptionDetailPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Border.RenderTransform>
-                            <TranslateTransform X="40" />
-                        </Border.RenderTransform>
-                        <Border.Style>
-                            <Style TargetType="Border" BasedOn="{StaticResource SettingsGroupCardStyle}">
-                                <Style.Triggers>
-                                    <Trigger Property="Visibility" Value="Visible">
-                                        <Trigger.EnterActions>
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
-                                                        <DoubleAnimation.EasingFunction>
-                                                            <CubicEase EasingMode="EaseOut" />
-                                                        </DoubleAnimation.EasingFunction>
-                                                    </DoubleAnimation>
-                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" From="40" To="0" Duration="0:0:0.25">
-                                                        <DoubleAnimation.EasingFunction>
-                                                            <CubicEase EasingMode="EaseOut" />
-                                                        </DoubleAnimation.EasingFunction>
-                                                    </DoubleAnimation>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </Trigger.EnterActions>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
+                        <!-- Loading Overlay -->
+                        <Grid x:Name="ExceptionListExpandedLoadingOverlay" Visibility="Collapsed">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsExceptionOrdersListBusy}" Value="True">
+                                            <DataTrigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                        </ObjectAnimationUsingKeyFrames>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.EnterActions>
+                                            <DataTrigger.ExitActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.2" Duration="0">
+                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                        </ObjectAnimationUsingKeyFrames>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </DataTrigger.ExitActions>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <Border Background="#80FFFFFF" CornerRadius="12" />
+
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE72C;" 
+                                           FontFamily="Segoe MDL2 Assets" 
+                                           FontSize="30" 
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource HeadingBrush}" 
+                                           HorizontalAlignment="Center" 
+                                           RenderTransformOrigin="0.5,0.5" 
+                                           Margin="0,0,0,12">
+                                    <TextBlock.RenderTransform>
+                                        <RotateTransform Angle="0" />
+                                    </TextBlock.RenderTransform>
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ElementName=ExceptionListExpandedLoadingOverlay, Path=Visibility}" Value="Visible">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard x:Name="RotateStoryboardListExpanded">
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                                 From="0" To="360" Duration="0:0:1"
+                                                                                 RepeatBehavior="Forever" />
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <StopStoryboard BeginStoryboardName="RotateStoryboardListExpanded" />
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding ExceptionStatusMessage}" 
+                                           FontSize="13" 
+                                           FontWeight="Bold"
+                                           Foreground="{StaticResource HeadingBrush}" 
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                    <!-- C. 右侧异常详情工作区 -->
+                    <Grid x:Name="ExceptionRightPaneContainer"
+                          Grid.Column="1"
+                          Visibility="{Binding IsExceptionDetailPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border x:Name="ExceptionDetailPanel"
+                                Padding="20"
+                                Margin="0"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <TranslateTransform X="40" />
+                            </Border.RenderTransform>
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource SettingsGroupCardStyle}">
+                                    <Style.Triggers>
+                                        <Trigger Property="Visibility" Value="Visible">
+                                            <Trigger.EnterActions>
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" From="40" To="0" Duration="0:0:0.25">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </Trigger.EnterActions>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
                             <!-- 1. 头部标题 & 关闭 (双行紧凑布局以和履约一致) -->
                             <Border BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,0,0,1" Padding="0,0,0,14" Margin="0,0,0,14">
@@ -4887,8 +4079,93 @@
                                     <Button Grid.Column="4" Content="标记已处理" Style="{StaticResource ToolbarPrimaryButtonStyle}" Width="110" Height="36" Padding="0" Margin="0" Command="{Binding ResolveSelectedExceptionCommand}" Background="#0066cc" />
                                 </Grid>
                             </Border>
-                        </Grid>
-                    </Border>
+                            </Grid>
+                        </Border>
+
+                    </Grid>
+
+                    <Grid x:Name="ExceptionWorkAreaLoadingOverlay" Grid.Column="0" Grid.ColumnSpan="2" Background="#D8FFFFFF" Visibility="Collapsed" Panel.ZIndex="10">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Setter Property="Opacity" Value="0" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsExceptionOrderDetailBusy}" Value="True">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" Duration="0">
+                                                        <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
+                                                    </ObjectAnimationUsingKeyFrames>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                        <DataTrigger.ExitActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.15">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <CubicEase EasingMode="EaseOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility" BeginTime="0:0:0.15" Duration="0">
+                                                        <DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Collapsed}"/>
+                                                    </ObjectAnimationUsingKeyFrames>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.ExitActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+
+                        <Border Background="Transparent" CornerRadius="12" />
+
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE72C;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="30"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource HeadingBrush}"
+                                       HorizontalAlignment="Center"
+                                       RenderTransformOrigin="0.5,0.5"
+                                       Margin="0,0,0,12">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="0" />
+                                </TextBlock.RenderTransform>
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ElementName=ExceptionWorkAreaLoadingOverlay, Path=Visibility}" Value="Visible">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard x:Name="RotateStoryboardExceptionWorkArea">
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                             From="0" To="360" Duration="0:0:1"
+                                                                             RepeatBehavior="Forever" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <StopStoryboard BeginStoryboardName="RotateStoryboardExceptionWorkArea" />
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding ExceptionStatusMessage}"
+                                       FontSize="13"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource HeadingBrush}"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </Grid>
 
@@ -6512,3 +5789,4 @@
         </Grid>
     </Grid>
 </Window>
+
