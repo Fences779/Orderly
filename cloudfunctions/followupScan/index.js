@@ -23,6 +23,26 @@ function normalizeArray(value) {
   return String(value).split(/[,\s，、/]+/).map((item) => item.trim()).filter(Boolean)
 }
 
+function normalizeNumber(value) {
+  const number = Number(value || 0)
+  return Number.isFinite(number) ? number : 0
+}
+
+function normalizeText(value) {
+  return value == null ? '' : String(value).trim()
+}
+
+function normalizeDirection(value) {
+  const direction = normalizeText(value).toLowerCase()
+  return direction === 'expense' ? 'expense' : 'income'
+}
+
+function normalizeMovementType(value) {
+  const type = normalizeText(value).toLowerCase()
+  if (['in', 'out', 'adjust', 'reserve', 'release'].indexOf(type) >= 0) return type
+  return 'adjust'
+}
+
 function priority(triggerType, deal, customer, dueAt) {
   let score = triggerType === 'quote_no_reply' ? 40 : (triggerType === 'post_delivery' ? 30 : (triggerType === 'repurchase' ? 35 : 28))
   const overdueHours = hoursSince(dueAt)
@@ -123,13 +143,95 @@ exports.main = async (event) => {
     const mergedSku = Object.assign({}, baseSku, rawSku)
     const sku = Object.assign({ workspaceId, enabled: true, sortOrder: 10 }, mergedSku, {
       workspaceId,
-      basePrice: Number(mergedSku.basePrice || 0),
-      costPrice: Number(mergedSku.costPrice || 0),
+      basePrice: normalizeNumber(mergedSku.basePrice),
+      costPrice: normalizeNumber(mergedSku.costPrice),
+      purchasePrice: normalizeNumber(mergedSku.purchasePrice),
+      stockOnHand: normalizeNumber(mergedSku.stockOnHand),
+      stockReserved: normalizeNumber(mergedSku.stockReserved),
+      safetyStock: normalizeNumber(mergedSku.safetyStock),
+      stockUnit: normalizeText(mergedSku.stockUnit || '件'),
+      stockLocation: normalizeText(mergedSku.stockLocation),
+      supplierName: normalizeText(mergedSku.supplierName),
+      inventoryRemark: normalizeText(mergedSku.inventoryRemark),
+      reorderEnabled: mergedSku.reorderEnabled === true,
+      lastRestockedAt: normalizeText(mergedSku.lastRestockedAt),
       tags: normalizeArray(mergedSku.tags),
       adjustableFields: normalizeArray(mergedSku.adjustableFields)
     })
     const saved = await upsertById('sku_catalog', sku)
     return { ok: true, sku: saved }
+  }
+  if (event.mode === 'inventoryMovementSave') {
+    const movementInput = event.movement || {}
+    const movementType = normalizeMovementType(movementInput.movementType || movementInput.type)
+    const quantity = normalizeNumber(movementInput.quantity)
+    const unitCost = normalizeNumber(movementInput.unitCost)
+    const skuId = normalizeText(movementInput.skuId)
+    if (!skuId) return { ok: false, message: '缺少 skuId' }
+    if (!quantity) return { ok: false, message: '库存流水数量不能为空' }
+
+    let sku = {}
+    try {
+      sku = (await db.collection('sku_catalog').doc(skuId).get()).data || {}
+    } catch (err) {}
+
+    const signedQuantity = movementType === 'out' || movementType === 'reserve' ? -Math.abs(quantity) : quantity
+    const movement = Object.assign({}, movementInput, {
+      workspaceId,
+      skuId,
+      skuName: normalizeText(movementInput.skuName || sku.name),
+      movementType,
+      quantity,
+      unitCost,
+      totalCost: normalizeNumber(movementInput.totalCost) || Math.abs(quantity) * unitCost,
+      relatedOrderId: normalizeText(movementInput.relatedOrderId),
+      relatedOrderNo: normalizeText(movementInput.relatedOrderNo),
+      operatorId,
+      note: normalizeText(movementInput.note),
+      occurredAt: normalizeText(movementInput.occurredAt) || now(),
+      createdAt: now(),
+      updatedAt: now(),
+      createdBy: operatorId,
+      updatedBy: operatorId
+    })
+    const added = await db.collection('inventory_movements').add({ data: movement })
+    const _ = db.command
+    const stockPatch = { updatedAt: now(), updatedBy: operatorId }
+    if (movementType === 'reserve') {
+      stockPatch.stockReserved = _.inc(Math.abs(quantity))
+    } else if (movementType === 'release') {
+      stockPatch.stockReserved = _.inc(-Math.abs(quantity))
+    } else {
+      stockPatch.stockOnHand = _.inc(signedQuantity)
+    }
+    if (movementType === 'in') stockPatch.lastRestockedAt = movement.occurredAt
+    await db.collection('sku_catalog').doc(skuId).update({ data: stockPatch })
+    return { ok: true, movement: Object.assign({}, movement, { _id: added._id }) }
+  }
+  if (event.mode === 'cashflowSave') {
+    const input = event.entry || {}
+    const amount = normalizeNumber(input.amount)
+    if (!amount) return { ok: false, message: '现金流金额不能为空' }
+    const entry = Object.assign({}, input, {
+      workspaceId,
+      direction: normalizeDirection(input.direction),
+      amount,
+      category: normalizeText(input.category),
+      paymentMethod: normalizeText(input.paymentMethod || input.channel),
+      status: normalizeText(input.status || 'confirmed'),
+      relatedOrderId: normalizeText(input.relatedOrderId || input.orderId),
+      relatedOrderNo: normalizeText(input.relatedOrderNo || input.orderNo),
+      relatedQuoteId: normalizeText(input.relatedQuoteId || input.quoteId),
+      relatedSkuId: normalizeText(input.relatedSkuId || input.skuId),
+      counterpartyName: normalizeText(input.counterpartyName || input.counterparty),
+      operatorId,
+      note: normalizeText(input.note),
+      occurredAt: normalizeText(input.occurredAt) || now(),
+      createdBy: operatorId,
+      updatedBy: operatorId
+    })
+    const saved = await upsertById('cashflow_entries', entry)
+    return { ok: true, entry: saved }
   }
 
   const deals = (await db.collection('deals').where({ workspaceId }).limit(1000).get()).data || []

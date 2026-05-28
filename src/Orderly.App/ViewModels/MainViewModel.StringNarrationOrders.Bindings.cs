@@ -89,22 +89,27 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(StringNarrationWorkbenchTodayOrderCountText));
         OnPropertyChanged(nameof(StringNarrationWorkbenchTodayOrderCountDelta));
         OnPropertyChanged(nameof(StringNarrationWorkbenchTodayOrderCountDeltaText));
+        OnPropertyChanged(nameof(IsStringNarrationWorkbenchTodayOrderCountDeltaPositive));
         OnPropertyChanged(nameof(StringNarrationWorkbenchTodayRevenueAmount));
         OnPropertyChanged(nameof(StringNarrationWorkbenchTodayRevenueAmountText));
         OnPropertyChanged(nameof(StringNarrationWorkbenchTodayRevenueAmountDelta));
         OnPropertyChanged(nameof(StringNarrationWorkbenchTodayRevenueAmountDeltaText));
+        OnPropertyChanged(nameof(IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive));
         OnPropertyChanged(nameof(StringNarrationWorkbenchPendingMakeCount));
         OnPropertyChanged(nameof(StringNarrationWorkbenchPendingMakeCountText));
         OnPropertyChanged(nameof(StringNarrationWorkbenchPendingMakeDelta));
         OnPropertyChanged(nameof(StringNarrationWorkbenchPendingMakeDeltaText));
+        OnPropertyChanged(nameof(IsStringNarrationWorkbenchPendingMakeDeltaPositive));
         OnPropertyChanged(nameof(StringNarrationWorkbenchReadyToShipCount));
         OnPropertyChanged(nameof(StringNarrationWorkbenchReadyToShipCountText));
         OnPropertyChanged(nameof(StringNarrationWorkbenchReadyToShipDelta));
         OnPropertyChanged(nameof(StringNarrationWorkbenchReadyToShipDeltaText));
+        OnPropertyChanged(nameof(IsStringNarrationWorkbenchReadyToShipDeltaPositive));
         OnPropertyChanged(nameof(StringNarrationWorkbenchExceptionOrderCount));
         OnPropertyChanged(nameof(StringNarrationWorkbenchExceptionOrderCountText));
         OnPropertyChanged(nameof(StringNarrationWorkbenchExceptionOrderDelta));
         OnPropertyChanged(nameof(StringNarrationWorkbenchExceptionOrderDeltaText));
+        OnPropertyChanged(nameof(IsStringNarrationWorkbenchExceptionOrderDeltaPositive));
         OnPropertyChanged(nameof(StringNarrationWorkbenchUnfinishedOrderCount));
         OnPropertyChanged(nameof(StringNarrationWorkbenchUnfinishedOrderCountText));
         OnPropertyChanged(nameof(StringNarrationWorkbenchInventoryHealthStatusText));
@@ -114,9 +119,12 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowScore));
         OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowScoreText));
         OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowStatusText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowColorText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowEvaluation));
         OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowDelta));
         OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowDeltaText));
         OnPropertyChanged(nameof(StringNarrationWorkbenchLastSyncedAtText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchLastSyncedAtFriendlyText));
         OnPropertyChanged(nameof(IsStringNarrationWorkbenchFallbackProjection));
     }
 }

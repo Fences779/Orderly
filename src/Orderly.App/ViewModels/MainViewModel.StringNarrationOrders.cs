@@ -118,6 +118,97 @@ public partial class MainViewModel
         ? "未同步"
         : FormatGatewayTime(StringNarrationWorkbenchDashboard.LastSyncedAt);
     public bool IsStringNarrationWorkbenchFallbackProjection => StringNarrationWorkbenchDashboard.IsFallbackProjection;
+
+    public bool IsStringNarrationWorkbenchTodayOrderCountDeltaPositive => StringNarrationWorkbenchTodayOrderCountDelta >= 0;
+    public bool IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive => StringNarrationWorkbenchTodayRevenueAmountDelta >= 0;
+    public bool IsStringNarrationWorkbenchPendingMakeDeltaPositive => StringNarrationWorkbenchPendingMakeDelta >= 0;
+    public bool IsStringNarrationWorkbenchReadyToShipDeltaPositive => StringNarrationWorkbenchReadyToShipDelta >= 0;
+    public bool IsStringNarrationWorkbenchExceptionOrderDeltaPositive => StringNarrationWorkbenchExceptionOrderDelta >= 0;
+
+    public string StringNarrationWorkbenchCashFlowColorText
+    {
+        get
+        {
+            var score = StringNarrationWorkbenchCashFlowScore;
+            if (score < 15) return "#DE4C4A"; // 红色
+            if (score <= 30) return "#D97A26"; // 橙色
+            if (score <= 90) return "#2B7A5C"; // 绿色
+            return "#D4AF37"; // 金色
+        }
+    }
+
+    public string StringNarrationWorkbenchCashFlowEvaluation
+    {
+        get
+        {
+            var score = StringNarrationWorkbenchCashFlowScore;
+            if (score < 15) return "危险";
+            if (score <= 30) return "预警";
+            if (score <= 90) return "健康";
+            return "充裕";
+        }
+    }
+    
+    [ObservableProperty]
+    private string stringNarrationWorkbenchInventoryTestStatus = "需注意";
+
+    public string StringNarrationWorkbenchLastSyncedAtFriendlyText
+    {
+        get
+        {
+            var timestamp = StringNarrationWorkbenchDashboard.LastSyncedAt;
+            if (timestamp <= 0)
+            {
+                return "未同步";
+            }
+
+            try
+            {
+                var milliseconds = timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp;
+                var dt = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).LocalDateTime;
+                var now = DateTime.Now;
+
+                if (dt.Date == now.Date)
+                {
+                    var diff = now - dt;
+                    if (diff.TotalMilliseconds < 0)
+                    {
+                        return dt.ToString("HH:mm");
+                    }
+                    if (diff.TotalMinutes < 60)
+                    {
+                        var mins = (int)diff.TotalMinutes;
+                        return mins <= 0 ? "刚刚" : $"{mins}分钟前";
+                    }
+                    if (diff.TotalHours < 3)
+                    {
+                        return $"{(int)diff.TotalHours}小时前";
+                    }
+                    return dt.ToString("HH:mm");
+                }
+                else
+                {
+                    return dt.ToString("M.d HH:mm");
+                }
+            }
+            catch
+            {
+                return "未同步";
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleInventoryTestStatus()
+    {
+        StringNarrationWorkbenchInventoryTestStatus = StringNarrationWorkbenchInventoryTestStatus switch
+        {
+            "健康" => "需注意",
+            "需注意" => "警告",
+            "警告" => "健康",
+            _ => "需注意"
+        };
+    }
     public string StringNarrationEmptyStateText => string.IsNullOrWhiteSpace(StringNarrationError)
         ? "暂无串述订单，点击刷新从 adminPcGateway 拉取。"
         : StringNarrationError;

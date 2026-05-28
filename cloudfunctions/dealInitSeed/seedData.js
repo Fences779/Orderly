@@ -24,7 +24,22 @@ function createSeed(workspaceId) {
     { _id: 'seed_sku_silver_accessory', name: '银饰小配件', category: '配件', basePrice: 88, costPrice: 32, specSchema: '款式, 尺寸, 是否刻字', adjustableFields: ['刻字', '尺寸'], tags: ['配件', '低客单'], enabled: true, sortOrder: 40 },
     { _id: 'seed_sku_gift_box', name: '礼盒包装升级', category: '礼物', basePrice: 38, costPrice: 15, specSchema: '礼盒颜色, 贺卡文案', adjustableFields: ['贺卡', '包装色'], tags: ['加购', '送人'], enabled: true, sortOrder: 50 },
     { _id: 'seed_sku_repair', name: '旧款调整/维修', category: '售后', basePrice: 58, costPrice: 18, specSchema: '维修内容, 材料补差', adjustableFields: ['工费', '材料'], tags: ['复购', '售后'], enabled: true, sortOrder: 60 }
-  ]
+  ].map(function(sku, index) {
+    const stock = [24, 9, 16, 4, 38, 7][index] || 0
+    const safety = [8, 6, 5, 6, 12, 4][index] || 0
+    return Object.assign({
+      purchasePrice: sku.costPrice,
+      stockOnHand: stock,
+      stockReserved: index % 2 === 0 ? 1 : 0,
+      safetyStock: safety,
+      stockUnit: '件',
+      stockLocation: index < 3 ? 'A架' : 'B架',
+      supplierName: index < 3 ? '主材供应商' : '配件供应商',
+      inventoryRemark: '',
+      reorderEnabled: true,
+      lastRestockedAt: daysAgo(index + 1)
+    }, sku)
+  })
 
   const templates = [
     { _id: 'seed_tpl_clarify_1', sceneType: 'clarify', title: '尺寸追问', content: '亲爱的{{customerName}}，我先确认一下尺寸/手围，这样报价会更准，也能避免后面反复改。', variables: ['customerName'], toneStyle: '自然', enabled: true, useCount: 4 },
@@ -71,6 +86,18 @@ function createSeed(workspaceId) {
     { _id: 'seed_quote_3', dealId: 'seed_deal_shipped', quoteNo: 'Q-SEED-003', quoteStatus: 'accepted', items: [{ skuId: 'seed_sku_pearl_necklace', name: '淡水珍珠项链', qty: 1, price: 268 }, { skuId: 'seed_sku_gift_box', name: '礼盒包装升级', qty: 1, price: 38 }], baseAmount: 306, customFee: 40, laborFee: 20, shippingFee: 0, discountAmount: 0, depositRequired: 150, totalAmount: 366, validUntil: daysAgo(2), quoteNote: '礼盒已包含贺卡', sentAt: daysAgo(10), respondedAt: daysAgo(9) }
   ]
 
+  const inventoryMovements = [
+    { _id: 'seed_inv_in_basic', skuId: 'seed_sku_bracelet_basic', skuName: '基础天然石手串', movementType: 'in', quantity: 20, unitCost: 68, totalCost: 1360, relatedOrderId: '', relatedOrderNo: '', operatorId: createdBy, note: 'seed 初始入库', occurredAt: daysAgo(6) },
+    { _id: 'seed_inv_out_custom', skuId: 'seed_sku_bracelet_custom', skuName: '定制设计手串', movementType: 'out', quantity: 1, unitCost: 120, totalCost: 120, relatedOrderId: 'seed_deal_scheduled', relatedOrderNo: 'Q-SEED-002', operatorId: createdBy, note: 'seed 订单占用出库', occurredAt: daysAgo(2) },
+    { _id: 'seed_inv_adjust_silver', skuId: 'seed_sku_silver_accessory', skuName: '银饰小配件', movementType: 'adjust', quantity: -2, unitCost: 32, totalCost: 64, relatedOrderId: '', relatedOrderNo: '', operatorId: createdBy, note: 'seed 盘点调整', occurredAt: daysAgo(1) }
+  ]
+
+  const cashflowEntries = [
+    { _id: 'seed_cash_income_1', direction: 'income', amount: 200, category: '定金', paymentMethod: '微信支付', status: 'confirmed', relatedOrderId: 'seed_deal_scheduled', relatedOrderNo: 'Q-SEED-002', relatedQuoteId: 'seed_quote_2', relatedSkuId: 'seed_sku_bracelet_custom', counterpartyName: '陈小姐', operatorId: createdBy, note: '急单礼物手串定金', occurredAt: daysAgo(2) },
+    { _id: 'seed_cash_income_2', direction: 'income', amount: 366, category: '尾款', paymentMethod: '微信支付', status: 'confirmed', relatedOrderId: 'seed_deal_shipped', relatedOrderNo: 'Q-SEED-003', relatedQuoteId: 'seed_quote_3', relatedSkuId: 'seed_sku_pearl_necklace', counterpartyName: 'Momo', operatorId: createdBy, note: '礼盒珍珠项链尾款', occurredAt: daysAgo(9) },
+    { _id: 'seed_cash_expense_1', direction: 'expense', amount: 320, category: '材料采购', paymentMethod: '银行卡', status: 'confirmed', relatedOrderId: '', relatedOrderNo: '', relatedQuoteId: '', relatedSkuId: 'seed_sku_pearl_necklace', counterpartyName: '主材供应商', operatorId: createdBy, note: '珍珠批次补货', occurredAt: daysAgo(5) }
+  ]
+
   const tasks = [
     { _id: 'seed_task_quote_reply', dealId: 'seed_deal_quote_sent', customerId: 'seed_customer_yuyu', customerName: '鱼鱼', triggerType: 'quote_no_reply', triggerAt: daysAgo(2), dueAt: daysAgo(1), priorityScore: 60, templateId: 'seed_tpl_quote_1', suggestedText: '鱼鱼，我刚才那版报价不用急着定；如果想压预算，我可以帮你换一档材质。', taskStatus: 'pending', completedAt: '', resultType: '', dedupeKey: 'seed_deal_quote_sent:quote_no_reply:seed_quote_1' },
     { _id: 'seed_task_post_delivery', dealId: 'seed_deal_shipped', customerId: 'seed_customer_momo', customerName: 'Momo', triggerType: 'post_delivery', triggerAt: daysAgo(1), dueAt: daysLater(2), priorityScore: 34, templateId: 'seed_tpl_aftersales_1', suggestedText: 'Momo，收到后佩戴感觉怎么样？尺寸和颜色如果有偏差可以直接跟我说。', taskStatus: 'pending', completedAt: '', resultType: '', dedupeKey: 'seed_deal_shipped:post_delivery:seed' },
@@ -96,6 +123,8 @@ function createSeed(workspaceId) {
 
   return {
     sku_catalog: stamp(skus),
+    inventory_movements: stamp(inventoryMovements),
+    cashflow_entries: stamp(cashflowEntries),
     message_templates: stamp(templates),
     customers: stamp(customers),
     deals: stamp(deals),

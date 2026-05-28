@@ -40,11 +40,13 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void SelectSection(string section)
+    private async Task SelectSectionAsync(string section)
     {
         if (!string.IsNullOrWhiteSpace(section))
         {
-            SelectedSection = NormalizeSection(section);
+            var normalized = NormalizeSection(section);
+            SelectedSection = normalized;
+            await EnsureBusinessSectionLoadedAsync(normalized);
         }
     }
 

@@ -4,7 +4,7 @@ const { createSeed } = require('./seedData')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const COLLECTIONS = ['customers', 'deals', 'quotes', 'sku_catalog', 'followup_tasks', 'message_templates', 'captures', 'activity_logs']
+const COLLECTIONS = ['customers', 'deals', 'quotes', 'sku_catalog', 'inventory_movements', 'cashflow_entries', 'followup_tasks', 'message_templates', 'captures', 'activity_logs']
 
 async function ensureCollections() {
   for (const name of COLLECTIONS) {

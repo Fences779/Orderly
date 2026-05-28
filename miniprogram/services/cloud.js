@@ -6,6 +6,8 @@ const COLLECTIONS = {
   deals: 'deals',
   quotes: 'quotes',
   sku: 'sku_catalog',
+  inventoryMovements: 'inventory_movements',
+  cashflow: 'cashflow_entries',
   followups: 'followup_tasks',
   templates: 'message_templates',
   captures: 'captures',

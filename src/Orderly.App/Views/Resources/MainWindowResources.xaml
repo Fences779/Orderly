@@ -1494,6 +1494,14 @@
                             <Setter TargetName="IconBg" Property="Background" Value="#DCFCE7"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#16A34A"/>
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="库存管理">
+                            <Setter TargetName="IconBg" Property="Background" Value="#FEF3C7"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#B45309"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="现金流">
+                            <Setter TargetName="IconBg" Property="Background" Value="#E0E7FF"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#4F46E5"/>
+                        </DataTrigger>
                         <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="异常处理">
                             <Setter TargetName="IconBg" Property="Background" Value="#FFE4E6"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#E11D48"/>

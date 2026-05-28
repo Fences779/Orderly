@@ -265,8 +265,9 @@ public partial class App : System.Windows.Application
         {
             Timeout = TimeSpan.FromSeconds(stringNarrationGatewayOptions.TimeoutSeconds)
         };
-        IStringNarrationOrderService stringNarrationOrderService = new StringNarrationGatewayOrderService(
-            new StringNarrationGatewayClient(stringNarrationHttpClient, stringNarrationGatewayOptions));
+        var stringNarrationGatewayClient = new StringNarrationGatewayClient(stringNarrationHttpClient, stringNarrationGatewayOptions);
+        IStringNarrationOrderService stringNarrationOrderService = new StringNarrationGatewayOrderService(stringNarrationGatewayClient);
+        IStringNarrationBusinessService stringNarrationBusinessService = new StringNarrationGatewayBusinessService(stringNarrationGatewayClient);
 
         var preferences = await settingRepository.GetPreferencesAsync();
 
@@ -299,7 +300,8 @@ public partial class App : System.Windows.Application
             _sessionContextService,
             stringNarrationGatewayOptions.Endpoint,
             stringNarrationGatewayOptions.HasToken,
-            stringNarrationGatewayOptions.TimeoutSeconds);
+            stringNarrationGatewayOptions.TimeoutSeconds,
+            stringNarrationBusinessService);
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
         await _mainViewModel.LoadAsync();

@@ -10,6 +10,8 @@ public partial class MainViewModel : ObservableObject
 {
     public const string SectionWorkbench = "工作台";
     public const string SectionFulfillment = "订单履约";
+    public const string SectionInventory = "库存管理";
+    public const string SectionCashflow = "现金流";
     public const string SectionException = "异常处理";
     public const string SectionSettings = "设置";
 
@@ -17,6 +19,8 @@ public partial class MainViewModel : ObservableObject
     {
         SectionWorkbench,
         SectionFulfillment,
+        SectionInventory,
+        SectionCashflow,
         SectionException,
         SectionSettings
     };
@@ -45,6 +49,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IBackupService _backupService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IStringNarrationOrderService _stringNarrationOrderService;
+    private readonly IStringNarrationBusinessService _stringNarrationBusinessService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
     private readonly IAppSettingRepository _settingRepository;
     private readonly ISyncService _syncService;
@@ -79,7 +84,8 @@ public partial class MainViewModel : ObservableObject
         ISessionContextService? sessionContextService = null,
         string stringNarrationGatewayEndpoint = "",
         bool isStringNarrationGatewayTokenConfigured = false,
-        int stringNarrationGatewayTimeoutSeconds = 15)
+        int stringNarrationGatewayTimeoutSeconds = 15,
+        IStringNarrationBusinessService? stringNarrationBusinessService = null)
         : this(
             customerRepository,
             orderRepository,
@@ -109,7 +115,8 @@ public partial class MainViewModel : ObservableObject
             sessionContextService,
             stringNarrationGatewayEndpoint,
             isStringNarrationGatewayTokenConfigured,
-            stringNarrationGatewayTimeoutSeconds)
+            stringNarrationGatewayTimeoutSeconds,
+            stringNarrationBusinessService)
     {
     }
 
@@ -142,7 +149,8 @@ public partial class MainViewModel : ObservableObject
         ISessionContextService? sessionContextService = null,
         string stringNarrationGatewayEndpoint = "",
         bool isStringNarrationGatewayTokenConfigured = false,
-        int stringNarrationGatewayTimeoutSeconds = 15)
+        int stringNarrationGatewayTimeoutSeconds = 15,
+        IStringNarrationBusinessService? stringNarrationBusinessService = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -162,6 +170,7 @@ public partial class MainViewModel : ObservableObject
         _backupService = backupService;
         _priceAdjustmentService = priceAdjustmentService;
         _stringNarrationOrderService = stringNarrationOrderService ?? EmptyStringNarrationOrderService.Instance;
+        _stringNarrationBusinessService = stringNarrationBusinessService ?? EmptyStringNarrationBusinessService.Instance;
         _replyTemplateRepository = replyTemplateRepository;
         _settingRepository = settingRepository;
         _syncService = syncService;
@@ -189,7 +198,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<ReplyTemplate> ReplyTemplates { get; } = new();
     public ObservableCollection<WorkbenchTaskListItem> WorkbenchTasks { get; } = new();
     public ObservableCollection<SearchResultListItem> SearchResults { get; } = new();
-    public ObservableCollection<string> Sections { get; } = new(new[] { SectionWorkbench, SectionFulfillment, SectionException, SectionSettings });
+    public ObservableCollection<string> Sections { get; } = new(new[] { SectionWorkbench, SectionFulfillment, SectionInventory, SectionCashflow, SectionException, SectionSettings });
     public ObservableCollection<SearchFilterOption> SearchFilterOptions { get; } = new();
     public ObservableCollection<QuickFilterOption> QuickFilterOptions { get; } = new();
     public ObservableCollection<CustomerStatus> CustomerStatusOptions { get; } = new(Enum.GetValues<CustomerStatus>());
@@ -662,6 +671,21 @@ public partial class MainViewModel : ObservableObject
         public Task<StringNarrationOrderDetail> GenerateProductionOrderAsync(StringNarrationGenerateProductionOrderRequest request, CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("串述订单服务未配置。");
+        }
+    }
+
+    private sealed class EmptyStringNarrationBusinessService : IStringNarrationBusinessService
+    {
+        public static EmptyStringNarrationBusinessService Instance { get; } = new();
+
+        public Task<StringNarrationInventoryListResult> GetInventoryAsync(StringNarrationInventoryQuery query, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述业务数据服务未配置。");
+        }
+
+        public Task<StringNarrationCashflowListResult> GetCashflowAsync(StringNarrationCashflowQuery query, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述业务数据服务未配置。");
         }
     }
 }
