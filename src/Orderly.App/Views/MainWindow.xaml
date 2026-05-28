@@ -1220,6 +1220,555 @@
                 </Grid>
             </Grid>
 
+            <!-- 库存管理 -->
+            <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=库存管理}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="0,0,6,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="库存管理" Style="{StaticResource SectionHeaderTextStyle}" />
+                                <TextBlock Text="{Binding InventoryDashboardHealthSummaryText}" Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Text="{Binding InventoryUpdatedAtText}" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <Button Grid.Column="2" Content="刷新库存" Command="{Binding RefreshInventoryCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Grid Grid.Row="1" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <StackPanel>
+                                    <TextBlock Text="库存健康" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding InventoryDashboardHealthStatusText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding InventoryDashboardWarningCountText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <StackPanel>
+                                    <TextBlock Text="低库存项" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding InventoryDashboardLowStockCountText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding InventoryDashboardPageInfoText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <StackPanel>
+                                    <TextBlock Text="快动销 / 低动销" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding InventoryDashboardFastSellingCountText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding InventoryDashboardLowSellingCountText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="3" Style="{StaticResource SummaryMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="毛利率 / 单串成本" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding InventoryDashboardGrossMarginRateText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding InventoryDashboardAvgBraceletCostPriceText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Grid Grid.Row="2" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.6*" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="关键口径" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <Grid Grid.Row="1" Margin="0,12,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="单单材料消耗" Style="{StaticResource CaptionTextStyle}" />
+                                            <TextBlock Text="{Binding InventoryDashboardAvgOrderMaterialUsageText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="材料均价" Style="{StaticResource CaptionTextStyle}" />
+                                            <TextBlock Text="{Binding InventoryDashboardAvgMaterialUnitCostText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="客单均价" Style="{StaticResource CaptionTextStyle}" />
+                                            <TextBlock Text="{Binding InventoryDashboardAvgBraceletSalePriceText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="3">
+                                            <TextBlock Text="筛选口径" Style="{StaticResource CaptionTextStyle}" />
+                                            <TextBlock Text="{Binding InventoryDashboardStatusSummaryText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <StackPanel Grid.Row="2" Margin="0,14,0,0">
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap">
+                                            <Run Text="库存源：" />
+                                            <Run Text="{Binding InventoryDashboardResult.DataAvailability.InventorySource.SourceType, TargetNullValue=未接入}" />
+                                            <Run Text="  " />
+                                            <Run Text="{Binding InventoryDashboardResult.DataAvailability.InventorySource.Reason}" />
+                                        </TextBlock>
+                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap">
+                                            <Run Text="消耗口径：" />
+                                            <Run Text="{Binding InventoryDashboardResult.DataAvailability.MaterialConsumption.SourceType, TargetNullValue=未接入}" />
+                                            <Run Text="  " />
+                                            <Run Text="{Binding InventoryDashboardResult.DataAvailability.MaterialConsumption.Reason}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="数据覆盖" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <TextBlock Text="{Binding InventoryDashboardCategorySummaryText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,12,0,0" />
+                                    <TextBlock Text="{Binding InventoryItemsCountText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding InventoryDashboardPageInfoText}" Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" />
+                                    <TextBlock Text="{Binding InventoryEmptyStateText}" Style="{StaticResource CaptionTextStyle}" Margin="0,10,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Grid.Row="3" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,0,12">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="库存明细" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding InventoryDashboardPageInfoText}" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center" />
+                                </Grid>
+                                <Grid Grid.Row="1" Margin="0,12,0,0">
+                                    <DataGrid ItemsSource="{Binding InventoryDashboardItems}"
+                                              AutoGenerateColumns="False"
+                                              IsReadOnly="True"
+                                              HeadersVisibility="Column"
+                                              GridLinesVisibility="Horizontal"
+                                              BorderThickness="0"
+                                              RowHeaderWidth="0"
+                                              AlternatingRowBackground="#FCFCFD"
+                                              Background="Transparent"
+                                              MaxHeight="420">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="材料" Binding="{Binding MaterialName, TargetNullValue=暂无数据}" Width="180" />
+                                            <DataGridTextColumn Header="分类" Binding="{Binding Category, TargetNullValue=未分类}" Width="90" />
+                                            <DataGridTextColumn Header="现存" Binding="{Binding CurrentStockQty, StringFormat={}{0:0.##}}" Width="80" />
+                                            <DataGridTextColumn Header="单位" Binding="{Binding StockUnit, TargetNullValue=-}" Width="60" />
+                                            <DataGridTextColumn Header="建议安全库存" Binding="{Binding SafeStockSuggestedQty, StringFormat={}{0:0.##}, TargetNullValue=未评估}" Width="110" />
+                                            <DataGridTextColumn Header="7日销量" Binding="{Binding Sold7dQty, StringFormat={}{0:0.##}}" Width="80" />
+                                            <DataGridTextColumn Header="30日销量" Binding="{Binding Sold30dQty, StringFormat={}{0:0.##}}" Width="90" />
+                                            <DataGridTextColumn Header="状态" Binding="{Binding StatusLabel, TargetNullValue=未评估}" Width="100" />
+                                            <DataGridTextColumn Header="单位成本" Binding="{Binding UnitCost, StringFormat={}{0:C0}, TargetNullValue=未评估}" Width="90" />
+                                            <DataGridTextColumn Header="最近补货" Binding="{Binding LastRestockedAt, Converter={StaticResource TimestampToDateTimeConverter}, StringFormat={}{0:yyyy-MM-dd HH:mm}, TargetNullValue=未记录}" Width="130" />
+                                            <DataGridTextColumn Header="供应商" Binding="{Binding SupplierName, TargetNullValue=未记录}" Width="120" />
+                                            <DataGridTextColumn Header="备注" Binding="{Binding Remark}" Width="*" />
+                                        </DataGrid.Columns>
+                                        <DataGrid.Style>
+                                            <Style TargetType="DataGrid">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasInventoryDashboardItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </DataGrid.Style>
+                                    </DataGrid>
+                                    <TextBlock Text="{Binding InventoryEmptyStateText}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasInventoryDashboardItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- 现金流 -->
+            <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=现金流}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Margin="0,0,6,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="现金流" Style="{StaticResource SectionHeaderTextStyle}" />
+                                <TextBlock Text="{Binding CashflowHealthSummaryText}" Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Text="{Binding CashflowUpdatedAtText}" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                            <Button Grid.Column="2" Content="刷新现金流" Command="{Binding RefreshCashflowCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" VerticalAlignment="Center" />
+                        </Grid>
+
+                        <Grid Grid.Row="1" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <StackPanel>
+                                    <TextBlock Text="健康评分" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding CashflowHealthScoreText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding CashflowHealthLevelText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <StackPanel>
+                                    <TextBlock Text="账上现金" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding CashflowCashBalanceText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="真实现金账户余额" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="2" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <StackPanel>
+                                    <TextBlock Text="可用现金" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding CashflowAvailableCashText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="现金 - 应付 + 应收" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="3" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <StackPanel>
+                                    <TextBlock Text="可支撑天数" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding CashflowSupportDaysText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding CashflowAvgDailyExpense7dText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="4" Style="{StaticResource SummaryMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="应收 / 应付" Style="{StaticResource CaptionTextStyle}" />
+                                    <TextBlock Text="{Binding CashflowReceivableAmountHealthText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding CashflowPayableAmountHealthText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Grid Grid.Row="2" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.35*" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <StackPanel>
+                                    <TextBlock Text="数据可用性" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,12,0,0" TextWrapping="Wrap">
+                                        <Run Text="现金余额：" />
+                                        <Run Text="{Binding CashflowHealthDashboardResult.DataAvailability.CashBalance.SourceType, TargetNullValue=未接入}" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding CashflowHealthDashboardResult.DataAvailability.CashBalance.Reason}" />
+                                    </TextBlock>
+                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap">
+                                        <Run Text="应收：" />
+                                        <Run Text="{Binding CashflowHealthDashboardResult.DataAvailability.Receivable.SourceType, TargetNullValue=未接入}" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding CashflowHealthDashboardResult.DataAvailability.Receivable.Reason}" />
+                                    </TextBlock>
+                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap">
+                                        <Run Text="应付：" />
+                                        <Run Text="{Binding CashflowHealthDashboardResult.DataAvailability.Payable.SourceType, TargetNullValue=未接入}" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding CashflowHealthDashboardResult.DataAvailability.Payable.Reason}" />
+                                    </TextBlock>
+                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap">
+                                        <Run Text="补货预算：" />
+                                        <Run Text="{Binding CashflowHealthDashboardResult.DataAvailability.InventorySource.SourceType, TargetNullValue=未接入}" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding CashflowHealthDashboardResult.DataAvailability.InventorySource.Reason}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="经营建议" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <TextBlock Text="{Binding CashflowAdviceTitleText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,12,0,0" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding CashflowAdviceDescriptionText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                                    <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" TextWrapping="Wrap">
+                                        <Run Text="风险提示：" />
+                                        <Run Text="{Binding CashflowAdvice.RiskHint, TargetNullValue=暂无}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Grid Grid.Row="3" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.25*" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="30 天趋势" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <Grid Grid.Row="1" Margin="0,12,0,0">
+                                        <DataGrid ItemsSource="{Binding CashflowHealthTrendItems}"
+                                                  AutoGenerateColumns="False"
+                                                  IsReadOnly="True"
+                                                  HeadersVisibility="Column"
+                                                  GridLinesVisibility="Horizontal"
+                                                  BorderThickness="0"
+                                                  RowHeaderWidth="0"
+                                                  AlternatingRowBackground="#FCFCFD"
+                                                  Background="Transparent"
+                                                  MaxHeight="320">
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="日期" Binding="{Binding Date, TargetNullValue=暂无}" Width="100" />
+                                                <DataGridTextColumn Header="收入" Binding="{Binding IncomeAmount, StringFormat={}{0:C0}}" Width="90" />
+                                                <DataGridTextColumn Header="支出" Binding="{Binding ExpenseAmount, StringFormat={}{0:C0}}" Width="90" />
+                                                <DataGridTextColumn Header="净额" Binding="{Binding NetCashflowAmount, StringFormat={}{0:C0}}" Width="100" />
+                                            </DataGrid.Columns>
+                                            <DataGrid.Style>
+                                                <Style TargetType="DataGrid">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasCashflowHealthTrendItems}" Value="False">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGrid.Style>
+                                        </DataGrid>
+                                        <TextBlock Text="暂无现金流趋势数据">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasCashflowHealthTrendItems}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="即将影响现金流" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <ItemsControl ItemsSource="{Binding CashflowUpcomingCashItems}" Margin="0,12,0,0">
+                                        <ItemsControl.Style>
+                                            <Style TargetType="ItemsControl">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCashflowUpcomingCashItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ItemsControl.Style>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,8">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Label, TargetNullValue=未命名}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                                            <TextBlock Text="{Binding Note, TargetNullValue=暂无说明}" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                                            <TextBlock Text="{Binding Amount, StringFormat={}{0:C0}}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Right" />
+                                                            <TextBlock Text="{Binding Count, StringFormat=涉及 {0} 项}" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0" HorizontalAlignment="Right" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="暂无 upcoming cash items">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCashflowUpcomingCashItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,12">
+                                <StackPanel>
+                                    <TextBlock Text="收入结构" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <ItemsControl ItemsSource="{Binding CashflowIncomeBreakdown.Items}" Margin="0,12,0,0">
+                                        <ItemsControl.Style>
+                                            <Style TargetType="ItemsControl">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCashflowIncomeBreakdownItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ItemsControl.Style>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Category, TargetNullValue=未分类}" Foreground="{StaticResource HeadingBrush}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Amount, StringFormat={}{0:C0}}" Foreground="{StaticResource HeadingBrush}" Margin="12,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding Percent, StringFormat={}{0:0.#}%}" Style="{StaticResource CaptionTextStyle}" Margin="12,0,0,0" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="暂无收入拆分">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCashflowIncomeBreakdownItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <TextBlock Text="支出结构" Style="{StaticResource SectionHeaderTextStyle}" />
+                                    <ItemsControl ItemsSource="{Binding CashflowExpenseBreakdown.Items}" Margin="0,12,0,0">
+                                        <ItemsControl.Style>
+                                            <Style TargetType="ItemsControl">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCashflowExpenseBreakdownItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ItemsControl.Style>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Category, TargetNullValue=未分类}" Foreground="{StaticResource HeadingBrush}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Amount, StringFormat={}{0:C0}}" Foreground="{StaticResource HeadingBrush}" Margin="12,0,0,0" />
+                                                    <TextBlock Grid.Column="2" Text="{Binding Percent, StringFormat={}{0:0.#}%}" Style="{StaticResource CaptionTextStyle}" Margin="12,0,0,0" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="暂无支出拆分">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCashflowExpenseBreakdownItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <ItemsControl ItemsSource="{Binding CashflowAdvice.NextFocus}" Margin="0,16,0,0">
+                                        <ItemsControl.Style>
+                                            <Style TargetType="ItemsControl">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasCashflowAdviceFocusItems}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ItemsControl.Style>
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{StaticResource BlueSoftBrush}" CornerRadius="10" Padding="10,4" Margin="0,0,8,8">
+                                                    <TextBlock Text="{Binding}" Foreground="{StaticResource BlueTextBrush}" FontSize="12" FontWeight="SemiBold" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+
             <!-- 订单履约 -->
             <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=订单履约}">
                 <Grid.RowDefinitions>

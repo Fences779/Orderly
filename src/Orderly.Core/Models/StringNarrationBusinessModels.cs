@@ -113,6 +113,105 @@ public sealed class StringNarrationInventoryMovement
     }
 }
 
+public sealed class StringNarrationInventoryManagementDashboardRequest
+{
+    public string Keyword { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string SortBy { get; set; } = "sold30dRatio";
+    public string SortDirection { get; set; } = "desc";
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+}
+
+public sealed class StringNarrationInventoryManagementDashboardResult
+{
+    public long UpdatedAt { get; set; }
+    public StringNarrationBusinessDataAvailability DataAvailability { get; set; } = new();
+    public StringNarrationInventoryManagementDashboardSummary Summary { get; set; } = new();
+    public StringNarrationInventoryManagementDashboardFilterOptions FilterOptions { get; set; } = new();
+    public IReadOnlyList<StringNarrationInventoryManagementDashboardItem> Items { get; set; } = [];
+    public StringNarrationInventoryManagementDashboardPageInfo PageInfo { get; set; } = new();
+}
+
+public sealed class StringNarrationBusinessDataAvailability
+{
+    public StringNarrationBusinessDataAvailabilityItem CashBalance { get; set; } = new();
+    public StringNarrationBusinessDataAvailabilityItem Receivable { get; set; } = new();
+    public StringNarrationBusinessDataAvailabilityItem Payable { get; set; } = new();
+    public StringNarrationBusinessDataAvailabilityItem InventorySource { get; set; } = new();
+    public StringNarrationBusinessDataAvailabilityItem MaterialConsumption { get; set; } = new();
+}
+
+public sealed class StringNarrationBusinessDataAvailabilityItem
+{
+    public string Status { get; set; } = string.Empty;
+    public string SourceType { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+
+    public bool IsUnavailable => string.Equals(Status, "unavailable", StringComparison.OrdinalIgnoreCase);
+    public bool IsCompat => string.Equals(Status, "compat", StringComparison.OrdinalIgnoreCase);
+}
+
+public sealed class StringNarrationInventoryManagementDashboardSummary
+{
+    public decimal? AvgOrderMaterialUsage { get; set; }
+    public decimal? AvgMaterialUnitCost { get; set; }
+    public decimal? AvgBraceletSalePrice { get; set; }
+    public decimal? AvgBraceletCostPrice { get; set; }
+    public decimal? GrossMarginRate { get; set; }
+    public int LowStockCount { get; set; }
+    public int FastSellingCount { get; set; }
+    public int LowSellingCount { get; set; }
+    public string InventoryHealthStatus { get; set; } = string.Empty;
+    public string InventoryHealthSummary { get; set; } = string.Empty;
+    public int InventoryWarningCount { get; set; }
+}
+
+public sealed class StringNarrationInventoryManagementDashboardFilterOption
+{
+    public string Value { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+}
+
+public sealed class StringNarrationInventoryManagementDashboardFilterOptions
+{
+    public IReadOnlyList<string> Categories { get; set; } = [];
+    public IReadOnlyList<StringNarrationInventoryManagementDashboardFilterOption> Statuses { get; set; } = [];
+    public string DefaultSortBy { get; set; } = "sold30dRatio";
+    public string DefaultSortDirection { get; set; } = "desc";
+}
+
+public sealed class StringNarrationInventoryManagementDashboardItem
+{
+    public string MaterialId { get; set; } = string.Empty;
+    public string MaterialName { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public decimal CurrentStockQty { get; set; }
+    public string StockUnit { get; set; } = string.Empty;
+    public decimal Sold7dQty { get; set; }
+    public decimal Sold7dRatio { get; set; }
+    public decimal Sold30dQty { get; set; }
+    public decimal Sold30dRatio { get; set; }
+    public decimal Consumed7dQty { get; set; }
+    public decimal Consumed30dQty { get; set; }
+    public decimal? SafeStockSuggestedQty { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string StatusLabel { get; set; } = string.Empty;
+    public decimal? UnitCost { get; set; }
+    public long LastRestockedAt { get; set; }
+    public string SupplierName { get; set; } = string.Empty;
+    public string Remark { get; set; } = string.Empty;
+}
+
+public sealed class StringNarrationInventoryManagementDashboardPageInfo
+{
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public int Total { get; set; }
+    public int TotalPages { get; set; }
+}
+
 public sealed class StringNarrationCashflowQuery
 {
     public int Page { get; set; } = 1;
@@ -122,6 +221,80 @@ public sealed class StringNarrationCashflowQuery
     public string Category { get; set; } = string.Empty;
     public long StartAt { get; set; }
     public long EndAt { get; set; }
+}
+
+public sealed class StringNarrationCashflowHealthDashboardRequest
+{
+    public string Range { get; set; } = "30d";
+    public long StartAt { get; set; }
+    public long EndAt { get; set; }
+}
+
+public sealed class StringNarrationCashflowHealthDashboardResult
+{
+    public string Range { get; set; } = string.Empty;
+    public long StartAt { get; set; }
+    public long EndAt { get; set; }
+    public long UpdatedAt { get; set; }
+    public StringNarrationBusinessDataAvailability DataAvailability { get; set; } = new();
+    public StringNarrationCashflowHealthDashboardSummary Summary { get; set; } = new();
+    public IReadOnlyList<StringNarrationCashflowHealthDashboardTrendItem> TrendItems { get; set; } = [];
+    public StringNarrationCashflowHealthDashboardBreakdown IncomeBreakdown { get; set; } = new();
+    public StringNarrationCashflowHealthDashboardBreakdown ExpenseBreakdown { get; set; } = new();
+    public IReadOnlyList<StringNarrationCashflowHealthDashboardUpcomingCashItem> UpcomingCashItems { get; set; } = [];
+    public StringNarrationCashflowHealthDashboardAdvice Advice { get; set; } = new();
+}
+
+public sealed class StringNarrationCashflowHealthDashboardSummary
+{
+    public int? CashFlowHealthScore { get; set; }
+    public string CashFlowHealthLevel { get; set; } = string.Empty;
+    public string CashFlowHealthSummary { get; set; } = string.Empty;
+    public decimal? CashBalanceAmount { get; set; }
+    public decimal? AvailableCashAmount { get; set; }
+    public decimal? ReceivableAmount { get; set; }
+    public decimal? PayableAmount { get; set; }
+    public decimal AvgDailyExpense7d { get; set; }
+    public int? SupportDays { get; set; }
+}
+
+public sealed class StringNarrationCashflowHealthDashboardTrendItem
+{
+    public string Date { get; set; } = string.Empty;
+    public decimal IncomeAmount { get; set; }
+    public decimal ExpenseAmount { get; set; }
+    public decimal NetCashflowAmount { get; set; }
+}
+
+public sealed class StringNarrationCashflowHealthDashboardBreakdown
+{
+    public decimal TotalAmount { get; set; }
+    public IReadOnlyList<StringNarrationCashflowHealthDashboardBreakdownItem> Items { get; set; } = [];
+}
+
+public sealed class StringNarrationCashflowHealthDashboardBreakdownItem
+{
+    public string Category { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public decimal Percent { get; set; }
+}
+
+public sealed class StringNarrationCashflowHealthDashboardUpcomingCashItem
+{
+    public string Type { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public int Count { get; set; }
+    public string Note { get; set; } = string.Empty;
+}
+
+public sealed class StringNarrationCashflowHealthDashboardAdvice
+{
+    public string HealthTitle { get; set; } = string.Empty;
+    public string HealthDescription { get; set; } = string.Empty;
+    public decimal? RestockSuggestionAmount { get; set; }
+    public string RiskHint { get; set; } = string.Empty;
+    public IReadOnlyList<string> NextFocus { get; set; } = [];
 }
 
 public sealed class StringNarrationCashflowListResult
@@ -137,8 +310,8 @@ public sealed class StringNarrationCashflowSummary
     public decimal IncomeTotal { get; set; }
     public decimal ExpenseTotal { get; set; }
     public decimal NetAmount { get; set; }
-    public decimal ReceivableAmount { get; set; }
-    public decimal PayableAmount { get; set; }
+    public decimal? ReceivableAmount { get; set; }
+    public decimal? PayableAmount { get; set; }
     public int EntryCount { get; set; }
 
     public string IncomeTotalText => FormatCurrency(IncomeTotal);
@@ -147,9 +320,14 @@ public sealed class StringNarrationCashflowSummary
     public string ReceivableAmountText => FormatCurrency(ReceivableAmount);
     public string PayableAmountText => FormatCurrency(PayableAmount);
 
-    private static string FormatCurrency(decimal value)
+    private static string FormatCurrency(decimal? value)
     {
-        return value == 0 ? "¥0" : $"¥{value:N0}";
+        if (!value.HasValue)
+        {
+            return "不可得";
+        }
+
+        return value.Value == 0 ? "¥0" : $"¥{value.Value:N0}";
     }
 }
 

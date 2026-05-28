@@ -54,6 +54,11 @@ public sealed class StringNarrationGatewayClient
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
+            if (TryParseGatewayError(body, out var gatewayError))
+            {
+                throw new InvalidOperationException(gatewayError);
+            }
+
             if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
             {
                 throw new InvalidOperationException($"串述 adminPcGateway 未授权或 token 无效（HTTP {(int)response.StatusCode}）。");
@@ -123,6 +128,41 @@ public sealed class StringNarrationGatewayClient
             JsonValueKind.False => "false",
             _ => string.Empty
         };
+    }
+
+    private static bool TryParseGatewayError(string body, out string errorMessage)
+    {
+        errorMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            var code = ReadString(root, "code");
+            var message = ReadString(root, "message");
+            if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(message))
+            {
+                return false;
+            }
+
+            errorMessage = string.IsNullOrWhiteSpace(code)
+                ? $"串述 adminPcGateway 调用失败：{message}"
+                : $"串述 adminPcGateway 调用失败：{code} {message}".Trim();
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
 }

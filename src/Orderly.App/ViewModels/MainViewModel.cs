@@ -687,5 +687,19 @@ public partial class MainViewModel : ObservableObject
         {
             throw new InvalidOperationException("串述业务数据服务未配置。");
         }
+
+        public Task<StringNarrationCashflowHealthDashboardResult> GetCashflowHealthDashboardAsync(
+            StringNarrationCashflowHealthDashboardRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述业务数据服务未配置。");
+        }
+
+        public Task<StringNarrationInventoryManagementDashboardResult> GetInventoryManagementDashboardAsync(
+            StringNarrationInventoryManagementDashboardRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("串述业务数据服务未配置。");
+        }
     }
 }

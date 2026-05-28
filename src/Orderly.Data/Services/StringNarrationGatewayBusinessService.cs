@@ -7,7 +7,9 @@ namespace Orderly.Data.Services;
 public sealed class StringNarrationGatewayBusinessService : IStringNarrationBusinessService
 {
     private const string InventoryListAction = "inventoryList";
+    private const string InventoryManagementDashboardAction = "inventoryManagementDashboard";
     private const string CashflowListAction = "cashflowList";
+    private const string CashflowHealthDashboardAction = "cashflowHealthDashboard";
 
     private readonly StringNarrationGatewayClient _client;
 
@@ -32,6 +34,25 @@ public sealed class StringNarrationGatewayBusinessService : IStringNarrationBusi
         };
     }
 
+    public async Task<StringNarrationInventoryManagementDashboardResult> GetInventoryManagementDashboardAsync(
+        StringNarrationInventoryManagementDashboardRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        request ??= new StringNarrationInventoryManagementDashboardRequest();
+        var root = await _client.InvokeAsync(InventoryManagementDashboardAction, request, cancellationToken);
+        var payload = GetPayloadRoot(root);
+        var items = ParseInventoryManagementDashboardItems(payload);
+        return new StringNarrationInventoryManagementDashboardResult
+        {
+            UpdatedAt = ReadLong(payload, "updatedAt", "calculatedAt", "syncedAt"),
+            DataAvailability = ParseDataAvailability(payload),
+            Summary = ParseInventoryManagementDashboardSummary(payload, items),
+            FilterOptions = ParseInventoryManagementDashboardFilterOptions(payload),
+            Items = items,
+            PageInfo = ParseInventoryManagementDashboardPageInfo(payload)
+        };
+    }
+
     public async Task<StringNarrationCashflowListResult> GetCashflowAsync(StringNarrationCashflowQuery query, CancellationToken cancellationToken = default)
     {
         query ??= new StringNarrationCashflowQuery();
@@ -49,6 +70,16 @@ public sealed class StringNarrationGatewayBusinessService : IStringNarrationBusi
             Total = ReadInt(payload, "total", "count"),
             UpdatedAt = ReadLong(payload, "updatedAt", "calculatedAt", "syncedAt")
         };
+    }
+
+    public async Task<StringNarrationCashflowHealthDashboardResult> GetCashflowHealthDashboardAsync(
+        StringNarrationCashflowHealthDashboardRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        request ??= new StringNarrationCashflowHealthDashboardRequest();
+        var root = await _client.InvokeAsync(CashflowHealthDashboardAction, request, cancellationToken);
+        var payload = GetPayloadRoot(root);
+        return ParseCashflowHealthDashboard(payload);
     }
 
     private static IReadOnlyList<StringNarrationInventoryItem> ParseInventoryItems(JsonElement root)
@@ -119,6 +150,336 @@ public sealed class StringNarrationGatewayBusinessService : IStringNarrationBusi
         return items;
     }
 
+    private static StringNarrationInventoryManagementDashboardSummary ParseInventoryManagementDashboardSummary(
+        JsonElement root,
+        IReadOnlyList<StringNarrationInventoryManagementDashboardItem> items)
+    {
+        var summaryElement = TryGet(root, "summary", out var value) && value.ValueKind == JsonValueKind.Object
+            ? value
+            : default;
+
+        var lowStockCount = items.Count(item => string.Equals(item.Status, "low_stock", StringComparison.OrdinalIgnoreCase));
+        var fastSellingCount = items.Count(item => string.Equals(item.Status, "fast_selling", StringComparison.OrdinalIgnoreCase));
+        var lowSellingCount = items.Count(item => string.Equals(item.Status, "low_selling", StringComparison.OrdinalIgnoreCase));
+
+        if (summaryElement.ValueKind != JsonValueKind.Object)
+        {
+            return new StringNarrationInventoryManagementDashboardSummary
+            {
+                LowStockCount = lowStockCount,
+                FastSellingCount = fastSellingCount,
+                LowSellingCount = lowSellingCount,
+                InventoryHealthStatus = "暂不可用",
+                InventoryHealthSummary = "库存看板摘要暂不可用",
+                InventoryWarningCount = lowStockCount
+            };
+        }
+
+        return new StringNarrationInventoryManagementDashboardSummary
+        {
+            AvgOrderMaterialUsage = ReadNullableDecimal(summaryElement, "avgOrderMaterialUsage"),
+            AvgMaterialUnitCost = ReadNullableDecimal(summaryElement, "avgMaterialUnitCost"),
+            AvgBraceletSalePrice = ReadNullableDecimal(summaryElement, "avgBraceletSalePrice"),
+            AvgBraceletCostPrice = ReadNullableDecimal(summaryElement, "avgBraceletCostPrice"),
+            GrossMarginRate = ReadNullableDecimal(summaryElement, "grossMarginRate"),
+            LowStockCount = HasAnyProperty(summaryElement, "lowStockCount") ? ReadInt(summaryElement, "lowStockCount") : lowStockCount,
+            FastSellingCount = HasAnyProperty(summaryElement, "fastSellingCount") ? ReadInt(summaryElement, "fastSellingCount") : fastSellingCount,
+            LowSellingCount = HasAnyProperty(summaryElement, "lowSellingCount") ? ReadInt(summaryElement, "lowSellingCount") : lowSellingCount,
+            InventoryHealthStatus = ReadString(summaryElement, "inventoryHealthStatus"),
+            InventoryHealthSummary = ReadString(summaryElement, "inventoryHealthSummary"),
+            InventoryWarningCount = ReadInt(summaryElement, "inventoryWarningCount")
+        };
+    }
+
+    private static StringNarrationInventoryManagementDashboardFilterOptions ParseInventoryManagementDashboardFilterOptions(JsonElement root)
+    {
+        if (!(TryGet(root, "filterOptions", out var filterOptions) && filterOptions.ValueKind == JsonValueKind.Object))
+        {
+            return new StringNarrationInventoryManagementDashboardFilterOptions
+            {
+                Statuses = BuildDefaultDashboardStatuses()
+            };
+        }
+
+        var categories = GetFirstArray(filterOptions, "categories").ValueKind == JsonValueKind.Array
+            ? GetFirstArray(filterOptions, "categories").EnumerateArray()
+                .Select(ReadStringValue)
+                .Where(category => !string.IsNullOrWhiteSpace(category))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList()
+            : [];
+
+        return new StringNarrationInventoryManagementDashboardFilterOptions
+        {
+            Categories = categories,
+            Statuses = ParseInventoryManagementDashboardStatuses(filterOptions),
+            DefaultSortBy = ReadString(filterOptions, "defaultSortBy") is var sortBy && !string.IsNullOrWhiteSpace(sortBy) ? sortBy : "sold30dRatio",
+            DefaultSortDirection = ReadString(filterOptions, "defaultSortDirection") is var sortDirection && !string.IsNullOrWhiteSpace(sortDirection) ? sortDirection : "desc"
+        };
+    }
+
+    private static IReadOnlyList<StringNarrationInventoryManagementDashboardFilterOption> ParseInventoryManagementDashboardStatuses(JsonElement filterOptions)
+    {
+        var statusesArray = GetFirstArray(filterOptions, "statuses");
+        if (statusesArray.ValueKind != JsonValueKind.Array)
+        {
+            return BuildDefaultDashboardStatuses();
+        }
+
+        var statuses = new List<StringNarrationInventoryManagementDashboardFilterOption>();
+        foreach (var item in statusesArray.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.Object)
+            {
+                var value = ReadString(item, "value", "code");
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                statuses.Add(new StringNarrationInventoryManagementDashboardFilterOption
+                {
+                    Value = value,
+                    Label = ReadString(item, "label", "name")
+                });
+            }
+            else
+            {
+                var value = ReadStringValue(item);
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                statuses.Add(new StringNarrationInventoryManagementDashboardFilterOption
+                {
+                    Value = value
+                });
+            }
+        }
+
+        return statuses.Count == 0 ? BuildDefaultDashboardStatuses() : statuses;
+    }
+
+    private static IReadOnlyList<StringNarrationInventoryManagementDashboardFilterOption> BuildDefaultDashboardStatuses()
+    {
+        return
+        [
+            new StringNarrationInventoryManagementDashboardFilterOption { Value = "all", Label = "全部状态" },
+            new StringNarrationInventoryManagementDashboardFilterOption { Value = "fast_selling", Label = "动销偏快" },
+            new StringNarrationInventoryManagementDashboardFilterOption { Value = "low_selling", Label = "低动销" },
+            new StringNarrationInventoryManagementDashboardFilterOption { Value = "normal", Label = "正常" },
+            new StringNarrationInventoryManagementDashboardFilterOption { Value = "low_stock", Label = "低库存" },
+            new StringNarrationInventoryManagementDashboardFilterOption { Value = "disabled", Label = "停用" }
+        ];
+    }
+
+    private static IReadOnlyList<StringNarrationInventoryManagementDashboardItem> ParseInventoryManagementDashboardItems(JsonElement root)
+    {
+        var array = GetFirstArray(root, "items", "list", "inventory");
+        if (array.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var items = new List<StringNarrationInventoryManagementDashboardItem>();
+        foreach (var element in array.EnumerateArray())
+        {
+            items.Add(new StringNarrationInventoryManagementDashboardItem
+            {
+                MaterialId = ReadString(element, "materialId", "id", "_id", "skuId"),
+                MaterialName = ReadString(element, "materialName", "name", "title", "skuName"),
+                Category = ReadString(element, "category"),
+                CurrentStockQty = ReadDecimal(element, "currentStockQty", "availableStock", "stockOnHand", "stock", "quantity"),
+                StockUnit = ReadString(element, "stockUnit", "unit"),
+                Sold7dQty = ReadDecimal(element, "sold7dQty"),
+                Sold7dRatio = ReadDecimal(element, "sold7dRatio"),
+                Sold30dQty = ReadDecimal(element, "sold30dQty"),
+                Sold30dRatio = ReadDecimal(element, "sold30dRatio"),
+                Consumed7dQty = ReadDecimal(element, "consumed7dQty", "sold7dQty"),
+                Consumed30dQty = ReadDecimal(element, "consumed30dQty", "sold30dQty"),
+                SafeStockSuggestedQty = ReadNullableDecimal(element, "safeStockSuggestedQty", "safeStockSuggested", "safetyStock"),
+                Status = ReadString(element, "status"),
+                StatusLabel = ReadString(element, "statusLabel"),
+                UnitCost = ReadNullableDecimal(element, "unitCost", "purchasePrice", "costPrice"),
+                LastRestockedAt = ReadLong(element, "lastRestockedAt", "restockedAt", "updatedAt"),
+                SupplierName = ReadString(element, "supplierName", "supplier"),
+                Remark = ReadString(element, "remark", "inventoryRemark", "note")
+            });
+        }
+
+        return items;
+    }
+
+    private static StringNarrationInventoryManagementDashboardPageInfo ParseInventoryManagementDashboardPageInfo(JsonElement root)
+    {
+        if (!(TryGet(root, "pageInfo", out var pageInfo) && pageInfo.ValueKind == JsonValueKind.Object))
+        {
+            var page = ReadInt(root, "page");
+            var pageSize = ReadInt(root, "pageSize");
+            var total = ReadInt(root, "total", "count");
+            return new StringNarrationInventoryManagementDashboardPageInfo
+            {
+                Page = page > 0 ? page : 1,
+                PageSize = pageSize > 0 ? pageSize : 10,
+                Total = total,
+                TotalPages = pageSize > 0 ? (int)Math.Ceiling(total / (decimal)pageSize) : 0
+            };
+        }
+
+        var parsedPage = ReadInt(pageInfo, "page");
+        var parsedPageSize = ReadInt(pageInfo, "pageSize");
+        var parsedTotal = ReadInt(pageInfo, "total", "count");
+        var parsedTotalPages = ReadInt(pageInfo, "totalPages");
+        return new StringNarrationInventoryManagementDashboardPageInfo
+        {
+            Page = parsedPage > 0 ? parsedPage : 1,
+            PageSize = parsedPageSize > 0 ? parsedPageSize : 10,
+            Total = parsedTotal,
+            TotalPages = parsedTotalPages > 0
+                ? parsedTotalPages
+                : (parsedPageSize > 0 ? (int)Math.Ceiling(parsedTotal / (decimal)parsedPageSize) : 0)
+        };
+    }
+
+    private static StringNarrationCashflowHealthDashboardResult ParseCashflowHealthDashboard(JsonElement root)
+    {
+        return new StringNarrationCashflowHealthDashboardResult
+        {
+            Range = ReadString(root, "range"),
+            StartAt = ReadLong(root, "startAt"),
+            EndAt = ReadLong(root, "endAt"),
+            UpdatedAt = ReadLong(root, "updatedAt", "calculatedAt", "syncedAt"),
+            DataAvailability = ParseDataAvailability(root),
+            Summary = ParseCashflowHealthDashboardSummary(root),
+            TrendItems = ParseCashflowHealthDashboardTrendItems(root),
+            IncomeBreakdown = ParseCashflowHealthDashboardBreakdown(root, "incomeBreakdown"),
+            ExpenseBreakdown = ParseCashflowHealthDashboardBreakdown(root, "expenseBreakdown"),
+            UpcomingCashItems = ParseCashflowHealthDashboardUpcomingCashItems(root),
+            Advice = ParseCashflowHealthDashboardAdvice(root)
+        };
+    }
+
+    private static StringNarrationCashflowHealthDashboardSummary ParseCashflowHealthDashboardSummary(JsonElement root)
+    {
+        if (!(TryGet(root, "summary", out var summary) && summary.ValueKind == JsonValueKind.Object))
+        {
+            return new StringNarrationCashflowHealthDashboardSummary();
+        }
+
+        return new StringNarrationCashflowHealthDashboardSummary
+        {
+            CashFlowHealthScore = ReadNullableInt(summary, "cashFlowHealthScore"),
+            CashFlowHealthLevel = ReadString(summary, "cashFlowHealthLevel"),
+            CashFlowHealthSummary = ReadString(summary, "cashFlowHealthSummary"),
+            CashBalanceAmount = ReadNullableDecimal(summary, "cashBalanceAmount"),
+            AvailableCashAmount = ReadNullableDecimal(summary, "availableCashAmount"),
+            ReceivableAmount = ReadNullableDecimal(summary, "receivableAmount"),
+            PayableAmount = ReadNullableDecimal(summary, "payableAmount"),
+            AvgDailyExpense7d = ReadDecimal(summary, "avgDailyExpense7d"),
+            SupportDays = ReadNullableInt(summary, "supportDays")
+        };
+    }
+
+    private static IReadOnlyList<StringNarrationCashflowHealthDashboardTrendItem> ParseCashflowHealthDashboardTrendItems(JsonElement root)
+    {
+        if (!(TryGet(root, "trendItems", out var array) && array.ValueKind == JsonValueKind.Array))
+        {
+            return [];
+        }
+
+        var items = new List<StringNarrationCashflowHealthDashboardTrendItem>();
+        foreach (var element in array.EnumerateArray())
+        {
+            items.Add(new StringNarrationCashflowHealthDashboardTrendItem
+            {
+                Date = ReadString(element, "date"),
+                IncomeAmount = ReadDecimal(element, "incomeAmount"),
+                ExpenseAmount = ReadDecimal(element, "expenseAmount"),
+                NetCashflowAmount = ReadDecimal(element, "netCashflowAmount")
+            });
+        }
+
+        return items;
+    }
+
+    private static StringNarrationCashflowHealthDashboardBreakdown ParseCashflowHealthDashboardBreakdown(JsonElement root, string name)
+    {
+        if (!(TryGet(root, name, out var breakdown) && breakdown.ValueKind == JsonValueKind.Object))
+        {
+            return new StringNarrationCashflowHealthDashboardBreakdown();
+        }
+
+        return new StringNarrationCashflowHealthDashboardBreakdown
+        {
+            TotalAmount = ReadDecimal(breakdown, "totalAmount"),
+            Items = ParseCashflowHealthDashboardBreakdownItems(breakdown)
+        };
+    }
+
+    private static IReadOnlyList<StringNarrationCashflowHealthDashboardBreakdownItem> ParseCashflowHealthDashboardBreakdownItems(JsonElement root)
+    {
+        var array = GetFirstArray(root, "items");
+        if (array.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var items = new List<StringNarrationCashflowHealthDashboardBreakdownItem>();
+        foreach (var element in array.EnumerateArray())
+        {
+            items.Add(new StringNarrationCashflowHealthDashboardBreakdownItem
+            {
+                Category = ReadString(element, "category"),
+                Amount = ReadDecimal(element, "amount"),
+                Percent = ReadDecimal(element, "percent")
+            });
+        }
+
+        return items;
+    }
+
+    private static IReadOnlyList<StringNarrationCashflowHealthDashboardUpcomingCashItem> ParseCashflowHealthDashboardUpcomingCashItems(JsonElement root)
+    {
+        var array = GetFirstArray(root, "upcomingCashItems");
+        if (array.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var items = new List<StringNarrationCashflowHealthDashboardUpcomingCashItem>();
+        foreach (var element in array.EnumerateArray())
+        {
+            items.Add(new StringNarrationCashflowHealthDashboardUpcomingCashItem
+            {
+                Type = ReadString(element, "type"),
+                Label = ReadString(element, "label"),
+                Amount = ReadDecimal(element, "amount"),
+                Count = ReadInt(element, "count"),
+                Note = ReadString(element, "note")
+            });
+        }
+
+        return items;
+    }
+
+    private static StringNarrationCashflowHealthDashboardAdvice ParseCashflowHealthDashboardAdvice(JsonElement root)
+    {
+        if (!(TryGet(root, "advice", out var advice) && advice.ValueKind == JsonValueKind.Object))
+        {
+            return new StringNarrationCashflowHealthDashboardAdvice();
+        }
+
+        return new StringNarrationCashflowHealthDashboardAdvice
+        {
+            HealthTitle = ReadString(advice, "healthTitle"),
+            HealthDescription = ReadString(advice, "healthDescription"),
+            RestockSuggestionAmount = ReadNullableDecimal(advice, "restockSuggestionAmount"),
+            RiskHint = ReadString(advice, "riskHint"),
+            NextFocus = ReadStringArray(advice, "nextFocus")
+        };
+    }
+
     private static IReadOnlyList<StringNarrationCashflowEntry> ParseCashflowEntries(JsonElement root)
     {
         var array = GetFirstArray(root, "entries", "cashflow", "cashflows", "list");
@@ -161,8 +522,8 @@ public sealed class StringNarrationGatewayBusinessService : IStringNarrationBusi
             IncomeTotal = ReadDecimal(element, "incomeTotal", "income") is var income && income != 0 ? income : fallback.IncomeTotal,
             ExpenseTotal = ReadDecimal(element, "expenseTotal", "expense") is var expense && expense != 0 ? expense : fallback.ExpenseTotal,
             NetAmount = ReadDecimal(element, "netAmount", "net") is var net && net != 0 ? net : fallback.NetAmount,
-            ReceivableAmount = ReadDecimal(element, "receivableAmount", "receivable"),
-            PayableAmount = ReadDecimal(element, "payableAmount", "payable"),
+            ReceivableAmount = ReadNullableDecimal(element, "receivableAmount", "receivable"),
+            PayableAmount = ReadNullableDecimal(element, "payableAmount", "payable"),
             EntryCount = ReadInt(element, "entryCount", "count") is var count && count > 0 ? count : fallback.EntryCount
         };
     }
@@ -212,6 +573,51 @@ public sealed class StringNarrationGatewayBusinessService : IStringNarrationBusi
     {
         property = default;
         return element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out property);
+    }
+
+    private static bool HasAnyProperty(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (TryGet(element, name, out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static StringNarrationBusinessDataAvailability ParseDataAvailability(JsonElement root)
+    {
+        if (!(TryGet(root, "dataAvailability", out var availability) && availability.ValueKind == JsonValueKind.Object))
+        {
+            return new StringNarrationBusinessDataAvailability();
+        }
+
+        return new StringNarrationBusinessDataAvailability
+        {
+            CashBalance = ParseDataAvailabilityItem(availability, "cashBalance"),
+            Receivable = ParseDataAvailabilityItem(availability, "receivable"),
+            Payable = ParseDataAvailabilityItem(availability, "payable"),
+            InventorySource = ParseDataAvailabilityItem(availability, "inventorySource"),
+            MaterialConsumption = ParseDataAvailabilityItem(availability, "materialConsumption")
+        };
+    }
+
+    private static StringNarrationBusinessDataAvailabilityItem ParseDataAvailabilityItem(JsonElement root, string name)
+    {
+        if (!(TryGet(root, name, out var item) && item.ValueKind == JsonValueKind.Object))
+        {
+            return new StringNarrationBusinessDataAvailabilityItem();
+        }
+
+        return new StringNarrationBusinessDataAvailabilityItem
+        {
+            Status = ReadString(item, "status"),
+            SourceType = ReadString(item, "sourceType"),
+            Reason = ReadString(item, "reason")
+        };
     }
 
     private static string ReadString(JsonElement element, params string[] names)
@@ -341,6 +747,52 @@ public sealed class StringNarrationGatewayBusinessService : IStringNarrationBusi
         }
 
         return false;
+    }
+
+    private static decimal? ReadNullableDecimal(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!TryGet(element, name, out var property))
+            {
+                continue;
+            }
+
+            if (property.ValueKind == JsonValueKind.Number && property.TryGetDecimal(out var number))
+            {
+                return number;
+            }
+
+            if (property.ValueKind == JsonValueKind.String && decimal.TryParse(property.GetString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    private static int? ReadNullableInt(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!TryGet(element, name, out var property))
+            {
+                continue;
+            }
+
+            if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out var number))
+            {
+                return number;
+            }
+
+            if (property.ValueKind == JsonValueKind.String && int.TryParse(property.GetString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
     }
 
     private static IReadOnlyList<string> ReadStringArray(JsonElement element, string name)
