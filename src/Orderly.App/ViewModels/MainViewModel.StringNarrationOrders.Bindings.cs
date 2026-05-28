@@ -35,6 +35,7 @@ public partial class MainViewModel
     {
         OnPropertyChanged(nameof(Stats));
         OnPropertyChanged(nameof(StringNarrationStatsCalculatedAtText));
+        NotifyStringNarrationWorkbenchDashboardChanged();
     }
 
     public string Keyword
@@ -78,4 +79,44 @@ public partial class MainViewModel
     public IAsyncRelayCommand RefreshDetail => RefreshStringNarrationOrderDetailCommand;
     public IAsyncRelayCommand UpdateFulfillment => UpdateStringNarrationFulfillmentCommand;
     public IAsyncRelayCommand GenerateProductionOrder => GenerateStringNarrationProductionOrderCommand;
+
+    private void NotifyStringNarrationWorkbenchDashboardChanged()
+    {
+        OnPropertyChanged(nameof(StringNarrationWorkbenchDashboard));
+        OnPropertyChanged(nameof(HasStringNarrationWorkbenchTrendItems));
+        OnPropertyChanged(nameof(HasStringNarrationWorkbenchPressureItems));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchTodayOrderCount));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchTodayOrderCountText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchTodayOrderCountDelta));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchTodayOrderCountDeltaText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchTodayRevenueAmount));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchTodayRevenueAmountText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchTodayRevenueAmountDelta));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchTodayRevenueAmountDeltaText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchPendingMakeCount));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchPendingMakeCountText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchPendingMakeDelta));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchPendingMakeDeltaText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchReadyToShipCount));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchReadyToShipCountText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchReadyToShipDelta));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchReadyToShipDeltaText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchExceptionOrderCount));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchExceptionOrderCountText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchExceptionOrderDelta));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchExceptionOrderDeltaText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchUnfinishedOrderCount));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchUnfinishedOrderCountText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchInventoryHealthStatusText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchInventoryHealthSummaryText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchInventoryWarningCount));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchInventoryWarningCountText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowScore));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowScoreText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowStatusText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowDelta));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchCashFlowDeltaText));
+        OnPropertyChanged(nameof(StringNarrationWorkbenchLastSyncedAtText));
+        OnPropertyChanged(nameof(IsStringNarrationWorkbenchFallbackProjection));
+    }
 }

@@ -969,10 +969,13 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             return new StringNarrationFulfillmentStats();
         }
 
+        var totalCount = ReadInt(statsSource, "total", "totalCount");
+        var calculatedAt = ReadLong(statsSource, "calculatedAt", "at", "updatedAt");
         return BuildStatsFromCounts(
             counts,
-            ReadInt(statsSource, "total", "totalCount"),
-            ReadLong(statsSource, "calculatedAt", "at", "updatedAt"));
+            totalCount,
+            calculatedAt,
+            ParseWorkbenchDashboard(root, statsSource, counts, totalCount, calculatedAt));
     }
 
     private static StringNarrationFulfillmentStats BuildStatsFromOrders(
@@ -998,7 +1001,8 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
     private static StringNarrationFulfillmentStats BuildStatsFromCounts(
         IReadOnlyDictionary<string, int> counts,
         int totalCount,
-        long calculatedAt)
+        long calculatedAt,
+        StringNarrationWorkbenchDashboardStats? dashboard = null)
     {
         var metrics = new List<StringNarrationFulfillmentStatusMetric>();
         foreach (var definition in StringNarrationFulfillmentStatusCatalog.GetDefinitions().OrderBy(item => item.SortOrder))
@@ -1043,8 +1047,212 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         {
             Metrics = metrics,
             TotalCount = normalizedTotal,
-            CalculatedAt = calculatedAt
+            CalculatedAt = calculatedAt,
+            WorkbenchDashboard = dashboard ?? new StringNarrationWorkbenchDashboardStats()
         };
+    }
+
+    private static StringNarrationWorkbenchDashboardStats ParseWorkbenchDashboard(
+        JsonElement root,
+        JsonElement statsSource,
+        IReadOnlyDictionary<string, int> counts,
+        int totalCount,
+        long calculatedAt)
+    {
+        var dashboardSource = GetFirstObject(root, "workbenchDashboard", "dashboard", "businessDashboard", "summary");
+        if (dashboardSource.ValueKind != JsonValueKind.Object)
+        {
+            dashboardSource = GetFirstObject(statsSource, "workbenchDashboard", "dashboard", "businessDashboard", "summary");
+        }
+
+        var sources = dashboardSource.ValueKind == JsonValueKind.Object
+            ? new[] { dashboardSource, statsSource, root }
+            : new[] { statsSource, root };
+
+        counts.TryGetValue(StringNarrationFulfillmentStatusCatalog.PendingMake, out var pendingMakeCount);
+        counts.TryGetValue(StringNarrationFulfillmentStatusCatalog.ReadyToShip, out var readyToShipCount);
+        counts.TryGetValue(StringNarrationFulfillmentStatusCatalog.Exception, out var exceptionCount);
+
+        var unfinishedOrderCount = ReadIntFromCandidates(sources, "unfinishedOrderCount", "unfinishedCount", "openOrderCount");
+        if (unfinishedOrderCount <= 0)
+        {
+            unfinishedOrderCount = CountFromMap(counts,
+                StringNarrationFulfillmentStatusCatalog.PaidPendingConfirm,
+                StringNarrationFulfillmentStatusCatalog.PendingMake,
+                StringNarrationFulfillmentStatusCatalog.Making,
+                StringNarrationFulfillmentStatusCatalog.ReadyToShip,
+                StringNarrationFulfillmentStatusCatalog.Exception);
+        }
+
+        var lastSyncedAt = ReadLongFromCandidates(sources, "lastSyncedAt", "lastSyncAt", "calculatedAt", "at", "updatedAt");
+        if (lastSyncedAt <= 0)
+        {
+            lastSyncedAt = calculatedAt;
+        }
+
+        var dashboard = new StringNarrationWorkbenchDashboardStats
+        {
+            TodayOrderCount = ReadIntFromCandidates(sources, "todayOrderCount", "todayOrders", "orderCountToday"),
+            TodayOrderCountDelta = ReadIntFromCandidates(sources, "todayOrderCountDelta", "todayOrdersDelta", "orderCountDelta"),
+            TodayRevenueAmount = ReadDecimalFromCandidates(sources, "todayRevenueAmount", "todayRevenue", "todayAmount", "revenueToday"),
+            TodayRevenueAmountDelta = ReadDecimalFromCandidates(sources, "todayRevenueAmountDelta", "todayRevenueDelta", "revenueDelta"),
+            PendingMakeCount = ReadIntFromCandidates(sources, "pendingMakeCount", "pendingMake", "pendingProductionCount"),
+            PendingMakeDelta = ReadIntFromCandidates(sources, "pendingMakeDelta", "pendingProductionDelta"),
+            ReadyToShipCount = ReadIntFromCandidates(sources, "readyToShipCount", "readyToShip", "pendingShipCount"),
+            ReadyToShipDelta = ReadIntFromCandidates(sources, "readyToShipDelta", "pendingShipDelta"),
+            ExceptionOrderCount = ReadIntFromCandidates(sources, "exceptionOrderCount", "exceptionCount", "abnormalOrderCount"),
+            ExceptionOrderDelta = ReadIntFromCandidates(sources, "exceptionOrderDelta", "exceptionDelta", "abnormalOrderDelta"),
+            UnfinishedOrderCount = unfinishedOrderCount,
+            InventoryHealthStatus = ReadStringFromCandidates(sources, "inventoryHealthStatus", "inventoryStatus", "stockHealthStatus"),
+            InventoryHealthSummary = ReadStringFromCandidates(sources, "inventoryHealthSummary", "inventorySummary", "stockHealthSummary"),
+            InventoryWarningCount = ReadIntFromCandidates(sources, "inventoryWarningCount", "stockWarningCount", "inventoryAlertCount"),
+            CashFlowScore = ReadIntFromCandidates(sources, "cashFlowScore", "cashflowScore"),
+            CashFlowStatus = ReadStringFromCandidates(sources, "cashFlowStatus", "cashflowStatus", "cashFlowSummary"),
+            CashFlowDelta = ReadIntFromCandidates(sources, "cashFlowDelta", "cashflowDelta"),
+            LastSyncedAt = lastSyncedAt,
+            RecentBusinessTrendItems = ParseBusinessTrendItems(sources),
+            FulfillmentPressureItems = ParseFulfillmentPressureItems(sources, counts, unfinishedOrderCount, totalCount)
+        };
+
+        if (dashboard.PendingMakeCount <= 0)
+        {
+            dashboard.PendingMakeCount = pendingMakeCount;
+        }
+
+        if (dashboard.ReadyToShipCount <= 0)
+        {
+            dashboard.ReadyToShipCount = readyToShipCount;
+        }
+
+        if (dashboard.ExceptionOrderCount <= 0)
+        {
+            dashboard.ExceptionOrderCount = exceptionCount;
+        }
+
+        return dashboard;
+    }
+
+    private static IReadOnlyList<StringNarrationBusinessTrendPoint> ParseBusinessTrendItems(IReadOnlyList<JsonElement> sources)
+    {
+        var trendArray = GetFirstArrayFromCandidates(
+            sources,
+            "recentBusinessTrendItems",
+            "recentBusinessTrend",
+            "businessTrend",
+            "trend",
+            "last7Days");
+        if (trendArray.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var result = new List<StringNarrationBusinessTrendPoint>();
+        foreach (var item in trendArray.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            result.Add(new StringNarrationBusinessTrendPoint
+            {
+                DateKey = ReadString(item, "dateKey", "date", "day"),
+                Label = ReadString(item, "label", "dateLabel", "dayLabel"),
+                OrderCount = ReadInt(item, "orderCount", "orders", "count"),
+                RevenueAmount = ReadDecimal(item, "revenueAmount", "revenue", "amount", "salesAmount")
+            });
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<StringNarrationFulfillmentPressureMetric> ParseFulfillmentPressureItems(
+        IReadOnlyList<JsonElement> sources,
+        IReadOnlyDictionary<string, int> counts,
+        int unfinishedOrderCount,
+        int totalCount)
+    {
+        var pressureArray = GetFirstArrayFromCandidates(
+            sources,
+            "fulfillmentPressureItems",
+            "fulfillmentPressure",
+            "pressureItems",
+            "pressure");
+        if (pressureArray.ValueKind == JsonValueKind.Array)
+        {
+            var parsed = new List<StringNarrationFulfillmentPressureMetric>();
+            foreach (var item in pressureArray.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                var status = ReadString(item, "fulfillmentStatus", "status", "key");
+                var count = ReadInt(item, "count", "value", "orderCount");
+                var targetCount = ReadInt(item, "targetCount", "target", "total");
+                var ratio = ReadDecimal(item, "ratio", "percent", "percentage");
+                parsed.Add(new StringNarrationFulfillmentPressureMetric
+                {
+                    FulfillmentStatus = status,
+                    Label = ReadString(item, "label", "name"),
+                    Count = count,
+                    TargetCount = targetCount,
+                    Ratio = NormalizeRatio(ratio)
+                });
+            }
+
+            return parsed;
+        }
+
+        return BuildDefaultFulfillmentPressureItems(counts, unfinishedOrderCount, totalCount);
+    }
+
+    private static IReadOnlyList<StringNarrationFulfillmentPressureMetric> BuildDefaultFulfillmentPressureItems(
+        IReadOnlyDictionary<string, int> counts,
+        int unfinishedOrderCount,
+        int totalCount)
+    {
+        var targetCount = unfinishedOrderCount > 0 ? unfinishedOrderCount : totalCount;
+        return new[]
+        {
+            BuildDefaultFulfillmentPressureItem(StringNarrationFulfillmentStatusCatalog.PendingMake, counts, targetCount),
+            BuildDefaultFulfillmentPressureItem(StringNarrationFulfillmentStatusCatalog.ReadyToShip, counts, targetCount)
+        };
+    }
+
+    private static StringNarrationFulfillmentPressureMetric BuildDefaultFulfillmentPressureItem(
+        string fulfillmentStatus,
+        IReadOnlyDictionary<string, int> counts,
+        int targetCount)
+    {
+        counts.TryGetValue(fulfillmentStatus, out var count);
+        var definition = StringNarrationFulfillmentStatusCatalog.Resolve(fulfillmentStatus);
+        return new StringNarrationFulfillmentPressureMetric
+        {
+            FulfillmentStatus = fulfillmentStatus,
+            Label = definition.Label,
+            Count = count,
+            TargetCount = targetCount,
+            Ratio = targetCount <= 0 ? 0 : (decimal)count / targetCount
+        };
+    }
+
+    private static int CountFromMap(IReadOnlyDictionary<string, int> counts, params string[] statuses)
+    {
+        var total = 0;
+        foreach (var status in statuses)
+        {
+            counts.TryGetValue(status, out var count);
+            total += count;
+        }
+
+        return total;
+    }
+
+    private static decimal NormalizeRatio(decimal value)
+    {
+        return value > 1 ? value / 100 : value;
     }
 
     private static StringNarrationPageInfo ParsePageInfo(JsonElement element)
@@ -1232,6 +1440,20 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             if (TryGet(element, name, out var property) && property.ValueKind == JsonValueKind.Array)
             {
                 return property;
+            }
+        }
+
+        return default;
+    }
+
+    private static JsonElement GetFirstArrayFromCandidates(IReadOnlyList<JsonElement> candidates, params string[] names)
+    {
+        foreach (var candidate in candidates)
+        {
+            var value = GetFirstArray(candidate, names);
+            if (value.ValueKind == JsonValueKind.Array)
+            {
+                return value;
             }
         }
 
@@ -1462,12 +1684,40 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         return string.Empty;
     }
 
+    private static int ReadIntFromCandidates(IReadOnlyList<JsonElement> candidates, params string[] names)
+    {
+        foreach (var candidate in candidates)
+        {
+            var value = ReadInt(candidate, names);
+            if (value != 0)
+            {
+                return value;
+            }
+        }
+
+        return 0;
+    }
+
     private static long ReadLongFromCandidates(IReadOnlyList<JsonElement> candidates, params string[] names)
     {
         foreach (var candidate in candidates)
         {
             var value = ReadLong(candidate, names);
             if (value > 0)
+            {
+                return value;
+            }
+        }
+
+        return 0;
+    }
+
+    private static decimal ReadDecimalFromCandidates(IReadOnlyList<JsonElement> candidates, params string[] names)
+    {
+        foreach (var candidate in candidates)
+        {
+            var value = ReadDecimal(candidate, names);
+            if (value != 0)
             {
                 return value;
             }

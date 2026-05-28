@@ -20,6 +20,8 @@ public partial class MainViewModel
     public ObservableCollection<StringNarrationWorkOrderSnapshot> StringNarrationWorkOrders { get; } = new();
     public ObservableCollection<StringNarrationProductionSheetMaterialItem> StringNarrationProductionSheetMaterials { get; } = new();
     public ObservableCollection<StringNarrationFulfillmentStatusMetric> StringNarrationFulfillmentMetrics { get; } = new();
+    public ObservableCollection<StringNarrationBusinessTrendPoint> StringNarrationWorkbenchTrendItems { get; } = new();
+    public ObservableCollection<StringNarrationFulfillmentPressureMetric> StringNarrationWorkbenchPressureItems { get; } = new();
     public ObservableCollection<string> StringNarrationStatusFilterOptions { get; } = new(new[]
     {
         "全部",
@@ -72,12 +74,50 @@ public partial class MainViewModel
     public bool HasStringNarrationProductionSheet => SelectedStringNarrationProductionSheet?.HasDisplayableContent == true;
     public bool HasStringNarrationProductionSheetMaterials => StringNarrationProductionSheetMaterials.Count > 0;
     public bool HasStringNarrationFulfillmentMetrics => StringNarrationFulfillmentMetrics.Count > 0;
+    public bool HasStringNarrationWorkbenchTrendItems => StringNarrationWorkbenchTrendItems.Count > 0;
+    public bool HasStringNarrationWorkbenchPressureItems => StringNarrationWorkbenchPressureItems.Count > 0;
     public bool IsStringNarrationBusy => IsStringNarrationLoading || IsStringNarrationSaving || IsStringNarrationProductionOrderErrorVisible;
     public bool IsStringNarrationWorkAreaBusy => IsStringNarrationLoading || (IsStringNarrationSaving && !IsStringNarrationGeneratingProductionOrder);
     public bool IsStringNarrationDetailBusyVisible => IsStringNarrationBusy && !IsStringNarrationProductionOrderOverlayVisible;
     public bool IsStringNarrationProductionOrderOverlayVisible => IsStringNarrationGeneratingProductionOrder || IsStringNarrationProductionOrderErrorVisible;
     public string StringNarrationOrdersCountText => $"{StringNarrationOrders.Count} 单";
     public string StringNarrationStatsTotalText => $"{StringNarrationFulfillmentStats.TotalCount} 单";
+    public StringNarrationWorkbenchDashboardStats StringNarrationWorkbenchDashboard => StringNarrationFulfillmentStats.WorkbenchDashboard;
+    public int StringNarrationWorkbenchTodayOrderCount => StringNarrationWorkbenchDashboard.TodayOrderCount;
+    public string StringNarrationWorkbenchTodayOrderCountText => StringNarrationWorkbenchDashboard.TodayOrderCountText;
+    public int StringNarrationWorkbenchTodayOrderCountDelta => StringNarrationWorkbenchDashboard.TodayOrderCountDelta;
+    public string StringNarrationWorkbenchTodayOrderCountDeltaText => StringNarrationWorkbenchDashboard.TodayOrderCountDeltaText;
+    public decimal StringNarrationWorkbenchTodayRevenueAmount => StringNarrationWorkbenchDashboard.TodayRevenueAmount;
+    public string StringNarrationWorkbenchTodayRevenueAmountText => StringNarrationWorkbenchDashboard.TodayRevenueAmountText;
+    public decimal StringNarrationWorkbenchTodayRevenueAmountDelta => StringNarrationWorkbenchDashboard.TodayRevenueAmountDelta;
+    public string StringNarrationWorkbenchTodayRevenueAmountDeltaText => StringNarrationWorkbenchDashboard.TodayRevenueAmountDeltaText;
+    public int StringNarrationWorkbenchPendingMakeCount => StringNarrationWorkbenchDashboard.PendingMakeCount;
+    public string StringNarrationWorkbenchPendingMakeCountText => StringNarrationWorkbenchDashboard.PendingMakeCountText;
+    public int StringNarrationWorkbenchPendingMakeDelta => StringNarrationWorkbenchDashboard.PendingMakeDelta;
+    public string StringNarrationWorkbenchPendingMakeDeltaText => StringNarrationWorkbenchDashboard.PendingMakeDeltaText;
+    public int StringNarrationWorkbenchReadyToShipCount => StringNarrationWorkbenchDashboard.ReadyToShipCount;
+    public string StringNarrationWorkbenchReadyToShipCountText => StringNarrationWorkbenchDashboard.ReadyToShipCountText;
+    public int StringNarrationWorkbenchReadyToShipDelta => StringNarrationWorkbenchDashboard.ReadyToShipDelta;
+    public string StringNarrationWorkbenchReadyToShipDeltaText => StringNarrationWorkbenchDashboard.ReadyToShipDeltaText;
+    public int StringNarrationWorkbenchExceptionOrderCount => StringNarrationWorkbenchDashboard.ExceptionOrderCount;
+    public string StringNarrationWorkbenchExceptionOrderCountText => StringNarrationWorkbenchDashboard.ExceptionOrderCountText;
+    public int StringNarrationWorkbenchExceptionOrderDelta => StringNarrationWorkbenchDashboard.ExceptionOrderDelta;
+    public string StringNarrationWorkbenchExceptionOrderDeltaText => StringNarrationWorkbenchDashboard.ExceptionOrderDeltaText;
+    public int StringNarrationWorkbenchUnfinishedOrderCount => StringNarrationWorkbenchDashboard.UnfinishedOrderCount;
+    public string StringNarrationWorkbenchUnfinishedOrderCountText => StringNarrationWorkbenchDashboard.UnfinishedOrderCountText;
+    public string StringNarrationWorkbenchInventoryHealthStatusText => StringNarrationWorkbenchDashboard.InventoryHealthStatusText;
+    public string StringNarrationWorkbenchInventoryHealthSummaryText => StringNarrationWorkbenchDashboard.InventoryHealthSummaryText;
+    public int StringNarrationWorkbenchInventoryWarningCount => StringNarrationWorkbenchDashboard.InventoryWarningCount;
+    public string StringNarrationWorkbenchInventoryWarningCountText => StringNarrationWorkbenchDashboard.InventoryWarningCountText;
+    public int StringNarrationWorkbenchCashFlowScore => StringNarrationWorkbenchDashboard.CashFlowScore;
+    public string StringNarrationWorkbenchCashFlowScoreText => StringNarrationWorkbenchDashboard.CashFlowScoreText;
+    public string StringNarrationWorkbenchCashFlowStatusText => StringNarrationWorkbenchDashboard.CashFlowStatusText;
+    public int StringNarrationWorkbenchCashFlowDelta => StringNarrationWorkbenchDashboard.CashFlowDelta;
+    public string StringNarrationWorkbenchCashFlowDeltaText => StringNarrationWorkbenchDashboard.CashFlowDeltaText;
+    public string StringNarrationWorkbenchLastSyncedAtText => StringNarrationWorkbenchDashboard.LastSyncedAt <= 0
+        ? "未同步"
+        : FormatGatewayTime(StringNarrationWorkbenchDashboard.LastSyncedAt);
+    public bool IsStringNarrationWorkbenchFallbackProjection => StringNarrationWorkbenchDashboard.IsFallbackProjection;
     public string StringNarrationEmptyStateText => string.IsNullOrWhiteSpace(StringNarrationError)
         ? "暂无串述订单，点击刷新从 adminPcGateway 拉取。"
         : StringNarrationError;
@@ -804,8 +844,12 @@ public partial class MainViewModel
             };
         }
 
+        resolved.WorkbenchDashboard = ResolveStringNarrationWorkbenchDashboard(resolved.WorkbenchDashboard, resolved, StringNarrationOrders);
         StringNarrationFulfillmentStats = resolved;
         ReplaceCollection(StringNarrationFulfillmentMetrics, resolved.Metrics.OrderBy(item => item.SortOrder));
+        ReplaceCollection(StringNarrationWorkbenchTrendItems, resolved.WorkbenchDashboard.RecentBusinessTrendItems);
+        ReplaceCollection(StringNarrationWorkbenchPressureItems, resolved.WorkbenchDashboard.FulfillmentPressureItems);
+        NotifyStringNarrationWorkbenchDashboardChanged();
     }
 
     private StringNarrationOrderQuery BuildStringNarrationQuery()
@@ -914,6 +958,200 @@ public partial class MainViewModel
             TotalCount = counts.Values.Sum(),
             CalculatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
+    }
+
+    private static StringNarrationWorkbenchDashboardStats ResolveStringNarrationWorkbenchDashboard(
+        StringNarrationWorkbenchDashboardStats? dashboard,
+        StringNarrationFulfillmentStats stats,
+        IReadOnlyList<StringNarrationOrderSummary> orders)
+    {
+        dashboard ??= new StringNarrationWorkbenchDashboardStats();
+        var fallback = BuildStringNarrationWorkbenchDashboardFallback(stats, orders);
+        var fallbackUsed = false;
+
+        if (dashboard.TodayOrderCount == 0)
+        {
+            dashboard.TodayOrderCount = fallback.TodayOrderCount;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.TodayOrderCountDelta == 0)
+        {
+            dashboard.TodayOrderCountDelta = fallback.TodayOrderCountDelta;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.TodayRevenueAmount == 0)
+        {
+            dashboard.TodayRevenueAmount = fallback.TodayRevenueAmount;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.TodayRevenueAmountDelta == 0)
+        {
+            dashboard.TodayRevenueAmountDelta = fallback.TodayRevenueAmountDelta;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.PendingMakeCount <= 0)
+        {
+            dashboard.PendingMakeCount = stats.PendingMakeCount;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.ReadyToShipCount <= 0)
+        {
+            dashboard.ReadyToShipCount = stats.ReadyToShipCount;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.ExceptionOrderCount <= 0)
+        {
+            dashboard.ExceptionOrderCount = stats.ExceptionCount;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.UnfinishedOrderCount <= 0)
+        {
+            dashboard.UnfinishedOrderCount = fallback.UnfinishedOrderCount;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.LastSyncedAt <= 0)
+        {
+            dashboard.LastSyncedAt = stats.CalculatedAt > 0 ? stats.CalculatedAt : fallback.LastSyncedAt;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.RecentBusinessTrendItems.Count == 0)
+        {
+            dashboard.RecentBusinessTrendItems = fallback.RecentBusinessTrendItems;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.FulfillmentPressureItems.Count == 0)
+        {
+            dashboard.FulfillmentPressureItems = BuildStringNarrationPressureItems(stats, dashboard.UnfinishedOrderCount);
+            fallbackUsed = true;
+        }
+
+        dashboard.IsFallbackProjection = dashboard.IsFallbackProjection || fallbackUsed;
+
+        return dashboard;
+    }
+
+    private static StringNarrationWorkbenchDashboardStats BuildStringNarrationWorkbenchDashboardFallback(
+        StringNarrationFulfillmentStats stats,
+        IReadOnlyList<StringNarrationOrderSummary> orders)
+    {
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+        var todayOrderCount = CountOrdersCreatedOn(orders, today);
+        var yesterdayOrderCount = CountOrdersCreatedOn(orders, yesterday);
+        var todayRevenue = SumRevenuePaidOn(orders, today);
+        var yesterdayRevenue = SumRevenuePaidOn(orders, yesterday);
+        var unfinishedOrderCount =
+            stats.PaidPendingConfirmCount +
+            stats.PendingMakeCount +
+            stats.MakingCount +
+            stats.ReadyToShipCount +
+            stats.ExceptionCount;
+
+        return new StringNarrationWorkbenchDashboardStats
+        {
+            TodayOrderCount = todayOrderCount,
+            TodayOrderCountDelta = todayOrderCount - yesterdayOrderCount,
+            TodayRevenueAmount = todayRevenue,
+            TodayRevenueAmountDelta = todayRevenue - yesterdayRevenue,
+            PendingMakeCount = stats.PendingMakeCount,
+            ReadyToShipCount = stats.ReadyToShipCount,
+            ExceptionOrderCount = stats.ExceptionCount,
+            UnfinishedOrderCount = unfinishedOrderCount,
+            LastSyncedAt = stats.CalculatedAt > 0 ? stats.CalculatedAt : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            RecentBusinessTrendItems = BuildStringNarrationTrendItems(orders, today),
+            FulfillmentPressureItems = BuildStringNarrationPressureItems(stats, unfinishedOrderCount),
+            IsFallbackProjection = true
+        };
+    }
+
+    private static IReadOnlyList<StringNarrationBusinessTrendPoint> BuildStringNarrationTrendItems(
+        IReadOnlyList<StringNarrationOrderSummary> orders,
+        DateTime today)
+    {
+        var items = new List<StringNarrationBusinessTrendPoint>();
+        var start = today.AddDays(-6);
+        for (var date = start; date <= today; date = date.AddDays(1))
+        {
+            items.Add(new StringNarrationBusinessTrendPoint
+            {
+                DateKey = date.ToString("yyyy-MM-dd"),
+                Label = date.ToString("MM-dd"),
+                OrderCount = CountOrdersCreatedOn(orders, date),
+                RevenueAmount = SumRevenuePaidOn(orders, date)
+            });
+        }
+
+        return items;
+    }
+
+    private static IReadOnlyList<StringNarrationFulfillmentPressureMetric> BuildStringNarrationPressureItems(
+        StringNarrationFulfillmentStats stats,
+        int unfinishedOrderCount)
+    {
+        var targetCount = unfinishedOrderCount > 0 ? unfinishedOrderCount : stats.TotalCount;
+        return new[]
+        {
+            BuildStringNarrationPressureItem(StringNarrationFulfillmentStatusCatalog.PendingMake, "待制作", stats.PendingMakeCount, targetCount),
+            BuildStringNarrationPressureItem(StringNarrationFulfillmentStatusCatalog.ReadyToShip, "待发货", stats.ReadyToShipCount, targetCount)
+        };
+    }
+
+    private static StringNarrationFulfillmentPressureMetric BuildStringNarrationPressureItem(
+        string fulfillmentStatus,
+        string label,
+        int count,
+        int targetCount)
+    {
+        return new StringNarrationFulfillmentPressureMetric
+        {
+            FulfillmentStatus = fulfillmentStatus,
+            Label = label,
+            Count = count,
+            TargetCount = targetCount,
+            Ratio = targetCount <= 0 ? 0 : (decimal)count / targetCount
+        };
+    }
+
+    private static int CountOrdersCreatedOn(IReadOnlyList<StringNarrationOrderSummary> orders, DateTime date)
+    {
+        return orders.Count(order => TryGetLocalDate(order.CreatedAt, out var localDate) && localDate == date.Date);
+    }
+
+    private static decimal SumRevenuePaidOn(IReadOnlyList<StringNarrationOrderSummary> orders, DateTime date)
+    {
+        return orders
+            .Where(order => TryGetLocalDate(order.PaidAt, out var localDate) && localDate == date.Date)
+            .Sum(order => order.Amount);
+    }
+
+    private static bool TryGetLocalDate(long timestamp, out DateTime date)
+    {
+        date = default;
+        if (timestamp <= 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            var milliseconds = timestamp < 10_000_000_000 ? timestamp * 1000 : timestamp;
+            date = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).LocalDateTime.Date;
+            return true;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return false;
+        }
     }
 
     private void SelectStringNarrationSummaryByDetail(StringNarrationOrderDetail? detail)
@@ -1076,6 +1314,8 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasStringNarrationProductionSheet));
         OnPropertyChanged(nameof(HasStringNarrationProductionSheetMaterials));
         OnPropertyChanged(nameof(HasStringNarrationFulfillmentMetrics));
+        OnPropertyChanged(nameof(HasStringNarrationWorkbenchTrendItems));
+        OnPropertyChanged(nameof(HasStringNarrationWorkbenchPressureItems));
         OnPropertyChanged(nameof(StringNarrationOrdersCountText));
         OnPropertyChanged(nameof(StringNarrationStatsTotalText));
         OnPropertyChanged(nameof(StringNarrationStatsCalculatedAtText));
@@ -1105,6 +1345,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(StringNarrationProductionSheetRemarkText));
         OnPropertyChanged(nameof(StringNarrationProductionSheetExampleImageUrl));
         OnPropertyChanged(nameof(StringNarrationProductionSheetExampleFallbackText));
+        NotifyStringNarrationWorkbenchDashboardChanged();
     }
 
     private bool ConfirmStringNarrationFulfillmentUpdate(StringNarrationOrderDetail detail)
