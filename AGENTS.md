@@ -87,7 +87,16 @@
 - **Related Files**:
   - Any backend models, DTOs, entities, mappings, services, repositories, migrations, or API contracts directly related to order fulfillment backend fields.
 
+### 5. Exception Handling Page (异常处理页 / 标记异常处理页)
+- **Status**: Temporarily complete.
+- **Constraint**: **DO NOT** modify, refactor, polish, restructure, or touch any exception-handling-page code, layout, styles, bindings, commands, interaction flow, page state, or related runtime behavior unless the user explicitly asks for that area.
+- **Note**: This page is temporarily considered closed for normal implementation work.
+
 ## CURRENT WORK IN PROGRESS
+
+### 0. Current Delivery Scope
+- **Status**: All major areas except the Workbench are considered complete for now.
+- **Constraint**: Unless the user explicitly says otherwise, default active scope is the Workbench only.
 
 ### 1. Home Page / MainWindow Refactoring (首页重构)
 - **Status**: Pending refactoring. This is the next target.
