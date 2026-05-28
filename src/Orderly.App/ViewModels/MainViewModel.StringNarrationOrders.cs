@@ -119,11 +119,20 @@ public partial class MainViewModel
         : FormatGatewayTime(StringNarrationWorkbenchDashboard.LastSyncedAt);
     public bool IsStringNarrationWorkbenchFallbackProjection => StringNarrationWorkbenchDashboard.IsFallbackProjection;
 
-    public bool IsStringNarrationWorkbenchTodayOrderCountDeltaPositive => StringNarrationWorkbenchTodayOrderCountDelta >= 0;
-    public bool IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive => StringNarrationWorkbenchTodayRevenueAmountDelta >= 0;
-    public bool IsStringNarrationWorkbenchPendingMakeDeltaPositive => StringNarrationWorkbenchPendingMakeDelta >= 0;
-    public bool IsStringNarrationWorkbenchReadyToShipDeltaPositive => StringNarrationWorkbenchReadyToShipDelta >= 0;
-    public bool IsStringNarrationWorkbenchExceptionOrderDeltaPositive => StringNarrationWorkbenchExceptionOrderDelta >= 0;
+    public bool IsStringNarrationWorkbenchTodayOrderCountDeltaPositive => StringNarrationWorkbenchTodayOrderCountDelta > 0;
+    public bool IsStringNarrationWorkbenchTodayOrderCountDeltaZero => StringNarrationWorkbenchTodayOrderCountDelta == 0;
+
+    public bool IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive => StringNarrationWorkbenchTodayRevenueAmountDelta > 0;
+    public bool IsStringNarrationWorkbenchTodayRevenueAmountDeltaZero => StringNarrationWorkbenchTodayRevenueAmountDelta == 0;
+
+    public bool IsStringNarrationWorkbenchPendingMakeDeltaPositive => StringNarrationWorkbenchPendingMakeDelta > 0;
+    public bool IsStringNarrationWorkbenchPendingMakeDeltaZero => StringNarrationWorkbenchPendingMakeDelta == 0;
+
+    public bool IsStringNarrationWorkbenchReadyToShipDeltaPositive => StringNarrationWorkbenchReadyToShipDelta > 0;
+    public bool IsStringNarrationWorkbenchReadyToShipDeltaZero => StringNarrationWorkbenchReadyToShipDelta == 0;
+
+    public bool IsStringNarrationWorkbenchExceptionOrderDeltaPositive => StringNarrationWorkbenchExceptionOrderDelta > 0;
+    public bool IsStringNarrationWorkbenchExceptionOrderDeltaZero => StringNarrationWorkbenchExceptionOrderDelta == 0;
 
     public string StringNarrationWorkbenchCashFlowColorText
     {

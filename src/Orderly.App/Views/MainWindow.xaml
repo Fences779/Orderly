@@ -369,7 +369,7 @@
                 </StackPanel>
             </DockPanel>
             <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=工作台}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <Grid>
                     <Grid Margin="0,0,0,12" Background="Transparent">
                         <Grid.RowDefinitions>
                             <!-- 0. 独立头部区域 -->
@@ -388,13 +388,13 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
+                            <StackPanel Grid.Column="0" Margin="0,0,24,0">
                                 <TextBlock Text="工作台" FontSize="30" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
-                                <TextBlock Text="概览经营数据，掌握履约进度，助力高效成交与履约" FontSize="13" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,0" />
+                                <TextBlock Text="概览经营数据，掌握履约进度，助力高效成交与履约" FontSize="13" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <!-- 刷新按钮 -->
-                                <Button Command="{Binding LoadStringNarrationStatsCommand}" Style="{StaticResource MainMenuButtonStyle}" Background="Transparent" BorderThickness="0" Padding="12,6" Margin="0,0,16,0" Cursor="Hand">
+                                <Button Command="{Binding LoadStringNarrationStatsCommand}" Style="{StaticResource SubtleActionButtonStyle}" Padding="12,6" Margin="0,0,16,0">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{StaticResource PrimaryBrush}" />
                                         <TextBlock Text="刷新" VerticalAlignment="Center" FontSize="13" Foreground="{StaticResource HeadingBrush}" />
@@ -450,11 +450,18 @@
                                             <TextBlock Text="{Binding StringNarrationWorkbenchTodayOrderCountDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchTodayOrderCountDeltaPositive}" Value="False">
-                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchTodayOrderCountDeltaPositive}" Value="True">
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
                                                             </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchTodayOrderCountDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchTodayOrderCountDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -462,13 +469,22 @@
                                             <TextBlock Margin="2,0,0,0" FontSize="11" FontWeight="Bold">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="↑" />
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Visibility" Value="Collapsed" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchTodayOrderCountDeltaPositive}" Value="False">
-                                                                    <Setter Property="Text" Value="↓" />
-                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchTodayOrderCountDeltaPositive}" Value="True">
+                                                                <Setter Property="Text" Value="↑" />
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
+                                                                <Setter Property="Visibility" Value="Visible" />
                                                             </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchTodayOrderCountDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchTodayOrderCountDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Text" Value="↓" />
+                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -499,11 +515,18 @@
                                             <TextBlock Text="{Binding StringNarrationWorkbenchTodayRevenueAmountDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive}" Value="False">
-                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive}" Value="True">
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
                                                             </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchTodayRevenueAmountDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -511,13 +534,22 @@
                                             <TextBlock Margin="2,0,0,0" FontSize="11" FontWeight="Bold">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="↑" />
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Visibility" Value="Collapsed" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive}" Value="False">
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive}" Value="True">
+                                                                <Setter Property="Text" Value="↑" />
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchTodayRevenueAmountDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchTodayRevenueAmountDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
                                                                 <Setter Property="Text" Value="↓" />
                                                                 <Setter Property="Foreground" Value="#2B7A5C" />
-                                                            </DataTrigger>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -548,11 +580,18 @@
                                             <TextBlock Text="{Binding StringNarrationWorkbenchPendingMakeDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchPendingMakeDeltaPositive}" Value="False">
-                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchPendingMakeDeltaPositive}" Value="True">
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
                                                             </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchPendingMakeDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchPendingMakeDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -560,13 +599,22 @@
                                             <TextBlock Margin="2,0,0,0" FontSize="11" FontWeight="Bold">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="↑" />
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Visibility" Value="Collapsed" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchPendingMakeDeltaPositive}" Value="False">
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchPendingMakeDeltaPositive}" Value="True">
+                                                                <Setter Property="Text" Value="↑" />
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchPendingMakeDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchPendingMakeDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
                                                                 <Setter Property="Text" Value="↓" />
                                                                 <Setter Property="Foreground" Value="#2B7A5C" />
-                                                            </DataTrigger>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -597,11 +645,18 @@
                                             <TextBlock Text="{Binding StringNarrationWorkbenchReadyToShipDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="False">
-                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="True">
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
                                                             </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -609,13 +664,22 @@
                                             <TextBlock Margin="2,0,0,0" FontSize="11" FontWeight="Bold">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="↑" />
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Visibility" Value="Collapsed" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="False">
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="True">
+                                                                <Setter Property="Text" Value="↑" />
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
                                                                 <Setter Property="Text" Value="↓" />
                                                                 <Setter Property="Foreground" Value="#2B7A5C" />
-                                                            </DataTrigger>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -646,11 +710,18 @@
                                             <TextBlock Text="{Binding StringNarrationWorkbenchExceptionOrderDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="False">
-                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="True">
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
                                                             </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Foreground" Value="#2B7A5C" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -658,13 +729,22 @@
                                             <TextBlock Margin="2,0,0,0" FontSize="11" FontWeight="Bold">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="↑" />
-                                                        <Setter Property="Foreground" Value="#DE4C4A" />
+                                                        <Setter Property="Visibility" Value="Collapsed" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="False">
+                                                            <DataTrigger Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="True">
+                                                                <Setter Property="Text" Value="↑" />
+                                                                <Setter Property="Foreground" Value="#DE4C4A" />
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="False" />
+                                                                    <Condition Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaZero}" Value="False" />
+                                                                </MultiDataTrigger.Conditions>
                                                                 <Setter Property="Text" Value="↓" />
                                                                 <Setter Property="Foreground" Value="#2B7A5C" />
-                                                            </DataTrigger>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
@@ -934,7 +1014,7 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- 左边：库存状态 (点击循环切换测试) -->
-                            <Button Grid.Column="0" Command="{Binding ToggleInventoryTestStatusCommand}" Style="{StaticResource MainMenuButtonStyle}" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" HorizontalContentAlignment="Stretch">
+                            <Button Grid.Column="0" Command="{Binding ToggleInventoryTestStatusCommand}" Style="{StaticResource InvisibleContainerButtonStyle}" HorizontalContentAlignment="Stretch">
                                 <Border x:Name="InventoryCard" BorderThickness="1" CornerRadius="12" Padding="20,18" Height="140">
                                     <Border.Effect>
                                         <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
@@ -1074,7 +1154,7 @@
                                             </StackPanel>
                                             
                                             <!-- 跳转按钮 -->
-                                            <Button Grid.Column="2" Content="查看库存详情 →" Style="{StaticResource MainMenuButtonStyle}" Background="Transparent" BorderThickness="0" Foreground="{StaticResource BlueTextBrush}" FontSize="12" VerticalAlignment="Center" Cursor="Hand"
+                                            <Button Grid.Column="2" Content="查看库存详情 →" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" FontSize="12" VerticalAlignment="Center"
                                                     Command="{Binding SelectSectionCommand}" CommandParameter="库存管理" />
                                         </Grid>
                                     </Grid>
@@ -1134,14 +1214,14 @@
                                         </StackPanel>
                                         
                                         <!-- 跳转按钮 -->
-                                        <Button Grid.Column="2" Content="查看现金流详情 →" Style="{StaticResource MainMenuButtonStyle}" Background="Transparent" BorderThickness="0" Foreground="{StaticResource BlueTextBrush}" FontSize="12" VerticalAlignment="Center" Cursor="Hand"
+                                        <Button Grid.Column="2" Content="查看现金流详情 →" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" FontSize="12" VerticalAlignment="Center"
                                                 Command="{Binding SelectSectionCommand}" CommandParameter="现金流" />
                                     </Grid>
                                 </Grid>
                             </Border>
                         </Grid>
                     </Grid>
-                </ScrollViewer>
+                </Grid>
             </Grid>
 
             <!-- 订单履约 -->
