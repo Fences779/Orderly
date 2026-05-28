@@ -475,6 +475,8 @@ function New-P36ViewModelHarness {
         $null,
         $Context.ReplyTemplateRepository,
         $Context.SettingRepository,
+        $syncService,
+        $Context.SyncRecordRepository,
         $clipboardService,
         $Context.DatabasePath,
         $null,

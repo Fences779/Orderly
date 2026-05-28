@@ -44,8 +44,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
   - 只清理 QA 数据
 - `run-uia-smoke.ps1`
   - P1 UIA 主链路 smoke
+- `run-p1-write-smoke.ps1`
+  - P1 非 UIA 写入链路 smoke（OrderService + NoteService + ActivityLog 校验）
 - `run-p1-smoke.ps1`
-  - `reset -> status -> UIA -> status`
+  - `reset -> status -> write-chain -> UIA -> status`
 - `run-p2-full-regression.ps1`
   - 顺序编排 `run-p2-1` 到 `run-p2-9`
 - `run-p3-1-workbench-smoke.ps1`
@@ -67,4 +69,3 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 - 本目录结论不覆盖最终 UI / XAML 视觉验收
 - 本目录结论不覆盖 125% 缩放收尾
 - `artifacts\qa-smoke\` 只存运行产物，不提交
-

@@ -80,6 +80,16 @@ function New-QaSmokeRunDirectory {
 }
 
 function Get-DefaultDatabasePath {
+    if (-not [string]::IsNullOrWhiteSpace($env:ORDERLY_QA_DB_PATH)) {
+        $overridePath = [System.IO.Path]::GetFullPath($env:ORDERLY_QA_DB_PATH)
+        $overrideDir = [System.IO.Path]::GetDirectoryName($overridePath)
+        if (-not [string]::IsNullOrWhiteSpace($overrideDir)) {
+            [System.IO.Directory]::CreateDirectory($overrideDir) | Out-Null
+        }
+
+        return $overridePath
+    }
+
     $root = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Orderly-SN'
     return Join-Path $root 'orderly.db'
 }

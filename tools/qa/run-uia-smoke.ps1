@@ -751,13 +751,6 @@ try {
         $report.checks.preReset = $resetResult.StdOut
     }
 
-    $runtimeMarker = '[P1_QA_RUNTIME]'
-    $runToken = "uia-$($run.Timestamp)"
-    $orderTitle = "$runtimeMarker Order $runToken"
-    $orderRequirement = "$runtimeMarker Requirement $runToken"
-    $orderRemark = "$runtimeMarker Remark $runToken"
-    $noteContent = "$runtimeMarker Note $runToken"
-
     $exePath = Get-OrderlyAppExePath
     Add-LogLine "启动 Orderly.App：$exePath --qa-mode"
     $process = Start-Process -FilePath $exePath -ArgumentList @('--qa-mode') -PassThru
@@ -774,59 +767,6 @@ try {
     $report.screenshots.mainWindow = $mainWindowPath
     $report.mainWindowTitle = [string]$window.Current.Name
 
-    Add-LogLine '步骤：切换到客户/订单 Tab'
-    $customerOrderTab = Find-AutomationElement -Root $window -AutomationId 'Tab_CustomerOrder' -TimeoutSeconds 5
-    if ($null -eq $customerOrderTab) {
-        throw "未找到客户/订单 Tab。"
-    }
-
-    Invoke-AutomationClick -Element $customerOrderTab
-    Start-Sleep -Milliseconds 700
-
-    Add-LogLine '步骤：选择 QA 客户 p13qa-customer-a'
-    $qaCustomer = Find-AutomationElement -Root $window -AutomationId 'p13qa-customer-a' -TimeoutSeconds 5
-    if ($null -eq $qaCustomer) {
-        throw "未找到 QA 客户：p13qa-customer-a"
-    }
-
-    Invoke-AutomationClick -Element $qaCustomer
-    Start-Sleep -Milliseconds 500
-    $report.checks.selectedCustomer = 'p13qa-customer-a'
-
-    Add-LogLine '步骤：打开新增订单对话框'
-    $addOrderButton = Find-AutomationElement -Root $window -AutomationId 'Btn_AddOrder' -TimeoutSeconds 5
-    if ($null -eq $addOrderButton) {
-        throw "未找到新增订单按钮。"
-    }
-
-    Invoke-AutomationClick -Element $addOrderButton
-    Start-Sleep -Milliseconds 700
-
-    $orderDialog = Find-AutomationElement -Root $window -AutomationId 'AddOrderDialog' -TimeoutSeconds 5
-    if ($null -eq $orderDialog) {
-        throw "未找到 AddOrderDialog。"
-    }
-
-    Add-LogLine '步骤：填写新增订单表单'
-    Set-AutomationText -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Title' -TimeoutSeconds 2) -Text $orderTitle
-    Set-AutomationText -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Amount' -TimeoutSeconds 2) -Text '199'
-    Set-AutomationText -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Requirement' -TimeoutSeconds 2) -Text $orderRequirement
-    Set-AutomationText -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Remark' -TimeoutSeconds 2) -Text $orderRemark
-
-    $orderDialogPath = Join-Path $run.Path '01-add-order-dialog.png'
-    Save-WindowScreenshot -WindowHandle $windowHandle -Path $orderDialogPath
-    $report.screenshots.addOrderDialog = $orderDialogPath
-
-    Add-LogLine '步骤：提交新增订单'
-    Invoke-AutomationClick -Element (Find-AutomationElement -Root $orderDialog -AutomationId 'AddOrderDialog_Confirm' -TimeoutSeconds 2)
-    Wait-AutomationElementMissing -Root $window -AutomationId 'AddOrderDialog' -TimeoutSeconds 8
-    Start-Sleep -Milliseconds 800
-    $report.checks.addOrder = $orderTitle
-
-    $afterOrderPath = Join-Path $run.Path '02-after-add-order.png'
-    Save-WindowScreenshot -WindowHandle $windowHandle -Path $afterOrderPath
-    $report.screenshots.afterAddOrder = $afterOrderPath
-
     Add-LogLine '步骤：切换到工作台 Tab'
     $dashboardTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Dashboard' -TimeoutSeconds 5
     if ($null -eq $dashboardTab) {
@@ -834,67 +774,52 @@ try {
     }
 
     Invoke-AutomationClick -Element $dashboardTab
+    Start-Sleep -Milliseconds 600
+    $report.checks.dashboardTab = 'OK'
+
+    Add-LogLine '步骤：切换到订单履约 Tab 并验证关键输入框'
+    $fulfillmentTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Fulfillment' -TimeoutSeconds 5
+    if ($null -eq $fulfillmentTab) {
+        throw "未找到订单履约 Tab。"
+    }
+
+    Invoke-AutomationClick -Element $fulfillmentTab
     Start-Sleep -Milliseconds 700
+    $fulfillmentSearch = Find-AutomationElement -Root $window -AutomationId 'Input_FulfillmentSearchKeyword' -TimeoutSeconds 5
+    if ($null -eq $fulfillmentSearch) {
+        throw "未找到订单履约搜索框：Input_FulfillmentSearchKeyword。"
+    }
+    Set-AutomationText -Element $fulfillmentSearch -Text '[P1.3_QA]'
+    $report.checks.fulfillmentTab = 'OK'
 
-    Add-LogLine '步骤：打开新增备注对话框'
-    $addNoteButton = Find-AutomationElement -Root $window -AutomationId 'Btn_AddNote' -TimeoutSeconds 5
-    if ($null -eq $addNoteButton) {
-        throw "未找到新增备注按钮。"
+    Add-LogLine '步骤：切换到异常处理 Tab'
+    $exceptionTab = Find-AutomationElement -Root $window -AutomationId 'Tab_ExceptionOrders' -TimeoutSeconds 5
+    if ($null -eq $exceptionTab) {
+        throw "未找到异常处理 Tab。"
     }
 
-    Invoke-AutomationClick -Element $addNoteButton
+    Invoke-AutomationClick -Element $exceptionTab
+    Start-Sleep -Milliseconds 600
+    $report.checks.exceptionTab = 'OK'
+
+    Add-LogLine '步骤：切换到设置 Tab 并验证保存按钮'
+    $settingsTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Settings' -TimeoutSeconds 5
+    if ($null -eq $settingsTab) {
+        throw "未找到设置 Tab。"
+    }
+
+    Invoke-AutomationClick -Element $settingsTab
     Start-Sleep -Milliseconds 700
-
-    $noteDialog = Find-AutomationElement -Root $window -AutomationId 'AddNoteDialog' -TimeoutSeconds 5
-    if ($null -eq $noteDialog) {
-        throw "未找到 AddNoteDialog。"
+    $savePreferences = Find-AutomationElement -Root $window -AutomationId 'Btn_SavePreferences' -TimeoutSeconds 5
+    if ($null -eq $savePreferences) {
+        throw "未找到设置保存按钮：Btn_SavePreferences。"
     }
+    $report.checks.settingsTab = 'OK'
 
-    Add-LogLine '步骤：选择备注模板并填写内容'
-    $templateCombo = Find-AutomationElement -Root $noteDialog -AutomationId 'AddNoteDialog_Template' -TimeoutSeconds 2
-    $templateName = Select-FirstComboBoxItem -ComboBox $templateCombo
-    $insertButton = Find-AutomationElement -Root $noteDialog -AutomationId 'AddNoteDialog_InsertTemplate' -TimeoutSeconds 2
-    $contentBox = Find-AutomationElement -Root $noteDialog -AutomationId 'AddNoteDialog_Content' -TimeoutSeconds 2
-    $contentBefore = Get-AutomationTextValue -Element $contentBox
-
-    Invoke-AutomationClick -Element $insertButton
-    Start-Sleep -Milliseconds 400
-
-    $contentAfterInsert = Get-AutomationTextValue -Element $contentBox
-    $templateInserted = -not [string]::IsNullOrWhiteSpace($contentAfterInsert) -and $contentAfterInsert -ne $contentBefore
-    $finalNoteContent = if ($templateInserted) {
-        $contentAfterInsert.TrimEnd() + [Environment]::NewLine + $noteContent
-    }
-    else {
-        $noteContent
-    }
-
-    Set-AutomationText -Element $contentBox -Text $finalNoteContent
-
-    $noteDialogPath = Join-Path $run.Path '03-add-note-dialog.png'
-    Save-WindowScreenshot -WindowHandle $windowHandle -Path $noteDialogPath
-    $report.screenshots.addNoteDialog = $noteDialogPath
-
-    Add-LogLine '步骤：提交新增备注'
-    Invoke-AutomationClick -Element (Find-AutomationElement -Root $noteDialog -AutomationId 'AddNoteDialog_Confirm' -TimeoutSeconds 2)
-    Wait-AutomationElementMissing -Root $window -AutomationId 'AddNoteDialog' -TimeoutSeconds 8
-    Start-Sleep -Milliseconds 800
-    $report.checks.addNote = [ordered]@{
-        template                 = $templateName
-        templateInsertVerified   = $templateInserted
-        content                  = $finalNoteContent
-    }
-
-    if (-not $templateInserted) {
-        $report.notCovered += 'AddNote 模板插入在当前 UIA 下未稳定命中；本次仅覆盖 AddNote 保存与 SQLite 回读。'
-    }
-
-    $afterNotePath = Join-Path $run.Path '04-after-add-note.png'
-    Save-WindowScreenshot -WindowHandle $windowHandle -Path $afterNotePath
-    $report.screenshots.afterAddNote = $afterNotePath
-
-    Add-LogLine "执行 SQLite 回读验证"
-    $report.checks.sqlite = Invoke-DatabaseVerification -OrderTitle $orderTitle -OrderRequirement $orderRequirement -NoteContent $finalNoteContent
+    Add-LogLine '步骤：回到工作台 Tab'
+    Invoke-AutomationClick -Element $dashboardTab
+    Start-Sleep -Milliseconds 500
+    $report.checks.returnToDashboard = 'OK'
 }
 catch {
     $failureMessage = $_.Exception.ToString()

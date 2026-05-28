@@ -19,6 +19,19 @@ public static class DatabasePaths
 
     public static string GetDefaultDatabasePath()
     {
+        var qaOverridePath = Environment.GetEnvironmentVariable("ORDERLY_QA_DB_PATH");
+        if (!string.IsNullOrWhiteSpace(qaOverridePath))
+        {
+            var fullPath = Path.GetFullPath(qaOverridePath);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            return fullPath;
+        }
+
         return GetLegacyDatabasePath();
     }
 

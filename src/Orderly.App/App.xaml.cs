@@ -1,4 +1,6 @@
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using Microsoft.Win32;
 using Orderly.Core.Models;
@@ -19,6 +21,10 @@ public partial class App : System.Windows.Application
 {
     private const int MainHotkeyId = 1001;
     private const int FloatingHotkeyId = 1002;
+    private const string QaSessionAccountId = "qa-local-account";
+    private const string QaSessionUsername = "qa-local-user";
+    private const string QaSessionDisplayName = "QA Local User";
+    private const string QaSessionDataKeySeed = "Orderly-QA-Encryption-v1";
 
     private TrayIconService? _trayIconService;
     private GlobalHotkeyService? _hotkeyService;
@@ -52,6 +58,7 @@ public partial class App : System.Windows.Application
         base.OnStartup(e);
         _startupArgs = e.Args;
         QaDataMaintenanceService.TryGetRequestedCommand(_startupArgs, out _qaMaintenanceCommand);
+        var isQaMode = QaDataSeeder.IsQaMode(_startupArgs);
         Console.WriteLine("App starting");
 
         try
@@ -73,7 +80,9 @@ public partial class App : System.Windows.Application
 
             if (QaDataSeeder.IsQaMode(_startupArgs))
             {
-                await InitializeWorkspaceAsync(DatabasePaths.GetDefaultDatabasePath());
+                var qaDatabasePath = DatabasePaths.GetDefaultDatabasePath();
+                InitializeQaSessionContext(qaDatabasePath);
+                await InitializeWorkspaceAsync(qaDatabasePath);
                 return;
             }
         }
@@ -136,6 +145,29 @@ public partial class App : System.Windows.Application
 
         _sessionLockService.LockStateChanged += OnSessionLockStateChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
+    }
+
+    private void InitializeQaSessionContext(string databasePath)
+    {
+        var sessionContextService = _sessionContextService ?? throw new InvalidOperationException("Session context service is not initialized.");
+        var sessionLockService = _sessionLockService ?? throw new InvalidOperationException("Session lock service is not initialized.");
+
+        var keySeedBytes = Encoding.UTF8.GetBytes(QaSessionDataKeySeed);
+        var qaDataKey = SHA256.HashData(keySeedBytes);
+
+        var session = new LocalSessionContext
+        {
+            AccountId = QaSessionAccountId,
+            Username = QaSessionUsername,
+            DisplayName = QaSessionDisplayName,
+            Role = LocalAccountRole.Owner,
+            DatabasePath = databasePath,
+            DataKey = qaDataKey,
+            SignedInAt = DateTime.Now
+        };
+
+        sessionContextService.SetCurrent(session);
+        sessionLockService.MarkSignedIn();
     }
 
     private async Task CompleteLoginAsync(LocalSessionContext session)
