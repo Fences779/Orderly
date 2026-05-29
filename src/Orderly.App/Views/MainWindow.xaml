@@ -396,6 +396,12 @@
                             <DataTrigger Binding="{Binding SelectedSection}" Value="设置">
                                 <Setter Property="Visibility" Value="Collapsed" />
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="库存管理">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="现金流">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </DockPanel.Style>
