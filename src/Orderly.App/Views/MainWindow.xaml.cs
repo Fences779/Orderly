@@ -18,6 +18,7 @@ public partial class MainWindow : Window
         System.Windows.Application.Current.MainWindow = this;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
         TrendTooltip.SizeChanged += TrendTooltip_SizeChanged;
+        this.SizeChanged += MainWindow_SizeChanged;
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -873,5 +874,40 @@ public partial class MainWindow : Window
         System.Windows.Controls.Canvas.SetLeft(fullCircle, centerX - radius);
         System.Windows.Controls.Canvas.SetTop(fullCircle, centerY - radius);
         canvas.Children.Add(fullCircle);
+    }
+
+    private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateCashflowTrendCardVisibility();
+    }
+
+    private void UpdateCashflowTrendCardVisibility()
+    {
+        bool shouldShow = this.WindowState == WindowState.Maximized || this.ActualWidth >= 1600;
+
+        if (CashflowTrendCard != null)
+        {
+            CashflowTrendCard.Visibility = shouldShow ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        if (CashflowFirstRow != null)
+        {
+            CashflowFirstRow.Height = shouldShow ? new GridLength(0, GridUnitType.Auto) : new GridLength(2.2, GridUnitType.Star);
+        }
+
+        if (shouldShow)
+        {
+            if (CashflowTrendRow != null)
+                CashflowTrendRow.Height = new GridLength(1, GridUnitType.Star);
+            if (CashflowBreakdownRow != null)
+                CashflowBreakdownRow.Height = new GridLength(0, GridUnitType.Auto);
+        }
+        else
+        {
+            if (CashflowTrendRow != null)
+                CashflowTrendRow.Height = new GridLength(1, GridUnitType.Star);
+            if (CashflowBreakdownRow != null)
+                CashflowBreakdownRow.Height = new GridLength(3, GridUnitType.Star);
+        }
     }
 }

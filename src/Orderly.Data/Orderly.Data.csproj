@@ -11,5 +11,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.12" />
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
   </ItemGroup>
 </Project>

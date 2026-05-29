@@ -1,0 +1,60 @@
+CREATE TABLE IF NOT EXISTS inventory_items (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    workspace_id VARCHAR(64) NOT NULL,
+    material_code VARCHAR(128) NOT NULL,
+    material_name VARCHAR(255) NOT NULL,
+    category VARCHAR(128) NOT NULL DEFAULT '',
+    stock_unit VARCHAR(32) NOT NULL DEFAULT '件',
+    current_stock_qty DECIMAL(18,4) NOT NULL DEFAULT 0,
+    safe_stock_qty DECIMAL(18,4) NOT NULL DEFAULT 0,
+    sold_7d_qty DECIMAL(18,4) NOT NULL DEFAULT 0,
+    sold_30d_qty DECIMAL(18,4) NOT NULL DEFAULT 0,
+    unit_cost DECIMAL(18,4) NOT NULL DEFAULT 0,
+    bracelet_sale_price DECIMAL(18,4) NOT NULL DEFAULT 0,
+    bracelet_cost_price DECIMAL(18,4) NOT NULL DEFAULT 0,
+    supplier_name VARCHAR(255) NOT NULL DEFAULT '',
+    remark TEXT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    last_restocked_at DATETIME NULL,
+    source_updated_at DATETIME NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_inventory_workspace_material (workspace_id, material_code),
+    KEY idx_inventory_workspace_category (workspace_id, category),
+    KEY idx_inventory_workspace_updated (workspace_id, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS inventory_sync_batches (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    workspace_id VARCHAR(64) NOT NULL,
+    batch_no VARCHAR(64) NOT NULL,
+    source_file_name VARCHAR(255) NOT NULL DEFAULT '',
+    source_file_hash VARCHAR(64) NOT NULL DEFAULT '',
+    total_rows INT NOT NULL DEFAULT 0,
+    inserted_rows INT NOT NULL DEFAULT 0,
+    updated_rows INT NOT NULL DEFAULT 0,
+    unchanged_rows INT NOT NULL DEFAULT 0,
+    skipped_rows INT NOT NULL DEFAULT 0,
+    operator_id VARCHAR(128) NOT NULL DEFAULT '',
+    summary_json JSON NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_inventory_batch_no (batch_no),
+    KEY idx_inventory_batch_workspace_created (workspace_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS inventory_item_revisions (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    workspace_id VARCHAR(64) NOT NULL,
+    batch_id BIGINT UNSIGNED NULL,
+    material_code VARCHAR(128) NOT NULL,
+    change_type VARCHAR(32) NOT NULL,
+    before_json JSON NULL,
+    after_json JSON NULL,
+    operator_id VARCHAR(128) NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_inventory_revision_workspace_material (workspace_id, material_code, created_at),
+    KEY idx_inventory_revision_batch (batch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

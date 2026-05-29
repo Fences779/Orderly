@@ -300,6 +300,14 @@ public partial class App : System.Windows.Application
         var stringNarrationGatewayClient = new StringNarrationGatewayClient(stringNarrationHttpClient, stringNarrationGatewayOptions);
         IStringNarrationOrderService stringNarrationOrderService = new StringNarrationGatewayOrderService(stringNarrationGatewayClient);
         IStringNarrationBusinessService stringNarrationBusinessService = new StringNarrationGatewayBusinessService(stringNarrationGatewayClient);
+        var inventoryGatewayOptions = InventoryGatewayOptions.FromEnvironment();
+        var inventoryHttpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(inventoryGatewayOptions.TimeoutSeconds)
+        };
+        IInventoryWorkspaceService inventoryWorkspaceService = inventoryGatewayOptions.IsConfigured
+            ? new CloudInventoryWorkspaceService(new InventoryGatewayClient(inventoryHttpClient, inventoryGatewayOptions))
+            : new StringNarrationInventoryWorkspaceServiceAdapter(stringNarrationBusinessService);
 
         var preferences = await settingRepository.GetPreferencesAsync();
 
@@ -333,7 +341,8 @@ public partial class App : System.Windows.Application
             stringNarrationGatewayOptions.Endpoint,
             stringNarrationGatewayOptions.HasToken,
             stringNarrationGatewayOptions.TimeoutSeconds,
-            stringNarrationBusinessService);
+            stringNarrationBusinessService,
+            inventoryWorkspaceService);
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
         await _mainViewModel.LoadAsync();

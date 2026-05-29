@@ -322,7 +322,7 @@
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Button x:Name="Tab_Cashflow" AutomationProperties.AutomationId="Tab_Cashflow" Content="现金流" Tag="&#xEAF1;" Command="{Binding SelectSectionCommand}" CommandParameter="现金流">
+                    <Button x:Name="Tab_Cashflow" AutomationProperties.AutomationId="Tab_Cashflow" Content="现金流" Tag="&#xE825;" Command="{Binding SelectSectionCommand}" CommandParameter="现金流">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                                 <Style.Triggers>
@@ -1292,6 +1292,8 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="数据更新：" Foreground="#868E96" FontSize="12" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding InventoryUpdatedAtText}" Foreground="#868E96" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0" />
+                        <Button Content="导入 Excel" Command="{Binding ImportInventoryWorkbookCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" Margin="0,0,8,0" />
+                        <Button Content="导出 Excel" Command="{Binding ExportInventoryWorkbookCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" Margin="0,0,8,0" />
                         <Button Content="刷新库存" Command="{Binding RefreshInventoryCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" />
                     </StackPanel>
                 </Grid>
@@ -2055,13 +2057,12 @@
 
             <!-- 现金流 -->
             <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=现金流}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid Margin="24,16,24,24">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" /> <!-- 标题栏 -->
-                            <RowDefinition Height="*" />    <!-- 内容区 -->
-                            <RowDefinition Height="Auto" /> <!-- 最底脚注 -->
-                        </Grid.RowDefinitions>
+                <Grid Margin="24,12,24,12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /> <!-- 标题栏 -->
+                        <RowDefinition Height="*" />    <!-- 内容区 -->
+                        <RowDefinition Height="Auto" /> <!-- 最底脚注 -->
+                    </Grid.RowDefinitions>
                         
                         <!-- Row 0: 标题栏 -->
                         <Grid Grid.Row="0" Margin="0,0,0,20">
@@ -2097,11 +2098,17 @@
                             </Grid.ColumnDefinitions>
                             
                             <!-- 左侧 3.1* 区域 -->
-                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <Grid Grid.Column="0" Margin="0,0,16,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition x:Name="CashflowFirstRow" Height="Auto" /> <!-- 第一排: 三张卡片 -->
+                                    <RowDefinition x:Name="CashflowTrendRow" Height="*" />    <!-- 第二排: 趋势图卡片 -->
+                                    <RowDefinition x:Name="CashflowBreakdownRow" Height="Auto" /> <!-- 第三排: 构成卡片 -->
+                                </Grid.RowDefinitions>
+                                
                                 <!-- 第一排: 三张卡片 -->
-                                <UniformGrid Columns="3" Rows="1" Margin="0,0,0,16">
+                                <UniformGrid Grid.Row="0" Columns="3" Rows="1" Margin="0,0,0,24">
                                     <!-- 现金流健康指数 -->
-                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,12,0" Padding="20,18">
+                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,16,0" Padding="16,12">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
@@ -2148,7 +2155,7 @@
                                     </Border>
 
                                     <!-- 当前可用现金 -->
-                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,12,0" Padding="20,18">
+                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,16,0" Padding="16,12">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
@@ -2170,7 +2177,7 @@
                                     </Border>
 
                                     <!-- 预计可支撑天数 -->
-                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0" Padding="20,18">
+                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0" Padding="16,12">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
@@ -2194,11 +2201,11 @@
                                 </UniformGrid>
                                 
                                 <!-- 第二排: 趋势图卡片 -->
-                                <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,0,16" Padding="20">
+                                <Border x:Name="CashflowTrendCard" Grid.Row="1" Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,0,24" Padding="20,16">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" /> <!-- 标题/选择器 -->
-                                            <RowDefinition Height="220" />  <!-- 图表区 -->
+                                            <RowDefinition Height="*" />    <!-- 图表区 -->
                                             <RowDefinition Height="Auto" /> <!-- X 轴标签 -->
                                             <RowDefinition Height="Auto" /> <!-- 底部图例 -->
                                         </Grid.RowDefinitions>
@@ -2253,13 +2260,13 @@
                                 </Border>
                                 
                                 <!-- 第三排: 构成卡片 -->
-                                <UniformGrid Columns="2" Rows="1">
+                                <UniformGrid Grid.Row="2" Columns="2" Rows="1">
                                     <!-- 收入构成 -->
-                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,8,0" Padding="20">
+                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,8,0" Padding="16,12">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="150" />
+                                                <RowDefinition Height="*" MinHeight="120" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             
@@ -2329,11 +2336,11 @@
                                     </Border>
                                     
                                     <!-- 支出构成 -->
-                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="8,0,0,0" Padding="20">
+                                    <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="8,0,0,0" Padding="16,12">
                                         <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="150" />
+                                                <RowDefinition Height="*" MinHeight="120" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             
@@ -2405,12 +2412,18 @@
                                         </Grid>
                                     </Border>
                                 </UniformGrid>
-                            </StackPanel>
+                            </Grid>
                             
                             <!-- 右侧 1.1* 区域 -->
-                            <StackPanel Grid.Column="1">
+                            <Grid Grid.Column="1">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" /> <!-- 经营建议卡片 -->
+                                    <RowDefinition Height="12" />   <!-- 间距 -->
+                                    <RowDefinition Height="*" />    <!-- 待发生现金事项卡片 -->
+                                </Grid.RowDefinitions>
+                                
                                 <!-- 经营建议卡片 -->
-                                <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,0,16" Padding="20">
+                                <Border Grid.Row="0" Style="{StaticResource SectionBlockBorderStyle}" Margin="0" Padding="20,16">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
@@ -2498,14 +2511,12 @@
                                     </Grid>
                                 </Border>
                                 
-                                <Border Height="16" />
-                                
                                 <!-- 待发生现金事项卡片 -->
-                                <Border Style="{StaticResource SectionBlockBorderStyle}" Margin="0" Padding="20">
+                                <Border Grid.Row="2" Style="{StaticResource SectionBlockBorderStyle}" Margin="0" Padding="20,16">
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
                                             <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
                                         
@@ -2568,7 +2579,7 @@
                                         <TextBlock Grid.Row="2" Text="建议控制在安全额度内" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" Margin="0,8,0,0" />
                                     </Grid>
                                 </Border>
-                            </StackPanel>
+                            </Grid>
                         </Grid>
                         
                         <!-- 最底脚注 -->
@@ -2578,7 +2589,6 @@
                             <Run Text="，部分数据可能存在延迟，仅供参考。" />
                         </TextBlock>
                     </Grid>
-                </ScrollViewer>
             </Grid>
 
             <!-- 订单履约 -->

@@ -52,6 +52,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IPriceAdjustmentService _priceAdjustmentService;
     private readonly IStringNarrationOrderService _stringNarrationOrderService;
     private readonly IStringNarrationBusinessService _stringNarrationBusinessService;
+    private readonly IInventoryWorkspaceService _inventoryWorkspaceService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
     private readonly IAppSettingRepository _settingRepository;
     private readonly ISyncService _syncService;
@@ -87,7 +88,8 @@ public partial class MainViewModel : ObservableObject
         string stringNarrationGatewayEndpoint = "",
         bool isStringNarrationGatewayTokenConfigured = false,
         int stringNarrationGatewayTimeoutSeconds = 15,
-        IStringNarrationBusinessService? stringNarrationBusinessService = null)
+        IStringNarrationBusinessService? stringNarrationBusinessService = null,
+        IInventoryWorkspaceService? inventoryWorkspaceService = null)
         : this(
             customerRepository,
             orderRepository,
@@ -118,7 +120,8 @@ public partial class MainViewModel : ObservableObject
             stringNarrationGatewayEndpoint,
             isStringNarrationGatewayTokenConfigured,
             stringNarrationGatewayTimeoutSeconds,
-            stringNarrationBusinessService)
+            stringNarrationBusinessService,
+            inventoryWorkspaceService)
     {
     }
 
@@ -152,7 +155,8 @@ public partial class MainViewModel : ObservableObject
         string stringNarrationGatewayEndpoint = "",
         bool isStringNarrationGatewayTokenConfigured = false,
         int stringNarrationGatewayTimeoutSeconds = 15,
-        IStringNarrationBusinessService? stringNarrationBusinessService = null)
+        IStringNarrationBusinessService? stringNarrationBusinessService = null,
+        IInventoryWorkspaceService? inventoryWorkspaceService = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -173,6 +177,7 @@ public partial class MainViewModel : ObservableObject
         _priceAdjustmentService = priceAdjustmentService;
         _stringNarrationOrderService = stringNarrationOrderService ?? EmptyStringNarrationOrderService.Instance;
         _stringNarrationBusinessService = stringNarrationBusinessService ?? EmptyStringNarrationBusinessService.Instance;
+        _inventoryWorkspaceService = inventoryWorkspaceService ?? EmptyInventoryWorkspaceService.Instance;
         _replyTemplateRepository = replyTemplateRepository;
         _settingRepository = settingRepository;
         _syncService = syncService;
@@ -702,6 +707,40 @@ public partial class MainViewModel : ObservableObject
             CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("串述业务数据服务未配置。");
+        }
+    }
+
+    private sealed class EmptyInventoryWorkspaceService : IInventoryWorkspaceService
+    {
+        public static EmptyInventoryWorkspaceService Instance { get; } = new();
+
+        public Task<StringNarrationInventoryManagementDashboardResult> GetDashboardAsync(
+            StringNarrationInventoryManagementDashboardRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("库存工作区服务未配置。");
+        }
+
+        public Task<InventoryImportPreviewResult> PrepareWorkbookImportAsync(
+            string workbookPath,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("库存工作区服务未配置。");
+        }
+
+        public Task<InventoryImportCommitResult> CommitWorkbookImportAsync(
+            InventoryImportPreviewResult preview,
+            bool writeBackWorkbook,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("库存工作区服务未配置。");
+        }
+
+        public Task ExportWorkbookAsync(
+            string workbookPath,
+            CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("库存工作区服务未配置。");
         }
     }
 }

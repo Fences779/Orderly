@@ -58,7 +58,7 @@ public partial class MainViewModel
         ? $"第 {Math.Max(InventoryDashboardPageInfo.Page, 1)} / {Math.Max(InventoryDashboardPageInfo.TotalPages, 1)} 页，共 {InventoryDashboardPageInfo.Total} 条"
         : GetInventoryDashboardFallbackText("暂无分页结果");
     public string InventoryEmptyStateText => string.IsNullOrWhiteSpace(InventoryError)
-        ? "暂无库存数据，点击刷新从 adminPcGateway 拉取。"
+        ? "暂无库存数据，点击刷新从库存主库拉取。"
         : InventoryError;
     public StringNarrationCashflowSummary CashflowSummary => CashflowResult.Summary;
     public StringNarrationCashflowHealthDashboardSummary CashflowHealthSummary => CashflowHealthDashboardResult.Summary;
@@ -159,7 +159,7 @@ public partial class MainViewModel
             IsInventoryLoading = true;
             InventoryError = string.Empty;
             StatusMessage = "正在加载库存数据...";
-            var dashboardResult = await _stringNarrationBusinessService.GetInventoryManagementDashboardAsync(new StringNarrationInventoryManagementDashboardRequest
+            var dashboardResult = await _inventoryWorkspaceService.GetDashboardAsync(new StringNarrationInventoryManagementDashboardRequest
             {
                 Keyword = InventoryKeyword,
                 Status = "all",
