@@ -14,6 +14,7 @@ public partial class MainViewModel : ObservableObject
     public const string SectionCashflow = "现金流";
     public const string SectionException = "异常处理";
     public const string SectionSettings = "设置";
+    public const string SectionMe = "我的";
 
     private static readonly HashSet<string> SupportedSections = new(StringComparer.Ordinal)
     {
@@ -22,7 +23,8 @@ public partial class MainViewModel : ObservableObject
         SectionInventory,
         SectionCashflow,
         SectionException,
-        SectionSettings
+        SectionSettings,
+        SectionMe
     };
 
     private static readonly HashSet<string> LegacySections = new(StringComparer.Ordinal)
@@ -198,7 +200,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<ReplyTemplate> ReplyTemplates { get; } = new();
     public ObservableCollection<WorkbenchTaskListItem> WorkbenchTasks { get; } = new();
     public ObservableCollection<SearchResultListItem> SearchResults { get; } = new();
-    public ObservableCollection<string> Sections { get; } = new(new[] { SectionWorkbench, SectionFulfillment, SectionInventory, SectionCashflow, SectionException, SectionSettings });
+    public ObservableCollection<string> Sections { get; } = new(new[] { SectionWorkbench, SectionFulfillment, SectionInventory, SectionCashflow, SectionException, SectionSettings, SectionMe });
     public ObservableCollection<SearchFilterOption> SearchFilterOptions { get; } = new();
     public ObservableCollection<QuickFilterOption> QuickFilterOptions { get; } = new();
     public ObservableCollection<CustomerStatus> CustomerStatusOptions { get; } = new(Enum.GetValues<CustomerStatus>());

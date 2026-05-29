@@ -350,6 +350,11 @@ public partial class MainViewModel
             return;
         }
 
+        if (string.Equals(value, SectionMe, StringComparison.Ordinal))
+        {
+            _ = RefreshManagedAccountsAsync();
+        }
+
         if (string.Equals(value, SectionFulfillment, StringComparison.Ordinal))
         {
             // 不再自动默认选中第一个卡片

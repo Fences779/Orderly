@@ -1510,6 +1510,10 @@
                             <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="我的">
+                            <Setter TargetName="IconBg" Property="Background" Value="#FCE7F3"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#DB2777"/>
+                        </DataTrigger>
 
                         <!-- Hover State when not selected: subtle background highlight -->
                         <MultiTrigger>
@@ -1555,6 +1559,230 @@
                                 </BeginStoryboard>
                             </Trigger.ExitActions>
                         </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Profile Menu Button Style (Left sidebar bottom) -->
+    <Style x:Key="ProfileMenuButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#1D1D1F"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="Margin" Value="2,12,2,4"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="TabBorder" Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent" BorderThickness="1"
+                            CornerRadius="14" Padding="{TemplateBinding Padding}" Margin="{TemplateBinding Margin}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- 渐变圆形头像区 -->
+                            <Border x:Name="AvatarBg" Grid.Column="0" Width="34" Height="34" CornerRadius="17" Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#F472B6" Offset="0"/>
+                                        <GradientStop Color="#A78BFA" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="AvatarScale" ScaleX="1" ScaleY="1"/>
+                                </Border.RenderTransform>
+                                <TextBlock x:Name="AvatarIcon" FontFamily="Segoe MDL2 Assets"
+                                           Text="{TemplateBinding Tag}" FontSize="13.5"
+                                           Foreground="#FFFFFF"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            
+                            <!-- 用户名称与状态文本 -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="NameText" Text="{Binding CurrentAccountDisplayName, FallbackValue=商家用户}" FontSize="13" FontWeight="SemiBold" Foreground="#1D1D1F"/>
+                                <TextBlock x:Name="RoleText" Text="系统店员" FontSize="11" Foreground="#86868B" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- 右侧跳转小箭头 -->
+                            <TextBlock Grid.Column="2" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" 
+                                       FontSize="10" Foreground="#86868B" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- 动态角色身份触发器 -->
+                        <DataTrigger Binding="{Binding IsCurrentUserOwner}" Value="True">
+                            <Setter TargetName="RoleText" Property="Text" Value="系统管理员"/>
+                        </DataTrigger>
+                        
+                        <!-- Hover 状态 -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="TabBorder" Property="Background" Value="#F1F2F5"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="AvatarScale" Storyboard.TargetProperty="ScaleX" To="1.08" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="AvatarScale" Storyboard.TargetProperty="ScaleY" To="1.08" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="AvatarScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="AvatarScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        
+                        <!-- Selected 状态 -->
+                        <DataTrigger Binding="{Binding SelectedSection}" Value="我的">
+                            <Setter TargetName="TabBorder" Property="Background" Value="#FFFFFF"/>
+                            <Setter TargetName="TabBorder" Property="BorderBrush" Value="#E5E7EC"/>
+                            <Setter TargetName="TabBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Profile Menu Glass Button Style (Left sidebar bottom - Option C) -->
+    <Style x:Key="ProfileMenuGlassButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="#A0FFFFFF"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="#1D1D1F"/>
+        <Setter Property="Padding" Value="12,10"/>
+        <Setter Property="Margin" Value="2,18,2,4"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="TabBorder" Background="{TemplateBinding Background}"
+                            BorderBrush="#CCFFFFFF" BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="14" Padding="{TemplateBinding Padding}" Margin="{TemplateBinding Margin}">
+                        <Border.Effect>
+                            <!-- 柔和毛玻璃悬浮阴影 -->
+                            <DropShadowEffect x:Name="TabShadow" BlurRadius="16" ShadowDepth="2" Direction="270" Color="#111216" Opacity="0.04"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- 圆形头像区，微弱香槟金偏光渐变 -->
+                            <Border x:Name="AvatarBg" Grid.Column="0" Width="34" Height="34" CornerRadius="17" Margin="0,0,10,0" RenderTransformOrigin="0.5,0.5">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#FAF7F2" Offset="0"/>
+                                        <GradientStop Color="#F3EADF" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="AvatarScale" ScaleX="1" ScaleY="1"/>
+                                </Border.RenderTransform>
+                                <TextBlock x:Name="AvatarIcon" FontFamily="Segoe MDL2 Assets"
+                                           Text="{TemplateBinding Tag}" FontSize="13.5"
+                                           Foreground="#C5A880"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            
+                            <!-- 用户名称与状态文本 -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock x:Name="NameText" Text="{Binding CurrentAccountDisplayName, FallbackValue=商家用户}" FontSize="13" FontWeight="SemiBold" Foreground="#1D1D1F"/>
+                                <TextBlock x:Name="RoleText" Text="系统店员" FontSize="11" Foreground="#86868B" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- 右侧跳转小箭头 -->
+                            <TextBlock Grid.Column="2" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" 
+                                       FontSize="10" Foreground="#86868B" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- 动态角色身份触发器 -->
+                        <DataTrigger Binding="{Binding IsCurrentUserOwner}" Value="True">
+                            <Setter TargetName="RoleText" Property="Text" Value="系统管理员"/>
+                        </DataTrigger>
+                        
+                        <!-- Hover 状态：呼吸式亮白玻璃 -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="TabBorder" Property="Background" Value="#E0FFFFFF"/>
+                            <Setter TargetName="TabBorder" Property="BorderBrush" Value="#E5FFFFFF"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="AvatarScale" Storyboard.TargetProperty="ScaleX" To="1.08" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="AvatarScale" Storyboard.TargetProperty="ScaleY" To="1.08" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="AvatarScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="AvatarScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.15">
+                                            <DoubleAnimation.EasingFunction><QuadraticEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        
+                        <!-- Selected 状态：高奢黑金光晕与黑金渐变头像 -->
+                        <DataTrigger Binding="{Binding SelectedSection}" Value="我的">
+                            <Setter TargetName="TabBorder" Property="Background" Value="#F2FFFFFF"/>
+                            <Setter TargetName="TabBorder" Property="BorderBrush" Value="#D4B285"/>
+                            <Setter TargetName="TabBorder" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect BlurRadius="18" ShadowDepth="2.5" Direction="270" Color="#D4B285" Opacity="0.1"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="AvatarBg" Property="Background">
+                                <Setter.Value>
+                                    <!-- 曜石深黑到典雅金的渐变 -->
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#1D1D20" Offset="0"/>
+                                        <GradientStop Color="#D4B285" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="AvatarIcon" Property="Foreground" Value="#FFFFFF"/>
+                        </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
