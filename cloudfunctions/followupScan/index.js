@@ -37,6 +37,232 @@ function normalizeDirection(value) {
   return direction === 'expense' ? 'expense' : 'income'
 }
 
+async function safeList(collection, where) {
+  try {
+    return (await db.collection(collection).where(where).limit(1000).get()).data || []
+  } catch (err) {
+    return []
+  }
+}
+
+function dateKey(value) {
+  const date = value ? new Date(value) : new Date()
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 10)
+}
+
+function timestamp(value) {
+  const date = value ? new Date(value) : new Date()
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+}
+
+function buildAvailability(status, sourceType, reason) {
+  return { status, sourceType, reason }
+}
+
+function buildInventoryStatus(sku) {
+  if (sku.enabled === false) return { status: 'disabled', label: '停用' }
+  const stock = normalizeNumber(sku.stockOnHand)
+  const reserved = normalizeNumber(sku.stockReserved)
+  const safety = normalizeNumber(sku.safetyStock)
+  if (safety > 0 && stock - reserved <= safety) return { status: 'low_stock', label: '低库存' }
+  return { status: 'normal', label: '正常' }
+}
+
+function compareValue(a, b, sortBy, direction) {
+  const left = a[sortBy]
+  const right = b[sortBy]
+  const result = typeof left === 'string' || typeof right === 'string'
+    ? String(left || '').localeCompare(String(right || ''), 'zh-Hans-CN')
+    : normalizeNumber(left) - normalizeNumber(right)
+  return direction === 'asc' ? result : -result
+}
+
+async function inventoryManagementDashboard(event, workspaceId) {
+  const request = event.payload || event
+  const page = Math.max(1, Number(request.page || 1))
+  const pageSize = Math.max(1, Number(request.pageSize || 10))
+  const keyword = normalizeText(request.keyword).toLowerCase()
+  const category = normalizeText(request.category)
+  const status = normalizeText(request.status || 'all')
+  const sortBy = normalizeText(request.sortBy || 'sold30dRatio')
+  const sortDirection = normalizeText(request.sortDirection || 'desc') === 'asc' ? 'asc' : 'desc'
+  const skus = await safeList('sku_catalog', { workspaceId })
+  const movements = await safeList('inventory_movements', { workspaceId })
+
+  const movementTotals = movements.reduce((map, movement) => {
+    const skuId = normalizeText(movement.skuId)
+    if (!skuId) return map
+    const occurredAt = timestamp(movement.occurredAt || movement.createdAt)
+    const ageDays = (Date.now() - occurredAt) / 86400000
+    const quantity = Math.abs(normalizeNumber(movement.quantity))
+    const bucket = map[skuId] || { consumed7dQty: 0, consumed30dQty: 0 }
+    if (ageDays <= 7) bucket.consumed7dQty += quantity
+    if (ageDays <= 30) bucket.consumed30dQty += quantity
+    map[skuId] = bucket
+    return map
+  }, {})
+
+  let items = skus.map((sku) => {
+    const skuStatus = buildInventoryStatus(sku)
+    const materialId = normalizeText(sku._id || sku.skuId || sku.id)
+    const totals = movementTotals[materialId] || { consumed7dQty: 0, consumed30dQty: 0 }
+    const currentStockQty = normalizeNumber(sku.stockOnHand) - normalizeNumber(sku.stockReserved)
+    const sold7dQty = totals.consumed7dQty
+    const sold30dQty = totals.consumed30dQty
+    return {
+      materialId,
+      materialName: normalizeText(sku.name || sku.title),
+      category: normalizeText(sku.category),
+      currentStockQty,
+      stockUnit: normalizeText(sku.stockUnit || sku.unit || '件'),
+      sold7dQty,
+      sold7dRatio: currentStockQty > 0 ? sold7dQty / currentStockQty : 0,
+      sold30dQty,
+      sold30dRatio: currentStockQty > 0 ? sold30dQty / currentStockQty : 0,
+      consumed7dQty: totals.consumed7dQty,
+      consumed30dQty: totals.consumed30dQty,
+      safeStockSuggestedQty: normalizeNumber(sku.safetyStock),
+      status: skuStatus.status,
+      statusLabel: skuStatus.label,
+      unitCost: normalizeNumber(sku.purchasePrice) || normalizeNumber(sku.costPrice),
+      lastRestockedAt: timestamp(sku.lastRestockedAt),
+      supplierName: normalizeText(sku.supplierName || sku.supplier),
+      remark: normalizeText(sku.inventoryRemark || sku.remark)
+    }
+  })
+
+  items = items.filter((item) => {
+    if (keyword && (item.materialName + item.category + item.supplierName).toLowerCase().indexOf(keyword) < 0) return false
+    if (category && item.category !== category) return false
+    if (status && status !== 'all' && item.status !== status) return false
+    return true
+  }).sort((a, b) => compareValue(a, b, sortBy, sortDirection))
+
+  const total = items.length
+  const pagedItems = items.slice((page - 1) * pageSize, page * pageSize)
+  const lowStockCount = items.filter((item) => item.status === 'low_stock').length
+  const fastSellingCount = items.filter((item) => item.sold30dRatio >= 0.5).length
+  const lowSellingCount = items.filter((item) => item.sold30dQty === 0).length
+  const avg = (values) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+  return {
+    ok: true,
+    updatedAt: Date.now(),
+    dataAvailability: {
+      inventorySource: buildAvailability(skus.length ? 'available' : 'unavailable', 'sku_catalog', skus.length ? '' : '暂无 SKU 库存数据'),
+      materialConsumption: buildAvailability(movements.length ? 'available' : 'compat', 'inventory_movements', movements.length ? '' : '暂无库存消耗流水，动销字段按 0 返回')
+    },
+    summary: {
+      avgOrderMaterialUsage: avg(items.map((item) => item.consumed30dQty).filter((value) => value > 0)),
+      avgMaterialUnitCost: avg(items.map((item) => item.unitCost).filter((value) => value > 0)),
+      avgBraceletSalePrice: avg(skus.map((sku) => normalizeNumber(sku.basePrice)).filter((value) => value > 0)),
+      avgBraceletCostPrice: avg(items.map((item) => item.unitCost).filter((value) => value > 0)),
+      grossMarginRate: null,
+      lowStockCount,
+      fastSellingCount,
+      lowSellingCount,
+      inventoryHealthStatus: lowStockCount > 0 ? 'warning' : 'healthy',
+      inventoryHealthSummary: lowStockCount > 0 ? lowStockCount + ' 个物料低于安全库存' : '库存风险在可控范围内',
+      inventoryWarningCount: lowStockCount
+    },
+    filterOptions: {
+      categories: Array.from(new Set(skus.map((sku) => normalizeText(sku.category)).filter(Boolean))),
+      statuses: [
+        { value: 'all', label: '全部状态' },
+        { value: 'fast_selling', label: '动销偏快' },
+        { value: 'low_selling', label: '低动销' },
+        { value: 'normal', label: '正常' },
+        { value: 'low_stock', label: '低库存' },
+        { value: 'disabled', label: '停用' }
+      ],
+      defaultSortBy: 'sold30dRatio',
+      defaultSortDirection: 'desc'
+    },
+    pageInfo: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    items: pagedItems
+  }
+}
+
+function buildBreakdown(entries, direction) {
+  const rows = entries.filter((entry) => entry.direction === direction)
+  const totalAmount = rows.reduce((sum, entry) => sum + normalizeNumber(entry.amount), 0)
+  const groups = rows.reduce((map, entry) => {
+    const category = normalizeText(entry.category) || '未分类'
+    map[category] = (map[category] || 0) + normalizeNumber(entry.amount)
+    return map
+  }, {})
+  return {
+    totalAmount,
+    items: Object.keys(groups).map((category) => ({
+      category,
+      amount: groups[category],
+      percent: totalAmount > 0 ? groups[category] / totalAmount : 0
+    }))
+  }
+}
+
+async function cashflowHealthDashboard(event, workspaceId) {
+  const entries = await safeList('cashflow_entries', { workspaceId })
+  const incomeBreakdown = buildBreakdown(entries, 'income')
+  const expenseBreakdown = buildBreakdown(entries, 'expense')
+  const netAmount = incomeBreakdown.totalAmount - expenseBreakdown.totalAmount
+  const avgDailyExpense7d = entries
+    .filter((entry) => entry.direction === 'expense' && (Date.now() - timestamp(entry.occurredAt || entry.createdAt)) / 86400000 <= 7)
+    .reduce((sum, entry) => sum + normalizeNumber(entry.amount), 0) / 7
+  const availableCashAmount = netAmount
+  const supportDays = avgDailyExpense7d > 0 ? Math.floor(Math.max(0, availableCashAmount) / avgDailyExpense7d) : null
+  const score = Math.max(0, Math.min(100, 70 + (netAmount >= 0 ? 15 : -20) + (supportDays == null || supportDays >= 14 ? 5 : -10)))
+  const trendItems = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  for (let offset = 6; offset >= 0; offset -= 1) {
+    const date = new Date(today)
+    date.setDate(today.getDate() - offset)
+    const key = date.toISOString().slice(0, 10)
+    const dayEntries = entries.filter((entry) => dateKey(entry.occurredAt || entry.createdAt) === key)
+    const incomeAmount = dayEntries.filter((entry) => entry.direction !== 'expense').reduce((sum, entry) => sum + normalizeNumber(entry.amount), 0)
+    const expenseAmount = dayEntries.filter((entry) => entry.direction === 'expense').reduce((sum, entry) => sum + normalizeNumber(entry.amount), 0)
+    trendItems.push({ date: key, incomeAmount, expenseAmount, netCashflowAmount: incomeAmount - expenseAmount })
+  }
+  return {
+    ok: true,
+    range: (event.payload && event.payload.range) || event.range || '30d',
+    startAt: timestamp(trendItems[0] && trendItems[0].date),
+    endAt: Date.now(),
+    updatedAt: Date.now(),
+    dataAvailability: {
+      cashBalance: buildAvailability(entries.length ? 'compat' : 'unavailable', 'cashflow_entries', entries.length ? '按现金流明细汇总现金余额' : '暂无现金流明细'),
+      receivable: buildAvailability('compat', 'cashflow_entries', '暂无独立应收账款表，按 0 返回'),
+      payable: buildAvailability('compat', 'cashflow_entries', '暂无独立应付账款表，按 0 返回')
+    },
+    summary: {
+      cashFlowHealthScore: score,
+      cashFlowHealthLevel: score >= 80 ? 'healthy' : (score >= 60 ? 'watch' : 'risk'),
+      cashFlowHealthSummary: score >= 80 ? '现金流健康' : (score >= 60 ? '现金流需关注' : '现金流存在风险'),
+      cashBalanceAmount: netAmount,
+      availableCashAmount,
+      receivableAmount: 0,
+      payableAmount: 0,
+      avgDailyExpense7d,
+      supportDays
+    },
+    trendItems,
+    incomeBreakdown,
+    expenseBreakdown,
+    upcomingCashItems: [
+      { type: 'receivable', label: '待收款', amount: 0, count: 0, note: '暂无独立应收数据' },
+      { type: 'payable', label: '待付款', amount: 0, count: 0, note: '暂无独立应付数据' }
+    ],
+    advice: {
+      healthTitle: score >= 80 ? '现金流稳定' : '关注现金流波动',
+      healthDescription: netAmount >= 0 ? '当前收入覆盖支出。' : '当前支出高于收入，需要控制补货和运营支出。',
+      restockSuggestionAmount: Math.max(0, availableCashAmount * 0.3),
+      riskHint: score >= 60 ? '' : '建议优先回款并减少非必要采购。',
+      nextFocus: ['确认待收款', '控制采购支出', '复核现金流明细']
+    }
+  }
+}
+
 function normalizeMovementType(value) {
   const type = normalizeText(value).toLowerCase()
   if (['in', 'out', 'adjust', 'reserve', 'release'].indexOf(type) >= 0) return type
@@ -97,6 +323,8 @@ async function taskAction(event, operatorId) {
 exports.main = async (event) => {
   const workspaceId = event.workspaceId || 'default'
   const operatorId = cloud.getWXContext().OPENID || 'anonymous'
+  if (event.mode === 'inventoryManagementDashboard') return inventoryManagementDashboard(event, workspaceId)
+  if (event.mode === 'cashflowHealthDashboard') return cashflowHealthDashboard(event, workspaceId)
   if (event.mode === 'taskAction') return taskAction(event, operatorId)
   if (event.mode === 'manualCreate') {
     const task = Object.assign({

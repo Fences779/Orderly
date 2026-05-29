@@ -55,34 +55,48 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
 
     public async Task<StringNarrationWhoamiResult> WhoamiAsync(CancellationToken cancellationToken = default)
     {
-        var root = await _client.InvokeAsync("whoami", new { }, cancellationToken);
-        var payloadRoot = GetPayloadRoot(root);
-        return new StringNarrationWhoamiResult
+        try
         {
-            Authorized = ReadBool(payloadRoot, "authorized"),
-            Gateway = ReadString(payloadRoot, "gateway"),
-            OperatorId = ReadString(payloadRoot, "operatorId"),
-            OperatorOpenid = ReadString(payloadRoot, "operatorOpenid"),
-            Permissions = ReadStringArray(payloadRoot, "permissions")
-        };
+            var root = await _client.InvokeAsync("whoami", new { }, cancellationToken);
+            var payloadRoot = GetPayloadRoot(root);
+            return new StringNarrationWhoamiResult
+            {
+                Authorized = ReadBool(payloadRoot, "authorized"),
+                Gateway = ReadString(payloadRoot, "gateway"),
+                OperatorId = ReadString(payloadRoot, "operatorId"),
+                OperatorOpenid = ReadString(payloadRoot, "operatorOpenid"),
+                Permissions = ReadStringArray(payloadRoot, "permissions")
+            };
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw WrapActionException("whoami", ex);
+        }
     }
 
     public async Task<StringNarrationOrderListResult> GetOrdersAsync(StringNarrationOrderQuery query, CancellationToken cancellationToken = default)
     {
-        query ??= new StringNarrationOrderQuery();
-        var payload = BuildQueryPayload(query, includePageInfo: true);
-
-        var root = await _client.InvokeAsync(OrderListAction, payload, cancellationToken);
-        var payloadRoot = GetPayloadRoot(root);
-        var orders = ParseSummaryList(payloadRoot);
-        var stats = ParseFulfillmentStats(payloadRoot);
-
-        return new StringNarrationOrderListResult
+        try
         {
-            Orders = orders,
-            PageInfo = TryGet(payloadRoot, "pageInfo", out var pageInfo) ? ParsePageInfo(pageInfo) : new StringNarrationPageInfo(),
-            Stats = stats
-        };
+            query ??= new StringNarrationOrderQuery();
+            var payload = BuildQueryPayload(query, includePageInfo: true);
+
+            var root = await _client.InvokeAsync(OrderListAction, payload, cancellationToken);
+            var payloadRoot = GetPayloadRoot(root);
+            var orders = ParseSummaryList(payloadRoot);
+            var stats = ParseFulfillmentStats(payloadRoot, requireWorkbenchDashboardContract: false);
+
+            return new StringNarrationOrderListResult
+            {
+                Orders = orders,
+                PageInfo = TryGet(payloadRoot, "pageInfo", out var pageInfo) ? ParsePageInfo(pageInfo) : new StringNarrationPageInfo(),
+                Stats = stats
+            };
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw WrapActionException(OrderListAction, ex);
+        }
     }
 
     public async Task<StringNarrationFulfillmentStats> GetFulfillmentStatsAsync(StringNarrationOrderQuery query, CancellationToken cancellationToken = default)
@@ -105,61 +119,82 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         }
         catch (InvalidOperationException ex)
         {
-            throw new InvalidOperationException($"调用串述 adminPcGateway action={FulfillmentStatsAction} 失败：{ex.Message}", ex);
+            throw WrapActionException(FulfillmentStatsAction, ex);
         }
     }
 
     public async Task<StringNarrationOrderDetail> GetOrderDetailAsync(string orderNo, string tradeNo = "", string id = "", CancellationToken cancellationToken = default)
     {
-        var payload = BuildLookupPayload(orderNo, tradeNo, id);
-        var root = await _client.InvokeAsync(OrderDetailAction, payload, cancellationToken);
-        return ParseDetail(GetPayloadRoot(root));
+        try
+        {
+            var payload = BuildLookupPayload(orderNo, tradeNo, id);
+            var root = await _client.InvokeAsync(OrderDetailAction, payload, cancellationToken);
+            return ParseDetail(GetPayloadRoot(root));
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw WrapActionException(OrderDetailAction, ex);
+        }
     }
 
     public async Task<StringNarrationOrderDetail> UpdateFulfillmentAsync(StringNarrationFulfillmentUpdateRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        try
+        {
+            ArgumentNullException.ThrowIfNull(request);
 
-        var payload = BuildLookupPayload(request.OrderNo, request.TradeNo, request.Id);
-        AddIfPresent(payload, "fulfillmentStatus", request.FulfillmentStatus);
-        payload["trackingNo"] = request.TrackingNo.Trim();
-        payload["carrier"] = request.Carrier.Trim();
-        payload["expressCompanyCode"] = request.ExpressCompanyCode.Trim();
-        payload["shippingRemark"] = request.ShippingRemark.Trim();
-        payload["adminRemark"] = request.AdminRemark.Trim();
+            var payload = BuildLookupPayload(request.OrderNo, request.TradeNo, request.Id);
+            AddIfPresent(payload, "fulfillmentStatus", request.FulfillmentStatus);
+            payload["trackingNo"] = request.TrackingNo.Trim();
+            payload["carrier"] = request.Carrier.Trim();
+            payload["expressCompanyCode"] = request.ExpressCompanyCode.Trim();
+            payload["shippingRemark"] = request.ShippingRemark.Trim();
+            payload["adminRemark"] = request.AdminRemark.Trim();
 
-        await _client.InvokeAsync(UpdateFulfillmentAction, payload, cancellationToken);
-        return await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
+            await _client.InvokeAsync(UpdateFulfillmentAction, payload, cancellationToken);
+            return await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw WrapActionException(UpdateFulfillmentAction, ex);
+        }
     }
 
     public async Task<StringNarrationExceptionActionResult> ApplyExceptionActionAsync(StringNarrationExceptionActionRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var payload = BuildLookupPayload(request.OrderNo, request.TradeNo, request.Id);
-        AddIfPresent(payload, "action", request.NormalizedAction);
-        AddIfPresent(payload, "resolutionStatus", request.TargetResolutionStatus);
-        AddIfPresent(payload, "resolutionAction", request.ResolutionAction);
-        AddIfPresent(payload, "adminResolutionRemark", request.AdminResolutionRemark);
-        AddIfPresent(payload, "owner", request.Owner);
-        AddIfPresent(payload, "assignee", request.Assignee);
-        AddIfPresent(payload, "priority", request.Priority);
-        AddIfPresent(payload, "resolvedBy", request.ResolvedBy);
-        AddIfPresent(payload, "operatorId", request.OperatorId);
-        AddIfPresent(payload, "operatorOpenid", request.OperatorOpenid);
-        AddIfPositive(payload, "slaDueAt", request.SlaDueAt);
-        AddIfPositive(payload, "lastCheckedAt", request.LastCheckedAt);
-        AddIfPositive(payload, "actionAt", request.ActionAt);
-
-        await _client.InvokeAsync(UpdateExceptionAction, payload, cancellationToken);
-        var detail = await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
-        return new StringNarrationExceptionActionResult
+        try
         {
-            Ok = true,
-            Message = $"异常处理动作已提交：{request.NormalizedAction}",
-            Detail = detail,
-            AuditEntry = BuildAuditEntryFromRequest(request, detail.Exception)
-        };
+            ArgumentNullException.ThrowIfNull(request);
+
+            var payload = BuildLookupPayload(request.OrderNo, request.TradeNo, request.Id);
+            AddIfPresent(payload, "action", request.NormalizedAction);
+            AddIfPresent(payload, "resolutionStatus", request.TargetResolutionStatus);
+            AddIfPresent(payload, "resolutionAction", request.ResolutionAction);
+            AddIfPresent(payload, "adminResolutionRemark", request.AdminResolutionRemark);
+            AddIfPresent(payload, "owner", request.Owner);
+            AddIfPresent(payload, "assignee", request.Assignee);
+            AddIfPresent(payload, "priority", request.Priority);
+            AddIfPresent(payload, "resolvedBy", request.ResolvedBy);
+            AddIfPresent(payload, "operatorId", request.OperatorId);
+            AddIfPresent(payload, "operatorOpenid", request.OperatorOpenid);
+            AddIfPositive(payload, "slaDueAt", request.SlaDueAt);
+            AddIfPositive(payload, "lastCheckedAt", request.LastCheckedAt);
+            AddIfPositive(payload, "actionAt", request.ActionAt);
+
+            await _client.InvokeAsync(UpdateExceptionAction, payload, cancellationToken);
+            var detail = await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
+            return new StringNarrationExceptionActionResult
+            {
+                Ok = true,
+                Message = $"异常处理动作已提交：{request.NormalizedAction}",
+                Detail = detail,
+                AuditEntry = BuildAuditEntryFromRequest(request, detail.Exception)
+            };
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw WrapActionException(UpdateExceptionAction, ex);
+        }
     }
 
     public Task<StringNarrationExceptionSampleReplayResult> ReplayExceptionSamplesAsync(StringNarrationExceptionSampleReplayRequest request, CancellationToken cancellationToken = default)
@@ -181,22 +216,21 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
 
     public async Task<StringNarrationOrderDetail> GenerateProductionOrderAsync(StringNarrationGenerateProductionOrderRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var payload = BuildLookupPayload(request.OrderNo, request.TradeNo, request.Id);
-        payload["remark"] = request.Remark.Trim();
-        payload["forceRegenerate"] = request.ForceRegenerate;
-
         try
         {
+            ArgumentNullException.ThrowIfNull(request);
+
+            var payload = BuildLookupPayload(request.OrderNo, request.TradeNo, request.Id);
+            payload["remark"] = request.Remark.Trim();
+            payload["forceRegenerate"] = request.ForceRegenerate;
+
             await _client.InvokeAsync(GenerateProductionOrderAction, payload, cancellationToken);
+            return await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
         }
         catch (InvalidOperationException ex)
         {
-            throw new InvalidOperationException($"调用串述 adminPcGateway action={GenerateProductionOrderAction} 失败：{ex.Message}", ex);
+            throw WrapActionException(GenerateProductionOrderAction, ex);
         }
-
-        return await GetOrderDetailAsync(request.OrderNo, request.TradeNo, request.Id, cancellationToken);
     }
 
     private static StringNarrationExceptionAuditEntry BuildAuditEntryFromRequest(
@@ -900,7 +934,9 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         };
     }
 
-    private static StringNarrationFulfillmentStats ParseFulfillmentStats(JsonElement root)
+    private static StringNarrationFulfillmentStats ParseFulfillmentStats(
+        JsonElement root,
+        bool requireWorkbenchDashboardContract = true)
     {
         var statsSource = GetFirstObject(root, "stats", "fulfillmentStats", "metrics");
         if (statsSource.ValueKind != JsonValueKind.Object)
@@ -975,7 +1011,7 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             counts,
             totalCount,
             calculatedAt,
-            ParseWorkbenchDashboard(root, statsSource, counts, totalCount, calculatedAt));
+            ParseWorkbenchDashboard(root, statsSource, counts, totalCount, calculatedAt, requireWorkbenchDashboardContract));
     }
 
     private static StringNarrationFulfillmentStats BuildStatsFromOrders(
@@ -1057,7 +1093,8 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         JsonElement statsSource,
         IReadOnlyDictionary<string, int> counts,
         int totalCount,
-        long calculatedAt)
+        long calculatedAt,
+        bool requireWorkbenchDashboardContract)
     {
         var dashboardSource = GetFirstObject(root, "workbenchDashboard", "dashboard", "businessDashboard", "summary");
         if (dashboardSource.ValueKind != JsonValueKind.Object)
@@ -1065,23 +1102,31 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             dashboardSource = GetFirstObject(statsSource, "workbenchDashboard", "dashboard", "businessDashboard", "summary");
         }
 
+        if (requireWorkbenchDashboardContract)
+        {
+            ValidateWorkbenchDashboardContract(dashboardSource);
+        }
+
         var sources = dashboardSource.ValueKind == JsonValueKind.Object
             ? new[] { dashboardSource, statsSource, root }
             : new[] { statsSource, root };
 
         counts.TryGetValue(StringNarrationFulfillmentStatusCatalog.PendingMake, out var pendingMakeCount);
+        counts.TryGetValue(StringNarrationFulfillmentStatusCatalog.Making, out var makingCount);
         counts.TryGetValue(StringNarrationFulfillmentStatusCatalog.ReadyToShip, out var readyToShipCount);
         counts.TryGetValue(StringNarrationFulfillmentStatusCatalog.Exception, out var exceptionCount);
+
+        var derivedUnfinishedOrderCount = CountFromMap(counts,
+            StringNarrationFulfillmentStatusCatalog.PaidPendingConfirm,
+            StringNarrationFulfillmentStatusCatalog.PendingMake,
+            StringNarrationFulfillmentStatusCatalog.Making,
+            StringNarrationFulfillmentStatusCatalog.ReadyToShip,
+            StringNarrationFulfillmentStatusCatalog.Exception);
 
         var unfinishedOrderCount = ReadIntFromCandidates(sources, "unfinishedOrderCount", "unfinishedCount", "openOrderCount");
         if (unfinishedOrderCount <= 0)
         {
-            unfinishedOrderCount = CountFromMap(counts,
-                StringNarrationFulfillmentStatusCatalog.PaidPendingConfirm,
-                StringNarrationFulfillmentStatusCatalog.PendingMake,
-                StringNarrationFulfillmentStatusCatalog.Making,
-                StringNarrationFulfillmentStatusCatalog.ReadyToShip,
-                StringNarrationFulfillmentStatusCatalog.Exception);
+            unfinishedOrderCount = derivedUnfinishedOrderCount;
         }
 
         var lastSyncedAt = ReadLongFromCandidates(sources, "lastSyncedAt", "lastSyncAt", "calculatedAt", "at", "updatedAt");
@@ -1096,11 +1141,13 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             TodayOrderCountDelta = ReadIntFromCandidates(sources, "todayOrderCountDelta", "todayOrdersDelta", "orderCountDelta"),
             TodayRevenueAmount = ReadDecimalFromCandidates(sources, "todayRevenueAmount", "todayRevenue", "todayAmount", "revenueToday"),
             TodayRevenueAmountDelta = ReadDecimalFromCandidates(sources, "todayRevenueAmountDelta", "todayRevenueDelta", "revenueDelta"),
-            PendingMakeCount = ReadIntFromCandidates(sources, "pendingMakeCount", "pendingMake", "pendingProductionCount"),
+            PendingMakeCount = pendingMakeCount,
             PendingMakeDelta = ReadIntFromCandidates(sources, "pendingMakeDelta", "pendingProductionDelta"),
-            ReadyToShipCount = ReadIntFromCandidates(sources, "readyToShipCount", "readyToShip", "pendingShipCount"),
+            MakingCount = makingCount,
+            MakingDelta = ReadIntFromCandidates(sources, "makingDelta", "inProductionDelta"),
+            ReadyToShipCount = readyToShipCount,
             ReadyToShipDelta = ReadIntFromCandidates(sources, "readyToShipDelta", "pendingShipDelta"),
-            ExceptionOrderCount = ReadIntFromCandidates(sources, "exceptionOrderCount", "exceptionCount", "abnormalOrderCount"),
+            ExceptionOrderCount = exceptionCount,
             ExceptionOrderDelta = ReadIntFromCandidates(sources, "exceptionOrderDelta", "exceptionDelta", "abnormalOrderDelta"),
             UnfinishedOrderCount = unfinishedOrderCount,
             InventoryHealthStatus = ReadStringFromCandidates(sources, "inventoryHealthStatus", "inventoryStatus", "stockHealthStatus"),
@@ -1114,22 +1161,40 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
             FulfillmentPressureItems = ParseFulfillmentPressureItems(sources, counts, unfinishedOrderCount, totalCount)
         };
 
-        if (dashboard.PendingMakeCount <= 0)
-        {
-            dashboard.PendingMakeCount = pendingMakeCount;
-        }
-
-        if (dashboard.ReadyToShipCount <= 0)
-        {
-            dashboard.ReadyToShipCount = readyToShipCount;
-        }
-
-        if (dashboard.ExceptionOrderCount <= 0)
-        {
-            dashboard.ExceptionOrderCount = exceptionCount;
-        }
-
         return dashboard;
+    }
+
+    private static void ValidateWorkbenchDashboardContract(JsonElement dashboardSource)
+    {
+        if (dashboardSource.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException("fulfillmentStats 返回缺少 workbenchDashboard 对象字段。");
+        }
+
+        RequireProperties(dashboardSource, "workbenchDashboard",
+            "todayOrderCount",
+            "todayOrderCountDelta",
+            "todayRevenueAmount",
+            "todayRevenueAmountDelta",
+            "pendingMakeCount",
+            "pendingMakeDelta",
+            "readyToShipCount",
+            "readyToShipDelta",
+            "exceptionOrderCount",
+            "exceptionOrderDelta",
+            "unfinishedOrderCount",
+            "lastSyncedAt",
+            "recentBusinessTrendItems",
+            "fulfillmentPressureItems",
+            "inventoryHealthStatus",
+            "inventoryHealthSummary",
+            "inventoryWarningCount",
+            "cashFlowScore",
+            "cashFlowStatus",
+            "cashFlowDelta");
+
+        RequireArray(dashboardSource, "recentBusinessTrendItems", "workbenchDashboard");
+        RequireArray(dashboardSource, "fulfillmentPressureItems", "workbenchDashboard");
     }
 
     private static IReadOnlyList<StringNarrationBusinessTrendPoint> ParseBusinessTrendItems(IReadOnlyList<JsonElement> sources)
@@ -1431,6 +1496,25 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         }
 
         return default;
+    }
+
+    private static void RequireArray(JsonElement element, string name, string contractName)
+    {
+        if (!TryGet(element, name, out var property) || property.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException($"{contractName} 返回缺少数组字段 {name}。");
+        }
+    }
+
+    private static void RequireProperties(JsonElement element, string contractName, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (!TryGet(element, name, out _))
+            {
+                throw new InvalidOperationException($"{contractName} 返回缺少字段 {name}。");
+            }
+        }
     }
 
     private static JsonElement GetFirstArray(JsonElement element, params string[] names)
@@ -1816,5 +1900,12 @@ public sealed class StringNarrationGatewayOrderService : IStringNarrationOrderSe
         }
 
         return property.Clone();
+    }
+
+    private static InvalidOperationException WrapActionException(string action, InvalidOperationException ex)
+    {
+        return ex.Message.Contains($"action={action}", StringComparison.OrdinalIgnoreCase)
+            ? ex
+            : new InvalidOperationException($"调用串述 adminPcGateway action={action} 失败：{ex.Message}", ex);
     }
 }

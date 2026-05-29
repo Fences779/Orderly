@@ -151,6 +151,7 @@ public sealed class StringNarrationBusinessDataAvailabilityItem
 
     public bool IsUnavailable => string.Equals(Status, "unavailable", StringComparison.OrdinalIgnoreCase);
     public bool IsCompat => string.Equals(Status, "compat", StringComparison.OrdinalIgnoreCase);
+    public bool IsAvailable => !IsUnavailable && !IsCompat;
 }
 
 public sealed class StringNarrationInventoryManagementDashboardSummary
@@ -286,6 +287,7 @@ public sealed class StringNarrationCashflowHealthDashboardUpcomingCashItem
     public decimal Amount { get; set; }
     public int Count { get; set; }
     public string Note { get; set; } = string.Empty;
+    public bool IsCompatPlaceholder { get; set; }
 }
 
 public sealed class StringNarrationCashflowHealthDashboardAdvice

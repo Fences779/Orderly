@@ -10,6 +10,12 @@ function recentMovements(limit) {
   return cloud.listByQuery(cloud.COLLECTIONS.inventoryMovements, {}, { orderBy: { field: 'occurredAt', direction: 'desc' }, limit: limit || 50 })
 }
 
+function managementDashboard(params) {
+  return cloud.call('followupScan', Object.assign({
+    mode: 'inventoryManagementDashboard'
+  }, params || {}))
+}
+
 function saveSku(sku) {
   return cloud.call('followupScan', {
     mode: 'skuSave',
@@ -27,6 +33,7 @@ function saveMovement(movement) {
 module.exports = {
   list,
   recentMovements,
+  managementDashboard,
   saveSku,
   saveMovement
 }

@@ -4,6 +4,12 @@ function list(limit) {
   return cloud.listByQuery(cloud.COLLECTIONS.cashflow, {}, { orderBy: { field: 'occurredAt', direction: 'desc' }, limit: limit || 100 })
 }
 
+function healthDashboard(params) {
+  return cloud.call('followupScan', Object.assign({
+    mode: 'cashflowHealthDashboard'
+  }, params || {}))
+}
+
 function save(entry) {
   return cloud.call('followupScan', {
     mode: 'cashflowSave',
@@ -27,6 +33,7 @@ function summarize(entries) {
 
 module.exports = {
   list,
+  healthDashboard,
   save,
   summarize
 }

@@ -1093,25 +1093,31 @@ public partial class MainViewModel
             fallbackUsed = true;
         }
 
-        if (dashboard.PendingMakeCount <= 0)
+        if (dashboard.PendingMakeCount != stats.PendingMakeCount)
         {
             dashboard.PendingMakeCount = stats.PendingMakeCount;
             fallbackUsed = true;
         }
 
-        if (dashboard.ReadyToShipCount <= 0)
+        if (dashboard.MakingCount != stats.MakingCount)
+        {
+            dashboard.MakingCount = stats.MakingCount;
+            fallbackUsed = true;
+        }
+
+        if (dashboard.ReadyToShipCount != stats.ReadyToShipCount)
         {
             dashboard.ReadyToShipCount = stats.ReadyToShipCount;
             fallbackUsed = true;
         }
 
-        if (dashboard.ExceptionOrderCount <= 0)
+        if (dashboard.ExceptionOrderCount != stats.ExceptionCount)
         {
             dashboard.ExceptionOrderCount = stats.ExceptionCount;
             fallbackUsed = true;
         }
 
-        if (dashboard.UnfinishedOrderCount <= 0)
+        if (dashboard.UnfinishedOrderCount != fallback.UnfinishedOrderCount)
         {
             dashboard.UnfinishedOrderCount = fallback.UnfinishedOrderCount;
             fallbackUsed = true;
@@ -1119,7 +1125,7 @@ public partial class MainViewModel
 
         if (dashboard.LastSyncedAt <= 0)
         {
-            dashboard.LastSyncedAt = stats.CalculatedAt > 0 ? stats.CalculatedAt : fallback.LastSyncedAt;
+            dashboard.LastSyncedAt = fallback.LastSyncedAt;
             fallbackUsed = true;
         }
 
@@ -1136,7 +1142,6 @@ public partial class MainViewModel
         }
 
         dashboard.IsFallbackProjection = dashboard.IsFallbackProjection || fallbackUsed;
-
         return dashboard;
     }
 
@@ -1164,6 +1169,7 @@ public partial class MainViewModel
             TodayRevenueAmount = todayRevenue,
             TodayRevenueAmountDelta = todayRevenue - yesterdayRevenue,
             PendingMakeCount = stats.PendingMakeCount,
+            MakingCount = stats.MakingCount,
             ReadyToShipCount = stats.ReadyToShipCount,
             ExceptionOrderCount = stats.ExceptionCount,
             UnfinishedOrderCount = unfinishedOrderCount,

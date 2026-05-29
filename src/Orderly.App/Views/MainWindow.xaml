@@ -300,6 +300,42 @@
                             </Style>
                         </Button.Style>
                     </Button>
+                    <Button x:Name="Tab_Inventory" AutomationProperties.AutomationId="Tab_Inventory" Content="库存管理" Tag="&#xE7B8;" Command="{Binding SelectSectionCommand}" CommandParameter="库存管理">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSection}" Value="库存管理">
+                                        <Setter Property="Background" Value="#FFFFFF" />
+                                        <Setter Property="Foreground" Value="#1D1D1F" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button x:Name="Tab_Cashflow" AutomationProperties.AutomationId="Tab_Cashflow" Content="现金流" Tag="&#xEAF1;" Command="{Binding SelectSectionCommand}" CommandParameter="现金流">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedSection}" Value="现金流">
+                                        <Setter Property="Background" Value="#FFFFFF" />
+                                        <Setter Property="Foreground" Value="#1D1D1F" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
                     <Button x:Name="Tab_ExceptionOrders" AutomationProperties.AutomationId="Tab_ExceptionOrders" Content="异常处理" Tag="&#xE7BA;" Command="{Binding SelectSectionCommand}" CommandParameter="异常处理">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
@@ -1221,201 +1257,787 @@
             </Grid>
 
             <!-- 库存管理 -->
-            <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=库存管理}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <Grid Margin="0,0,6,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+            <Grid Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=库存管理}" Background="{StaticResource PageBackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" /> <!-- 0: 顶部标题栏 -->
+                    <RowDefinition Height="Auto" /> <!-- 1: 5个大卡片 -->
+                    <RowDefinition Height="Auto" /> <!-- 2: 过滤工具栏 -->
+                    <RowDefinition Height="*" />    <!-- 3: 表格列表 -->
+                    <RowDefinition Height="Auto" /> <!-- 4: 分页栏 -->
+                </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                <!-- 0: 顶部标题栏 -->
+                <Grid Grid.Row="0" Margin="24,16,24,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="库存管理" FontSize="22" FontWeight="Bold" Foreground="#1D1D1F" />
+                        <TextBlock Text="用材料动销效率判断补货、压货和库存风险" FontSize="12" Foreground="#868E96" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="数据更新：" Foreground="#868E96" FontSize="12" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding InventoryUpdatedAtText}" Foreground="#868E96" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0" />
+                        <Button Content="刷新库存" Command="{Binding RefreshInventoryCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- 1: 5个指标卡片 -->
+                <Grid Grid.Row="1" Margin="24,0,24,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 卡片 1: 平均每单消耗珠子 -->
+                    <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="库存管理" Style="{StaticResource SectionHeaderTextStyle}" />
-                                <TextBlock Text="{Binding InventoryDashboardHealthSummaryText}" Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                            <!-- 圆形小图标 -->
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#F2EEFC" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE71D;" FontFamily="Segoe MDL2 Assets" Foreground="#7A3EDB" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="平均每单消耗珠子" FontSize="11" Foreground="#868E96" />
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding InventoryDashboardSummary.AvgOrderMaterialUsage, StringFormat={}{0:0.0}}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" />
+                                    <TextBlock Text=" 颗" FontSize="11" Foreground="#868E96" VerticalAlignment="Bottom" Margin="0,0,0,2" />
+                                </StackPanel>
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Text="{Binding InventoryUpdatedAtText}" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center" Margin="0,0,12,0" />
-                            <Button Grid.Column="2" Content="刷新库存" Command="{Binding RefreshInventoryCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" VerticalAlignment="Center" />
                         </Grid>
+                    </Border>
 
-                        <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <!-- 卡片 2: 平均珠子单价 -->
+                    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-
-                            <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
-                                <StackPanel>
-                                    <TextBlock Text="库存健康" Style="{StaticResource CaptionTextStyle}" />
-                                    <TextBlock Text="{Binding InventoryDashboardHealthStatusText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
-                                    <TextBlock Text="{Binding InventoryDashboardWarningCountText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
-                                </StackPanel>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#FFF5EC" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" Foreground="#FF9500" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
-                            <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
-                                <StackPanel>
-                                    <TextBlock Text="低库存项" Style="{StaticResource CaptionTextStyle}" />
-                                    <TextBlock Text="{Binding InventoryDashboardLowStockCountText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
-                                    <TextBlock Text="{Binding InventoryDashboardPageInfoText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="平均珠子单价" FontSize="11" Foreground="#868E96" />
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding InventoryDashboardSummary.AvgMaterialUnitCost, StringFormat=¥{0:0.00}}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" />
+                                    <TextBlock Text=" / 颗" FontSize="11" Foreground="#868E96" VerticalAlignment="Bottom" Margin="0,0,0,2" />
                                 </StackPanel>
-                            </Border>
-                            <Border Grid.Column="2" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
-                                <StackPanel>
-                                    <TextBlock Text="快动销 / 低动销" Style="{StaticResource CaptionTextStyle}" />
-                                    <TextBlock Text="{Binding InventoryDashboardFastSellingCountText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
-                                    <TextBlock Text="{Binding InventoryDashboardLowSellingCountText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="3" Style="{StaticResource SummaryMetricCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="毛利率 / 单串成本" Style="{StaticResource CaptionTextStyle}" />
-                                    <TextBlock Text="{Binding InventoryDashboardGrossMarginRateText}" Style="{StaticResource MetricValueTextStyle}" Margin="0,8,0,0" />
-                                    <TextBlock Text="{Binding InventoryDashboardAvgBraceletCostPriceText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
-                                </StackPanel>
-                            </Border>
+                            </StackPanel>
                         </Grid>
+                    </Border>
 
-                        <Grid Grid.Row="2" Margin="0,0,0,16">
+                    <!-- 卡片 3: 平均每串售价 -->
+                    <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.6*" />
-                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-
-                            <Border Grid.Column="0" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,12,0">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Text="关键口径" Style="{StaticResource SectionHeaderTextStyle}" />
-                                    <Grid Grid.Row="1" Margin="0,12,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="单单材料消耗" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Text="{Binding InventoryDashboardAvgOrderMaterialUsageText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="材料均价" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Text="{Binding InventoryDashboardAvgMaterialUnitCostText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="客单均价" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Text="{Binding InventoryDashboardAvgBraceletSalePriceText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="3">
-                                            <TextBlock Text="筛选口径" Style="{StaticResource CaptionTextStyle}" />
-                                            <TextBlock Text="{Binding InventoryDashboardStatusSummaryText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
-                                        </StackPanel>
-                                    </Grid>
-                                    <StackPanel Grid.Row="2" Margin="0,14,0,0">
-                                        <TextBlock Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap">
-                                            <Run Text="库存源：" />
-                                            <Run Text="{Binding InventoryDashboardResult.DataAvailability.InventorySource.SourceType, TargetNullValue=未接入}" />
-                                            <Run Text="  " />
-                                            <Run Text="{Binding InventoryDashboardResult.DataAvailability.InventorySource.Reason}" />
-                                        </TextBlock>
-                                        <TextBlock Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap">
-                                            <Run Text="消耗口径：" />
-                                            <Run Text="{Binding InventoryDashboardResult.DataAvailability.MaterialConsumption.SourceType, TargetNullValue=未接入}" />
-                                            <Run Text="  " />
-                                            <Run Text="{Binding InventoryDashboardResult.DataAvailability.MaterialConsumption.Reason}" />
-                                        </TextBlock>
-                                    </StackPanel>
-                                </Grid>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#EBF8F2" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" Foreground="#2B7A5C" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
-
-                            <Border Grid.Column="1" Style="{StaticResource SummaryMetricCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="数据覆盖" Style="{StaticResource SectionHeaderTextStyle}" />
-                                    <TextBlock Text="{Binding InventoryDashboardCategorySummaryText}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,12,0,0" />
-                                    <TextBlock Text="{Binding InventoryItemsCountText}" Style="{StaticResource CaptionTextStyle}" Margin="0,8,0,0" />
-                                    <TextBlock Text="{Binding InventoryDashboardPageInfoText}" Style="{StaticResource CaptionTextStyle}" Margin="0,6,0,0" />
-                                    <TextBlock Text="{Binding InventoryEmptyStateText}" Style="{StaticResource CaptionTextStyle}" Margin="0,10,0,0" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="平均每串售价" FontSize="11" Foreground="#868E96" />
+                                <TextBlock Text="{Binding InventoryDashboardSummary.AvgBraceletSalePrice, StringFormat=¥{0:0.00}}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" Margin="0,4,0,0" />
+                            </StackPanel>
                         </Grid>
+                    </Border>
 
-                        <Border Grid.Row="3" Style="{StaticResource SummaryMetricCardStyle}" Margin="0,0,0,12">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="库存明细" Style="{StaticResource SectionHeaderTextStyle}" />
-                                    <TextBlock Grid.Column="1" Text="{Binding InventoryDashboardPageInfoText}" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center" />
-                                </Grid>
-                                <Grid Grid.Row="1" Margin="0,12,0,0">
-                                    <DataGrid ItemsSource="{Binding InventoryDashboardItems}"
-                                              AutoGenerateColumns="False"
-                                              IsReadOnly="True"
-                                              HeadersVisibility="Column"
-                                              GridLinesVisibility="Horizontal"
-                                              BorderThickness="0"
-                                              RowHeaderWidth="0"
-                                              AlternatingRowBackground="#FCFCFD"
-                                              Background="Transparent"
-                                              MaxHeight="420">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="材料" Binding="{Binding MaterialName, TargetNullValue=暂无数据}" Width="180" />
-                                            <DataGridTextColumn Header="分类" Binding="{Binding Category, TargetNullValue=未分类}" Width="90" />
-                                            <DataGridTextColumn Header="现存" Binding="{Binding CurrentStockQty, StringFormat={}{0:0.##}}" Width="80" />
-                                            <DataGridTextColumn Header="单位" Binding="{Binding StockUnit, TargetNullValue=-}" Width="60" />
-                                            <DataGridTextColumn Header="建议安全库存" Binding="{Binding SafeStockSuggestedQty, StringFormat={}{0:0.##}, TargetNullValue=未评估}" Width="110" />
-                                            <DataGridTextColumn Header="7日销量" Binding="{Binding Sold7dQty, StringFormat={}{0:0.##}}" Width="80" />
-                                            <DataGridTextColumn Header="30日销量" Binding="{Binding Sold30dQty, StringFormat={}{0:0.##}}" Width="90" />
-                                            <DataGridTextColumn Header="状态" Binding="{Binding StatusLabel, TargetNullValue=未评估}" Width="100" />
-                                            <DataGridTextColumn Header="单位成本" Binding="{Binding UnitCost, StringFormat={}{0:C0}, TargetNullValue=未评估}" Width="90" />
-                                            <DataGridTextColumn Header="最近补货" Binding="{Binding LastRestockedAt, Converter={StaticResource TimestampToDateTimeConverter}, StringFormat={}{0:yyyy-MM-dd HH:mm}, TargetNullValue=未记录}" Width="130" />
-                                            <DataGridTextColumn Header="供应商" Binding="{Binding SupplierName, TargetNullValue=未记录}" Width="120" />
-                                            <DataGridTextColumn Header="备注" Binding="{Binding Remark}" Width="*" />
-                                        </DataGrid.Columns>
-                                        <DataGrid.Style>
-                                            <Style TargetType="DataGrid">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasInventoryDashboardItems}" Value="False">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </DataGrid.Style>
-                                    </DataGrid>
-                                    <TextBlock Text="{Binding InventoryEmptyStateText}">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyStateTextStyle}">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding HasInventoryDashboardItems}" Value="False">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Grid>
-                            </Grid>
-                        </Border>
+                    <!-- 卡片 4: 平均每串成本 -->
+                    <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#EAF4FC" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE825;" FontFamily="Segoe MDL2 Assets" Foreground="#1A73E8" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="平均每串成本" FontSize="11" Foreground="#868E96" />
+                                <TextBlock Text="{Binding InventoryDashboardSummary.AvgBraceletCostPrice, StringFormat=¥{0:0.00}}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 卡片 5: 毛利率 -->
+                    <Border Grid.Column="8" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#FCEEF9" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" Foreground="#D12E9F" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="毛利率" FontSize="11" Foreground="#868E96" />
+                                <TextBlock Text="{Binding InventoryDashboardSummary.GrossMarginRate, StringFormat={}{0:0.0}%}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- 2: 过滤工具栏 -->
+                <Grid Grid.Row="2" Margin="24,0,24,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180" /> <!-- 搜索框 -->
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="120" /> <!-- 分类 -->
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="120" /> <!-- 状态 -->
+                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="Auto" /> <!-- 视图切换 -->
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="Auto" /> <!-- 显示字段 -->
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" /> <!-- 排序 -->
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="Auto" /> <!-- 筛选 -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 搜索框 -->
+                    <Grid Grid.Column="0">
+                        <TextBox Text="{Binding InventoryKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource FulfillmentInputTextBoxStyle}" 
+                                 Padding="28,0,10,0" Tag="搜索材料名称" Height="34" />
+                        <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" Foreground="#A0A5AF" FontSize="12" 
+                                   HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0" IsHitTestVisible="False" />
+                        <TextBlock Text="搜索材料名称" FontSize="12" Foreground="#A0A5AF" IsHitTestVisible="False" VerticalAlignment="Center" Margin="30,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding InventoryKeyword}" Value="">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding InventoryKeyword}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
-                </ScrollViewer>
+
+                    <!-- 分类 ComboBox -->
+                    <ComboBox Grid.Column="2" 
+                              ItemsSource="{Binding InventoryCategoryOptions}" 
+                              SelectedItem="{Binding SelectedInventoryCategory}"
+                              Style="{StaticResource FulfillmentInputComboBoxStyle}" Height="34" />
+
+                    <!-- 状态 ComboBox -->
+                    <ComboBox Grid.Column="4" 
+                              ItemsSource="{Binding InventoryStatusOptions}" 
+                              SelectedItem="{Binding SelectedInventoryStatus}"
+                              Style="{StaticResource FulfillmentInputComboBoxStyle}" Height="34" />
+
+                    <!-- 视图切换 (分段控件) -->
+                    <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="视图：" Foreground="#868E96" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <Border BorderBrush="#DFE3EA" BorderThickness="1" CornerRadius="6" Background="#FFFFFF" Padding="2" Height="32">
+                            <StackPanel Orientation="Horizontal">
+                                <!-- 精简 -->
+                                <Button Content="精简" Command="{Binding SwitchInventoryViewCommand}" CommandParameter="精简" Padding="12,0" BorderThickness="0" Height="26" FontSize="12">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="Foreground" Value="#495057" />
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CurrentInventoryView}" Value="精简">
+                                                    <Setter Property="Background" Value="#EBF3FC" />
+                                                    <Setter Property="Foreground" Value="#1A73E8" />
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <!-- 动销 -->
+                                <Button Content="动销" Command="{Binding SwitchInventoryViewCommand}" CommandParameter="动销" Padding="12,0" BorderThickness="0" Height="26" FontSize="12">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="Foreground" Value="#495057" />
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CurrentInventoryView}" Value="动销">
+                                                    <Setter Property="Background" Value="#EBF3FC" />
+                                                    <Setter Property="Foreground" Value="#1A73E8" />
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <!-- 库存 -->
+                                <Button Content="库存" Command="{Binding SwitchInventoryViewCommand}" CommandParameter="库存" Padding="12,0" BorderThickness="0" Height="26" FontSize="12">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="Transparent" />
+                                            <Setter Property="Foreground" Value="#495057" />
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CurrentInventoryView}" Value="库存">
+                                                    <Setter Property="Background" Value="#EBF3FC" />
+                                                    <Setter Property="Foreground" Value="#1A73E8" />
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- 显示字段 ToggleButton + Popup -->
+                    <Grid Grid.Column="8" VerticalAlignment="Center">
+                        <ToggleButton x:Name="Btn_ShowCols" Style="{StaticResource InvisibleContainerToggleButtonStyle}" Height="32">
+                            <Border BorderBrush="#DFE3EA" BorderThickness="1" CornerRadius="6" Background="#FFFFFF" Padding="12,0" Height="32">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="&#xE7B4;" FontFamily="Segoe MDL2 Assets" Foreground="#495057" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="显示字段" Foreground="#495057" FontSize="12" VerticalAlignment="Center" />
+                                    <TextBlock Text=" ▾" Foreground="#868E96" FontSize="10" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </ToggleButton>
+                        <Popup IsOpen="{Binding IsChecked, ElementName=Btn_ShowCols}" StaysOpen="False" PlacementTarget="{Binding ElementName=Btn_ShowCols}" Placement="Bottom" AllowsTransparency="True" PopupAnimation="Slide">
+                            <Border Background="#FFFFFF" BorderBrush="#DFE3EA" BorderThickness="1" CornerRadius="8" Width="200" Padding="14">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="12" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.08"/>
+                                </Border.Effect>
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,10">
+                                        <TextBlock Text="显示字段" FontWeight="Bold" FontSize="13" Foreground="#1D1D1F" VerticalAlignment="Center" />
+                                        <Button Content="重置" Command="{Binding SwitchInventoryViewCommand}" CommandParameter="精简" 
+                                                Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" 
+                                                FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <Separator Background="#F1F2F5" Margin="0,0,0,10" />
+
+                                    <TextBlock Text="基础信息" FontSize="11" Foreground="#868E96" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                    <CheckBox Content="材料名称" IsChecked="{Binding ShowColMaterialName}" Margin="0,0,0,6" IsEnabled="False" />
+                                    <CheckBox Content="分类" IsChecked="{Binding ShowColCategory}" Margin="0,0,0,6" />
+                                    <CheckBox Content="当前库存" IsChecked="{Binding ShowColCurrentStock}" Margin="0,0,0,6" />
+                                    <CheckBox Content="状态" IsChecked="{Binding ShowColStatus}" Margin="0,0,0,12" />
+
+                                    <TextBlock Text="动销数据" FontSize="11" Foreground="#868E96" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                    <CheckBox Content="7日动销 (动销比)" IsChecked="{Binding ShowCol7dSold}" Margin="0,0,0,6" />
+                                    <CheckBox Content="30日动销 (动销比)" IsChecked="{Binding ShowCol30dSold}" Margin="0,0,0,12" />
+
+                                    <TextBlock Text="库存建议" FontSize="11" Foreground="#868E96" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                    <CheckBox Content="安全库存建议" IsChecked="{Binding ShowColSafeStock}" Margin="0,0,0,12" />
+
+                                    <TextBlock Text="其他" FontSize="11" Foreground="#868E96" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                    <CheckBox Content="单位成本" IsChecked="{Binding ShowColUnitCost}" Margin="0,0,0,6" />
+                                    <CheckBox Content="最近补货" IsChecked="{Binding ShowColLastRestock}" Margin="0,0,0,6" />
+                                    <CheckBox Content="供应商" IsChecked="{Binding ShowColSupplier}" Margin="0,0,0,6" />
+                                    <CheckBox Content="备注" IsChecked="{Binding ShowColRemark}" Margin="0,0,0,12" />
+
+                                    <Separator Background="#F1F2F5" Margin="0,0,0,10" />
+                                    <Button Content="恢复默认" Command="{Binding SwitchInventoryViewCommand}" CommandParameter="精简" 
+                                            Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" 
+                                            FontSize="11" HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+
+                    <!-- 排序 ComboBox + 排序方向 ToggleButton -->
+                    <StackPanel Grid.Column="10" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="排序：" Foreground="#868E96" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <ComboBox ItemsSource="{Binding InventorySortOptions}" 
+                                  SelectedItem="{Binding SelectedInventorySortBy}"
+                                  Style="{StaticResource FulfillmentInputComboBoxStyle}" Width="120" Height="32" />
+                        <Button Command="{Binding ToggleInventorySortDirectionCommand}" Style="{StaticResource InvisibleContainerButtonStyle}" Margin="4,0,0,0" Height="32" Width="32">
+                            <Border BorderBrush="#DFE3EA" BorderThickness="1" CornerRadius="6" Background="#FFFFFF" Height="32" Width="32">
+                                <TextBlock Text="&#xE74B;" FontFamily="Segoe MDL2 Assets" Foreground="#495057" FontSize="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedInventorySortDirection}" Value="asc">
+                                                    <Setter Property="Text" Value="&#xE74A;" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- 筛选按钮 -->
+                    <Button Grid.Column="12" Style="{StaticResource InvisibleContainerButtonStyle}" Height="32">
+                        <Border BorderBrush="#DFE3EA" BorderThickness="1" CornerRadius="6" Background="#FFFFFF" Padding="12,0" Height="32">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets" Foreground="#495057" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="筛选" Foreground="#495057" FontSize="12" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Button>
+                </Grid>
+
+                <!-- 3: 表格列表 -->
+                <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Margin="24,0,24,12" Padding="0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                    </Border.Effect>
+                    <Grid>
+                        <!-- 正常表格展示 -->
+                        <DataGrid ItemsSource="{Binding PagedInventoryItems}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  BorderThickness="0"
+                                  RowHeaderWidth="0"
+                                  Background="Transparent"
+                                  RowHeight="48"
+                                  HorizontalGridLinesBrush="#F1F2F5"
+                                  ColumnHeaderHeight="40">
+                            
+                            <!-- 表头样式定义 -->
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#FCFCFD" />
+                                    <Setter Property="Foreground" Value="#868E96" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="FontSize" Value="12" />
+                                    <Setter Property="Padding" Value="14,0" />
+                                    <Setter Property="BorderThickness" Value="0,0,0,1" />
+                                    <Setter Property="BorderBrush" Value="#E5E7EC" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="DataGridColumnHeader">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        BorderBrush="{TemplateBinding BorderBrush}" 
+                                                        BorderThickness="{TemplateBinding BorderThickness}" 
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter VerticalAlignment="Center" />
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+
+                            <!-- 行样式定义 -->
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#F8F9FA" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+
+                            <DataGrid.Columns>
+                                <!-- 1. 材料名称 -->
+                                <DataGridTemplateColumn Header="材料名称" Width="200" 
+                                                        Visibility="{Binding DataContext.ShowColMaterialName, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding MaterialName, TargetNullValue=暂无数据}" 
+                                                       FontWeight="Bold" Foreground="#1D1D1F" 
+                                                       VerticalAlignment="Center" Margin="14,0" FontSize="13" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 2. 分类 -->
+                                <DataGridTemplateColumn Header="分类" Width="100"
+                                                        Visibility="{Binding DataContext.ShowColCategory, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Category, TargetNullValue=未分类}" 
+                                                       Foreground="#495057" VerticalAlignment="Center" Margin="14,0" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 3. 当前库存 -->
+                                <DataGridTemplateColumn Header="当前库存" Width="120"
+                                                        Visibility="{Binding DataContext.ShowColCurrentStock, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                                <TextBlock Text="{Binding CurrentStockQty, StringFormat={}{0:0.##}}" FontWeight="Bold" Foreground="#1D1D1F" />
+                                                <TextBlock Text=" " />
+                                                <TextBlock Text="{Binding StockUnit}" Foreground="#868E96" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 4. 7日动销 (动销比) -->
+                                <DataGridTemplateColumn Header="7日动销 (动销比)" Width="160"
+                                                        Visibility="{Binding DataContext.ShowCol7dSold, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                                <TextBlock Text="{Binding Sold7dQty, StringFormat={}{0:0.##}}" Foreground="#1D1D1F" />
+                                                <TextBlock Text=" " />
+                                                <TextBlock Text="{Binding StockUnit}" Foreground="#868E96" />
+                                                <TextBlock Text=" / " Foreground="#E5E7EC" />
+                                                <TextBlock Text="{Binding Sold7dRatio, StringFormat={}{0:0.0}%}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#868E96" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="fast_selling">
+                                                                    <Setter Property="Foreground" Value="#E0533C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="low_selling">
+                                                                    <Setter Property="Foreground" Value="#2B7A5C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 5. 30日动销 (动销比) -->
+                                <DataGridTemplateColumn Header="30日动销 (动销比)" Width="160"
+                                                        Visibility="{Binding DataContext.ShowCol30dSold, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                                <TextBlock Text="{Binding Sold30dQty, StringFormat={}{0:0.##}}" Foreground="#1D1D1F" />
+                                                <TextBlock Text=" " />
+                                                <TextBlock Text="{Binding StockUnit}" Foreground="#868E96" />
+                                                <TextBlock Text=" / " Foreground="#E5E7EC" />
+                                                <TextBlock Text="{Binding Sold30dRatio, StringFormat={}{0:0.0}%}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#868E96" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="fast_selling">
+                                                                    <Setter Property="Foreground" Value="#E0533C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="low_selling">
+                                                                    <Setter Property="Foreground" Value="#2B7A5C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 6. 安全库存建议 -->
+                                <DataGridTemplateColumn Header="安全库存建议" Width="130"
+                                                        Visibility="{Binding DataContext.ShowColSafeStock, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                                <TextBlock Text="{Binding SafeStockSuggestedQty, StringFormat={}{0:0.##}, TargetNullValue=未评估}" Foreground="#495057" />
+                                                <TextBlock Text=" " />
+                                                <TextBlock Text="{Binding StockUnit}" Foreground="#868E96">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SafeStockSuggestedQty}" Value="{x:Null}">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 7. 状态 -->
+                                <DataGridTemplateColumn Header="状态" Width="110"
+                                                        Visibility="{Binding DataContext.ShowColStatus, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="4" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="14,0">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#F1F3F5" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="fast_selling">
+                                                                <Setter Property="Background" Value="#FFF0E6" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="low_selling">
+                                                                <Setter Property="Background" Value="#EBF8F2" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="low_stock">
+                                                                <Setter Property="Background" Value="#FFF0F0" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="normal">
+                                                                <Setter Property="Background" Value="#E6F0FA" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding StatusLabel, TargetNullValue=正常}" FontSize="11">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#495057" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="fast_selling">
+                                                                    <Setter Property="Foreground" Value="#E0533C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="low_selling">
+                                                                    <Setter Property="Foreground" Value="#2B7A5C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="low_stock">
+                                                                    <Setter Property="Foreground" Value="#D93838" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="normal">
+                                                                    <Setter Property="Foreground" Value="#1A73E8" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 8. 单位成本 -->
+                                <DataGridTemplateColumn Header="单位成本" Width="100"
+                                                        Visibility="{Binding DataContext.ShowColUnitCost, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding UnitCost, StringFormat=¥{0:0.00}, TargetNullValue=未评估}" 
+                                                       Foreground="#495057" VerticalAlignment="Center" Margin="14,0" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 9. 最近补货 -->
+                                <DataGridTemplateColumn Header="最近补货" Width="140"
+                                                        Visibility="{Binding DataContext.ShowColLastRestock, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding LastRestockedAt, Converter={StaticResource TimestampToDateTimeConverter}, StringFormat={}{0:yyyy-MM-dd HH:mm}, TargetNullValue=未记录}" 
+                                                       Foreground="#495057" VerticalAlignment="Center" Margin="14,0" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 10. 供应商 -->
+                                <DataGridTemplateColumn Header="供应商" Width="130"
+                                                        Visibility="{Binding DataContext.ShowColSupplier, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding SupplierName, TargetNullValue=未记录}" 
+                                                       Foreground="#495057" VerticalAlignment="Center" Margin="14,0" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 11. 备注 -->
+                                <DataGridTemplateColumn Header="备注" Width="*"
+                                                        Visibility="{Binding DataContext.ShowColRemark, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Remark}" Foreground="#868E96" VerticalAlignment="Center" Margin="14,0" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                            
+                            <DataGrid.Style>
+                                <Style TargetType="DataGrid">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasInventoryDashboardItems}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.Style>
+                        </DataGrid>
+
+                        <!-- 空数据展示 -->
+                        <TextBlock Text="{Binding InventoryEmptyStateText}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#868E96" FontSize="14">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasInventoryDashboardItems}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+                <!-- 4: 底部分页栏 -->
+                <Grid Grid.Row="4" Margin="24,0,24,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" /> <!-- 共 N 条 -->
+                        <ColumnDefinition Width="*" />    <!-- 页码按钮 -->
+                        <ColumnDefinition Width="Auto" /> <!-- 每页条数下拉框 -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 共 N 条 -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="共 " Foreground="#868E96" FontSize="12" />
+                        <TextBlock Text="{Binding InventoryTotalCount}" Foreground="#1D1D1F" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Text=" 条" Foreground="#868E96" FontSize="12" />
+                    </StackPanel>
+
+                    <!-- 页码按钮 -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <!-- 上一页 -->
+                        <Button Content="&#xE0E2;" FontFamily="Segoe MDL2 Assets" 
+                                Command="{Binding GoToPreviousInventoryPageCommand}" 
+                                IsEnabled="{Binding CanGoToPreviousInventoryPage}"
+                                Height="28" Width="28" FontSize="10" 
+                                Style="{StaticResource InvisibleContainerButtonStyle}" Margin="0,0,4,0" />
+
+                        <!-- 动态生成的数字页码 -->
+                        <ItemsControl ItemsSource="{Binding InventoryPageNumbers}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <!-- 页码数字按钮 -->
+                                        <Button Content="{Binding DisplayText}" 
+                                                Command="{Binding DataContext.ChangeInventoryPageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" 
+                                                CommandParameter="{Binding PageNumber}"
+                                                Height="28" MinWidth="28" FontSize="12" Margin="2,0">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="Foreground" Value="#495057" />
+                                                    <Setter Property="BorderThickness" Value="0" />
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" BorderBrush="#DFE3EA" BorderThickness="{TemplateBinding BorderThickness}" Padding="6,0">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <!-- 鼠标悬浮 -->
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#F1F2F5" />
+                                                        </Trigger>
+                                                        <!-- 高亮选中页码 -->
+                                                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                            <Setter Property="Background" Value="#1A73E8" />
+                                                            <Setter Property="Foreground" Value="#FFFFFF" />
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                        <!-- 省略号 0 展示 -->
+                                                        <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
+                                                            <Setter Property="IsEnabled" Value="False" />
+                                                            <Setter Property="Background" Value="Transparent" />
+                                                            <Setter Property="Foreground" Value="#868E96" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- 下一页 -->
+                        <Button Content="&#xE0E3;" FontFamily="Segoe MDL2 Assets" 
+                                Command="{Binding GoToNextInventoryPageCommand}" 
+                                IsEnabled="{Binding CanGoToNextInventoryPage}"
+                                Height="28" Width="28" FontSize="10" 
+                                Style="{StaticResource InvisibleContainerButtonStyle}" Margin="4,0,0,0" />
+                    </StackPanel>
+
+                    <!-- 每页条数下拉框 -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ComboBox ItemsSource="{Binding InventoryPageSizeOptions}" 
+                                  SelectedItem="{Binding InventoryPageSize}"
+                                  Style="{StaticResource FulfillmentInputComboBoxStyle}" Width="90" Height="28">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding StringFormat={}{0} 条/页}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
             </Grid>
 
             <!-- 现金流 -->

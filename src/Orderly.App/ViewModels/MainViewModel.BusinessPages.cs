@@ -78,8 +78,14 @@ public partial class MainViewModel
     public string CashflowHealthSummaryText => BuildCashflowHealthSummaryText();
     public string CashflowCashBalanceText => BuildCashflowDashboardCurrencyText(CashflowHealthSummary.CashBalanceAmount, "未接入");
     public string CashflowAvailableCashText => BuildCashflowDashboardCurrencyText(CashflowHealthSummary.AvailableCashAmount, "未评估");
-    public string CashflowReceivableAmountHealthText => BuildCashflowDashboardCurrencyText(CashflowHealthSummary.ReceivableAmount, "未接入");
-    public string CashflowPayableAmountHealthText => BuildCashflowDashboardCurrencyText(CashflowHealthSummary.PayableAmount, "未接入");
+    public string CashflowReceivableAmountHealthText => BuildCashflowAvailabilityCurrencyText(
+        CashflowHealthSummary.ReceivableAmount,
+        CashflowHealthDashboardResult.DataAvailability.Receivable,
+        "未接入");
+    public string CashflowPayableAmountHealthText => BuildCashflowAvailabilityCurrencyText(
+        CashflowHealthSummary.PayableAmount,
+        CashflowHealthDashboardResult.DataAvailability.Payable,
+        "未接入");
     public string CashflowSupportDaysText => CashflowHealthSummary.SupportDays is > 0
         ? $"{CashflowHealthSummary.SupportDays} 天"
         : GetCashflowDashboardFallbackText("未评估");
@@ -153,25 +159,25 @@ public partial class MainViewModel
             IsInventoryLoading = true;
             InventoryError = string.Empty;
             StatusMessage = "正在加载库存数据...";
-            var loadResult = await LoadInventoryDashboardWithFallbackAsync();
-            InventoryDashboardResult = loadResult.DashboardResult;
-            ReplaceCollection(InventoryItems, loadResult.DashboardResult.Items
+            var dashboardResult = await _stringNarrationBusinessService.GetInventoryManagementDashboardAsync(new StringNarrationInventoryManagementDashboardRequest
+            {
+                Keyword = InventoryKeyword,
+                Status = "all",
+                SortBy = "sold30dRatio",
+                SortDirection = "desc",
+                Page = 1,
+                PageSize = 100
+            });
+            InventoryDashboardResult = dashboardResult;
+            ReplaceCollection(InventoryItems, dashboardResult.Items
                 .OrderBy(item => GetInventoryDashboardStatusRank(item.Status))
                 .ThenBy(item => item.Category)
                 .ThenBy(item => item.MaterialName)
                 .Select(MapDashboardItemToInventoryItem));
-            ReplaceCollection(InventoryRecentMovements, loadResult.RecentMovements.OrderByDescending(item => item.OccurredAt).Take(20));
+            ReplaceCollection(InventoryRecentMovements, []);
             SelectedInventoryItem = InventoryItems.FirstOrDefault();
             _hasLoadedInventoryOnce = true;
-            if (!string.IsNullOrWhiteSpace(loadResult.WarningMessage))
-            {
-                InventoryError = loadResult.WarningMessage;
-                StatusMessage = $"已加载库存：{InventoryItems.Count} 个 SKU；{loadResult.WarningMessage}";
-            }
-            else
-            {
-                StatusMessage = $"已加载库存：{InventoryItems.Count} 个 SKU";
-            }
+            StatusMessage = $"已加载库存看板：{InventoryItems.Count} 个 SKU";
         }
         catch (Exception ex)
         {
@@ -182,99 +188,6 @@ public partial class MainViewModel
         {
             IsInventoryLoading = false;
             NotifyInventoryStateChanged();
-        }
-    }
-
-    private async Task<InventoryDashboardLoadResult> LoadInventoryDashboardWithFallbackAsync()
-    {
-        try
-        {
-            return new InventoryDashboardLoadResult
-            {
-                DashboardResult = await _stringNarrationBusinessService.GetInventoryManagementDashboardAsync(new StringNarrationInventoryManagementDashboardRequest
-                {
-                    Keyword = InventoryKeyword,
-                    Status = "all",
-                    SortBy = "sold30dRatio",
-                    SortDirection = "desc",
-                    Page = 1,
-                    PageSize = 100
-                })
-            };
-        }
-        catch (InvalidOperationException ex) when (IsDashboardActionUnavailable(ex))
-        {
-            var legacyResult = await _stringNarrationBusinessService.GetInventoryAsync(new StringNarrationInventoryQuery
-            {
-                Keyword = InventoryKeyword,
-                IncludeDisabled = true,
-                Page = 1,
-                PageSize = 100
-            });
-            var legacyLowStockCount = legacyResult.Items.Count(item => item.IsLowStock);
-            return new InventoryDashboardLoadResult
-            {
-                DashboardResult = new StringNarrationInventoryManagementDashboardResult
-                {
-                    UpdatedAt = legacyResult.UpdatedAt,
-                    Summary = new StringNarrationInventoryManagementDashboardSummary
-                    {
-                        LowStockCount = legacyLowStockCount,
-                        FastSellingCount = 0,
-                        LowSellingCount = 0,
-                        InventoryHealthStatus = "暂不可用",
-                        InventoryHealthSummary = "库存看板接口暂不可用，当前展示兼容旧库存列表。",
-                        InventoryWarningCount = legacyLowStockCount
-                    },
-                    FilterOptions = new StringNarrationInventoryManagementDashboardFilterOptions
-                    {
-                        Categories = legacyResult.Items
-                            .Select(item => item.Category)
-                            .Where(category => !string.IsNullOrWhiteSpace(category))
-                            .Distinct(StringComparer.OrdinalIgnoreCase)
-                            .ToList(),
-                        Statuses =
-                        [
-                            new StringNarrationInventoryManagementDashboardFilterOption { Value = "all", Label = "全部状态" },
-                            new StringNarrationInventoryManagementDashboardFilterOption { Value = "normal", Label = "正常" },
-                            new StringNarrationInventoryManagementDashboardFilterOption { Value = "low_stock", Label = "低库存" },
-                            new StringNarrationInventoryManagementDashboardFilterOption { Value = "disabled", Label = "停用" }
-                        ],
-                        DefaultSortBy = "sold30dRatio",
-                        DefaultSortDirection = "desc"
-                    },
-                    Items = legacyResult.Items.Select(item => new StringNarrationInventoryManagementDashboardItem
-                    {
-                        MaterialId = item.Id,
-                        MaterialName = item.Name,
-                        Category = item.Category,
-                        CurrentStockQty = item.StockOnHand,
-                        StockUnit = item.StockUnit,
-                        Sold7dQty = 0,
-                        Sold7dRatio = 0,
-                        Sold30dQty = 0,
-                        Sold30dRatio = 0,
-                        Consumed7dQty = 0,
-                        Consumed30dQty = 0,
-                        SafeStockSuggestedQty = null,
-                        Status = item.Enabled ? (item.IsLowStock ? "low_stock" : "normal") : "disabled",
-                        StatusLabel = item.StatusText,
-                        UnitCost = item.UnitCost > 0 ? item.UnitCost : null,
-                        LastRestockedAt = item.LastRestockedAt,
-                        SupplierName = item.SupplierName,
-                        Remark = item.InventoryRemark
-                    }).ToList(),
-                    PageInfo = new StringNarrationInventoryManagementDashboardPageInfo
-                    {
-                        Page = 1,
-                        PageSize = legacyResult.Items.Count > 0 ? legacyResult.Items.Count : 100,
-                        Total = legacyResult.Total > 0 ? legacyResult.Total : legacyResult.Items.Count,
-                        TotalPages = (legacyResult.Total > 0 || legacyResult.Items.Count > 0) ? 1 : 0
-                    }
-                },
-                RecentMovements = legacyResult.RecentMovements,
-                WarningMessage = "库存看板接口暂不可用，当前展示兼容旧库存列表。"
-            };
         }
     }
 
@@ -292,20 +205,10 @@ public partial class MainViewModel
             CashflowError = string.Empty;
             StatusMessage = "正在加载现金流数据...";
 
-            var cashflowHealthWarning = string.Empty;
-            try
+            CashflowHealthDashboardResult = await _stringNarrationBusinessService.GetCashflowHealthDashboardAsync(new StringNarrationCashflowHealthDashboardRequest
             {
-                CashflowHealthDashboardResult = await _stringNarrationBusinessService.GetCashflowHealthDashboardAsync(new StringNarrationCashflowHealthDashboardRequest
-                {
-                    Range = "30d"
-                });
-            }
-            catch (InvalidOperationException ex) when (IsCashflowHealthDashboardActionUnavailable(ex))
-            {
-                CashflowHealthDashboardResult = new StringNarrationCashflowHealthDashboardResult();
-                cashflowHealthWarning = "现金流健康看板接口暂不可用，已保留明细列表。";
-                CashflowError = cashflowHealthWarning;
-            }
+                Range = "30d"
+            });
 
             var result = await _stringNarrationBusinessService.GetCashflowAsync(new StringNarrationCashflowQuery
             {
@@ -318,9 +221,7 @@ public partial class MainViewModel
             ReplaceCollection(CashflowEntries, result.Entries.OrderByDescending(item => item.OccurredAt));
             SelectedCashflowEntry = CashflowEntries.FirstOrDefault();
             _hasLoadedCashflowOnce = true;
-            StatusMessage = string.IsNullOrWhiteSpace(cashflowHealthWarning)
-                ? $"已加载现金流：{CashflowEntries.Count} 条"
-                : $"已加载现金流：{CashflowEntries.Count} 条；{cashflowHealthWarning}";
+            StatusMessage = $"已加载现金流：{CashflowEntries.Count} 条";
         }
         catch (Exception ex)
         {
@@ -337,30 +238,6 @@ public partial class MainViewModel
     private bool CanRunBusinessDataReadAction()
     {
         return !IsInventoryLoading && !IsCashflowLoading;
-    }
-
-    private static bool IsDashboardActionUnavailable(Exception ex)
-    {
-        if (string.IsNullOrWhiteSpace(ex.Message))
-        {
-            return false;
-        }
-
-        return ex.Message.Contains("INVALID_ACTION", StringComparison.OrdinalIgnoreCase)
-            || ex.Message.Contains("不支持的 action", StringComparison.Ordinal)
-            || ex.Message.Contains("inventoryManagementDashboard", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsCashflowHealthDashboardActionUnavailable(Exception ex)
-    {
-        if (string.IsNullOrWhiteSpace(ex.Message))
-        {
-            return false;
-        }
-
-        return ex.Message.Contains("INVALID_ACTION", StringComparison.OrdinalIgnoreCase)
-            || ex.Message.Contains("不支持的 action", StringComparison.Ordinal)
-            || ex.Message.Contains("cashflowHealthDashboard", StringComparison.OrdinalIgnoreCase);
     }
 
     private static StringNarrationInventoryItem MapDashboardItemToInventoryItem(StringNarrationInventoryManagementDashboardItem item)
@@ -587,6 +464,28 @@ public partial class MainViewModel
         return value.HasValue ? FormatCurrency(value) : fallback;
     }
 
+    private string BuildCashflowAvailabilityCurrencyText(
+        decimal? value,
+        StringNarrationBusinessDataAvailabilityItem availability,
+        string unavailableFallback)
+    {
+        if (availability.IsCompat)
+        {
+            return string.IsNullOrWhiteSpace(availability.Reason)
+                ? "兼容占位"
+                : $"兼容占位：{availability.Reason.Trim()}";
+        }
+
+        if (availability.IsUnavailable)
+        {
+            return string.IsNullOrWhiteSpace(availability.Reason)
+                ? unavailableFallback
+                : $"{unavailableFallback}：{availability.Reason.Trim()}";
+        }
+
+        return BuildCashflowDashboardCurrencyText(value, unavailableFallback);
+    }
+
     private string BuildCashflowDashboardAmountText(decimal value)
     {
         var fallback = GetCashflowDashboardFallbackText("未评估");
@@ -614,12 +513,5 @@ public partial class MainViewModel
         {
             return "未同步";
         }
-    }
-
-    private sealed class InventoryDashboardLoadResult
-    {
-        public StringNarrationInventoryManagementDashboardResult DashboardResult { get; init; } = new();
-        public IReadOnlyList<StringNarrationInventoryMovement> RecentMovements { get; init; } = [];
-        public string WarningMessage { get; init; } = string.Empty;
     }
 }

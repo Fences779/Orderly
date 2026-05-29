@@ -150,6 +150,14 @@ public static class StringNarrationFulfillmentStatusCatalog
     private static readonly IReadOnlyDictionary<string, StringNarrationFulfillmentStatusDefinition> Lookup =
         Definitions.ToDictionary(item => item.FulfillmentStatus, StringComparer.OrdinalIgnoreCase);
 
+    private static readonly IReadOnlyDictionary<string, string> Aliases = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["scheduled"] = PendingMake,
+        ["in_production"] = Making,
+        ["received"] = Completed,
+        ["repurchase_due"] = Completed
+    };
+
     public static IReadOnlyList<StringNarrationFulfillmentStatusDefinition> GetDefinitions()
     {
         return Definitions;
@@ -157,7 +165,15 @@ public static class StringNarrationFulfillmentStatusCatalog
 
     public static string Normalize(string? fulfillmentStatus)
     {
-        return string.IsNullOrWhiteSpace(fulfillmentStatus) ? string.Empty : fulfillmentStatus.Trim();
+        if (string.IsNullOrWhiteSpace(fulfillmentStatus))
+        {
+            return string.Empty;
+        }
+
+        var normalized = fulfillmentStatus.Trim();
+        return Aliases.TryGetValue(normalized, out var canonical)
+            ? canonical
+            : normalized;
     }
 
     public static StringNarrationFulfillmentStatusDefinition Resolve(string? fulfillmentStatus)
@@ -425,6 +441,8 @@ public sealed class StringNarrationWorkbenchDashboardStats
     public decimal TodayRevenueAmountDelta { get; set; }
     public int PendingMakeCount { get; set; }
     public int PendingMakeDelta { get; set; }
+    public int MakingCount { get; set; }
+    public int MakingDelta { get; set; }
     public int ReadyToShipCount { get; set; }
     public int ReadyToShipDelta { get; set; }
     public int ExceptionOrderCount { get; set; }
@@ -447,6 +465,8 @@ public sealed class StringNarrationWorkbenchDashboardStats
     public string TodayRevenueAmountDeltaText => FormatSignedCurrency(TodayRevenueAmountDelta);
     public string PendingMakeCountText => PendingMakeCount.ToString("N0");
     public string PendingMakeDeltaText => FormatSignedNumber(PendingMakeDelta);
+    public string MakingCountText => MakingCount.ToString("N0");
+    public string MakingDeltaText => FormatSignedNumber(MakingDelta);
     public string ReadyToShipCountText => ReadyToShipCount.ToString("N0");
     public string ReadyToShipDeltaText => FormatSignedNumber(ReadyToShipDelta);
     public string ExceptionOrderCountText => ExceptionOrderCount.ToString("N0");
