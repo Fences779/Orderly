@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using Orderly.App.ViewModels;
+using Orderly.Core.Models;
 
 namespace Orderly.App.Views;
 
@@ -222,6 +223,14 @@ public partial class MainWindow : Window
         else if (e.PropertyName == "StringNarrationWorkbenchDashboard")
         {
             Dispatcher.InvokeAsync(UpdateTrendChart);
+        }
+        else if (e.PropertyName == "CashflowHealthDashboardResult" || (e.PropertyName == nameof(MainViewModel.SelectedSection) && DataContext is MainViewModel vm && string.Equals(vm.SelectedSection, "现金流")))
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                UpdateCashflowTrendChart();
+                UpdateDonutCharts();
+            });
         }
     }
 
@@ -536,5 +545,333 @@ public partial class MainWindow : Window
         {
             TrendTooltip.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void CashflowTrendCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateCashflowTrendChart();
+    }
+
+    private void CanvasIncomeDonut_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateDonutCharts();
+    }
+
+    private void CanvasExpenseDonut_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateDonutCharts();
+    }
+
+    private void UpdateCashflowTrendChart()
+    {
+        if (DataContext is not MainViewModel vm || CashflowTrendCanvas == null) return;
+
+        var trendItems = vm.CashflowHealthTrendItems;
+        if (trendItems == null || trendItems.Count == 0)
+        {
+            CashflowTrendCanvas.Children.Clear();
+            return;
+        }
+
+        CashflowTrendCanvas.Children.Clear();
+
+        double width = CashflowTrendCanvas.ActualWidth;
+        double height = CashflowTrendCanvas.ActualHeight;
+
+        if (width <= 0 || height <= 0) return;
+
+        double maxVal = 1000;
+        foreach (var item in trendItems)
+        {
+            double inc = (double)item.IncomeAmount;
+            double exp = (double)Math.Abs(item.ExpenseAmount);
+            double net = (double)Math.Abs(item.NetCashflowAmount);
+            maxVal = Math.Max(maxVal, Math.Max(inc, Math.Max(exp, net)));
+        }
+
+        maxVal *= 1.15;
+
+        double bottomPadding = 25;
+        double chartHeight = height - bottomPadding;
+        double zeroY = chartHeight / 2;
+        double scale = (chartHeight / 2 - 10) / maxVal;
+
+        double[] values = { maxVal, maxVal * 0.5, 0, -maxVal * 0.5, -maxVal };
+        foreach (var val in values)
+        {
+            double y = zeroY - val * scale;
+
+            var line = new System.Windows.Shapes.Line
+            {
+                X1 = 40,
+                Y1 = y,
+                X2 = width,
+                Y2 = y,
+                Stroke = new SolidColorBrush(val == 0 ? System.Windows.Media.Color.FromRgb(220, 224, 230) : System.Windows.Media.Color.FromRgb(240, 242, 245)),
+                StrokeThickness = val == 0 ? 1.5 : 1
+            };
+            if (val != 0)
+            {
+                line.StrokeDashArray = new DoubleCollection { 4, 4 };
+            }
+            CashflowTrendCanvas.Children.Add(line);
+
+            var yText = new System.Windows.Controls.TextBlock
+            {
+                Text = val == 0 ? "0" : $"{val:N0}",
+                FontSize = 9,
+                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(134, 142, 150)),
+                Width = 35,
+                TextAlignment = TextAlignment.Right
+            };
+            System.Windows.Controls.Canvas.SetLeft(yText, 0);
+            System.Windows.Controls.Canvas.SetTop(yText, y - 6);
+            CashflowTrendCanvas.Children.Add(yText);
+        }
+
+        int count = trendItems.Count;
+        double chartWidth = width - 40;
+        double colWidth = chartWidth / count;
+        double barWidth = Math.Max(3, colWidth * 0.35);
+
+        var netPoints = new PointCollection();
+        var xLabelIndices = new System.Collections.Generic.HashSet<int>();
+
+        if (count > 0)
+        {
+            int step = Math.Max(1, count / 5);
+            for (int k = 0; k < count; k += step)
+            {
+                xLabelIndices.Add(k);
+            }
+            xLabelIndices.Add(count - 1);
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            var item = trendItems[i];
+            double x = 40 + (i + 0.5) * colWidth;
+
+            double incVal = (double)item.IncomeAmount;
+            if (incVal > 0)
+            {
+                double barHeight = incVal * scale;
+                var rect = new System.Windows.Controls.Border
+                {
+                    Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(52, 199, 89)),
+                    Width = barWidth,
+                    Height = barHeight,
+                    CornerRadius = new CornerRadius(barWidth / 2, barWidth / 2, 0, 0),
+                    Opacity = 0.8
+                };
+                System.Windows.Controls.Canvas.SetLeft(rect, x - barWidth - 1);
+                System.Windows.Controls.Canvas.SetTop(rect, zeroY - barHeight);
+                CashflowTrendCanvas.Children.Add(rect);
+            }
+
+            double expVal = (double)Math.Abs(item.ExpenseAmount);
+            if (expVal > 0)
+            {
+                double barHeight = expVal * scale;
+                var rect = new System.Windows.Controls.Border
+                {
+                    Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 159, 10)),
+                    Width = barWidth,
+                    Height = barHeight,
+                    CornerRadius = new CornerRadius(0, 0, barWidth / 2, barWidth / 2),
+                    Opacity = 0.8
+                };
+                System.Windows.Controls.Canvas.SetLeft(rect, x + 1);
+                System.Windows.Controls.Canvas.SetTop(rect, zeroY);
+                CashflowTrendCanvas.Children.Add(rect);
+            }
+
+            double netVal = (double)item.NetCashflowAmount;
+            double netY = zeroY - netVal * scale;
+            netPoints.Add(new System.Windows.Point(x, netY));
+
+            if (xLabelIndices.Contains(i) && !string.IsNullOrWhiteSpace(item.Date))
+            {
+                var xText = new System.Windows.Controls.TextBlock
+                {
+                    Text = item.Date,
+                    FontSize = 9,
+                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(134, 142, 150)),
+                    Width = colWidth * 2,
+                    TextAlignment = TextAlignment.Center
+                };
+                System.Windows.Controls.Canvas.SetLeft(xText, x - colWidth);
+                System.Windows.Controls.Canvas.SetTop(xText, chartHeight + 6);
+                CashflowTrendCanvas.Children.Add(xText);
+            }
+        }
+
+        if (netPoints.Count > 1)
+        {
+            var path = new System.Windows.Shapes.Path
+            {
+                Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(88, 86, 214)),
+                StrokeThickness = 2.5,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+                Fill = System.Windows.Media.Brushes.Transparent
+            };
+
+            var geometry = new PathGeometry();
+            var figure = new PathFigure { StartPoint = netPoints[0] };
+            for (int i = 1; i < netPoints.Count; i++)
+            {
+                figure.Segments.Add(new LineSegment(netPoints[i], true));
+            }
+            geometry.Figures.Add(figure);
+            path.Data = geometry;
+            CashflowTrendCanvas.Children.Add(path);
+
+            for (int i = 0; i < netPoints.Count; i++)
+            {
+                var p = netPoints[i];
+                var ellipse = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 6,
+                    Height = 6,
+                    Fill = new SolidColorBrush(System.Windows.Media.Color.FromRgb(88, 86, 214)),
+                    Stroke = System.Windows.Media.Brushes.White,
+                    StrokeThickness = 1.5
+                };
+                System.Windows.Controls.Canvas.SetLeft(ellipse, p.X - 3);
+                System.Windows.Controls.Canvas.SetTop(ellipse, p.Y - 3);
+                CashflowTrendCanvas.Children.Add(ellipse);
+            }
+        }
+    }
+
+    private void UpdateDonutCharts()
+    {
+        if (DataContext is not MainViewModel vm) return;
+
+        UpdateSingleDonutChart(CanvasIncomeDonut, vm.CashflowIncomeBreakdown?.Items, new string[] { "#4D96FF", "#FFD93D", "#9B5DE5", "#FF6B6B" });
+        UpdateSingleDonutChart(CanvasExpenseDonut, vm.CashflowExpenseBreakdown?.Items, new string[] { "#6BCB77", "#4D96FF", "#9B5DE5", "#FFD93D", "#FF6B6B" });
+    }
+
+    private void UpdateSingleDonutChart(System.Windows.Controls.Canvas canvas, IReadOnlyList<StringNarrationCashflowHealthDashboardBreakdownItem>? items, string[] colors)
+    {
+        if (canvas == null) return;
+        canvas.Children.Clear();
+
+        if (items == null || items.Count == 0)
+        {
+            DrawPlaceholderDonut(canvas);
+            return;
+        }
+
+        double width = canvas.ActualWidth;
+        double height = canvas.ActualHeight;
+        if (width <= 0 || height <= 0) return;
+
+        double centerX = width / 2;
+        double centerY = height / 2;
+        double radius = Math.Min(width, height) / 2 - 8;
+        double strokeThickness = 12;
+
+        double currentAngle = -90;
+
+        double totalPercent = 0;
+        foreach (var item in items)
+        {
+            if (item.Percent > 0) totalPercent += (double)item.Percent;
+        }
+
+        if (totalPercent <= 0)
+        {
+            DrawPlaceholderDonut(canvas);
+            return;
+        }
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            double percent = (double)item.Percent;
+            if (percent <= 0) continue;
+
+            double sweepAngle = (percent / totalPercent) * 360;
+
+            if (sweepAngle >= 359.9)
+            {
+                var fullCircle = new System.Windows.Shapes.Ellipse
+                {
+                    Width = radius * 2,
+                    Height = radius * 2,
+                    Stroke = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colors[i % colors.Length])),
+                    StrokeThickness = strokeThickness
+                };
+                System.Windows.Controls.Canvas.SetLeft(fullCircle, centerX - radius);
+                System.Windows.Controls.Canvas.SetTop(fullCircle, centerY - radius);
+                canvas.Children.Add(fullCircle);
+                break;
+            }
+
+            double nextAngle = currentAngle + sweepAngle;
+
+            double rad1 = currentAngle * Math.PI / 180.0;
+            double rad2 = nextAngle * Math.PI / 180.0;
+
+            double x1 = centerX + radius * Math.Cos(rad1);
+            double y1 = centerY + radius * Math.Sin(rad1);
+            double x2 = centerX + radius * Math.Cos(rad2);
+            double y2 = centerY + radius * Math.Sin(rad2);
+
+            var path = new System.Windows.Shapes.Path
+            {
+                Stroke = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colors[i % colors.Length])),
+                StrokeThickness = strokeThickness,
+                StrokeStartLineCap = PenLineCap.Flat,
+                StrokeEndLineCap = PenLineCap.Flat
+            };
+
+            var geometry = new PathGeometry();
+            var figure = new PathFigure
+            {
+                StartPoint = new System.Windows.Point(x1, y1),
+                IsClosed = false
+            };
+
+            var arc = new ArcSegment
+            {
+                Point = new System.Windows.Point(x2, y2),
+                Size = new System.Windows.Size(radius, radius),
+                SweepDirection = SweepDirection.Clockwise,
+                IsLargeArc = sweepAngle > 180
+            };
+
+            figure.Segments.Add(arc);
+            geometry.Figures.Add(figure);
+            path.Data = geometry;
+
+            canvas.Children.Add(path);
+            currentAngle = nextAngle;
+        }
+    }
+
+    private void DrawPlaceholderDonut(System.Windows.Controls.Canvas canvas)
+    {
+        double width = canvas.ActualWidth;
+        double height = canvas.ActualHeight;
+        if (width <= 0 || height <= 0) return;
+
+        double centerX = width / 2;
+        double centerY = height / 2;
+        double radius = Math.Min(width, height) / 2 - 8;
+        double strokeThickness = 12;
+
+        var fullCircle = new System.Windows.Shapes.Ellipse
+        {
+            Width = radius * 2,
+            Height = radius * 2,
+            Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 224, 230)),
+            StrokeThickness = strokeThickness
+        };
+        System.Windows.Controls.Canvas.SetLeft(fullCircle, centerX - radius);
+        System.Windows.Controls.Canvas.SetTop(fullCircle, centerY - radius);
+        canvas.Children.Add(fullCircle);
     }
 }
