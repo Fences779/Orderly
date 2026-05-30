@@ -14,7 +14,6 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         System.Windows.Application.Current.MainWindow = this;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
-        this.SizeChanged += MainWindow_SizeChanged;
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -37,14 +36,6 @@ public partial class MainWindow : Window
             {
                 ShowCopyToast(vm.StringNarrationStatusMessage);
             }
-        }
-        else if (e.PropertyName == "CashflowHealthDashboardResult" || (e.PropertyName == nameof(MainViewModel.SelectedSection) && DataContext is MainViewModel vm && string.Equals(vm.SelectedSection, "现金流")))
-        {
-            Dispatcher.InvokeAsync(() =>
-            {
-                UpdateCashflowTrendChart();
-                UpdateDonutCharts();
-            });
         }
     }
 

@@ -1,14 +1,74 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using Orderly.App.ViewModels;
 using Orderly.Core.Models;
+using MediaColor = System.Windows.Media.Color;
+using MediaColorConverter = System.Windows.Media.ColorConverter;
+using WindowsPoint = System.Windows.Point;
+using WindowsSize = System.Windows.Size;
 
-namespace Orderly.App.Views;
+namespace Orderly.App.Views.Sections;
 
-public partial class MainWindow : Window
+public partial class CashflowBreakdownCards : System.Windows.Controls.UserControl
 {
+    private MainViewModel? _subscribedViewModel;
+
+    public CashflowBreakdownCards()
+    {
+        InitializeComponent();
+        DataContextChanged += CashflowBreakdownCards_DataContextChanged;
+        Loaded += CashflowBreakdownCards_Loaded;
+        Unloaded += CashflowBreakdownCards_Unloaded;
+    }
+
+    private void CashflowBreakdownCards_Loaded(object sender, RoutedEventArgs e)
+    {
+        SubscribeToViewModel(DataContext as MainViewModel);
+        UpdateDonutCharts();
+    }
+
+    private void CashflowBreakdownCards_Unloaded(object sender, RoutedEventArgs e)
+    {
+        SubscribeToViewModel(null);
+    }
+
+    private void CashflowBreakdownCards_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        SubscribeToViewModel(e.NewValue as MainViewModel);
+        Dispatcher.InvokeAsync(UpdateDonutCharts);
+    }
+
+    private void SubscribeToViewModel(MainViewModel? viewModel)
+    {
+        if (ReferenceEquals(_subscribedViewModel, viewModel))
+        {
+            return;
+        }
+
+        if (_subscribedViewModel is not null)
+        {
+            _subscribedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+
+        _subscribedViewModel = viewModel;
+
+        if (_subscribedViewModel is not null)
+        {
+            _subscribedViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == "CashflowHealthDashboardResult" || (e.PropertyName == nameof(MainViewModel.SelectedSection) && DataContext is MainViewModel vm && string.Equals(vm.SelectedSection, "现金流")))
+        {
+            Dispatcher.InvokeAsync(UpdateDonutCharts);
+        }
+    }
+
     private void CanvasIncomeDonut_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateDonutCharts();
@@ -46,10 +106,9 @@ public partial class MainWindow : Window
         double centerY = height / 2;
         double radius = Math.Min(width, height) / 2 - 8;
         double strokeThickness = 12;
-
         double currentAngle = -90;
-
         double totalPercent = 0;
+
         foreach (var item in items)
         {
             if (item.Percent > 0) totalPercent += (double)item.Percent;
@@ -75,7 +134,7 @@ public partial class MainWindow : Window
                 {
                     Width = radius * 2,
                     Height = radius * 2,
-                    Stroke = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colors[i % colors.Length])),
+                    Stroke = new SolidColorBrush((MediaColor)MediaColorConverter.ConvertFromString(colors[i % colors.Length])),
                     StrokeThickness = strokeThickness
                 };
                 System.Windows.Controls.Canvas.SetLeft(fullCircle, centerX - radius);
@@ -85,10 +144,8 @@ public partial class MainWindow : Window
             }
 
             double nextAngle = currentAngle + sweepAngle;
-
             double rad1 = currentAngle * Math.PI / 180.0;
             double rad2 = nextAngle * Math.PI / 180.0;
-
             double x1 = centerX + radius * Math.Cos(rad1);
             double y1 = centerY + radius * Math.Sin(rad1);
             double x2 = centerX + radius * Math.Cos(rad2);
@@ -96,7 +153,7 @@ public partial class MainWindow : Window
 
             var path = new System.Windows.Shapes.Path
             {
-                Stroke = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colors[i % colors.Length])),
+                Stroke = new SolidColorBrush((MediaColor)MediaColorConverter.ConvertFromString(colors[i % colors.Length])),
                 StrokeThickness = strokeThickness,
                 StrokeStartLineCap = PenLineCap.Flat,
                 StrokeEndLineCap = PenLineCap.Flat
@@ -105,14 +162,14 @@ public partial class MainWindow : Window
             var geometry = new PathGeometry();
             var figure = new PathFigure
             {
-                StartPoint = new System.Windows.Point(x1, y1),
+                StartPoint = new WindowsPoint(x1, y1),
                 IsClosed = false
             };
 
             var arc = new ArcSegment
             {
-                Point = new System.Windows.Point(x2, y2),
-                Size = new System.Windows.Size(radius, radius),
+                Point = new WindowsPoint(x2, y2),
+                Size = new WindowsSize(radius, radius),
                 SweepDirection = SweepDirection.Clockwise,
                 IsLargeArc = sweepAngle > 180
             };
@@ -141,7 +198,7 @@ public partial class MainWindow : Window
         {
             Width = radius * 2,
             Height = radius * 2,
-            Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 224, 230)),
+            Stroke = new SolidColorBrush(MediaColor.FromRgb(220, 224, 230)),
             StrokeThickness = strokeThickness
         };
         System.Windows.Controls.Canvas.SetLeft(fullCircle, centerX - radius);

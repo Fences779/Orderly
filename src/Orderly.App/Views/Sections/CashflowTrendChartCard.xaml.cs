@@ -1,12 +1,71 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using Orderly.App.ViewModels;
+using MediaBrushes = System.Windows.Media.Brushes;
+using MediaColor = System.Windows.Media.Color;
+using WindowsPoint = System.Windows.Point;
 
-namespace Orderly.App.Views;
+namespace Orderly.App.Views.Sections;
 
-public partial class MainWindow : Window
+public partial class CashflowTrendChartCard : System.Windows.Controls.UserControl
 {
+    private MainViewModel? _subscribedViewModel;
+
+    public CashflowTrendChartCard()
+    {
+        InitializeComponent();
+        DataContextChanged += CashflowTrendChartCard_DataContextChanged;
+        Loaded += CashflowTrendChartCard_Loaded;
+        Unloaded += CashflowTrendChartCard_Unloaded;
+    }
+
+    private void CashflowTrendChartCard_Loaded(object sender, RoutedEventArgs e)
+    {
+        SubscribeToViewModel(DataContext as MainViewModel);
+        UpdateCashflowTrendChart();
+    }
+
+    private void CashflowTrendChartCard_Unloaded(object sender, RoutedEventArgs e)
+    {
+        SubscribeToViewModel(null);
+    }
+
+    private void CashflowTrendChartCard_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        SubscribeToViewModel(e.NewValue as MainViewModel);
+        Dispatcher.InvokeAsync(UpdateCashflowTrendChart);
+    }
+
+    private void SubscribeToViewModel(MainViewModel? viewModel)
+    {
+        if (ReferenceEquals(_subscribedViewModel, viewModel))
+        {
+            return;
+        }
+
+        if (_subscribedViewModel is not null)
+        {
+            _subscribedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+
+        _subscribedViewModel = viewModel;
+
+        if (_subscribedViewModel is not null)
+        {
+            _subscribedViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == "CashflowHealthDashboardResult" || (e.PropertyName == nameof(MainViewModel.SelectedSection) && DataContext is MainViewModel vm && string.Equals(vm.SelectedSection, "现金流")))
+        {
+            Dispatcher.InvokeAsync(UpdateCashflowTrendChart);
+        }
+    }
+
     private void CashflowTrendCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateCashflowTrendChart();
@@ -57,7 +116,7 @@ public partial class MainWindow : Window
                 Y1 = y,
                 X2 = width,
                 Y2 = y,
-                Stroke = new SolidColorBrush(val == 0 ? System.Windows.Media.Color.FromRgb(220, 224, 230) : System.Windows.Media.Color.FromRgb(240, 242, 245)),
+                Stroke = new SolidColorBrush(val == 0 ? MediaColor.FromRgb(220, 224, 230) : MediaColor.FromRgb(240, 242, 245)),
                 StrokeThickness = val == 0 ? 1.5 : 1
             };
             if (val != 0)
@@ -70,7 +129,7 @@ public partial class MainWindow : Window
             {
                 Text = val == 0 ? "0" : $"{val:N0}",
                 FontSize = 9,
-                Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(134, 142, 150)),
+                Foreground = new SolidColorBrush(MediaColor.FromRgb(134, 142, 150)),
                 Width = 35,
                 TextAlignment = TextAlignment.Right
             };
@@ -108,7 +167,7 @@ public partial class MainWindow : Window
                 double barHeight = incVal * scale;
                 var rect = new System.Windows.Controls.Border
                 {
-                    Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(52, 199, 89)),
+                    Background = new SolidColorBrush(MediaColor.FromRgb(52, 199, 89)),
                     Width = barWidth,
                     Height = barHeight,
                     CornerRadius = new CornerRadius(barWidth / 2, barWidth / 2, 0, 0),
@@ -125,7 +184,7 @@ public partial class MainWindow : Window
                 double barHeight = expVal * scale;
                 var rect = new System.Windows.Controls.Border
                 {
-                    Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 159, 10)),
+                    Background = new SolidColorBrush(MediaColor.FromRgb(255, 159, 10)),
                     Width = barWidth,
                     Height = barHeight,
                     CornerRadius = new CornerRadius(0, 0, barWidth / 2, barWidth / 2),
@@ -138,7 +197,7 @@ public partial class MainWindow : Window
 
             double netVal = (double)item.NetCashflowAmount;
             double netY = zeroY - netVal * scale;
-            netPoints.Add(new System.Windows.Point(x, netY));
+            netPoints.Add(new WindowsPoint(x, netY));
 
             if (xLabelIndices.Contains(i) && !string.IsNullOrWhiteSpace(item.Date))
             {
@@ -146,7 +205,7 @@ public partial class MainWindow : Window
                 {
                     Text = item.Date,
                     FontSize = 9,
-                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(134, 142, 150)),
+                    Foreground = new SolidColorBrush(MediaColor.FromRgb(134, 142, 150)),
                     Width = colWidth * 2,
                     TextAlignment = TextAlignment.Center
                 };
@@ -160,11 +219,11 @@ public partial class MainWindow : Window
         {
             var path = new System.Windows.Shapes.Path
             {
-                Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(88, 86, 214)),
+                Stroke = new SolidColorBrush(MediaColor.FromRgb(88, 86, 214)),
                 StrokeThickness = 2.5,
                 StrokeStartLineCap = PenLineCap.Round,
                 StrokeEndLineCap = PenLineCap.Round,
-                Fill = System.Windows.Media.Brushes.Transparent
+                Fill = MediaBrushes.Transparent
             };
 
             var geometry = new PathGeometry();
@@ -177,15 +236,14 @@ public partial class MainWindow : Window
             path.Data = geometry;
             CashflowTrendCanvas.Children.Add(path);
 
-            for (int i = 0; i < netPoints.Count; i++)
+            foreach (var p in netPoints)
             {
-                var p = netPoints[i];
                 var ellipse = new System.Windows.Shapes.Ellipse
                 {
                     Width = 6,
                     Height = 6,
-                    Fill = new SolidColorBrush(System.Windows.Media.Color.FromRgb(88, 86, 214)),
-                    Stroke = System.Windows.Media.Brushes.White,
+                    Fill = new SolidColorBrush(MediaColor.FromRgb(88, 86, 214)),
+                    Stroke = MediaBrushes.White,
                     StrokeThickness = 1.5
                 };
                 System.Windows.Controls.Canvas.SetLeft(ellipse, p.X - 3);

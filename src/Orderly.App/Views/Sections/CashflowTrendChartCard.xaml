@@ -1,0 +1,67 @@
+<UserControl x:Class="Orderly.App.Views.Sections.CashflowTrendChartCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainSharedResources.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainComponentStyles.A.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainComponentStyles.C.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Border x:Name="CashflowTrendCard" Style="{StaticResource SectionBlockBorderStyle}" Margin="0,0,0,24" Padding="20,16">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="近30天现金流趋势" Style="{StaticResource SectionHeaderTextStyle}" FontSize="15" />
+
+                <Border HorizontalAlignment="Right" Background="#F2F4F7" CornerRadius="8" Padding="2">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="7天" GroupName="TrendRange" Style="{StaticResource ModernTabRadioButtonStyle}" Padding="10,4" Margin="0" FontSize="11" IsChecked="False" />
+                        <RadioButton Content="30天" GroupName="TrendRange" Style="{StaticResource ModernTabRadioButtonStyle}" Padding="10,4" Margin="0" FontSize="11" IsChecked="True" />
+                        <RadioButton Content="90天" GroupName="TrendRange" Style="{StaticResource ModernTabRadioButtonStyle}" Padding="10,4" Margin="0" FontSize="11" IsChecked="False" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Canvas x:Name="CashflowTrendCanvas" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Margin="30,10" SizeChanged="CashflowTrendCanvas_SizeChanged" />
+
+            <ItemsControl Grid.Row="2" ItemsSource="{Binding CashflowHealthTrendItems}" Margin="30,4,30,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="{Binding CashflowHealthTrendItems.Count, FallbackValue=30}" Rows="1" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                    <Border Background="#34C759" Width="10" Height="10" CornerRadius="2" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Text="收入" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                    <Border Background="#FF9F0A" Width="10" Height="10" CornerRadius="2" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Text="支出" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Border Background="#5856D6" Width="16" Height="3" CornerRadius="1.5" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <Ellipse Fill="#5856D6" Width="6" Height="6" Stroke="White" StrokeThickness="1" VerticalAlignment="Center" Margin="-17,0,11,0" />
+                    <TextBlock Text="净现金流" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>
