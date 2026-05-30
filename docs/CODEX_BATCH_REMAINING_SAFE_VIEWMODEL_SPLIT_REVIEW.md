@@ -78,10 +78,18 @@ Both subagents and the coordinator used disjoint write scopes only.
 - Pre-build `Orderly.App.exe` check: no running process found
 - `dotnet build Orderly.sln -c Debug`: PASS
 - `powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1`: PASS
-- `powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-5-search-smoke.ps1`: FAIL
-- Failure detail: two consecutive reruns failed at `tools\qa\run-p3-5-search-smoke.ps1:355` with `Expected search result type not found: ConversationMessage`
 - `powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-6-navigation-smoke.ps1`: PASS
 - Local preview evidence: `run-p1-smoke.ps1` launched `src/Orderly.App/bin/Debug/net8.0-windows/Orderly.App.exe --qa-mode`, completed UIA smoke PASS, and restored the QA baseline
+
+### `run-p3-5-search-smoke.ps1` resolution (historical failure, now fixed)
+
+- The earlier recorded `run-p3-5-search-smoke.ps1` failure (two consecutive reruns at `tools\qa\run-p3-5-search-smoke.ps1:355` with `Expected search result type not found: ConversationMessage`) was diagnosed as **pre-existing QA fixture leakage**, not a regression introduced by this ViewModel split batch.
+- The issue was fixed in commit `7c3753b` (`fix(qa): clean up leaked p3.5 and p3.6 fixtures`).
+- Post-fix validation results:
+  - polluted QA DB cleanup verified
+  - `run-p3-5-search-smoke.ps1` passed twice consecutively with stable common needle: `7`
+  - canonical validation sequence passed
+- This historical red state is therefore resolved and must not be treated as an active blocker.
 
 ## Protected-area and behavior freeze confirmation
 
@@ -93,23 +101,40 @@ Both subagents and the coordinator used disjoint write scopes only.
 - payment callback, order creation, automatic paid transition, fulfillment/shipping sync, and payment-to-fulfillment closed loop untouched
 - mini-program compatibility behavior untouched
 
-## Remaining deferred line-budget violations
+## Corrected line-budget thresholds
 
-| Path | Lines | Reason |
-| --- | ---: | --- |
-| `src/Orderly.App/ViewModels/MainViewModel.StringNarrationOrders.cs` | 1809 | protected fulfillment/order flow |
-| `src/Orderly.App/ViewModels/MainViewModel.SettingsP0.cs` | 1358 | protected settings flow |
-| `src/Orderly.App/Views/MainWindow.xaml` | 8302 | UI-specialist XAML work |
-| `src/Orderly.App/Views/Resources/MainWindowResources.xaml` | 1854 | UI-specialist XAML resource work |
-| `src/Orderly.App/Views/LoginView.xaml` | 1708 | protected login UI |
-| `src/Orderly.App/Views/LoginView.xaml.cs` | 1063 | protected login UI/code-behind |
-| `src/Orderly.App/ViewModels/LoginViewModel.cs` | 923 | protected login flow |
-| `src/Orderly.App/Views/MainWindow.xaml.cs` | 913 | UI-specialist code-behind work |
-| `src/Orderly.App/ViewModels/MainViewModel.ExceptionOrders.cs` | 750 | protected exception flow |
-| `src/Orderly.App/App.xaml.cs` | 714 | UI/app-startup specialist work |
-| `src/Orderly.App/App.xaml` | 344 | UI/app-startup specialist work |
+The earlier single-threshold (`<= 300` for all files) interpretation was incorrect. The canonical project standard is dual-threshold:
+
+- UI / XAML / view-related files: over budget only when `> 300` lines.
+- Non-UI logic/source files (services, repositories, non-layout ViewModels, models): over budget only when `> 500` lines.
+
+Under these corrected thresholds, files such as `LocalNavigationRouteService.cs` (341), `LocalAiAssistantService.cs` (392), and the QA/service partials below 500 lines are compliant and are not split candidates.
+
+## Remaining over-budget work (corrected dual thresholds)
+
+There is currently no safe over-budget non-UI logic split candidate outside frozen boundaries. Every genuinely over-budget item below is either deferred UI/XAML structural work or frozen/high-risk domain work requiring explicit future approval.
+
+| Path | Lines | Threshold | Category | Reason |
+| --- | ---: | ---: | --- | --- |
+| `src/Orderly.App/Views/MainWindow.xaml` | 7975 | 300 | deferred UI/XAML | primary deferred UI structural target; requires explicit UI approval |
+| `src/Orderly.App/Views/Resources/MainWindowResources.xaml` | 1768 | 300 | deferred UI/XAML | shared XAML resource dictionary; UI-specialist work |
+| `src/Orderly.App/Views/MainWindow.xaml.cs` | 777 | 300 | deferred UI/XAML | main window code-behind; UI-specialist work |
+| `src/Orderly.App/App.xaml.cs` | 627 | 300 | deferred UI/XAML | app-startup code-behind; UI/app-startup specialist work |
+| `src/Orderly.App/App.xaml` | 330 | 300 | deferred UI/XAML | app-level XAML; UI/app-startup specialist work |
+| `src/Orderly.Data/Services/StringNarrationGatewayOrderService.cs` | 1696 | 500 | frozen/high-risk | order/fulfillment gateway; payment-to-fulfillment loop and backend contracts frozen |
+| `src/Orderly.App/ViewModels/MainViewModel.StringNarrationOrders.cs` | 1612 | 500 | frozen/high-risk | order fulfillment page behavior frozen |
+| `src/Orderly.App/ViewModels/MainViewModel.SettingsP0.cs` | 1183 | 500 | frozen/high-risk | settings page logic frozen |
+| `src/Orderly.Data/Services/StringNarrationGatewayBusinessService.cs` | 1086 | 500 | frozen/high-risk | fulfillment/business gateway; shipping-sync and transaction loop frozen |
+| `src/Orderly.App/Views/LoginView.xaml` | 1645 | 300 | frozen/high-risk | login page UI frozen |
+| `src/Orderly.App/Views/LoginView.xaml.cs` | 915 | 300 | frozen/high-risk | login page code-behind frozen |
+| `src/Orderly.App/ViewModels/LoginViewModel.cs` | 812 | 500 | frozen/high-risk | login flow frozen |
+| `src/Orderly.Data/Services/CloudInventoryWorkspaceService.cs` | 737 | 500 | frozen/high-risk | cloud-sync protocol frozen |
+| `src/Orderly.App/ViewModels/MainViewModel.ExceptionOrders.cs` | 652 | 500 | frozen/high-risk | exception flow frozen |
+| `src/Orderly.Data/Sqlite/DatabaseInitializer.cs` | 582 | 500 | frozen/high-risk | schema/migration/contract surface frozen |
 
 ## Read-only review readiness
 
-- This batch is not yet ready for Kiro Opus 4.8 read-only review.
-- Reason: all three selected families are now compliant and the diff stayed structural-only, but the required `run-p3-5-search-smoke.ps1` validation is currently red and must be triaged or restored to green first.
+- This batch is ready for read-only review.
+- All three selected families are now compliant under the corrected dual thresholds and the diff stayed structural-only.
+- The previously red `run-p3-5-search-smoke.ps1` validation was diagnosed as pre-existing QA fixture leakage (not a regression from this batch) and was fixed in commit `7c3753b`; it passed twice consecutively post-fix with stable common needle `7`, and the canonical validation sequence passed.
+- Completed safe refactor boundary: there is no safe over-budget non-UI logic split candidate outside frozen boundaries, so logic-layer splitting is paused until a protected domain is deliberately unlocked or deferred UI/XAML work is taken up.
