@@ -1,0 +1,270 @@
+<UserControl x:Class="Orderly.App.Views.Sections.InventoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:Sections="clr-namespace:Orderly.App.Views.Sections">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainWindowInlineStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Background="{StaticResource PageBackgroundBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" /> <!-- 0: 顶部标题栏 -->
+                    <RowDefinition Height="Auto" /> <!-- 1: 5个大卡片 -->
+                    <RowDefinition Height="Auto" /> <!-- 2: 过滤工具栏 -->
+                    <RowDefinition Height="*" />    <!-- 3: 表格列表 -->
+                    <RowDefinition Height="Auto" /> <!-- 4: 分页栏 -->
+                </Grid.RowDefinitions>
+
+                <!-- 0: 顶部标题栏 -->
+                <Grid Grid.Row="0" Margin="24,16,24,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="库存管理" FontSize="22" FontWeight="Bold" Foreground="#1D1D1F" />
+                        <TextBlock Text="用材料动销效率判断补货、压货和库存风险" FontSize="12" Foreground="#868E96" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="数据更新：" Foreground="#868E96" FontSize="12" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding InventoryUpdatedAtText}" Foreground="#868E96" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0" />
+                        <Button Content="导入 Excel" Command="{Binding ImportInventoryWorkbookCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" Margin="0,0,8,0" />
+                        <Button Content="导出 Excel" Command="{Binding ExportInventoryWorkbookCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" Margin="0,0,8,0" />
+                        <Button Content="刷新库存" Command="{Binding RefreshInventoryCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- 1: 5个指标卡片 -->
+                <Grid Grid.Row="1" Margin="24,0,24,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 卡片 1: 平均每单消耗珠子 -->
+                    <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <!-- 圆形小图标 -->
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#F2EEFC" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE71D;" FontFamily="Segoe MDL2 Assets" Foreground="#7A3EDB" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="平均每单消耗珠子" FontSize="11" Foreground="#868E96" />
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding InventoryDashboardSummary.AvgOrderMaterialUsage, StringFormat={}{0:0.0}}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" />
+                                    <TextBlock Text=" 颗" FontSize="11" Foreground="#868E96" VerticalAlignment="Bottom" Margin="0,0,0,2" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 卡片 2: 平均珠子单价 -->
+                    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#FFF5EC" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE724;" FontFamily="Segoe MDL2 Assets" Foreground="#FF9500" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="平均珠子单价" FontSize="11" Foreground="#868E96" />
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding InventoryDashboardSummary.AvgMaterialUnitCost, StringFormat=¥{0:0.00}}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" />
+                                    <TextBlock Text=" / 颗" FontSize="11" Foreground="#868E96" VerticalAlignment="Bottom" Margin="0,0,0,2" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 卡片 3: 平均每串售价 -->
+                    <Border Grid.Column="4" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#EBF8F2" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE8A9;" FontFamily="Segoe MDL2 Assets" Foreground="#2B7A5C" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="平均每串售价" FontSize="11" Foreground="#868E96" />
+                                <TextBlock Text="{Binding InventoryDashboardSummary.AvgBraceletSalePrice, StringFormat=¥{0:0.00}}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 卡片 4: 平均每串成本 -->
+                    <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#EAF4FC" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE825;" FontFamily="Segoe MDL2 Assets" Foreground="#1A73E8" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="平均每串成本" FontSize="11" Foreground="#868E96" />
+                                <TextBlock Text="{Binding InventoryDashboardSummary.AvgBraceletCostPrice, StringFormat=¥{0:0.00}}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 卡片 5: 毛利率 -->
+                    <Border Grid.Column="8" Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#FCEEF9" VerticalAlignment="Center" Margin="0,0,12,0">
+                                <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" Foreground="#D12E9F" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="毛利率" FontSize="11" Foreground="#868E96" />
+                                <TextBlock Text="{Binding InventoryDashboardSummary.GrossMarginRate, StringFormat={}{0:0.0}%}" FontSize="20" FontWeight="Bold" Foreground="#1D1D1F" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- 2: 过滤工具栏 -->
+                <Sections:InventoryFilterBar Grid.Row="2" />
+
+                <!-- 3: 表格列表 -->
+                <Sections:InventoryTable Grid.Row="3" Margin="24,0,24,12" />
+
+                <!-- 4: 底部分页栏 -->
+                <Grid Grid.Row="4" Margin="24,0,24,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" /> <!-- 共 N 条 -->
+                        <ColumnDefinition Width="*" />    <!-- 页码按钮 -->
+                        <ColumnDefinition Width="Auto" /> <!-- 每页条数下拉框 -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 共 N 条 -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="共 " Foreground="#868E96" FontSize="12" />
+                        <TextBlock Text="{Binding InventoryTotalCount}" Foreground="#1D1D1F" FontSize="12" FontWeight="SemiBold" />
+                        <TextBlock Text=" 条" Foreground="#868E96" FontSize="12" />
+                    </StackPanel>
+
+                    <!-- 页码按钮 -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <!-- 上一页 -->
+                        <Button Content="&#xE0E2;" FontFamily="Segoe MDL2 Assets" 
+                                Command="{Binding GoToPreviousInventoryPageCommand}" 
+                                IsEnabled="{Binding CanGoToPreviousInventoryPage}"
+                                Height="28" Width="28" FontSize="10" 
+                                Style="{StaticResource InvisibleContainerButtonStyle}" Margin="0,0,4,0" />
+
+                        <!-- 动态生成的数字页码 -->
+                        <ItemsControl ItemsSource="{Binding InventoryPageNumbers}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <!-- 页码数字按钮 -->
+                                        <Button Content="{Binding DisplayText}" 
+                                                Command="{Binding DataContext.ChangeInventoryPageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" 
+                                                CommandParameter="{Binding PageNumber}"
+                                                Height="28" MinWidth="28" FontSize="12" Margin="2,0">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="Transparent" />
+                                                    <Setter Property="Foreground" Value="#495057" />
+                                                    <Setter Property="BorderThickness" Value="0" />
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="4" BorderBrush="#DFE3EA" BorderThickness="{TemplateBinding BorderThickness}" Padding="6,0">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <!-- 鼠标悬浮 -->
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#F1F2F5" />
+                                                        </Trigger>
+                                                        <!-- 高亮选中页码 -->
+                                                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                            <Setter Property="Background" Value="#1A73E8" />
+                                                            <Setter Property="Foreground" Value="#FFFFFF" />
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                        </DataTrigger>
+                                                        <!-- 省略号 0 展示 -->
+                                                        <DataTrigger Binding="{Binding IsEllipsis}" Value="True">
+                                                            <Setter Property="IsEnabled" Value="False" />
+                                                            <Setter Property="Background" Value="Transparent" />
+                                                            <Setter Property="Foreground" Value="#868E96" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- 下一页 -->
+                        <Button Content="&#xE0E3;" FontFamily="Segoe MDL2 Assets" 
+                                Command="{Binding GoToNextInventoryPageCommand}" 
+                                IsEnabled="{Binding CanGoToNextInventoryPage}"
+                                Height="28" Width="28" FontSize="10" 
+                                Style="{StaticResource InvisibleContainerButtonStyle}" Margin="4,0,0,0" />
+                    </StackPanel>
+
+                    <!-- 每页条数下拉框 -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ComboBox ItemsSource="{Binding InventoryPageSizeOptions}" 
+                                  SelectedItem="{Binding InventoryPageSize}"
+                                  Style="{StaticResource FulfillmentInputComboBoxStyle}" Width="90" Height="28">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding StringFormat={}{0} 条/页}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+    </Grid>
+</UserControl>

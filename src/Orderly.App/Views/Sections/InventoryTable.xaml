@@ -1,0 +1,291 @@
+<UserControl x:Class="Orderly.App.Views.Sections.InventoryTable"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/InventoryResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+                <Border Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Margin="24,0,24,12" Padding="0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.02"/>
+                    </Border.Effect>
+                    <Grid>
+                        <!-- 正常表格展示 -->
+                        <DataGrid ItemsSource="{Binding PagedInventoryItems}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  BorderThickness="0"
+                                  RowHeaderWidth="0"
+                                  Background="Transparent"
+                                  RowHeight="48"
+                                  HorizontalGridLinesBrush="#F1F2F5"
+                                  ColumnHeaderHeight="40">
+                            
+                            <!-- 表头样式定义 -->
+                            <DataGrid.ColumnHeaderStyle>
+                                <StaticResource ResourceKey="InventoryColumnHeaderStyle" />
+                            </DataGrid.ColumnHeaderStyle>
+
+                            <!-- 行样式定义 -->
+                            <DataGrid.RowStyle>
+                                <StaticResource ResourceKey="InventoryRowStyle" />
+                            </DataGrid.RowStyle>
+
+                            <DataGrid.Columns>
+                                <!-- 1. 材料名称 -->
+                                <DataGridTemplateColumn Header="材料名称" Width="200" 
+                                                        Visibility="{Binding DataContext.ShowColMaterialName, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding MaterialName, TargetNullValue=暂无数据}" 
+                                                       FontWeight="Bold" Foreground="#1D1D1F" 
+                                                       VerticalAlignment="Center" Margin="14,0" FontSize="13" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 2. 分类 -->
+                                <DataGridTemplateColumn Header="分类" Width="100"
+                                                        Visibility="{Binding DataContext.ShowColCategory, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Category, TargetNullValue=未分类}" 
+                                                       Foreground="#495057" VerticalAlignment="Center" Margin="14,0" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 3. 当前库存 -->
+                                <DataGridTemplateColumn Header="当前库存" Width="120"
+                                                        Visibility="{Binding DataContext.ShowColCurrentStock, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                                <TextBlock Text="{Binding CurrentStockQty, StringFormat={}{0:0.##}}" FontWeight="Bold" Foreground="#1D1D1F" />
+                                                <TextBlock Text=" " />
+                                                <TextBlock Text="{Binding StockUnit}" Foreground="#868E96" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 4. 7日动销 (动销比) -->
+                                <DataGridTemplateColumn Header="7日动销 (动销比)" Width="160"
+                                                        Visibility="{Binding DataContext.ShowCol7dSold, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                                <TextBlock Text="{Binding Sold7dQty, StringFormat={}{0:0.##}}" Foreground="#1D1D1F" />
+                                                <TextBlock Text=" " />
+                                                <TextBlock Text="{Binding StockUnit}" Foreground="#868E96" />
+                                                <TextBlock Text=" / " Foreground="#E5E7EC" />
+                                                <TextBlock Text="{Binding Sold7dRatio, StringFormat={}{0:0.0}%}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#868E96" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="fast_selling">
+                                                                    <Setter Property="Foreground" Value="#E0533C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="low_selling">
+                                                                    <Setter Property="Foreground" Value="#2B7A5C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 5. 30日动销 (动销比) -->
+                                <DataGridTemplateColumn Header="30日动销 (动销比)" Width="160"
+                                                        Visibility="{Binding DataContext.ShowCol30dSold, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                                <TextBlock Text="{Binding Sold30dQty, StringFormat={}{0:0.##}}" Foreground="#1D1D1F" />
+                                                <TextBlock Text=" " />
+                                                <TextBlock Text="{Binding StockUnit}" Foreground="#868E96" />
+                                                <TextBlock Text=" / " Foreground="#E5E7EC" />
+                                                <TextBlock Text="{Binding Sold30dRatio, StringFormat={}{0:0.0}%}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#868E96" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="fast_selling">
+                                                                    <Setter Property="Foreground" Value="#E0533C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="low_selling">
+                                                                    <Setter Property="Foreground" Value="#2B7A5C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 6. 安全库存建议 -->
+                                <DataGridTemplateColumn Header="安全库存建议" Width="130"
+                                                        Visibility="{Binding DataContext.ShowColSafeStock, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                                <TextBlock Text="{Binding SafeStockSuggestedQty, StringFormat={}{0:0.##}, TargetNullValue=未评估}" Foreground="#495057" />
+                                                <TextBlock Text=" " />
+                                                <TextBlock Text="{Binding StockUnit}" Foreground="#868E96">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SafeStockSuggestedQty}" Value="{x:Null}">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 7. 状态 -->
+                                <DataGridTemplateColumn Header="状态" Width="110"
+                                                        Visibility="{Binding DataContext.ShowColStatus, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="4" Padding="8,3" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="14,0">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#F1F3F5" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="fast_selling">
+                                                                <Setter Property="Background" Value="#FFF0E6" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="low_selling">
+                                                                <Setter Property="Background" Value="#EBF8F2" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="low_stock">
+                                                                <Setter Property="Background" Value="#FFF0F0" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="normal">
+                                                                <Setter Property="Background" Value="#E6F0FA" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="{Binding StatusLabel, TargetNullValue=正常}" FontSize="11">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#495057" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Status}" Value="fast_selling">
+                                                                    <Setter Property="Foreground" Value="#E0533C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="low_selling">
+                                                                    <Setter Property="Foreground" Value="#2B7A5C" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="low_stock">
+                                                                    <Setter Property="Foreground" Value="#D93838" />
+                                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Status}" Value="normal">
+                                                                    <Setter Property="Foreground" Value="#1A73E8" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 8. 单位成本 -->
+                                <DataGridTemplateColumn Header="单位成本" Width="100"
+                                                        Visibility="{Binding DataContext.ShowColUnitCost, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding UnitCost, StringFormat=¥{0:0.00}, TargetNullValue=未评估}" 
+                                                       Foreground="#495057" VerticalAlignment="Center" Margin="14,0" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 9. 最近补货 -->
+                                <DataGridTemplateColumn Header="最近补货" Width="140"
+                                                        Visibility="{Binding DataContext.ShowColLastRestock, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding LastRestockedAt, Converter={StaticResource TimestampToDateTimeConverter}, StringFormat={}{0:yyyy-MM-dd HH:mm}, TargetNullValue=未记录}" 
+                                                       Foreground="#495057" VerticalAlignment="Center" Margin="14,0" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 10. 供应商 -->
+                                <DataGridTemplateColumn Header="供应商" Width="130"
+                                                        Visibility="{Binding DataContext.ShowColSupplier, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding SupplierName, TargetNullValue=未记录}" 
+                                                       Foreground="#495057" VerticalAlignment="Center" Margin="14,0" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- 11. 备注 -->
+                                <DataGridTemplateColumn Header="备注" Width="*"
+                                                        Visibility="{Binding DataContext.ShowColRemark, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Remark}" Foreground="#868E96" VerticalAlignment="Center" Margin="14,0" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                            
+                            <DataGrid.Style>
+                                <Style TargetType="DataGrid">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasInventoryDashboardItems}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.Style>
+                        </DataGrid>
+
+                        <!-- 空数据展示 -->
+                        <TextBlock Text="{Binding InventoryEmptyStateText}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#868E96" FontSize="14">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasInventoryDashboardItems}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+</UserControl>
