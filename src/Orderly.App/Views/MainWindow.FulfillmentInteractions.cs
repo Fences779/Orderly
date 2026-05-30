@@ -99,24 +99,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void StringNarrationOrdersList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.ListBox listBox || DataContext is not MainViewModel vm)
-        {
-            return;
-        }
-
-        if (e.OriginalSource is DependencyObject source && FindAncestor<System.Windows.Controls.Button>(source) is not null)
-        {
-            return;
-        }
-
-        if (listBox.SelectedItem is Orderly.Core.Models.StringNarrationOrderSummary summary)
-        {
-            await vm.OpenStringNarrationOrderDetailAsync(summary);
-        }
-    }
-
     private void StepperNode_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement element && DataContext is MainViewModel vm)
