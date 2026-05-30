@@ -1,0 +1,155 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 全局 TextBox 基础样式：现代扁平化 Apple 风格 -->
+    <Style TargetType="TextBox">
+        <Setter Property="Height" Value="42" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Background" Value="#F7F7F9" />
+        <Setter Property="BorderBrush" Value="#DFE3EA" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="#1D1D1F" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border"
+                            CornerRadius="12"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <Border.Background>
+                            <SolidColorBrush x:Name="TextBoxBackgroundBrush" Color="#F7F7F9" />
+                        </Border.Background>
+                        <Border.BorderBrush>
+                            <SolidColorBrush x:Name="TextBoxBorderBrush" Color="#DFE3EA" />
+                        </Border.BorderBrush>
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="TextBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#FFFFFF" Duration="0:0:0.16">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                        <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush" Storyboard.TargetProperty="Color" To="#8A9AB5" Duration="0:0:0.16">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="TextBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#F7F7F9" Duration="0:0:0.22">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                        <ColorAnimation Storyboard.TargetName="TextBoxBorderBrush" Storyboard.TargetProperty="Color" To="#DFE3EA" Duration="0:0:0.22">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="IsKeyboardFocusWithin" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="border" Property="Background" Value="#FAFAFB" />
+                            <Setter TargetName="border" Property="BorderBrush" Value="#D4D9E2" />
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="#F1F2F5" />
+                            <Setter TargetName="border" Property="BorderBrush" Value="#E5E7EC" />
+                            <Setter Property="Foreground" Value="#A0A5AF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="PasswordBox">
+        <Setter Property="Height" Value="42" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Background" Value="#F7F7F9" />
+        <Setter Property="BorderBrush" Value="#DFE3EA" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="#1D1D1F" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="border"
+                            CornerRadius="12"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <Border.Background>
+                            <SolidColorBrush x:Name="PasswordBoxBackgroundBrush" Color="#F7F7F9" />
+                        </Border.Background>
+                        <Border.BorderBrush>
+                            <SolidColorBrush x:Name="PasswordBoxBorderBrush" Color="#DFE3EA" />
+                        </Border.BorderBrush>
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="PasswordBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#FFFFFF" Duration="0:0:0.16">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                        <ColorAnimation Storyboard.TargetName="PasswordBoxBorderBrush" Storyboard.TargetProperty="Color" To="#8A9AB5" Duration="0:0:0.16">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="PasswordBoxBackgroundBrush" Storyboard.TargetProperty="Color" To="#F7F7F9" Duration="0:0:0.22">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                        <ColorAnimation Storyboard.TargetName="PasswordBoxBorderBrush" Storyboard.TargetProperty="Color" To="#DFE3EA" Duration="0:0:0.22">
+                                            <ColorAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></ColorAnimation.EasingFunction>
+                                        </ColorAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition Property="IsKeyboardFocusWithin" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="border" Property="Background" Value="#FAFAFB" />
+                            <Setter TargetName="border" Property="BorderBrush" Value="#D4D9E2" />
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="#F1F2F5" />
+                            <Setter TargetName="border" Property="BorderBrush" Value="#E5E7EC" />
+                            <Setter Property="Foreground" Value="#A0A5AF" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 全局 ComboBox 基础样式 -->
+    <Style TargetType="ComboBox">
+        <Setter Property="Height" Value="42" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Background" Value="#F7F7F9" />
+        <Setter Property="BorderBrush" Value="#DFE3EA" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="#1D1D1F" />
+        <Setter Property="Padding" Value="14,0,32,0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+</ResourceDictionary>
