@@ -1,10 +1,15 @@
 using System.Windows;
 using Orderly.App.ViewModels;
 
-namespace Orderly.App.Views;
+namespace Orderly.App.Views.Sections;
 
-public partial class MainWindow : Window
+public partial class FulfillmentToolbar : System.Windows.Controls.UserControl
 {
+    public FulfillmentToolbar()
+    {
+        InitializeComponent();
+    }
+
     private void Btn_SelectDateRange_Click(object sender, RoutedEventArgs e)
     {
         Popup_DateRangePicker.IsOpen = true;

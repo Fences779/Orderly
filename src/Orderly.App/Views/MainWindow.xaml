@@ -1931,68 +1931,7 @@
                 </Grid>
 
                 <!-- 2. Search & Filters -->
-                <Border Grid.Row="2" Style="{StaticResource SettingsGroupCardStyle}" Padding="14,10" Margin="0,0,0,14">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <Grid Grid.Column="0" Margin="0,0,10,0">
-                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Padding="14,0,10,0"
-                                     Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.AutomationId="Input_FulfillmentSearchKeyword" />
-                            <TextBlock Text="🔍 搜索订单号/客户昵称/收件人姓名/微信号..." Foreground="{StaticResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="14,0,0,0" IsHitTestVisible="False">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Keyword}" Value="">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding Keyword}" Value="{x:Null}">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
-
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,10,0">
-                            <Button x:Name="Btn_SelectDateRange" Content="选择时间范围" Style="{StaticResource ToolbarSecondaryButtonStyle}" Height="36" Padding="12,0" Click="Btn_SelectDateRange_Click" />
-                            <Popup x:Name="Popup_DateRangePicker" PlacementTarget="{Binding ElementName=Btn_SelectDateRange}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                                <Border Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,4,0,0">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Color="#111216" Opacity="0.08" />
-                                    </Border.Effect>
-                                    <StackPanel Width="280">
-                                        <TextBlock Text="选择过滤时间范围" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,12" />
-                                        <Grid Margin="0,0,0,12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <DatePicker SelectedDate="{Binding StartAt, Converter={StaticResource TimestampToDateTimeConverter}, Mode=TwoWay}" Height="32" Width="120" Grid.Column="0" />
-                                            <TextBlock Text="至" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="6,0" Grid.Column="1" />
-                                            <DatePicker SelectedDate="{Binding EndAt, Converter={StaticResource TimestampToDateTimeConverter}, Mode=TwoWay}" Height="32" Width="120" Grid.Column="2" />
-                                        </Grid>
-                                        <DockPanel>
-                                            <Button Content="清空时间" Style="{StaticResource DialogSecondaryButtonStyle}" Height="30" Padding="12,0" HorizontalAlignment="Left" Click="Btn_ClearDateRange_Click" />
-                                            <Button Content="确认应用" Style="{StaticResource DialogPrimaryButtonStyle}" Height="30" Padding="12,0" HorizontalAlignment="Right" Click="Btn_ApplyDateRange_Click" />
-                                        </DockPanel>
-                                    </StackPanel>
-                                </Border>
-                            </Popup>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <Button Content="重置筛选" Style="{StaticResource ToolbarSecondaryButtonStyle}" Height="36" Padding="14,0" Command="{Binding ClearStringNarrationFiltersCommand}" />
-                        </StackPanel>
-                    </Grid>
-                </Border>
+                <Sections:FulfillmentToolbar Grid.Row="2" />
 
                 <!-- 3. List & Detail Content Area -->
                 <Grid Grid.Row="3">
