@@ -4,9 +4,9 @@
 
 ### -1. Explicit Implementation Keyword Gate
 - **Status**: Active and strict.
-- **Constraint**: Unless the user explicitly gives a standalone implementation trigger such as `施工`, `修改`, `改代码`, `implement`, `fix`, or `apply changes`, Codex must stay in discussion mode only.
+- **Constraint**: Unless the user explicitly gives a standalone implementation trigger such as `施工`, `修改`, `改代码`, `分析执行`, `implement`, `fix`, or `apply changes`, Codex must stay in discussion mode only.
 - **Required Behavior**: Without an explicit implementation trigger, **DO NOT** modify files, edit code, write patches, run change-causing commands, or perform implementation by implication.
-- **Default Interpretation**: Requests such as `看看`, `检查`, `分析`, `排查`, `评估`, `方案`, `怎么改`, or similar wording must be treated as discussion-only, even if the likely technical solution is already clear.
+- **Default Interpretation**: Requests such as `看看`, `检查`, `分析`, `排查`, `评估`, `方案`, `怎么改`, or similar wording must be treated as discussion-only, even if the likely technical solution is already clear. A standalone `分析执行` is implementation authorization, not discussion-only wording.
 - **Escalation Rule**: When the user's intent is ambiguous, resolve it as non-implementation by default and discuss scope, goal, and approach first.
 
 ### -1.1 Discussion-First Workflow
@@ -17,7 +17,7 @@
   2. Codex responds with analysis, answers, and/or a proposed change plan only.
   3. Codex confirms the user's actual intent, scope, and boundaries.
   4. Codex explicitly asks whether it may begin modification.
-  5. Codex may start implementation only after the user gives an explicit implementation trigger such as `施工`, `修改`, `改代码`, `implement`, `fix`, or `apply changes`.
+  5. Codex may start implementation only after the user gives an explicit implementation trigger such as `施工`, `修改`, `改代码`, `分析执行`, `implement`, `fix`, or `apply changes`.
 - **Constraint**: Codex must not infer permission to modify code from context, momentum, prior similar tasks, or solution clarity.
 
 ### -1.2 Post-Change Validation Workflow
