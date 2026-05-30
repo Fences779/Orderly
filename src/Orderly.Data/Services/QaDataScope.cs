@@ -10,8 +10,8 @@ internal static class QaDataScope
     public const string CurrentDisplayMarker = "[P1.3_QA]";
     public const string P2DisplayMarker = "[P2_QA]";
 
-    private static readonly string[] QaRemoteIdPrefixes = ["p13qa-", "p2qa-"];
-    private static readonly string[] QaExternalIdPrefixes = ["p13qa-", "p2qa-"];
+    private static readonly string[] QaRemoteIdPrefixes = ["p13qa-", "p2qa-", "p35qa-", "p36qa-"];
+    private static readonly string[] QaExternalIdPrefixes = ["p13qa-", "p2qa-", "p35qa-", "p36qa-"];
     private static readonly string[] LegacyTextMarkers =
     [
         CurrentDisplayMarker,
