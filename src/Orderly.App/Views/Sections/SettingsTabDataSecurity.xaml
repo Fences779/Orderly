@@ -1,0 +1,146 @@
+<UserControl x:Class="Orderly.App.Views.Sections.SettingsTabDataSecurity"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <StackPanel>
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="数据安全与隐私" Style="{StaticResource SettingsGroupTitleStyle}" />
+
+                                    <!-- 敏感电话默认遮蔽 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="敏感电话默认加星" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="在客户与订单列表中遮蔽电话号码关键数字" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding MaskPhoneByDefaultInput}"
+                                                      AutomationProperties.AutomationId="Chk_MaskPhoneByDefault" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 敏感地址默认遮蔽 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="敏感地址默认加星" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="在客户与订单列表中遮蔽联系地址关键详情" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding MaskAddressByDefaultInput}"
+                                                      AutomationProperties.AutomationId="Chk_MaskAddressByDefault" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 备份时包含明文敏感字段 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="备份导出明文敏感字段" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="导出数据时包含明文敏感信息（不推荐开启）" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding IncludeSensitiveInExportInput}"
+                                                      AutomationProperties.AutomationId="Chk_IncludeSensitiveInExport" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 复制订单摘要时脱敏 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="复制订单摘要时脱敏" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="一键复制订单时自动隐藏客户姓名、金额等隐私" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding MaskOrderSummaryOnCopyInput}"
+                                                      AutomationProperties.AutomationId="Chk_MaskOrderSummaryOnCopy" />
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 数据库维护卡片 -->
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="本地数据库维护" Style="{StaticResource SettingsGroupTitleStyle}" />
+
+                                    <!-- 数据库路径 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="数据库路径" Style="{StaticResource SettingsItemTitleStyle}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding DatabasePath}" Style="{StaticResource SettingsStatusTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 数据库体积 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="数据体积" Style="{StaticResource SettingsItemTitleStyle}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding DatabaseSizeText}" Style="{StaticResource SettingsStatusTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 完整性检查 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="数据完整性校验" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="{Binding DatabaseHealthStatusText}" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Content="开始检查" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                    Command="{Binding CheckDatabaseHealthCommand}"
+                                                    AutomationProperties.AutomationId="Btn_CheckDatabaseHealth" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 检查详细结果 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                        <Grid>
+                                            <StackPanel>
+                                                <TextBlock Text="校验日志详情" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="{Binding DatabaseHealthDetailText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 数据验证与恢复卡片 -->
+    </StackPanel>
+</UserControl>

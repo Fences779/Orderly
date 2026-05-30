@@ -1,0 +1,39 @@
+<UserControl x:Class="Orderly.App.Views.Sections.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:Sections="clr-namespace:Orderly.App.Views.Sections">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <TabControl Style="{StaticResource SettingsTabControlStyle}">
+                
+                <!-- Tab 1: 应用与外观 -->
+                <TabItem Header="应用与外观" Style="{StaticResource SettingsTabItemStyle}" Tag="&#xE713;">
+                    <Sections:SettingsTabAppearance />
+                </TabItem>
+
+                <!-- Tab 2: 数据与安全 -->
+                <TabItem Header="数据与安全" Style="{StaticResource SettingsTabItemStyle}" Tag="&#xE8B5;">
+                    <Sections:SettingsTabData />
+                </TabItem>
+
+                <!-- Tab 4: AI 助手 -->
+                <TabItem Header="AI 助手" Style="{StaticResource SettingsTabItemStyle}" Tag="&#xE99A;">
+                    <Sections:SettingsTabAi />
+                </TabItem>
+
+                <!-- Tab 5: 系统提醒 -->
+                <TabItem Header="系统提醒" Style="{StaticResource SettingsTabItemStyle}" Tag="&#xE715;">
+                    <Sections:SettingsTabNotify />
+                </TabItem>
+
+                <!-- Tab 6: 快捷键 -->
+                <TabItem Header="快捷键" Style="{StaticResource SettingsTabItemStyle}" Tag="&#xE765;">
+                    <Sections:SettingsTabHotkeys />
+                </TabItem>
+    </TabControl>
+</UserControl>

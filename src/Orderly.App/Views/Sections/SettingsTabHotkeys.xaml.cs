@@ -2,10 +2,15 @@ using System.Linq;
 using System.Windows;
 using Orderly.App.ViewModels;
 
-namespace Orderly.App.Views;
+namespace Orderly.App.Views.Sections;
 
-public partial class MainWindow : Window
+public partial class SettingsTabHotkeys : System.Windows.Controls.UserControl
 {
+    public SettingsTabHotkeys()
+    {
+        InitializeComponent();
+    }
+
     private void SettingsTextInput_LostFocus(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm || sender is not System.Windows.Controls.TextBox textBox)

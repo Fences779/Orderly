@@ -1,0 +1,239 @@
+<UserControl x:Class="Orderly.App.Views.Sections.SettingsTabAppearance"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+                    <ScrollViewer Style="{StaticResource SettingsScrollViewerStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="10*" MaxWidth="900" MinWidth="450" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="1" Margin="0,0,24,0" HorizontalAlignment="Stretch">
+                            <!-- 外观卡片 -->
+                            <Border Style="{StaticResource SettingsGroupCardStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="个性化外观" Style="{StaticResource SettingsGroupTitleStyle}" />
+                                    
+                                    <!-- 主题模式 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="主题模式" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="应用外观主题设定" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <ListBox Grid.Column="1" Style="{StaticResource SettingsSegmentedControlStyle}"
+                                                     ItemContainerStyle="{StaticResource SettingsSegmentedItemStyle}"
+                                                     ItemsSource="{Binding ThemeModeOptions}"
+                                                     SelectedItem="{Binding ThemeModeInput}"
+                                                     AutomationProperties.AutomationId="List_ThemeMode" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 字号大小 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="字号预设" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="调整系统界面文本大小" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <ListBox Grid.Column="1" Style="{StaticResource SettingsSegmentedControlStyle}"
+                                                     ItemContainerStyle="{StaticResource SettingsSegmentedItemStyle}"
+                                                     ItemsSource="{Binding FontPresetOptions}"
+                                                     SelectedItem="{Binding FontSizePresetInput}"
+                                                     AutomationProperties.AutomationId="List_FontSizePreset" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 强调色行 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="应用强调色" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="选择或自定义符合您品牌的主题强调色" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <ListBox Style="{StaticResource SettingsColorSwatchListStyle}"
+                                                         ItemContainerStyle="{StaticResource SettingsColorSwatchItemStyle}"
+                                                         ItemsSource="{Binding AccentColorOptions}"
+                                                         SelectedItem="{Binding AccentColorInput}"
+                                                         AutomationProperties.AutomationId="List_AccentColor" />
+                                                <Button Style="{StaticResource SettingsRowCustomColorButtonStyle}"
+                                                        ToolTip="自定义强调色..."
+                                                        Command="{Binding ChooseCustomAccentColorCommand}"
+                                                        AutomationProperties.AutomationId="Btn_ChooseCustomColor" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 启动与显示配置卡片 -->
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="启动与显示" Style="{StaticResource SettingsGroupTitleStyle}" />
+                                    
+                                    <!-- 默认启动页面 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="默认启动页" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="打开应用时默认聚焦的板块" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <ListBox Grid.Column="1" Style="{StaticResource SettingsSegmentedControlStyle}"
+                                                     ItemContainerStyle="{StaticResource SettingsSegmentedItemStyle}"
+                                                     ItemsSource="{Binding StartupSectionOptions}"
+                                                     SelectedItem="{Binding StartupDefaultSectionInput}"
+                                                     AutomationProperties.AutomationId="List_StartupDefaultSection" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 默认窗口模式 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="默认窗口模式" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="启动应用时的窗口状态" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <ListBox Grid.Column="1" Style="{StaticResource SettingsSegmentedControlStyle}"
+                                                     ItemContainerStyle="{StaticResource SettingsSegmentedItemStyle}"
+                                                     ItemsSource="{Binding WindowModeOptions}"
+                                                     SelectedItem="{Binding DefaultWindowModeInput}"
+                                                     AutomationProperties.AutomationId="List_DefaultWindowMode" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 记住上次停留页 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="记住上次停留页" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="启动时恢复至上次关闭前的导航页面" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding RememberLastSectionInput}"
+                                                      AutomationProperties.AutomationId="Chk_RememberLastSection" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 开机自启 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="随系统开机启动" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="在系统登录后自动后台启动工作台" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding StartWithWindowsInput}"
+                                                      AutomationProperties.AutomationId="Chk_StartWithWindows" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 启动后自动显示悬浮窗 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="启动时显示悬浮窗" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="应用开启后自动在桌面右上角显示快捷悬浮工具栏" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding ShowFloatingWindowOnStartupInput}"
+                                                      AutomationProperties.AutomationId="Chk_ShowFloatingWindow" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 启动默认最小化到系统托盘 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="启动最小化至托盘" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="开启后自动隐藏在后台，双击右下角图标打开" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding StartMinimizedToTrayInput}"
+                                                      AutomationProperties.AutomationId="Chk_StartMinimizedToTray" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 记住主窗口位置和大小 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="记住窗口位置" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="自动记录并恢复上次关闭时的窗口几何大小与位置" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding RememberWindowBoundsInput}"
+                                                      AutomationProperties.AutomationId="Chk_RememberWindowBounds" />
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 保存应用配置按钮 -->
+                            <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0" Margin="0,16,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="保存基本配置" Style="{StaticResource SettingsItemTitleStyle}" />
+                                        <TextBlock Text="保存当前应用外观及启动策略设置" Style="{StaticResource SettingsItemDescStyle}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="保存并应用" 
+                                            Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="36" Padding="16,0" VerticalAlignment="Center"
+                                            Command="{Binding SaveP0SettingsCommand}"
+                                            AutomationProperties.AutomationId="Btn_SavePreferences" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+</UserControl>
