@@ -1,11 +1,68 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using Orderly.App.ViewModels;
 
-namespace Orderly.App.Views;
+namespace Orderly.App.Views.Sections;
 
-public partial class MainWindow : Window
+public partial class WorkbenchTrendCard : System.Windows.Controls.UserControl
 {
+    private MainViewModel? _subscribedViewModel;
+
+    public WorkbenchTrendCard()
+    {
+        InitializeComponent();
+        TrendTooltip.SizeChanged += TrendTooltip_SizeChanged;
+        DataContextChanged += WorkbenchTrendCard_DataContextChanged;
+        Loaded += WorkbenchTrendCard_Loaded;
+        Unloaded += WorkbenchTrendCard_Unloaded;
+    }
+
+    private void WorkbenchTrendCard_Loaded(object sender, RoutedEventArgs e)
+    {
+        SubscribeToViewModel(DataContext as MainViewModel);
+        UpdateTrendChart();
+    }
+
+    private void WorkbenchTrendCard_Unloaded(object sender, RoutedEventArgs e)
+    {
+        SubscribeToViewModel(null);
+    }
+
+    private void WorkbenchTrendCard_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        SubscribeToViewModel(e.NewValue as MainViewModel);
+        Dispatcher.InvokeAsync(UpdateTrendChart);
+    }
+
+    private void SubscribeToViewModel(MainViewModel? viewModel)
+    {
+        if (ReferenceEquals(_subscribedViewModel, viewModel))
+        {
+            return;
+        }
+
+        if (_subscribedViewModel is not null)
+        {
+            _subscribedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+
+        _subscribedViewModel = viewModel;
+
+        if (_subscribedViewModel is not null)
+        {
+            _subscribedViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == "StringNarrationWorkbenchDashboard")
+        {
+            Dispatcher.InvokeAsync(UpdateTrendChart);
+        }
+    }
+
     private void TrendCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateTrendChart();

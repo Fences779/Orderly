@@ -1,0 +1,227 @@
+<UserControl x:Class="Orderly.App.Views.Sections.WorkbenchBottomCards"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainWindowInlineStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Grid.Row="3">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="18" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左边：库存状态 (点击循环切换测试) -->
+        <Button Grid.Column="0" Command="{Binding ToggleInventoryTestStatusCommand}" Style="{StaticResource InvisibleContainerButtonStyle}" HorizontalContentAlignment="Stretch">
+            <Border x:Name="InventoryCard" BorderThickness="1" CornerRadius="12" Padding="20,18" Height="140">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
+                </Border.Effect>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                        <Setter Property="Background" Value="#FFFFFF" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="健康">
+                                <Setter Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#EAF2EF" Offset="0"/>
+                                            <GradientStop Color="#FFFFFF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="需注意">
+                                <Setter Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#FFF8F0" Offset="0"/>
+                                            <GradientStop Color="#FFFFFF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="警告">
+                                <Setter Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#FFF2F2" Offset="0"/>
+                                            <GradientStop Color="#FFFFFF" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="库存状态" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                    
+                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- 图标色 -->
+                        <Border Grid.Column="0" Width="48" Height="48" CornerRadius="24" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#F1F2F5" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="健康">
+                                            <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="需注意">
+                                            <Setter Property="Background" Value="{StaticResource WarmSoftBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="警告">
+                                            <Setter Property="Background" Value="{StaticResource DangerSoftBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource GreyTextBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="健康">
+                                                <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="需注意">
+                                                <Setter Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="警告">
+                                                <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        
+                        <!-- 详情描述 -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock FontWeight="Bold" FontSize="18">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="正常" />
+                                        <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="健康">
+                                                <Setter Property="Text" Value="正常" />
+                                                <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="需注意">
+                                                <Setter Property="Text" Value="需关注" />
+                                                <Setter Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="警告">
+                                                <Setter Property="Text" Value="警告" />
+                                                <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="所有材料库存充足，运营状况良好。" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="健康">
+                                                <Setter Property="Text" Value="所有材料库存充足，运营状况良好。" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="需注意">
+                                                <Setter Property="Text" Value="部分材料库存偏低，建议及时关注补货。" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StringNarrationWorkbenchInventoryTestStatus}" Value="警告">
+                                                <Setter Property="Text" Value="核心材料库存严重不足，请立即采购补充！" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                        
+                        <!-- 跳转按钮 -->
+                        <Button Grid.Column="2" Content="查看库存详情 →" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" FontSize="12" VerticalAlignment="Center"
+                                Command="{Binding SelectSectionCommand}" CommandParameter="库存管理" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Button>
+
+        <!-- 右边：现金流 (含天数圆弧环) -->
+        <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="20,18" Height="140">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="现金流" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                
+                <Grid Grid.Row="1" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- 环形图 (WPF Path 圆弧，72分时大约是260度弧度) -->
+                    <Grid Grid.Column="0" Width="64" Height="64" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <Ellipse Width="56" Height="56" Stroke="#F1F2F5" StrokeThickness="6" />
+                        <Path StrokeThickness="6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent">
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property="Stroke" Value="{Binding StringNarrationWorkbenchCashFlowColorText}" />
+                                    <Setter Property="Data" Value="M 32,7 A 25,25 0 1,1 8,28" />
+                                </Style>
+                            </Path.Style>
+                        </Path>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding StringNarrationWorkbenchCashFlowScoreText, FallbackValue=72}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding StringNarrationWorkbenchCashFlowEvaluation, FallbackValue=健康}" FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,1,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{Binding StringNarrationWorkbenchCashFlowColorText}" />
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                    
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="现金流状况良好，可支撑当前运营" FontSize="12" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Text="较昨日" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
+                            <TextBlock Text="{Binding StringNarrationWorkbenchCashFlowDeltaText}" FontSize="11" Foreground="#2B7A5C" FontWeight="Bold" Margin="4,0,0,0" />
+                            <TextBlock Text="天" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" Margin="2,0,0,0" />
+                            <TextBlock Text=" ↑" FontSize="11" Foreground="#2B7A5C" FontWeight="Bold" />
+                        </StackPanel>
+                    </StackPanel>
+                    
+                    <!-- 跳转按钮 -->
+                    <Button Grid.Column="2" Content="查看现金流详情 →" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" FontSize="12" VerticalAlignment="Center"
+                            Command="{Binding SelectSectionCommand}" CommandParameter="现金流" />
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

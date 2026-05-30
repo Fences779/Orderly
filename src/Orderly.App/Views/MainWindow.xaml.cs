@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Windows;
-using System.Windows.Media;
 using Orderly.App.ViewModels;
 
 namespace Orderly.App.Views;
@@ -15,7 +14,6 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         System.Windows.Application.Current.MainWindow = this;
         viewModel.PropertyChanged += ViewModel_PropertyChanged;
-        TrendTooltip.SizeChanged += TrendTooltip_SizeChanged;
         this.SizeChanged += MainWindow_SizeChanged;
     }
 
@@ -39,10 +37,6 @@ public partial class MainWindow : Window
             {
                 ShowCopyToast(vm.StringNarrationStatusMessage);
             }
-        }
-        else if (e.PropertyName == "StringNarrationWorkbenchDashboard")
-        {
-            Dispatcher.InvokeAsync(UpdateTrendChart);
         }
         else if (e.PropertyName == "CashflowHealthDashboardResult" || (e.PropertyName == nameof(MainViewModel.SelectedSection) && DataContext is MainViewModel vm && string.Equals(vm.SelectedSection, "现金流")))
         {

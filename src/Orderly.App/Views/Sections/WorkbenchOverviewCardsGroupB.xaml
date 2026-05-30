@@ -1,0 +1,156 @@
+<UserControl x:Class="Orderly.App.Views.Sections.WorkbenchOverviewCardsGroupB"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainWindowInlineStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Card 4: 待发货 (紫色) -->
+        <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="16,14">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="{StaticResource PurpleSoftBrush}" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource PurpleTextBrush}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="待发货" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding StringNarrationWorkbenchReadyToShipCountText, FallbackValue=0}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="较昨日" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
+                        <TextBlock Text="{Binding StringNarrationWorkbenchReadyToShipDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="True">
+                                            <Setter Property="Foreground" Value="#DE4C4A" />
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="False" />
+                                                <Condition Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaZero}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="#2B7A5C" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Margin="2,0,0,0" FontSize="11" FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="True">
+                                            <Setter Property="Text" Value="↑" />
+                                            <Setter Property="Foreground" Value="#DE4C4A" />
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="False" />
+                                                <Condition Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaZero}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Text" Value="↓" />
+                                            <Setter Property="Foreground" Value="#2B7A5C" />
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Card 5: 异常订单 (红色) -->
+        <Border Grid.Column="8" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="16,14">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="{StaticResource DangerSoftBrush}" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="&#xE7C1;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource DangerTextBrush}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="异常订单" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding StringNarrationWorkbenchExceptionOrderCountText, FallbackValue=0}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="较昨日" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
+                        <TextBlock Text="{Binding StringNarrationWorkbenchExceptionOrderDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="True">
+                                            <Setter Property="Foreground" Value="#DE4C4A" />
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="False" />
+                                                <Condition Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaZero}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="#2B7A5C" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Margin="2,0,0,0" FontSize="11" FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="True">
+                                            <Setter Property="Text" Value="↑" />
+                                            <Setter Property="Foreground" Value="#DE4C4A" />
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="False" />
+                                                <Condition Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaZero}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Text" Value="↓" />
+                                            <Setter Property="Foreground" Value="#2B7A5C" />
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
