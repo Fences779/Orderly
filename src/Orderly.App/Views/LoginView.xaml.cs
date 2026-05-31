@@ -36,6 +36,7 @@ public partial class LoginView : Window
         _viewModel = viewModel;
         DataContext = viewModel;
         InitializeComponent();
+        OwnerCreatePanel.Initialize(viewModel);
         Loaded += OnLoaded;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         ApplyViewModelState();
@@ -94,10 +95,7 @@ public partial class LoginView : Window
         TxtSignInAccountHint.Text = _viewModel.SignInAccountErrorMessage;
         TxtSignInAccountHint.Visibility = _viewModel.HasSignInAccountErrorMessage ? Visibility.Visible : Visibility.Collapsed;
 
-        RecoveryPanel.Visibility = _viewModel.IsRecoveryStepVisible ? Visibility.Visible : Visibility.Collapsed;
-        TxtRecoveryKeyValue.Text = _viewModel.GeneratedRecoveryKey;
-        ChkRecoverySaved.IsChecked = _viewModel.IsRecoveryKeyConfirmed;
-        BtnContinueAfterRecovery.IsEnabled = _viewModel.IsRecoveryConfirmationReady;
+        OwnerCreatePanel.ApplyRecoveryState();
         UpdateSignInCredentialSectionState(_hasLoaded);
     }
 
@@ -108,7 +106,7 @@ public partial class LoginView : Window
         switch (_currentSurface)
         {
             case LoginSurface.OwnerCreate:
-                TxtOwnerUsername.Focus();
+                OwnerCreatePanel.FocusPrimary();
                 return;
             case LoginSurface.PasswordRecovery:
                 TxtRecoveryOwnerUsername.Focus();
@@ -126,15 +124,6 @@ public partial class LoginView : Window
                 TxtSignInUsername.CaretIndex = TxtSignInUsername.Text.Length;
                 return;
         }
-    }
-
-    private async void BtnCreateOwner_Click(object sender, RoutedEventArgs e)
-    {
-        await _viewModel.CreateFirstOwnerAsync(
-            TxtOwnerUsername.Text,
-            TxtOwnerDisplayName.Text,
-            TxtOwnerPassword.Password,
-            TxtOwnerPin.Password);
     }
 
     private void UpdateSignInCredentialSectionState(bool animate)

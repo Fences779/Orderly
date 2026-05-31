@@ -5,16 +5,6 @@ namespace Orderly.App.Views;
 
 public partial class LoginView : Window
 {
-    private void BtnContinueAfterRecovery_Click(object sender, RoutedEventArgs e)
-    {
-        _viewModel.ConfirmRecoveryKeyAndContinue();
-    }
-
-    private void ChkRecoverySaved_OnChanged(object sender, RoutedEventArgs e)
-    {
-        _viewModel.IsRecoveryKeyConfirmed = ChkRecoverySaved.IsChecked == true;
-    }
-
     private async void BtnResetOwnerPassword_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.CanEditRecoveryKeyInput)
