@@ -440,3 +440,49 @@ non-UI ViewModels (`MainViewModel.StringNarrationOrders.cs`, `MainViewModel.Sett
 `MainViewModel.ExceptionOrders.cs`, `LoginViewModel.cs`) toward ≤500, preserving public contracts, DI,
 serialization, and business semantics. Frozen transaction-loop logic stays untouched and is documented
 as an exception if it blocks a split.
+
+---
+
+## Final-State Addendum (post-correction on `main` after `ccb453a`)
+
+The source maps and "remaining targets" above are historical planning notes; the work they describe is
+now complete. At the corrected final state:
+
+- **All planned extractions landed.** The Fulfillment right detail region, the Exception page, the
+  Me/Profile page, and the Login sign-in / recovery / account-management / owner-create / create-member
+  surfaces are extracted into self-contained `UserControl`s under `src/Orderly.App/Views/` and
+  `src/Orderly.App/Views/Sections/`, each within the ≤300 UI budget. Oversized non-UI ViewModels were
+  safely split to ≤500. The oversized count is 0.
+
+- **Login surface architecture and the restored guard.** The original `LoginView.xaml.cs`
+  `TryOpenRecentAccountsPopup` opened the recent-account dropdown only when
+  `_currentSurface == LoginSurface.SignIn` (plus the not-busy / not-confirmed / has-filtered-accounts
+  conditions). After extraction the open path moved into `LoginSignInPanel` (file
+  `LoginSignInPanel.RecentAccounts.cs`) and temporarily lost the active-surface term. The correction
+  restores the original rule via the narrowest contract: the parent `LoginView`, which owns
+  `_currentSurface`, pushes the active-surface flag into the panel through the existing
+  `UpdateCredentialSectionState(_currentSurface == LoginSurface.SignIn, ...)` call. `LoginSignInPanel`
+  stores it in `_isSignInSurfaceActive` and gates `TryOpenRecentAccountsPopup` on it, so the dropdown
+  cannot open unless SignIn is the active surface — not merely visually hidden. No authentication call,
+  account-selection semantics, focus behavior, dropdown animation, outside-click behavior,
+  password-recovery navigation, account-management navigation, or credential-section expansion was
+  changed.
+
+- **Dead-code cleanup.** After the surface extraction, the parent `LoginView`'s
+  `BtnOpenPasswordRecovery_Click` (`LoginView.Recovery.cs`) and `BtnOpenAccountManagement_Click`
+  (`LoginView.AccountManagement.cs`) were no longer wired by any XAML or `+=` subscription (the buttons
+  now live in `LoginSignInPanel.xaml`, raising `OpenRecoveryRequested` / `OpenAccountManagementRequested`
+  events that the parent handles via `OnSignInOpenRecoveryRequested` / `OnSignInOpenAccountManagementRequested`).
+  A repository-wide reference search confirmed they were dead, so both were removed in the same Login
+  correction commit (`ccb453a`).
+
+- **Whitespace correction.** A separate commit (`327cb82`) removed the ~90 cumulative
+  trailing-whitespace violations reported by `git diff --check origin/main..HEAD` across 10 governance
+  files, behavior-neutral (verified `git diff --ignore-all-space` empty).
+
+- **Frozen boundary untouched.** No correction commit modified payment callback verification,
+  auto-transition-to-paid, WeChat shipping sync, the payment-success-to-fulfillment loop, or related
+  gateway/cloudfunction/data-contract/state-transition behavior.
+
+- **Push still prohibited** until a post-correction independent review and the user's manual runtime
+  verification both succeed.
