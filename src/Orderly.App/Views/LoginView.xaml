@@ -19,6 +19,7 @@
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/AppContentScrollResources.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/LoginResources.A.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/LoginResources.B.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/LoginResources.C.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- 进场动画 -->
@@ -237,64 +238,9 @@
                                                      Background="Transparent"
                                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                                                      MaxHeight="168"
-                                                     SelectionChanged="LstRecentSignInAccounts_SelectionChanged">
-                                                <ListBox.ItemContainerStyle>
-                                                    <Style TargetType="ListBoxItem">
-                                                        <Setter Property="Padding" Value="0" />
-                                                        <Setter Property="Margin" Value="0,0,0,4" />
-                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="ListBoxItem">
-                                                                    <Border x:Name="AccountOption"
-                                                                            Background="Transparent"
-                                                                            BorderBrush="Transparent"
-                                                                            BorderThickness="1"
-                                                                            CornerRadius="12"
-                                                                            Padding="12,10">
-                                                                        <ContentPresenter />
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="AccountOption" Property="Background" Value="#F7F7F9" />
-                                                                            <Setter TargetName="AccountOption" Property="BorderBrush" Value="#ECEEF3" />
-                                                                        </Trigger>
-                                                                        <Trigger Property="IsSelected" Value="True">
-                                                                            <Setter TargetName="AccountOption" Property="Background" Value="#F3F4F7" />
-                                                                            <Setter TargetName="AccountOption" Property="BorderBrush" Value="#DFE3EA" />
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </ListBox.ItemContainerStyle>
-                                                <ListBox.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*" />
-                                                                <ColumnDefinition Width="Auto" />
-                                                            </Grid.ColumnDefinitions>
-                                                            <StackPanel>
-                                                                <TextBlock Text="{Binding Username}"
-                                                                           FontSize="14"
-                                                                           FontWeight="SemiBold"
-                                                                           Foreground="#1D1D1F" />
-                                                                <TextBlock Text="{Binding DisplayName}"
-                                                                           Margin="0,2,0,0"
-                                                                           FontSize="12"
-                                                                           Foreground="#7D8390" />
-                                                            </StackPanel>
-                                                            <TextBlock Grid.Column="1"
-                                                                       VerticalAlignment="Center"
-                                                                       FontSize="11"
-                                                                       Foreground="#A0A5AF"
-                                                                       Text="{Binding LastLoginAt, StringFormat=最近登录 {0:MM-dd HH:mm}}" />
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ListBox.ItemTemplate>
-                                            </ListBox>
+                                                     SelectionChanged="LstRecentSignInAccounts_SelectionChanged"
+                                                     ItemContainerStyle="{StaticResource RecentSignInAccountItemContainerStyle}"
+                                                     ItemTemplate="{StaticResource RecentSignInAccountItemTemplate}" />
                                         </Border>
                                     </Grid>
                                     <TextBlock x:Name="TxtSignInAccountHint"
@@ -599,29 +545,8 @@
                                                  BorderThickness="0"
                                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                 MaxHeight="220">
-                                            <ListBox.ItemContainerStyle>
-                                                <Style TargetType="ListBoxItem">
-                                                    <Setter Property="Padding" Value="0" />
-                                                    <Setter Property="Margin" Value="0,0,0,10" />
-                                                    <Setter Property="Focusable" Value="False" />
-                                                    <Setter Property="BorderThickness" Value="0" />
-                                                    <Setter Property="Background" Value="Transparent" />
-                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                                                    <Setter Property="Template">
-                                                        <Setter.Value>
-                                                            <ControlTemplate TargetType="ListBoxItem">
-                                                                <Border Background="Transparent"
-                                                                        SnapsToDevicePixels="True">
-                                                                    <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                                                                </Border>
-                                                            </ControlTemplate>
-                                                        </Setter.Value>
-                                                    </Setter>
-                                                </Style>
-                                            </ListBox.ItemContainerStyle>
+                                                 MaxHeight="220"
+                                                 ItemContainerStyle="{StaticResource AccountDirectoryItemContainerStyle}">
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Border x:Name="AccountCard"
