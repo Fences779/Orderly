@@ -15,12 +15,12 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
-        
+
         <StackPanel Grid.Column="0" Orientation="Horizontal">
             <Button Content="联系客户" Style="{StaticResource DialogSecondaryButtonStyle}" Height="36" Padding="14,0" Margin="0,0,8,0" />
             <Button Content="异常处理" Style="{StaticResource DialogSecondaryButtonStyle}" Height="36" Padding="14,0" Foreground="{StaticResource DangerTextBrush}" Tag="exception" Click="QuickFulfillmentUpdate_Click" />
         </StackPanel>
-        
+
         <Grid Grid.Column="1">
             <!-- paid_pending_confirm -> Confirm demand -->
             <Button Content="确认需求" Height="36" Padding="16,0" Tag="pending_make" Click="QuickFulfillmentUpdate_Click">
@@ -35,7 +35,7 @@
                     </Style>
                 </Button.Style>
             </Button>
-            
+
             <!-- pending_make -> Generate Production Order / Mark Making -->
             <Button Content="生成工单并制作" Background="#FF8800" Height="36" Padding="16,0" Tag="making" Click="QuickFulfillmentUpdate_Click">
                 <Button.Style>
@@ -49,7 +49,7 @@
                     </Style>
                 </Button.Style>
             </Button>
-            
+
             <!-- making -> Finish Making (Ready to ship) -->
             <Button Content="制作完成" Height="36" Padding="16,0" Tag="ready_to_ship" Click="QuickFulfillmentUpdate_Click">
                 <Button.Style>
@@ -63,7 +63,7 @@
                     </Style>
                 </Button.Style>
             </Button>
-            
+
             <!-- ready_to_ship -> Confirm Ship (Shipped) -->
             <Button Content="确认发货" Background="#1F7A5A" Height="36" Padding="16,0" Tag="shipped" Click="QuickFulfillmentUpdate_Click">
                 <Button.Style>
@@ -77,7 +77,7 @@
                     </Style>
                 </Button.Style>
             </Button>
-            
+
             <!-- shipped -> Completed -->
             <Button Content="完成订单" Height="36" Padding="16,0" Tag="completed" Click="QuickFulfillmentUpdate_Click">
                 <Button.Style>

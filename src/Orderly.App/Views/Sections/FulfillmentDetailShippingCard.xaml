@@ -22,7 +22,7 @@
                     </StackPanel>
                 </Button>
             </DockPanel>
-            
+
             <Grid Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="60" />
@@ -31,7 +31,7 @@
                 <TextBlock Grid.Column="0" Text="收件人" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="{Binding SelectedStringNarrationOrderDetail.Address.ReceiverName}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
             </Grid>
-            
+
             <Grid Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="60" />
@@ -45,7 +45,7 @@
                     <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
             </Grid>
-            
+
             <Grid Margin="0,0,0,12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="60" />
@@ -59,9 +59,9 @@
                     <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Button>
             </Grid>
-            
+
             <Border Background="{StaticResource SurfaceSoftBrush}" Height="1" Margin="0,0,0,12" HorizontalAlignment="Stretch" />
-            
+
             <!-- Logistics details inputs -->
             <StackPanel>
                 <TextBlock Text="发货快递公司与单号" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
@@ -111,7 +111,7 @@
                         </TextBlock>
                     </Grid>
                 </Grid>
-                
+
                 <Grid Margin="0,0,0,10">
                     <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Text="{Binding StringNarrationAdminRemarkInput, Mode=TwoWay}"
                              AutomationProperties.AutomationId="Input_FulfillmentAdminRemark" KeyDown="FulfillmentInput_KeyDown" />
@@ -131,14 +131,14 @@
                         </TextBlock.Style>
                     </TextBlock>
                 </Grid>
-                
+
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="10" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    
+
                     <ComboBox Grid.Column="0" Height="36" Style="{StaticResource FulfillmentInputComboBoxStyle}"
                               ItemContainerStyle="{StaticResource FulfillmentComboBoxItemStyle}"
                               ItemsSource="{Binding StringNarrationFulfillmentStatusOptions}"
@@ -149,7 +149,7 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    
+
                     <Button Grid.Column="2" Content="保存履约信息" Style="{StaticResource DialogPrimaryButtonStyle}" Height="36" Padding="14,0" Command="{Binding UpdateStringNarrationFulfillmentCommand}" />
                 </Grid>
             </StackPanel>

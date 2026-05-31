@@ -76,7 +76,7 @@ public partial class MainViewModel
             FontSizePresetInput = NormalizeOption(preferences.FontSizePreset, FontPresetOptions, "标准");
             ShowWindowsScaleHintInput = preferences.ShowWindowsScaleHint;
             ThemeModeInput = NormalizeOption(preferences.ThemeMode, ThemeModeOptions, "浅色");
-            
+
             var loadedColor = preferences.AccentColor;
             if (!string.IsNullOrWhiteSpace(loadedColor) && loadedColor.StartsWith('#'))
             {

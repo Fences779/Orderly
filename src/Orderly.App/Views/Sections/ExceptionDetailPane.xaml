@@ -59,7 +59,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    
+
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="异常详情" FontSize="18" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -71,7 +71,7 @@
                             </Button>
                         </StackPanel>
                     </StackPanel>
-                    
+
                     <Button Grid.Column="1" Style="{StaticResource ExceptionCloseButtonStyle}" Width="32" Height="32" Padding="0" VerticalAlignment="Top"
                             Click="CloseExceptionDetails_Click" ToolTip="关闭详情">
                         <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12" />

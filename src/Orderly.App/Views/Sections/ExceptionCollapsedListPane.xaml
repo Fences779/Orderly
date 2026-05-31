@@ -185,13 +185,13 @@
             <Border Background="#80FFFFFF" CornerRadius="12" />
 
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="&#xE72C;" 
-                           FontFamily="Segoe MDL2 Assets" 
-                           FontSize="30" 
+                <TextBlock Text="&#xE72C;"
+                           FontFamily="Segoe MDL2 Assets"
+                           FontSize="30"
                            FontWeight="Bold"
-                           Foreground="{StaticResource HeadingBrush}" 
-                           HorizontalAlignment="Center" 
-                           RenderTransformOrigin="0.5,0.5" 
+                           Foreground="{StaticResource HeadingBrush}"
+                           HorizontalAlignment="Center"
+                           RenderTransformOrigin="0.5,0.5"
                            Margin="0,0,0,12">
                     <TextBlock.RenderTransform>
                         <RotateTransform Angle="0" />
@@ -217,10 +217,10 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
-                <TextBlock Text="{Binding ExceptionStatusMessage}" 
-                           FontSize="13" 
+                <TextBlock Text="{Binding ExceptionStatusMessage}"
+                           FontSize="13"
                            FontWeight="Bold"
-                           Foreground="{StaticResource HeadingBrush}" 
+                           Foreground="{StaticResource HeadingBrush}"
                            HorizontalAlignment="Center" />
             </StackPanel>
         </Grid>

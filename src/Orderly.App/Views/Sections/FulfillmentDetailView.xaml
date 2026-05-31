@@ -49,7 +49,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        
+
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="订单详情" FontSize="18" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -61,7 +61,7 @@
                                 </Button>
                             </StackPanel>
                         </StackPanel>
-                        
+
                         <Button Grid.Column="1" Style="{StaticResource ToolbarSecondaryButtonStyle}" Width="32" Height="32" Padding="0" VerticalAlignment="Top"
                                 Click="CloseDetails_Click" ToolTip="关闭详情">
                             <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="12" />
@@ -84,7 +84,7 @@
                                     <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.Address.ReceiverName, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </Border>
-                            
+
                             <!-- Box 2: Amount -->
                             <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,8">
                                 <StackPanel>
@@ -92,7 +92,7 @@
                                     <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.AmountText, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" />
                                 </StackPanel>
                             </Border>
-                            
+
                             <!-- Box 3: Count -->
                             <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8">
                                 <StackPanel>
@@ -100,7 +100,7 @@
                                     <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ItemCountText, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" />
                                 </StackPanel>
                             </Border>
-                            
+
                             <!-- Box 4: CreatedAt -->
                             <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,0">
                                 <StackPanel>
@@ -108,7 +108,7 @@
                                     <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.CreatedAtText, FallbackValue='-'}" FontSize="11" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </Border>
-                            
+
                             <!-- Box 5: PaidAt -->
                             <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,0">
                                 <StackPanel>
@@ -116,7 +116,7 @@
                                     <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.PaidAtText, FallbackValue='-'}" FontSize="11" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </Border>
-                            
+
                             <!-- Box 6: Channel -->
                             <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,0">
                                 <StackPanel>
@@ -140,11 +140,11 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{StaticResource SurfaceSoftBrush}" 
-                                            BorderBrush="{StaticResource BorderBrushSoft}" 
-                                            BorderThickness="1" 
-                                            CornerRadius="8" 
-                                            Margin="4" 
+                                    <Border Background="{StaticResource SurfaceSoftBrush}"
+                                            BorderBrush="{StaticResource BorderBrushSoft}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Margin="4"
                                             Padding="8">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -152,16 +152,16 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            
+
                                             <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" ClipToBounds="True" VerticalAlignment="Center">
                                                 <Image Source="{Binding Cover}" Stretch="UniformToFill" />
                                             </Border>
-                                            
+
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
                                                 <TextBlock Text="{Binding TitleText}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" MaxHeight="32" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding DesignIdText}" FontSize="10" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0" />
                                             </StackPanel>
-                                            
+
                                             <TextBlock Grid.Column="2" Text="{Binding CountText}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
                                         </Grid>
                                     </Border>
