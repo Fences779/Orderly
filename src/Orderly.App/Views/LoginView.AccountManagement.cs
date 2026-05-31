@@ -6,13 +6,6 @@ namespace Orderly.App.Views;
 
 public partial class LoginView : Window
 {
-    private async void BtnOpenAccountManagement_Click(object sender, RoutedEventArgs e)
-    {
-        await _viewModel.EnterAccountManagementModeAsync();
-        await WaitForSurfaceAsync(LoginSurface.AccountManagement);
-        FocusPrimaryField();
-    }
-
     private async void OnAccountManagementBackRequested(object? sender, EventArgs e)
     {
         _viewModel.ExitAccountManagementMode();

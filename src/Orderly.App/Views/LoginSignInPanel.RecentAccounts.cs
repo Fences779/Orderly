@@ -20,7 +20,8 @@ public partial class LoginSignInPanel
 
     private void TryOpenRecentAccountsPopup()
     {
-        if (_viewModel is null
+        if (!_isSignInSurfaceActive
+            || _viewModel is null
             || _viewModel.IsBusy
             || _viewModel.IsSignInAccountConfirmed
             || !_viewModel.HasFilteredSignInAccounts)

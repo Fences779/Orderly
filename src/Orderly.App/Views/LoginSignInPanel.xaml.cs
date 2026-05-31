@@ -23,6 +23,7 @@ public partial class LoginSignInPanel : System.Windows.Controls.UserControl
     private bool _suppressNextSignInFocusPopup;
     private bool _isSignInCredentialSectionExpanded;
     private bool _isRecentAccountsPopupOpen;
+    private bool _isSignInSurfaceActive;
 
     public LoginSignInPanel()
     {
@@ -83,6 +84,7 @@ public partial class LoginSignInPanel : System.Windows.Controls.UserControl
 
     public void UpdateCredentialSectionState(bool isSignInSurface, bool animate)
     {
+        _isSignInSurfaceActive = isSignInSurface;
         if (_viewModel is null)
         {
             return;
