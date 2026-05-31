@@ -64,49 +64,11 @@ public partial class LoginView : Window
     private async Task WaitAndFocusCreateManagedAccountAsync()
     {
         await WaitForSurfaceAsync(LoginSurface.CreateMember);
-        FocusPrimaryField();
+        CreateManagedAccountPanel.FocusPrimary();
     }
 
-    private async void BtnBackFromCreateManagedAccount_Click(object sender, RoutedEventArgs e)
+    private async void OnCreateManagedAccountBackRequested(object? sender, EventArgs e)
     {
-        _viewModel.ExitCreateManagedAccountMode();
-        ClearCreateManagedAccountInputs();
-        await WaitForSurfaceAsync(LoginSurface.AccountManagement);
-        FocusPrimaryField();
-    }
-
-    private async void BtnSubmitCreateManagedAccount_Click(object sender, RoutedEventArgs e)
-    {
-        if (!_viewModel.IsCreateManagedAccountOwnerVerified)
-        {
-            await _viewModel.VerifyCreateManagedAccountOwnerAsync(
-                TxtCreateOwnerUsername.Text,
-                TxtCreateOwnerPassword.Password,
-                TxtCreateOwnerPin.Password);
-
-            if (_viewModel.IsCreateManagedAccountOwnerVerified)
-            {
-                TxtCreateMemberUsername.Focus();
-            }
-
-            return;
-        }
-
-        await _viewModel.CreateManagedAccountAsync(
-            TxtCreateOwnerUsername.Text,
-            TxtCreateOwnerPassword.Password,
-            TxtCreateOwnerPin.Password,
-            TxtCreateMemberUsername.Text,
-            TxtCreateMemberDisplayName.Text,
-            TxtCreateMemberPassword.Password,
-            TxtCreateMemberPin.Password);
-
-        if (_viewModel.IsCreateManagedAccountMode)
-        {
-            return;
-        }
-
-        ClearCreateManagedAccountInputs();
         await WaitForSurfaceAsync(LoginSurface.AccountManagement);
         FocusPrimaryField();
     }
@@ -128,36 +90,5 @@ public partial class LoginView : Window
     {
         _viewModel.CancelDeleteAccount();
         ClearDeleteAccountInputs();
-    }
-
-    private void ClearCreateManagedAccountInputs()
-    {
-        TxtCreateOwnerUsername.Text = string.Empty;
-        TxtCreateOwnerPassword.Password = string.Empty;
-        TxtCreateOwnerPin.Password = string.Empty;
-        TxtCreateMemberUsername.Text = string.Empty;
-        TxtCreateMemberDisplayName.Text = string.Empty;
-        TxtCreateMemberPassword.Password = string.Empty;
-        TxtCreateMemberPin.Password = string.Empty;
-    }
-
-    private void InvalidateCreateManagedAccountOwnerVerification()
-    {
-        _viewModel.ResetCreateManagedAccountOwnerVerification();
-    }
-
-    private void TxtCreateOwnerUsername_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        InvalidateCreateManagedAccountOwnerVerification();
-    }
-
-    private void TxtCreateOwnerPassword_PasswordChanged(object sender, RoutedEventArgs e)
-    {
-        InvalidateCreateManagedAccountOwnerVerification();
-    }
-
-    private void TxtCreateOwnerPin_PasswordChanged(object sender, RoutedEventArgs e)
-    {
-        InvalidateCreateManagedAccountOwnerVerification();
     }
 }

@@ -37,6 +37,8 @@ public partial class LoginView : Window
         DataContext = viewModel;
         InitializeComponent();
         OwnerCreatePanel.Initialize(viewModel);
+        CreateManagedAccountPanel.Initialize(viewModel);
+        CreateManagedAccountPanel.BackRequested += OnCreateManagedAccountBackRequested;
         Loaded += OnLoaded;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         ApplyViewModelState();
@@ -115,7 +117,7 @@ public partial class LoginView : Window
                 BtnBackFromAccountManagement.Focus();
                 return;
             case LoginSurface.CreateMember:
-                TxtCreateOwnerUsername.Focus();
+                CreateManagedAccountPanel.FocusPrimary();
                 return;
             default:
                 _suppressNextSignInFocusPopup = true;
