@@ -400,3 +400,43 @@ ViewModels, Services, Repositories, `Orderly.Data`, `Orderly.Core`, `Orderly.Inf
 cloudfunctions, miniprogram, `tools/qa` scripts, documentation, schemas, migrations, gateway
 contracts, payment/fulfillment/shipping-sync/cloud-sync behavior, and any visual or interaction
 redesign. If a structural split appears to require any such change, STOP and report.
+
+
+---
+
+## Rebaseline Note (HEAD `cafd64d`)
+
+The source maps above (with line ranges from `MainWindow.xaml` = 8302) are obsolete. At the actual
+current HEAD `cafd64d`, `MainWindow.xaml` is 2780 lines; code-behind partials, App/Main resource
+dictionary splits, inline-style extraction, and Workbench/Inventory/Cashflow/Settings/Fulfillment
+(toolbar + statistics + left order-list) UserControls are already committed under
+`src/Orderly.App/Views/Sections/` and `src/Orderly.App/Views/Resources/`.
+
+Remaining UI extraction targets in `MainWindow.xaml`:
+
+1. **Fulfillment right detail region** → `FulfillmentDetailPanel` UserControl, sub-split into a
+   `FulfillmentDetailStepper` child where a self-contained inner seam exists, to keep each file ≤300.
+   Coupled handlers (`CloseDetails_Click`, `StepperNode_MouseLeftButtonDown`, `FulfillmentInput_KeyDown`,
+   `QuickFulfillmentUpdate_Click`) and named elements (`DetailPanel`, `Input_FulfillmentCarrier`) move
+   verbatim into the control's own code-behind (established convention: each extracted control carries
+   the handlers it wires).
+2. **Exception page** → `ExceptionView` (+ child controls for list/detail) with
+   `ExceptionOrderCard_MouseDoubleClick`, `CloseExceptionDetails_Click`, `JumpToOrderFulfillment_Click`,
+   `ContactCustomer_Click`, `CopyText_Click` relocated verbatim.
+3. **Me/Profile page** → `MeProfileView`.
+
+Each extracted `UserControl` merges `MainWindowResources.xaml` + `MainWindowInlineStyles.xaml` in its
+own `UserControl.Resources` so all `StaticResource` keys resolve (same convention as `FulfillmentToolbar`).
+
+`Popup_CopyToast` / `Text_CopyToast` stay at window level (shared toast across pages); `CopyText_Click`
+remains in `MainWindow.xaml.cs` and is also wired by the exception detail subtree — handled by keeping a
+verbatim copy in the extracted exception control's code-behind.
+
+### Login / non-UI ViewModel governance (added this run)
+
+Authorized in addition to the original UI scope: behavior-preserving structural decomposition of
+`LoginView.xaml(.cs)` and safe extraction of pure helper/mapping/projection logic from oversized
+non-UI ViewModels (`MainViewModel.StringNarrationOrders.cs`, `MainViewModel.SettingsP0.cs`,
+`MainViewModel.ExceptionOrders.cs`, `LoginViewModel.cs`) toward ≤500, preserving public contracts, DI,
+serialization, and business semantics. Frozen transaction-loop logic stays untouched and is documented
+as an exception if it blocks a split.

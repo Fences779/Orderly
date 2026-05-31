@@ -151,3 +151,26 @@ The workspace `AGENTS.md` rules take precedence. Relevant constraints carried in
 #### Acceptance Criteria
 
 1. WHEN the mission concludes THEN the system SHALL report: starting state; chosen decomposition sequence; each commit (hash, message, file list, affected surface, validation, visual verification); final UI line-budget inventory (path, final line count, PASS / REMAINS OVER BUDGET + blocker); automated and manual validation results at 100%/125% (or recorded limitations); protected-boundary confirmation; and remaining work with exact blockers and required approvals (including the Login decision awaiting approval).
+
+
+---
+
+## Rebaseline Note (HEAD `cafd64d`)
+
+The "Verified Starting State" table above was captured at the obsolete baseline HEAD `1bb51a1`.
+Two later commits (`拆文件`, `4.8接着拆`) completed most of the original plan. The actual current
+state at HEAD `cafd64d` (clean tree, build green) is:
+
+| File | Then (1bb51a1) | Now (cafd64d) | Budget | Status |
+|------|----------------|---------------|--------|--------|
+| `Views/MainWindow.xaml` | 8302 | 2780 | ≤300 | still OVER (Fulfillment detail / Exception / Me-Profile inline) |
+| `Views/Resources/MainWindowResources.xaml` | 1854 | 17 | ≤300 | PASS (now a merged-dictionary shell) |
+| `Views/MainWindow.xaml.cs` | 913 | 93 | ≤300 | PASS (split into partials) |
+| `App.xaml` | 344 | 14 | ≤300 | PASS (merged-dictionary shell) |
+| `Views/LoginView.xaml` | 1708 | 1708 | ≤300 | still OVER (structure-first authorized) |
+| `Views/LoginView.xaml.cs` | 1063 | 1063 | ≤300 | still OVER (structure-first authorized) |
+
+Per the latest user authorization, Login/Auth/PIN/Session-Lock is no longer absolutely frozen:
+behavior-preserving structural decomposition is authorized first, followed by a separate read-only
+security audit and evidence-based hardening in independent commits. Requirement 8's "audit-only,
+await approval" gate is therefore superseded for this run.
