@@ -43,6 +43,8 @@ public partial class LoginView : Window
         AccountManagementPanel.BackRequested += OnAccountManagementBackRequested;
         AccountManagementPanel.CreateAccountRequested += OnAccountManagementCreateRequested;
         AccountManagementPanel.DeleteAccountRequested += OnAccountManagementDeleteRequested;
+        PasswordRecoveryPanel.Initialize(viewModel);
+        PasswordRecoveryPanel.BackRequested += OnPasswordRecoveryBackRequested;
         Loaded += OnLoaded;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         ApplyViewModelState();
@@ -96,8 +98,7 @@ public partial class LoginView : Window
 
         TxtError.Text = string.Empty;
         TxtError.Visibility = Visibility.Collapsed;
-        TxtNotice.Text = _viewModel.NoticeMessage;
-        TxtNotice.Visibility = _viewModel.HasNoticeMessage ? Visibility.Visible : Visibility.Collapsed;
+        PasswordRecoveryPanel.SetNotice(_viewModel.NoticeMessage, _viewModel.HasNoticeMessage);
         TxtSignInAccountHint.Text = _viewModel.SignInAccountErrorMessage;
         TxtSignInAccountHint.Visibility = _viewModel.HasSignInAccountErrorMessage ? Visibility.Visible : Visibility.Collapsed;
 
@@ -115,7 +116,7 @@ public partial class LoginView : Window
                 OwnerCreatePanel.FocusPrimary();
                 return;
             case LoginSurface.PasswordRecovery:
-                TxtRecoveryOwnerUsername.Focus();
+                PasswordRecoveryPanel.FocusPrimary();
                 return;
             case LoginSurface.AccountManagement:
                 AccountManagementPanel.FocusPrimary();
