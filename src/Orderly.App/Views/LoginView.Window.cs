@@ -1,11 +1,42 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace Orderly.App.Views;
 
 public partial class LoginView : Window
 {
+    private static void AnimateDouble(
+        DependencyObject target,
+        DependencyProperty property,
+        double to,
+        TimeSpan duration,
+        Action? completed = null)
+    {
+        var animation = new DoubleAnimation
+        {
+            To = to,
+            Duration = new Duration(duration),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+
+        if (completed is not null)
+        {
+            animation.Completed += (_, _) => completed();
+        }
+
+        switch (target)
+        {
+            case Animatable animatable:
+                animatable.BeginAnimation(property, animation);
+                break;
+            case UIElement element:
+                element.BeginAnimation(property, animation);
+                break;
+        }
+    }
+
     private void RootGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left)

@@ -26,8 +26,6 @@ public partial class LoginView : Window
     private LoginSurface _currentSurface;
     private string _lastShownErrorMessage = string.Empty;
     private int _transitionVersion;
-    private int _errorToastVersion;
-    private int _successToastVersion;
     private bool _suppressRecentAccountPopup;
     private bool _suppressNextSignInFocusPopup;
     private bool _isSignInCredentialSectionExpanded;
