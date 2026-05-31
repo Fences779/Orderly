@@ -14,28 +14,22 @@ namespace Orderly.App.Views;
 
 public partial class LoginView : Window
 {
-    private const double SignInAccountLiftOffset = -8d;
-    private const double RecentAccountsDropdownExpandedMaxHeight = 188d;
-    private const double SignInCredentialExpandedMaxHeight = 182d;
     private static readonly TimeSpan SurfaceTransitionDuration = TimeSpan.FromMilliseconds(120);
-    private static readonly TimeSpan RecentAccountsDropdownTransitionDuration = TimeSpan.FromMilliseconds(200);
-    private static readonly TimeSpan SignInCredentialTransitionDuration = TimeSpan.FromMilliseconds(180);
 
     private readonly LoginViewModel _viewModel;
     private bool _hasLoaded;
     private LoginSurface _currentSurface;
     private string _lastShownErrorMessage = string.Empty;
     private int _transitionVersion;
-    private bool _suppressRecentAccountPopup;
-    private bool _suppressNextSignInFocusPopup;
-    private bool _isSignInCredentialSectionExpanded;
-    private bool _isRecentAccountsPopupOpen;
 
     public LoginView(LoginViewModel viewModel)
     {
         _viewModel = viewModel;
         DataContext = viewModel;
         InitializeComponent();
+        SignInPanel.Initialize(viewModel);
+        SignInPanel.OpenRecoveryRequested += OnSignInOpenRecoveryRequested;
+        SignInPanel.OpenAccountManagementRequested += OnSignInOpenAccountManagementRequested;
         OwnerCreatePanel.Initialize(viewModel);
         CreateManagedAccountPanel.Initialize(viewModel);
         CreateManagedAccountPanel.BackRequested += OnCreateManagedAccountBackRequested;
@@ -56,6 +50,20 @@ public partial class LoginView : Window
         _hasLoaded = true;
         FocusPrimaryField();
         _ = Dispatcher.BeginInvoke(FocusPrimaryField, DispatcherPriority.Input);
+    }
+
+    private async void OnSignInOpenRecoveryRequested(object? sender, EventArgs e)
+    {
+        _viewModel.EnterPasswordRecoveryMode();
+        await WaitForSurfaceAsync(LoginSurface.PasswordRecovery);
+        FocusPrimaryField();
+    }
+
+    private async void OnSignInOpenAccountManagementRequested(object? sender, EventArgs e)
+    {
+        await _viewModel.EnterAccountManagementModeAsync();
+        await WaitForSurfaceAsync(LoginSurface.AccountManagement);
+        FocusPrimaryField();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -99,16 +107,15 @@ public partial class LoginView : Window
         TxtError.Text = string.Empty;
         TxtError.Visibility = Visibility.Collapsed;
         PasswordRecoveryPanel.SetNotice(_viewModel.NoticeMessage, _viewModel.HasNoticeMessage);
-        TxtSignInAccountHint.Text = _viewModel.SignInAccountErrorMessage;
-        TxtSignInAccountHint.Visibility = _viewModel.HasSignInAccountErrorMessage ? Visibility.Visible : Visibility.Collapsed;
+        SignInPanel.SetAccountHint(_viewModel.SignInAccountErrorMessage, _viewModel.HasSignInAccountErrorMessage);
 
         OwnerCreatePanel.ApplyRecoveryState();
-        UpdateSignInCredentialSectionState(_hasLoaded);
+        SignInPanel.UpdateCredentialSectionState(_currentSurface == LoginSurface.SignIn, _hasLoaded);
     }
 
     private void FocusPrimaryField()
     {
-        CloseRecentAccountsPopup();
+        SignInPanel.CloseRecentAccountsPopupExternally();
 
         switch (_currentSurface)
         {
@@ -125,47 +132,8 @@ public partial class LoginView : Window
                 CreateManagedAccountPanel.FocusPrimary();
                 return;
             default:
-                _suppressNextSignInFocusPopup = true;
-                TxtSignInUsername.Focus();
-                Keyboard.Focus(TxtSignInUsername);
-                TxtSignInUsername.CaretIndex = TxtSignInUsername.Text.Length;
+                SignInPanel.FocusPrimary();
                 return;
         }
-    }
-
-    private void UpdateSignInCredentialSectionState(bool animate)
-    {
-        var shouldExpand = _currentSurface == LoginSurface.SignIn && _viewModel.IsSignInPasswordStepVisible;
-        if (!animate)
-        {
-            ApplySignInCredentialSectionState(shouldExpand);
-            return;
-        }
-
-        if (_isSignInCredentialSectionExpanded == shouldExpand)
-        {
-            return;
-        }
-
-        _isSignInCredentialSectionExpanded = shouldExpand;
-        SignInCredentialSection.IsHitTestVisible = shouldExpand;
-        AnimateDouble(
-            SignInCredentialSection,
-            FrameworkElement.MaxHeightProperty,
-            shouldExpand ? SignInCredentialExpandedMaxHeight : 0d,
-            SignInCredentialTransitionDuration);
-        AnimateDouble(
-            SignInCredentialSection,
-            UIElement.OpacityProperty,
-            shouldExpand ? 1d : 0d,
-            SignInCredentialTransitionDuration);
-    }
-
-    private void ApplySignInCredentialSectionState(bool isExpanded)
-    {
-        _isSignInCredentialSectionExpanded = isExpanded;
-        SignInCredentialSection.MaxHeight = isExpanded ? SignInCredentialExpandedMaxHeight : 0d;
-        SignInCredentialSection.Opacity = isExpanded ? 1d : 0d;
-        SignInCredentialSection.IsHitTestVisible = isExpanded;
     }
 }
