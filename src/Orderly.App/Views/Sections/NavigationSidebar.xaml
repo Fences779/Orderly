@@ -1,0 +1,135 @@
+<UserControl x:Class="Orderly.App.Views.Sections.NavigationSidebar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:Sections="clr-namespace:Orderly.App.Views.Sections">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainWindowInlineStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Border Grid.Column="0" Background="#FBFAF6" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,0,1,0" Padding="18">
+        <DockPanel>
+            <!-- 底部“我的”按钮 -->
+            <StackPanel DockPanel.Dock="Bottom">
+                <Button x:Name="Tab_Me" AutomationProperties.AutomationId="Tab_Me" Content="我的" Tag="&#xE77B;" Style="{StaticResource ProfileMenuGlassButtonStyle}" Command="{Binding SelectSectionCommand}" CommandParameter="我的"/>
+            </StackPanel>
+            <StackPanel>
+                <TextBlock Text="Orderly" FontSize="26" FontWeight="Bold" Foreground="#17211D" />
+                <TextBlock Text="本地商家工作台" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,20" />
+
+                <Button x:Name="Tab_Dashboard" AutomationProperties.AutomationId="Tab_Dashboard" Content="工作台" Tag="&#xE80F;" Command="{Binding SelectSectionCommand}" CommandParameter="工作台">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="工作台">
+                                    <Setter Property="Background" Value="#FFFFFF" />
+                                    <Setter Property="Foreground" Value="#1D1D1F" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="Tab_Fulfillment" AutomationProperties.AutomationId="Tab_Fulfillment" Content="订单履约" Tag="&#xE8A1;" Command="{Binding SelectSectionCommand}" CommandParameter="订单履约">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="订单履约">
+                                    <Setter Property="Background" Value="#FFFFFF" />
+                                    <Setter Property="Foreground" Value="#1D1D1F" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="Tab_Inventory" AutomationProperties.AutomationId="Tab_Inventory" Content="库存管理" Tag="&#xE7B8;" Command="{Binding SelectSectionCommand}" CommandParameter="库存管理">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="库存管理">
+                                    <Setter Property="Background" Value="#FFFFFF" />
+                                    <Setter Property="Foreground" Value="#1D1D1F" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="Tab_Cashflow" AutomationProperties.AutomationId="Tab_Cashflow" Content="现金流" Tag="&#xE825;" Command="{Binding SelectSectionCommand}" CommandParameter="现金流">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="现金流">
+                                    <Setter Property="Background" Value="#FFFFFF" />
+                                    <Setter Property="Foreground" Value="#1D1D1F" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="Tab_ExceptionOrders" AutomationProperties.AutomationId="Tab_ExceptionOrders" Content="异常处理" Tag="&#xE7BA;" Command="{Binding SelectSectionCommand}" CommandParameter="异常处理">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="异常处理">
+                                    <Setter Property="Background" Value="#FFFFFF" />
+                                    <Setter Property="Foreground" Value="#1D1D1F" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="Tab_Settings" AutomationProperties.AutomationId="Tab_Settings" Content="设置" Tag="&#xE713;" Command="{Binding SelectSectionCommand}" CommandParameter="设置">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="设置">
+                                    <Setter Property="Background" Value="#FFFFFF" />
+                                    <Setter Property="Foreground" Value="#1D1D1F" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+
+        </DockPanel>
+    </Border>
+</UserControl>
