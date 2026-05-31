@@ -60,34 +60,7 @@ public partial class MainWindow : Window
         }, token);
     }
 
-    private void CopyText_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement element && element.Tag is string text && !string.IsNullOrEmpty(text))
-        {
-            try
-            {
-                System.Windows.Clipboard.SetText(text);
-                ShowCopyToast("已复制");
-            }
-            catch (System.Exception)
-            {
-                // ignore
-            }
-        }
-    }
-
-    private static T? FindAncestor<T>(DependencyObject? source) where T : DependencyObject
-    {
-        while (source is not null)
-        {
-            if (source is T match)
-            {
-                return match;
-            }
-
-            source = System.Windows.Media.VisualTreeHelper.GetParent(source);
-        }
-
-        return null;
-    }
+    // Exposed so extracted section UserControls can surface the shared window-level
+    // copy toast without owning the Popup. Behaviour is identical to the inline path.
+    internal void ShowCopyToastMessage(string message) => ShowCopyToast(message);
 }

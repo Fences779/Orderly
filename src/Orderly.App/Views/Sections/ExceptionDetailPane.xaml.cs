@@ -1,26 +1,28 @@
 using System.Windows;
 using Orderly.App.ViewModels;
 
-namespace Orderly.App.Views;
+namespace Orderly.App.Views.Sections;
 
-public partial class MainWindow : Window
+public partial class ExceptionDetailPane : System.Windows.Controls.UserControl
 {
-    private async void ExceptionOrderCard_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    public ExceptionDetailPane()
     {
-        if (sender is not System.Windows.Controls.ListBoxItem item || DataContext is not MainViewModel vm)
-        {
-            return;
-        }
+        InitializeComponent();
+    }
 
-        if (e.OriginalSource is DependencyObject source && FindAncestor<System.Windows.Controls.Button>(source) is not null)
+    private void CopyText_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement element && element.Tag is string text && !string.IsNullOrEmpty(text))
         {
-            return;
-        }
-
-        if (item.DataContext is Orderly.Core.Models.StringNarrationOrderSummary summary)
-        {
-            await vm.OpenExceptionOrderDetailAsync(summary);
-            e.Handled = true;
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+                SectionVisualHelpers.ShowCopyToast(this, "已复制");
+            }
+            catch (System.Exception)
+            {
+                // ignore
+            }
         }
     }
 
@@ -69,16 +71,6 @@ public partial class MainWindow : Window
             {
                 vm.DismissExceptionDetailsForSession();
             }
-        }
-    }
-
-    private async void JumpToOrderFulfillment_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel vm && vm.SelectedExceptionOrderDetail is not null)
-        {
-            var targetOrder = vm.SelectedExceptionOrderDetail;
-            vm.SelectedSection = MainViewModel.SectionFulfillment;
-            await vm.OpenStringNarrationOrderDetailAsync(targetOrder);
         }
     }
 }
