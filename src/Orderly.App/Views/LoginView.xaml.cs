@@ -39,6 +39,10 @@ public partial class LoginView : Window
         OwnerCreatePanel.Initialize(viewModel);
         CreateManagedAccountPanel.Initialize(viewModel);
         CreateManagedAccountPanel.BackRequested += OnCreateManagedAccountBackRequested;
+        AccountManagementPanel.Initialize(viewModel);
+        AccountManagementPanel.BackRequested += OnAccountManagementBackRequested;
+        AccountManagementPanel.CreateAccountRequested += OnAccountManagementCreateRequested;
+        AccountManagementPanel.DeleteAccountRequested += OnAccountManagementDeleteRequested;
         Loaded += OnLoaded;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         ApplyViewModelState();
@@ -114,7 +118,7 @@ public partial class LoginView : Window
                 TxtRecoveryOwnerUsername.Focus();
                 return;
             case LoginSurface.AccountManagement:
-                BtnBackFromAccountManagement.Focus();
+                AccountManagementPanel.FocusPrimary();
                 return;
             case LoginSurface.CreateMember:
                 CreateManagedAccountPanel.FocusPrimary();

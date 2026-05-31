@@ -13,7 +13,7 @@ public partial class LoginView : Window
         FocusPrimaryField();
     }
 
-    private async void BtnBackFromAccountManagement_Click(object sender, RoutedEventArgs e)
+    private async void OnAccountManagementBackRequested(object? sender, EventArgs e)
     {
         _viewModel.ExitAccountManagementMode();
         ClearDeleteAccountInputs();
@@ -21,13 +21,8 @@ public partial class LoginView : Window
         FocusPrimaryField();
     }
 
-    private void BtnRequestDeleteAccount_Click(object sender, RoutedEventArgs e)
+    private void OnAccountManagementDeleteRequested(object? sender, string accountId)
     {
-        if (sender is not FrameworkElement { Tag: string accountId })
-        {
-            return;
-        }
-
         _viewModel.BeginDeleteAccount(accountId);
         TxtDeleteOwnerUsername.Focus();
     }
@@ -55,7 +50,7 @@ public partial class LoginView : Window
         e.Handled = true;
     }
 
-    private void BtnCreateManagedAccount_Click(object sender, RoutedEventArgs e)
+    private void OnAccountManagementCreateRequested(object? sender, EventArgs e)
     {
         _viewModel.EnterCreateManagedAccountMode();
         _ = WaitAndFocusCreateManagedAccountAsync();
