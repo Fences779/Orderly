@@ -18,7 +18,9 @@ const CASHFLOW_FIELDS = ['_id', 'direction', 'amount', 'category', 'paymentMetho
 const TASK_ACTIONS = ['complete', 'skip', 'delay']
 const CASHFLOW_DIRECTIONS = ['income', 'expense']
 const CASHFLOW_STATUSES = ['pending', 'confirmed', 'cancelled']
+const INVENTORY_MOVEMENT_TYPES = ['in', 'out', 'adjust', 'reserve', 'release']
 const MAX_CASHFLOW_AMOUNT = 100000000
+const MAX_INVENTORY_QUANTITY = 1000000
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
 
@@ -408,8 +410,7 @@ async function cashflowHealthDashboard(event, workspaceId) {
 
 function normalizeMovementType(value) {
   const type = normalizeText(value).toLowerCase()
-  if (['in', 'out', 'adjust', 'reserve', 'release'].indexOf(type) >= 0) return type
-  return 'adjust'
+  return INVENTORY_MOVEMENT_TYPES.indexOf(type) >= 0 ? type : ''
 }
 
 function priority(triggerType, deal, customer, dueAt) {
@@ -588,7 +589,12 @@ async function handleRequest(event) {
     const unitCost = normalizeNumber(movementInput.unitCost)
     const skuId = normalizeText(movementInput.skuId)
     if (!skuId) return { ok: false, message: '缺少 skuId' }
+    if (!movementType) return { ok: false, code: 'invalid_movement_type', message: '非法库存流水类型。' }
     if (!quantity) return { ok: false, message: '库存流水数量不能为空' }
+    if (Math.abs(quantity) > MAX_INVENTORY_QUANTITY) return { ok: false, code: 'invalid_inventory_quantity', message: '库存流水数量超出允许范围。' }
+    if (unitCost < 0 || unitCost > MAX_CASHFLOW_AMOUNT) return { ok: false, code: 'invalid_inventory_unit_cost', message: '库存流水单价超出允许范围。' }
+    const totalCost = normalizeNumber(movementInput.totalCost) || Math.abs(quantity) * unitCost
+    if (totalCost < 0 || totalCost > MAX_CASHFLOW_AMOUNT) return { ok: false, code: 'invalid_inventory_total_cost', message: '库存流水总价超出允许范围。' }
 
     const sku = await getWorkspaceDoc('sku_catalog', skuId, workspaceId)
     if (!sku) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
@@ -597,16 +603,16 @@ async function handleRequest(event) {
     const movement = Object.assign({}, movementInput, {
       workspaceId,
       skuId,
-      skuName: normalizeText(movementInput.skuName || sku.name),
+      skuName: limitText(movementInput.skuName || sku.name, MAX_SHORT_TEXT_LENGTH),
       movementType,
       quantity,
       unitCost,
-      totalCost: normalizeNumber(movementInput.totalCost) || Math.abs(quantity) * unitCost,
-      relatedOrderId: normalizeText(movementInput.relatedOrderId),
-      relatedOrderNo: normalizeText(movementInput.relatedOrderNo),
+      totalCost,
+      relatedOrderId: limitText(movementInput.relatedOrderId, MAX_SHORT_TEXT_LENGTH),
+      relatedOrderNo: limitText(movementInput.relatedOrderNo, MAX_SHORT_TEXT_LENGTH),
       operatorId,
-      note: normalizeText(movementInput.note),
-      occurredAt: normalizeText(movementInput.occurredAt) || now(),
+      note: limitText(movementInput.note, MAX_NOTE_TEXT_LENGTH),
+      occurredAt: normalizeIsoDate(movementInput.occurredAt, now()),
       createdAt: now(),
       updatedAt: now(),
       createdBy: operatorId,
