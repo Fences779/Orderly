@@ -111,7 +111,10 @@ public partial class App
             _sessionContextService);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
         var stringNarrationGatewayOptions = StringNarrationGatewayOptions.FromEnvironment();
-        var stringNarrationHttpClient = new HttpClient
+        var stringNarrationHttpClient = new HttpClient(new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        })
         {
             Timeout = TimeSpan.FromSeconds(stringNarrationGatewayOptions.TimeoutSeconds)
         };
@@ -119,7 +122,10 @@ public partial class App
         IStringNarrationOrderService stringNarrationOrderService = new StringNarrationGatewayOrderService(stringNarrationGatewayClient);
         IStringNarrationBusinessService stringNarrationBusinessService = new StringNarrationGatewayBusinessService(stringNarrationGatewayClient);
         var inventoryGatewayOptions = InventoryGatewayOptions.FromEnvironment();
-        var inventoryHttpClient = new HttpClient
+        var inventoryHttpClient = new HttpClient(new HttpClientHandler
+        {
+            AllowAutoRedirect = false
+        })
         {
             Timeout = TimeSpan.FromSeconds(inventoryGatewayOptions.TimeoutSeconds)
         };
