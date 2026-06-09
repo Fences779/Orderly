@@ -1,5 +1,6 @@
 using Orderly.Core.Models;
 using Orderly.Core.Services;
+using System.Security.Cryptography;
 
 namespace Orderly.Data.Services;
 
@@ -18,6 +19,8 @@ public sealed class SessionContextService : ISessionContextService
         ArgumentNullException.ThrowIfNull(session);
 
         var copiedDataKey = session.DataKey.ToArray();
+        ClearCurrentDataKey();
+
         _current = new LocalSessionContext
         {
             AccountId = session.AccountId,
@@ -34,12 +37,16 @@ public sealed class SessionContextService : ISessionContextService
 
     public void Clear()
     {
-        if (_current?.DataKey is { Length: > 0 } key)
-        {
-            Array.Clear(key, 0, key.Length);
-        }
-
+        ClearCurrentDataKey();
         _current = null;
         SessionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ClearCurrentDataKey()
+    {
+        if (_current?.DataKey is { Length: > 0 } key)
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
     }
 }
