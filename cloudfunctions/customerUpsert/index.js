@@ -8,7 +8,11 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_SHORT_TEXT_LENGTH = 128
+const MAX_NOTE_TEXT_LENGTH = 512
+const MAX_TAGS = 20
 const CUSTOMER_FIELDS = ['_id', 'name', 'platform', 'externalUid', 'contactHandle', 'sourceChannel', 'profileTags', 'preferenceNotes', 'tabooNotes', 'riskNotes']
+const PLATFORMS = ['wechat', 'xianyu', 'xiaohongshu', 'douyin', 'offline', 'other']
 
 function now() {
   return new Date().toISOString()
@@ -53,6 +57,27 @@ function normalizeArray(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
   return String(value).split(/[,\s，、/]+/).map((item) => item.trim()).filter(Boolean)
+}
+
+function normalizeText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
+  if (value == null || typeof value === 'object') return ''
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maxLength)
+}
+
+function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[,\s，、;；|/]+/)
+  const seen = Object.create(null)
+  return source
+    .map((item) => normalizeText(item))
+    .filter((item) => item && !seen[item] && (seen[item] = true))
+    .slice(0, maxItems)
+}
+
+function normalizePlatform(value) {
+  const platform = normalizeText(value || 'wechat', 32)
+  return PLATFORMS.indexOf(platform) >= 0 ? platform : ''
 }
 
 function pickFields(source, allowedFields) {
@@ -165,7 +190,12 @@ async function handleRequest(event) {
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
   const input = pickFields(event.customer, CUSTOMER_FIELDS)
-  if (!input.name) return { ok: false, message: '客户名不能为空' }
+  const name = normalizeText(input.name)
+  const platform = normalizePlatform(input.platform)
+  const externalUid = normalizeText(input.externalUid)
+  const contactHandle = normalizeText(input.contactHandle)
+  if (!name) return { ok: false, message: '客户名不能为空' }
+  if (!platform) return { ok: false, code: 'invalid_platform', message: '非法客户来源平台。' }
   const data = Object.assign({
     workspaceId,
     platform: 'wechat',
@@ -184,24 +214,34 @@ async function handleRequest(event) {
     updatedBy: operatorId
   }, input, {
     workspaceId,
-    profileTags: normalizeArray(input.profileTags),
+    name,
+    platform,
+    externalUid,
+    contactHandle,
+    sourceChannel: normalizeText(input.sourceChannel, 64),
+    profileTags: normalizeLimitedArray(input.profileTags),
+    preferenceNotes: normalizeText(input.preferenceNotes, MAX_NOTE_TEXT_LENGTH),
+    tabooNotes: normalizeText(input.tabooNotes, MAX_NOTE_TEXT_LENGTH),
+    riskNotes: normalizeText(input.riskNotes, MAX_NOTE_TEXT_LENGTH),
     updatedAt: now(),
     updatedBy: operatorId
   })
 
   let existing = null
   if (input._id) {
+    const customerId = normalizeText(input._id)
+    if (!customerId) return { ok: false, code: 'invalid_customer_id', message: '非法客户 ID。' }
     try {
-      existing = (await db.collection('customers').doc(input._id).get()).data
+      existing = (await db.collection('customers').doc(customerId).get()).data
     } catch (err) {}
-    if (existing && existing.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
+    if (!existing || existing.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
   }
-  if (!existing && input.platform && input.externalUid) {
-    const matched = await db.collection('customers').where({ workspaceId, platform: input.platform, externalUid: input.externalUid }).limit(1).get()
+  if (!existing && platform && externalUid) {
+    const matched = await db.collection('customers').where({ workspaceId, platform, externalUid }).limit(1).get()
     existing = matched.data && matched.data[0]
   }
-  if (!existing && input.contactHandle) {
-    const matched = await db.collection('customers').where({ workspaceId, contactHandle: input.contactHandle }).limit(1).get()
+  if (!existing && contactHandle) {
+    const matched = await db.collection('customers').where({ workspaceId, contactHandle }).limit(1).get()
     existing = matched.data && matched.data[0]
   }
 

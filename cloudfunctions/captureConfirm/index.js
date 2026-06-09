@@ -8,8 +8,13 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_SHORT_TEXT_LENGTH = 128
+const MAX_SUMMARY_TEXT_LENGTH = 512
+const MAX_MONEY_AMOUNT = 100000000
+const MAX_TAGS = 20
 const STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing', 'quote_sent', 'waiting_deposit', 'scheduled', 'in_production', 'ready_to_ship', 'shipped', 'received', 'completed', 'repurchase_due', 'dormant', 'lost']
 const URGENCY_LEVELS = ['low', 'medium', 'high']
+const PLATFORMS = ['wechat', 'xianyu', 'xiaohongshu', 'douyin', 'offline', 'other']
 
 function now() {
   return new Date().toISOString()
@@ -57,7 +62,23 @@ function normalizeArray(value) {
 }
 
 function normalizeText(value) {
-  return value == null ? '' : String(value).trim()
+  return normalizeTextWithLimit(value, MAX_SHORT_TEXT_LENGTH)
+}
+
+function normalizeTextWithLimit(value, maxLength) {
+  if (value == null || typeof value === 'object') return ''
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maxLength)
+}
+
+function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[,\s，、;；|/]+/)
+  const seen = Object.create(null)
+  return source
+    .map((item) => normalizeText(item))
+    .filter((item) => item && !seen[item] && (seen[item] = true))
+    .slice(0, maxItems)
 }
 
 function normalizeDealStage(value) {
@@ -68,6 +89,11 @@ function normalizeDealStage(value) {
 function normalizeUrgencyLevel(value) {
   const urgencyLevel = normalizeText(value || 'low')
   return URGENCY_LEVELS.indexOf(urgencyLevel) >= 0 ? urgencyLevel : ''
+}
+
+function normalizePlatform(value) {
+  const platform = normalizeText(value || 'wechat')
+  return PLATFORMS.indexOf(platform) >= 0 ? platform : ''
 }
 
 function resolveWorkspaceId(event, operatorId) {
@@ -127,7 +153,8 @@ function normalizeWorkspaceBindingValue(value) {
 
 function money(value) {
   const num = Number(value || 0)
-  return Number.isFinite(num) && num >= 0 ? num : 0
+  if (!Number.isFinite(num) || num < 0) return 0
+  return Math.min(num, MAX_MONEY_AMOUNT)
 }
 
 const REDACTED_LOG_VALUE = '[redacted]'
@@ -159,10 +186,10 @@ async function addLog(workspaceId, entityType, entityId, actionType, beforeData,
 async function createCustomer(workspaceId, form, operatorId) {
   const customer = {
     workspaceId,
-    name: form.customerName,
-    platform: form.platform || 'wechat',
+    name: normalizeText(form.customerName),
+    platform: normalizePlatform(form.platform),
     externalUid: '',
-    contactHandle: form.contactHandle || '',
+    contactHandle: normalizeText(form.contactHandle),
     sourceChannel: 'capture',
     profileTags: [],
     preferenceNotes: '',
@@ -203,14 +230,19 @@ async function handleRequest(event) {
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
   const form = event.form || {}
-  if (!event.captureId) return { ok: false, message: '缺少 captureId' }
-  if (!form.customerName || !form.demandSummary) return { ok: false, message: '客户名和需求摘要必填' }
+  const captureId = normalizeText(event.captureId)
+  if (!captureId) return { ok: false, message: '缺少 captureId' }
+  const customerName = normalizeText(form.customerName)
+  const demandSummary = normalizeTextWithLimit(form.demandSummary, MAX_SUMMARY_TEXT_LENGTH)
+  const platform = normalizePlatform(form.platform)
+  if (!customerName || !demandSummary) return { ok: false, message: '客户名和需求摘要必填' }
+  if (!platform) return { ok: false, code: 'invalid_platform', message: '非法来源平台。' }
   const dealStage = normalizeDealStage(form.dealStage || 'new_inquiry')
   if (!dealStage) return { ok: false, code: 'invalid_deal_stage', message: '非法 dealStage。' }
   const urgencyLevel = normalizeUrgencyLevel(form.urgencyLevel || 'low')
   if (!urgencyLevel) return { ok: false, code: 'invalid_urgency_level', message: '非法 urgencyLevel。' }
 
-  const capture = (await db.collection('captures').doc(event.captureId).get()).data
+  const capture = (await db.collection('captures').doc(captureId).get()).data
   if (!capture || capture.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'capture 不存在。' }
   if (capture.confirmStatus === 'confirmed' && capture.linkedDealId) {
     return { ok: true, customerId: capture.linkedCustomerId, dealId: capture.linkedDealId, message: 'capture 已确认' }
@@ -218,31 +250,33 @@ async function handleRequest(event) {
 
   let customer
   if (event.customerMode === 'existing' && event.selectedCustomerId) {
-    customer = (await db.collection('customers').doc(event.selectedCustomerId).get()).data
+    const selectedCustomerId = normalizeText(event.selectedCustomerId)
+    if (!selectedCustomerId) return { ok: false, code: 'invalid_customer_id', message: '非法客户 ID。' }
+    customer = (await db.collection('customers').doc(selectedCustomerId).get()).data
     if (!customer || customer.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
-    await db.collection('customers').doc(event.selectedCustomerId).update({ data: { lastContactAt: now(), updatedAt: now(), updatedBy: operatorId } })
+    await db.collection('customers').doc(selectedCustomerId).update({ data: { lastContactAt: now(), updatedAt: now(), updatedBy: operatorId } })
   } else {
-    customer = await createCustomer(workspaceId, form, operatorId)
+    customer = await createCustomer(workspaceId, Object.assign({}, form, { customerName, platform }), operatorId)
   }
 
   const deal = {
     workspaceId,
     customerId: customer._id,
-    title: form.title || form.demandSummary.slice(0, 24),
-    sourceEntry: form.platform || customer.platform || 'wechat',
+    title: normalizeText(form.title || demandSummary.slice(0, 24)),
+    sourceEntry: platform || customer.platform || 'wechat',
     dealStage,
     priorityLevel: urgencyLevel === 'high' ? 'high' : 'medium',
-    intentCategory: form.intentCategory || '',
-    demandSummary: form.demandSummary,
-    styleTags: normalizeArray(form.styleTags),
-    materialTags: normalizeArray(form.materialTags),
-    sizeSpec: form.sizeSpec || '',
-    colorPref: form.colorPref || '',
+    intentCategory: normalizeText(form.intentCategory),
+    demandSummary,
+    styleTags: normalizeLimitedArray(form.styleTags),
+    materialTags: normalizeLimitedArray(form.materialTags),
+    sizeSpec: normalizeText(form.sizeSpec),
+    colorPref: normalizeText(form.colorPref),
     budgetMin: money(form.budgetMin),
     budgetMax: money(form.budgetMax),
-    deadlineAt: form.deadlineAt || '',
+    deadlineAt: normalizeTextWithLimit(form.deadlineAt, 64),
     urgencyLevel,
-    riskFlags: normalizeArray(form.riskFlags),
+    riskFlags: normalizeLimitedArray(form.riskFlags),
     latestQuoteId: '',
     nextFollowupAt: '',
     lastInteractionAt: now(),
@@ -256,7 +290,7 @@ async function handleRequest(event) {
   }
   const addedDeal = await db.collection('deals').add({ data: deal })
   const dealId = addedDeal._id
-  await db.collection('captures').doc(event.captureId).update({
+  await db.collection('captures').doc(captureId).update({
     data: {
       parserResult: capture.parserResult,
       confirmStatus: 'confirmed',
@@ -265,7 +299,7 @@ async function handleRequest(event) {
       updatedAt: now()
     }
   })
-  await addLog(workspaceId, 'capture', event.captureId, 'capture_confirm', capture, { linkedCustomerId: customer._id, linkedDealId: dealId }, 'capture 确认入库', operatorId)
+  await addLog(workspaceId, 'capture', captureId, 'capture_confirm', capture, { linkedCustomerId: customer._id, linkedDealId: dealId }, 'capture 确认入库', operatorId)
   await addLog(workspaceId, 'deal', dealId, 'deal_create', {}, Object.assign({}, deal, { _id: dealId }), 'capture 确认创建 deal', operatorId)
 
   return { ok: true, customerId: customer._id, dealId }

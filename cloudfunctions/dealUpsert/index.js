@@ -8,9 +8,16 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_SHORT_TEXT_LENGTH = 128
+const MAX_SUMMARY_TEXT_LENGTH = 512
+const MAX_MONEY_AMOUNT = 100000000
+const MAX_TAGS = 20
 
 const STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing', 'quote_sent', 'waiting_deposit', 'scheduled', 'in_production', 'ready_to_ship', 'shipped', 'received', 'completed', 'repurchase_due', 'dormant', 'lost']
 const DEAL_FIELDS = ['_id', 'customerId', 'title', 'sourceEntry', 'dealStage', 'priorityLevel', 'intentCategory', 'demandSummary', 'styleTags', 'materialTags', 'sizeSpec', 'colorPref', 'budgetMin', 'budgetMax', 'deadlineAt', 'urgencyLevel', 'lossReason', 'riskFlags']
+const PLATFORMS = ['wechat', 'xianyu', 'xiaohongshu', 'douyin', 'offline', 'other']
+const PRIORITY_LEVELS = ['low', 'medium', 'high']
+const URGENCY_LEVELS = ['low', 'medium', 'high']
 
 function now() {
   return new Date().toISOString()
@@ -55,6 +62,27 @@ function normalizeArray(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
   return String(value).split(/[,\s，、/]+/).map((item) => item.trim()).filter(Boolean)
+}
+
+function normalizeText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
+  if (value == null || typeof value === 'object') return ''
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maxLength)
+}
+
+function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[,\s，、;；|/]+/)
+  const seen = Object.create(null)
+  return source
+    .map((item) => normalizeText(item))
+    .filter((item) => item && !seen[item] && (seen[item] = true))
+    .slice(0, maxItems)
+}
+
+function normalizeEnum(value, allowed, fallback) {
+  const text = normalizeText(value || fallback, 32)
+  return allowed.indexOf(text) >= 0 ? text : ''
 }
 
 function pickFields(source, allowedFields) {
@@ -123,7 +151,8 @@ function normalizeWorkspaceBindingValue(value) {
 
 function money(value) {
   const num = Number(value || 0)
-  return Number.isFinite(num) && num >= 0 ? num : 0
+  if (!Number.isFinite(num) || num < 0) return 0
+  return Math.min(num, MAX_MONEY_AMOUNT)
 }
 
 const REDACTED_LOG_VALUE = '[redacted]'
@@ -172,11 +201,21 @@ async function handleRequest(event) {
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
   const input = pickFields(event.deal, DEAL_FIELDS)
-  if (!input.customerId) return { ok: false, message: 'deal 必须关联 customerId' }
-  if (!input.title && !input.demandSummary) return { ok: false, message: 'deal 标题或需求摘要不能为空' }
-  const stage = input.dealStage || 'new_inquiry'
+  const customerId = normalizeText(input.customerId)
+  const title = normalizeText(input.title || input.demandSummary)
+  const demandSummary = normalizeText(input.demandSummary, MAX_SUMMARY_TEXT_LENGTH)
+  if (!customerId) return { ok: false, message: 'deal 必须关联 customerId' }
+  if (!title && !demandSummary) return { ok: false, message: 'deal 标题或需求摘要不能为空' }
+  const stage = normalizeText(input.dealStage || 'new_inquiry', 32)
   if (STAGES.indexOf(stage) < 0) return { ok: false, message: '非法 dealStage' }
-  const customer = (await db.collection('customers').doc(input.customerId).get()).data
+  const sourceEntry = normalizeEnum(input.sourceEntry, PLATFORMS, 'wechat')
+  const priorityLevel = normalizeEnum(input.priorityLevel, PRIORITY_LEVELS, 'medium')
+  const urgencyLevel = normalizeEnum(input.urgencyLevel, URGENCY_LEVELS, 'low')
+  if (!sourceEntry) return { ok: false, code: 'invalid_source_entry', message: '非法来源平台。' }
+  if (!priorityLevel) return { ok: false, code: 'invalid_priority_level', message: '非法优先级。' }
+  if (!urgencyLevel) return { ok: false, code: 'invalid_urgency_level', message: '非法紧急程度。' }
+
+  const customer = (await db.collection('customers').doc(customerId).get()).data
   if (!customer || customer.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
 
   const data = Object.assign({
@@ -205,10 +244,21 @@ async function handleRequest(event) {
     updatedBy: operatorId
   }, input, {
     workspaceId,
+    customerId,
+    title: title || demandSummary || '新需求',
+    sourceEntry,
     dealStage: stage,
-    styleTags: normalizeArray(input.styleTags),
-    materialTags: normalizeArray(input.materialTags),
-    riskFlags: normalizeArray(input.riskFlags),
+    priorityLevel,
+    intentCategory: normalizeText(input.intentCategory),
+    demandSummary,
+    styleTags: normalizeLimitedArray(input.styleTags),
+    materialTags: normalizeLimitedArray(input.materialTags),
+    sizeSpec: normalizeText(input.sizeSpec),
+    colorPref: normalizeText(input.colorPref),
+    deadlineAt: normalizeText(input.deadlineAt, 64),
+    urgencyLevel,
+    lossReason: normalizeText(input.lossReason, MAX_SUMMARY_TEXT_LENGTH),
+    riskFlags: normalizeLimitedArray(input.riskFlags),
     budgetMin: money(input.budgetMin),
     budgetMax: money(input.budgetMax),
     updatedAt: now(),
@@ -216,7 +266,9 @@ async function handleRequest(event) {
   })
 
   if (input._id) {
-    const before = (await db.collection('deals').doc(input._id).get()).data
+    const dealId = normalizeText(input._id)
+    if (!dealId) return { ok: false, code: 'invalid_deal_id', message: '非法 dealId。' }
+    const before = (await db.collection('deals').doc(dealId).get()).data
     if (!before || before.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }
     delete data._id
     delete data.createdAt
@@ -227,9 +279,9 @@ async function handleRequest(event) {
     delete data.lastInteractionAt
     delete data.followupCount
     delete data.archivedAt
-    await db.collection('deals').doc(input._id).update({ data })
-    const deal = Object.assign({}, before, data, { _id: input._id })
-    await log(workspaceId, input._id, 'deal_update', before, deal, 'deal 信息更新', operatorId)
+    await db.collection('deals').doc(dealId).update({ data })
+    const deal = Object.assign({}, before, data, { _id: dealId })
+    await log(workspaceId, dealId, 'deal_update', before, deal, 'deal 信息更新', operatorId)
     return { ok: true, deal }
   }
 
