@@ -6,6 +6,8 @@ const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const MAX_EVENT_BYTES = 65536
+const QUOTE_FIELDS = ['_id', 'dealId', 'quoteNo', 'quoteStatus', 'validUntil', 'quoteNote', 'sentAt', 'respondedAt', 'items', 'baseAmount', 'customFee', 'laborFee', 'shippingFee', 'discountAmount', 'depositRequired']
+const QUOTE_ITEM_FIELDS = ['name', 'qty', 'price', 'note', 'skuId', 'materialCode', 'unit']
 
 function now() {
   return new Date().toISOString()
@@ -35,6 +37,19 @@ function normalizeList(value) {
     .filter(Boolean)
 }
 
+function normalizeText(value) {
+  return value == null ? '' : String(value).trim()
+}
+
+function pickFields(source, allowedFields) {
+  const result = {}
+  const input = source || {}
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(input, field)) result[field] = input[field]
+  })
+  return result
+}
+
 function resolveWorkspaceId(event) {
   const workspaceId = String((event && event.workspaceId) || '').trim() || DEFAULT_WORKSPACE_ID
   const configured = normalizeList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
@@ -62,8 +77,25 @@ function money(value) {
   return Number.isFinite(num) && num >= 0 ? num : 0
 }
 
+function normalizeQuoteItems(value) {
+  const items = Array.isArray(value) ? value : []
+  return items.map((item) => {
+    const input = pickFields(item, QUOTE_ITEM_FIELDS)
+    return {
+      name: normalizeText(input.name),
+      qty: money(input.qty || 1),
+      price: money(input.price),
+      note: normalizeText(input.note),
+      skuId: normalizeText(input.skuId),
+      materialCode: normalizeText(input.materialCode),
+      unit: normalizeText(input.unit)
+    }
+  }).filter((item) => item.name || item.price > 0)
+}
+
 function calculate(input) {
-  const items = Array.isArray(input.items) ? input.items : []
+  input = pickFields(input, QUOTE_FIELDS)
+  const items = normalizeQuoteItems(input.items)
   const itemBase = items.reduce((sum, item) => sum + money(item.qty || 1) * money(item.price), 0)
   const baseAmount = money(input.baseAmount || itemBase)
   const customFee = money(input.customFee)
