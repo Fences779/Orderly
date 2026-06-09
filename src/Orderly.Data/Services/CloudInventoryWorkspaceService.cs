@@ -9,6 +9,10 @@ namespace Orderly.Data.Services;
 
 public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspaceService
 {
+    private const int MaxInventoryExportRows = 5000;
+    private const int MaxInventoryDashboardItems = 1000;
+    private const int MaxInventoryStatusOptions = 50;
+
     private static readonly string[] ExportHeaders =
     [
         "物料编码",
@@ -182,6 +186,7 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
             return [];
         }
 
+        EnsureArrayLength(itemsElement, MaxInventoryExportRows, "库存导出行数");
         var rows = new List<InventoryWorkbookRow>();
         foreach (var item in itemsElement.EnumerateArray())
         {
@@ -237,6 +242,7 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
         var items = new List<StringNarrationInventoryManagementDashboardItem>();
         if (root.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == JsonValueKind.Array)
         {
+            EnsureArrayLength(itemsElement, MaxInventoryDashboardItems, "库存看板行数");
             foreach (var item in itemsElement.EnumerateArray())
             {
                 items.Add(new StringNarrationInventoryManagementDashboardItem
@@ -326,6 +332,7 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
         }
 
         var options = new List<StringNarrationInventoryManagementDashboardFilterOption>();
+        EnsureArrayLength(statusesElement, MaxInventoryStatusOptions, "库存状态选项");
         foreach (var item in statusesElement.EnumerateArray())
         {
             options.Add(new StringNarrationInventoryManagementDashboardFilterOption
@@ -336,6 +343,14 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
         }
 
         return options;
+    }
+
+    private static void EnsureArrayLength(JsonElement element, int maxLength, string displayName)
+    {
+        if (element.GetArrayLength() > maxLength)
+        {
+            throw new InvalidOperationException($"{displayName}超过客户端处理上限（{maxLength}）。");
+        }
     }
 
     private static string ReadString(JsonElement element, string name)
