@@ -239,6 +239,11 @@ public sealed partial class LocalBackupService
     private static byte[] GetMachineBackupIntegrityKey()
     {
         var keyPath = Path.Combine(DatabasePaths.GetIdentityDirectoryPath(), BackupIntegrityKeyFileName);
+        if (LocalDataFileSecurity.IsReparsePoint(keyPath))
+        {
+            throw new InvalidOperationException("备份完整性 key 文件不能是链接文件。");
+        }
+
         if (File.Exists(keyPath))
         {
             var existingKey = File.ReadAllBytes(keyPath);

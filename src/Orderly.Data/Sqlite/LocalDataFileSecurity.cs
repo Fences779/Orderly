@@ -39,6 +39,13 @@ public static class LocalDataFileSecurity
         HardenFileWindows(filePath);
     }
 
+    public static bool IsReparsePoint(string path)
+    {
+        return !string.IsNullOrWhiteSpace(path)
+            && (File.Exists(path) || Directory.Exists(path))
+            && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+    }
+
     [SupportedOSPlatform("windows")]
     private static void HardenDirectoryWindows(string directoryPath)
     {
@@ -140,6 +147,6 @@ public static class LocalDataFileSecurity
 
     private static bool HasReparsePoint(string path)
     {
-        return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        return IsReparsePoint(path);
     }
 }

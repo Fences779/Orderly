@@ -115,6 +115,11 @@ public partial class App
     private static byte[] LoadOrCreateQaSessionDataKey(string databasePath)
     {
         var keyPath = GetQaSessionDataKeyPath(databasePath);
+        if (LocalDataFileSecurity.IsReparsePoint(keyPath))
+        {
+            throw new InvalidOperationException("QA session data key file cannot be a linked file.");
+        }
+
         if (File.Exists(keyPath))
         {
             var existingKey = File.ReadAllBytes(keyPath);
