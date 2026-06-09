@@ -54,7 +54,7 @@ public sealed partial class LocalBackupService
         }
         catch (Exception ex)
         {
-            errors.Add($"读取备份文件失败：{ex.Message}");
+            errors.Add($"读取备份文件失败：{SanitizeBackupErrorSummary(ex.Message, backupPath)}");
             return new BackupValidationResult
             {
                 BackupPath = backupPath,
@@ -69,7 +69,7 @@ public sealed partial class LocalBackupService
         }
         catch (JsonException ex)
         {
-            errors.Add($"JSON 解析失败：{ex.Message}");
+            errors.Add($"JSON 解析失败：{SanitizeBackupErrorSummary(ex.Message, backupPath)}");
             return new BackupValidationResult
             {
                 BackupPath = backupPath,
@@ -116,7 +116,7 @@ public sealed partial class LocalBackupService
                 }
                 catch (InvalidOperationException ex)
                 {
-                    errors.Add($"integrityTag 校验失败：{ex.Message}");
+                    errors.Add($"integrityTag 校验失败：{SanitizeBackupErrorSummary(ex.Message, backupPath)}");
                 }
 
                 foreach (var tableName in IncludedTableNames)
