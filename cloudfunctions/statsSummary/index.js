@@ -169,7 +169,12 @@ function buildWorkbenchDashboard(deals, skus, cashflows, nowValue) {
   }
 }
 
-exports.main = async (event) => {
+function logInternalError(scope, err) {
+  const name = err && err.name ? String(err.name).slice(0, 64) : 'Error'
+  console.error(scope, { name })
+}
+
+async function handleRequest(event) {
   const auth = requireOperatorId()
   if (!auth.ok) return auth
 
@@ -232,5 +237,14 @@ exports.main = async (event) => {
     platformDistribution: platformGroups.map((row) => ({ platform: row.label, count: row.count, percent: Math.round(row.count / maxPlatform * 100) })),
     templateTop: templates.sort((a, b) => (b.useCount || 0) - (a.useCount || 0)).slice(0, 5),
     riskReasons
+  }
+}
+
+exports.main = async (event) => {
+  try {
+    return await handleRequest(event)
+  } catch (err) {
+    logInternalError('statsSummary failed', err)
+    return { ok: false, code: 'internal_error', message: '统计读取失败。' }
   }
 }
