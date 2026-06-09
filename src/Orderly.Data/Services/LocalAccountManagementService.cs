@@ -211,7 +211,8 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
             throw new InvalidOperationException("该账号不属于当前主账号，无法删除。");
         }
 
+        var workspaceDirectory = ResolveDeletableAccountWorkspaceDirectory(target.AccountId, target.DatabasePath);
         await _accountRepository.DeleteAsync(target.AccountId, cancellationToken);
-        DeleteAccountWorkspace(target.DatabasePath);
+        DeleteAccountWorkspace(workspaceDirectory);
     }
 }

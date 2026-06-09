@@ -72,19 +72,39 @@ public sealed partial class LocalAccountManagementService
             .ToList();
     }
 
-    private static void DeleteAccountWorkspace(string databasePath)
+    private static string? ResolveDeletableAccountWorkspaceDirectory(string accountId, string databasePath)
     {
         if (string.IsNullOrWhiteSpace(databasePath))
         {
-            return;
+            return null;
         }
 
         var accountsRoot = Path.GetFullPath(DatabasePaths.GetAccountsDirectoryPath());
-        var targetDirectory = Path.GetFullPath(Path.GetDirectoryName(databasePath) ?? string.Empty);
+        if (!DatabasePaths.IsExpectedAccountDatabasePath(accountId, databasePath))
+        {
+            throw new InvalidOperationException("账号数据路径与账号标识不匹配，已拒绝删除工作区。");
+        }
+
+        var expectedDatabasePath = Path.GetFullPath(DatabasePaths.GetExpectedAccountDatabasePath(accountId));
+        var targetDirectory = Path.GetFullPath(Path.GetDirectoryName(expectedDatabasePath) ?? string.Empty);
         if (string.IsNullOrWhiteSpace(targetDirectory)
             || !IsPathInsideDirectory(targetDirectory, accountsRoot)
-            || ContainsReparsePoint(targetDirectory)
             || !Directory.Exists(targetDirectory))
+        {
+            return null;
+        }
+
+        if (ContainsReparsePoint(targetDirectory))
+        {
+            throw new InvalidOperationException("账号工作区包含链接文件，已拒绝删除。");
+        }
+
+        return targetDirectory;
+    }
+
+    private static void DeleteAccountWorkspace(string? targetDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(targetDirectory))
         {
             return;
         }

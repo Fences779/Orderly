@@ -162,6 +162,12 @@ public sealed class LocalAuthService : ILocalAuthService
             return LocalSignInResult.Failure("账号不存在或主密码错误。");
         }
 
+        if (!DatabasePaths.IsExpectedAccountDatabasePath(account.AccountId, account.DatabasePath)
+            || LocalDataFileSecurity.IsReparsePoint(account.DatabasePath))
+        {
+            return LocalSignInResult.Failure("账号数据路径异常，已拒绝登录。");
+        }
+
         byte[] dataKey;
         try
         {
@@ -280,7 +286,7 @@ public sealed class LocalAuthService : ILocalAuthService
             Username = account.Username,
             DisplayName = account.DisplayName,
             Role = account.Role,
-            DatabasePath = account.DatabasePath,
+            DatabasePath = DatabasePaths.GetExpectedAccountDatabasePath(account.AccountId),
             DataKey = dataKey.ToArray(),
             SignedInAt = signedInAt
         };

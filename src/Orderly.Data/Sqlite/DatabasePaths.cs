@@ -74,8 +74,7 @@ public static class DatabasePaths
 
     public static string GetAccountDirectoryPath(string accountId)
     {
-        var normalizedAccountId = NormalizeAccountIdSegment(accountId);
-        var accountPath = Path.Combine(GetAccountsDirectoryPath(), normalizedAccountId);
+        var accountPath = GetExpectedAccountDirectoryPath(accountId);
         Directory.CreateDirectory(accountPath);
         LocalDataFileSecurity.HardenDirectory(accountPath);
         return accountPath;
@@ -84,6 +83,39 @@ public static class DatabasePaths
     public static string GetAccountDatabasePath(string accountId)
     {
         return Path.Combine(GetAccountDirectoryPath(accountId), "orderly.db");
+    }
+
+    public static string GetExpectedAccountDirectoryPath(string accountId)
+    {
+        var normalizedAccountId = NormalizeAccountIdSegment(accountId);
+        return Path.Combine(GetAccountsDirectoryPath(), normalizedAccountId);
+    }
+
+    public static string GetExpectedAccountDatabasePath(string accountId)
+    {
+        return Path.Combine(GetExpectedAccountDirectoryPath(accountId), "orderly.db");
+    }
+
+    public static bool IsExpectedAccountDatabasePath(string accountId, string databasePath)
+    {
+        if (string.IsNullOrWhiteSpace(databasePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var expectedPath = Path.GetFullPath(GetExpectedAccountDatabasePath(accountId));
+            var actualPath = Path.GetFullPath(databasePath);
+            return string.Equals(actualPath, expectedPath, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (
+            ex is ArgumentException
+                or NotSupportedException
+                or PathTooLongException)
+        {
+            return false;
+        }
     }
 
     private static string NormalizeAccountIdSegment(string accountId)
