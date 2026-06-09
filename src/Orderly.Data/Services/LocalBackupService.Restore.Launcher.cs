@@ -165,6 +165,23 @@ public sealed partial class LocalBackupService
         var adminEncryptedDataKey = FromBase64OrEmpty(row.AdminEncryptedDataKey, "AdminEncryptedDataKey");
         var adminDataKeyNonce = FromBase64OrEmpty(row.AdminDataKeyNonce, "AdminDataKeyNonce");
         var adminDataKeyTag = FromBase64OrEmpty(row.AdminDataKeyTag, "AdminDataKeyTag");
+        ValidateLauncherSnapshotCredentialFields(
+            row,
+            passwordHash,
+            passwordSalt,
+            pinHash,
+            pinSalt,
+            recoveryKeyHash,
+            recoveryKeySalt,
+            recoveryEncryptedDataKey,
+            recoveryDataKeyNonce,
+            recoveryDataKeyTag,
+            encryptedDataKey,
+            dataKeyNonce,
+            dataKeyTag,
+            adminEncryptedDataKey,
+            adminDataKeyNonce,
+            adminDataKeyTag);
 
         try
         {
@@ -233,6 +250,111 @@ public sealed partial class LocalBackupService
             || string.IsNullOrWhiteSpace(row.UpdatedAt))
         {
             throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在缺失关键字段的账号快照。");
+        }
+    }
+
+    private static void ValidateLauncherSnapshotCredentialFields(
+        LauncherAccountBackupRow row,
+        byte[] passwordHash,
+        byte[] passwordSalt,
+        byte[] pinHash,
+        byte[] pinSalt,
+        byte[] recoveryKeyHash,
+        byte[] recoveryKeySalt,
+        byte[] recoveryEncryptedDataKey,
+        byte[] recoveryDataKeyNonce,
+        byte[] recoveryDataKeyTag,
+        byte[] encryptedDataKey,
+        byte[] dataKeyNonce,
+        byte[] dataKeyTag,
+        byte[] adminEncryptedDataKey,
+        byte[] adminDataKeyNonce,
+        byte[] adminDataKeyTag)
+    {
+        if (!LocalCredentialSecurity.HasUsableHashParameters(passwordSalt, row.PasswordIterations, passwordHash)
+            || !LocalCredentialSecurity.HasUsableHashParameters(pinSalt, row.PinIterations, pinHash))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在不安全或无效的账号凭据哈希参数。");
+        }
+
+        if (!LocalCredentialSecurity.HasUsableWrappedDataKey(encryptedDataKey, dataKeyNonce, dataKeyTag))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在无效的数据密钥包裹字段。");
+        }
+
+        if (!Enum.IsDefined(typeof(LocalAccountRole), row.Role))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在无效的账号角色。");
+        }
+
+        ValidateLauncherSnapshotRecoveryFields(
+            row,
+            recoveryKeyHash,
+            recoveryKeySalt,
+            recoveryEncryptedDataKey,
+            recoveryDataKeyNonce,
+            recoveryDataKeyTag);
+
+        ValidateLauncherSnapshotAdminKeyFields(
+            row,
+            adminEncryptedDataKey,
+            adminDataKeyNonce,
+            adminDataKeyTag);
+    }
+
+    private static void ValidateLauncherSnapshotRecoveryFields(
+        LauncherAccountBackupRow row,
+        byte[] recoveryKeyHash,
+        byte[] recoveryKeySalt,
+        byte[] recoveryEncryptedDataKey,
+        byte[] recoveryDataKeyNonce,
+        byte[] recoveryDataKeyTag)
+    {
+        var hasAnyRecoveryField = row.RecoveryKeyIterations is not null
+            || recoveryKeyHash.Length > 0
+            || recoveryKeySalt.Length > 0
+            || recoveryEncryptedDataKey.Length > 0
+            || recoveryDataKeyNonce.Length > 0
+            || recoveryDataKeyTag.Length > 0;
+        if (!hasAnyRecoveryField)
+        {
+            return;
+        }
+
+        if (row.RecoveryKeyIterations is not { } recoveryIterations
+            || !LocalCredentialSecurity.HasUsableHashParameters(recoveryKeySalt, recoveryIterations, recoveryKeyHash)
+            || !LocalCredentialSecurity.HasUsableWrappedDataKey(recoveryEncryptedDataKey, recoveryDataKeyNonce, recoveryDataKeyTag))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在无效的恢复密钥凭据字段。");
+        }
+    }
+
+    private static void ValidateLauncherSnapshotAdminKeyFields(
+        LauncherAccountBackupRow row,
+        byte[] adminEncryptedDataKey,
+        byte[] adminDataKeyNonce,
+        byte[] adminDataKeyTag)
+    {
+        var role = (LocalAccountRole)row.Role;
+        var hasAnyAdminKeyField = !string.IsNullOrWhiteSpace(row.AdminOwnerAccountId)
+            || adminEncryptedDataKey.Length > 0
+            || adminDataKeyNonce.Length > 0
+            || adminDataKeyTag.Length > 0;
+
+        if (role == LocalAccountRole.Owner)
+        {
+            if (hasAnyAdminKeyField)
+            {
+                throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 的 Owner 账号不允许包含管理员包裹密钥字段。");
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(row.AdminOwnerAccountId)
+            || !LocalCredentialSecurity.HasUsableWrappedDataKey(adminEncryptedDataKey, adminDataKeyNonce, adminDataKeyTag))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 的 Member 账号缺少可用的管理员包裹密钥字段。");
         }
     }
 
