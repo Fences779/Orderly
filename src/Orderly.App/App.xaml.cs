@@ -74,17 +74,17 @@ public partial class App : System.Windows.Application
                 return;
             }
 
-            if (QaDataSeeder.IsRequested(_startupArgs))
-            {
-                await EnsureDatabasePreparedAsync(DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true));
-            }
-
             if (isQaMode)
             {
                 var qaDatabasePath = DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true);
                 InitializeQaSessionContext(qaDatabasePath);
                 await InitializeWorkspaceAsync(qaDatabasePath);
                 return;
+            }
+
+            if (QaDataSeeder.IsRequested(_startupArgs))
+            {
+                await PrepareQaSeedDatabaseAsync(DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true));
             }
         }
         catch (Exception ex)

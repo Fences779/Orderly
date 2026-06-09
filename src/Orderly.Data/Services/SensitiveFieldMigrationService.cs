@@ -104,7 +104,8 @@ public sealed class SensitiveFieldMigrationService
         query.CommandText = $"""
             SELECT Id, CAST({plainColumn} AS TEXT)
             FROM {table}
-            WHERE ifnull({cipherColumn}, '') = '' AND ({condition});
+            WHERE ({condition})
+              AND (ifnull({cipherColumn}, '') = '' OR ifnull({plainColumn}, 0) <> 0);
             """;
 
         var rows = new List<(long Id, string Value)>();
@@ -156,11 +157,25 @@ public sealed class SensitiveFieldMigrationService
     {
         await using var query = connection.CreateCommand();
         query.Transaction = transaction;
-        query.CommandText = $"""
-            SELECT Id, CAST({plainColumn} AS TEXT)
-            FROM {table}
-            WHERE ifnull({cipherColumn}, '') = '' AND ({condition});
-            """;
+        if (clearValue == DBNull.Value)
+        {
+            query.CommandText = $"""
+                SELECT Id, CAST({plainColumn} AS TEXT)
+                FROM {table}
+                WHERE ({condition})
+                  AND (ifnull({cipherColumn}, '') = '' OR {plainColumn} IS NOT NULL);
+                """;
+        }
+        else
+        {
+            query.CommandText = $"""
+                SELECT Id, CAST({plainColumn} AS TEXT)
+                FROM {table}
+                WHERE ({condition})
+                  AND (ifnull({cipherColumn}, '') = '' OR CAST({plainColumn} AS TEXT) <> $clear);
+                """;
+            query.Parameters.AddWithValue("$clear", clearValue);
+        }
 
         var rows = new List<(long Id, string Value)>();
         await using (var reader = await query.ExecuteReaderAsync(cancellationToken))

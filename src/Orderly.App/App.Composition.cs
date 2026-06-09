@@ -58,7 +58,7 @@ public partial class App
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
     }
 
-    private void InitializeQaSessionContext(string databasePath)
+    private void InitializeQaSessionContext(string databasePath, bool markSessionSignedIn = true)
     {
         var sessionContextService = _sessionContextService ?? throw new InvalidOperationException("Session context service is not initialized.");
         var sessionLockService = _sessionLockService ?? throw new InvalidOperationException("Session lock service is not initialized.");
@@ -80,7 +80,10 @@ public partial class App
             };
 
             sessionContextService.SetCurrent(session);
-            sessionLockService.MarkSignedIn();
+            if (markSessionSignedIn)
+            {
+                sessionLockService.MarkSignedIn();
+            }
         }
         finally
         {
@@ -88,6 +91,22 @@ public partial class App
             {
                 CryptographicOperations.ZeroMemory(qaDataKey);
             }
+        }
+    }
+
+    private async Task PrepareQaSeedDatabaseAsync(string databasePath)
+    {
+        InitializeQaSessionContext(databasePath, markSessionSignedIn: false);
+        try
+        {
+            await EnsureDatabasePreparedAsync(databasePath);
+
+            var connectionFactory = _connectionFactory ?? throw new InvalidOperationException("Database connection factory is not initialized.");
+            await BackfillSensitiveFieldsAsync(connectionFactory);
+        }
+        finally
+        {
+            ClearQaSessionContextIfCurrent();
         }
     }
 
@@ -145,20 +164,43 @@ public partial class App
 
     private async Task RunQaMaintenanceCommandAsync()
     {
-        await EnsureDatabasePreparedAsync(DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true));
+        var databasePath = DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true);
+        InitializeQaSessionContext(databasePath, markSessionSignedIn: false);
 
-        var connectionFactory = _connectionFactory ?? throw new InvalidOperationException("Database connection factory is not initialized.");
-        var maintenanceService = new QaDataMaintenanceService(connectionFactory);
-
-        object result = _qaMaintenanceCommand switch
+        try
         {
-            QaDataMaintenanceService.QaDataMaintenanceCommand.Status => await maintenanceService.GetStatusAsync(),
-            QaDataMaintenanceService.QaDataMaintenanceCommand.Clear => await maintenanceService.ClearAsync(),
-            QaDataMaintenanceService.QaDataMaintenanceCommand.Reset => await maintenanceService.ResetAsync(),
-            _ => throw new InvalidOperationException("Unsupported QA data maintenance command.")
-        };
+            await EnsureDatabasePreparedAsync(databasePath);
 
-        Console.WriteLine(result);
+            var connectionFactory = _connectionFactory ?? throw new InvalidOperationException("Database connection factory is not initialized.");
+            var maintenanceService = new QaDataMaintenanceService(connectionFactory);
+
+            object result = _qaMaintenanceCommand switch
+            {
+                QaDataMaintenanceService.QaDataMaintenanceCommand.Status => await maintenanceService.GetStatusAsync(),
+                QaDataMaintenanceService.QaDataMaintenanceCommand.Clear => await maintenanceService.ClearAsync(),
+                QaDataMaintenanceService.QaDataMaintenanceCommand.Reset => await maintenanceService.ResetAsync(),
+                _ => throw new InvalidOperationException("Unsupported QA data maintenance command.")
+            };
+
+            if (_qaMaintenanceCommand == QaDataMaintenanceService.QaDataMaintenanceCommand.Reset)
+            {
+                await BackfillSensitiveFieldsAsync(connectionFactory);
+            }
+
+            Console.WriteLine(result);
+        }
+        finally
+        {
+            ClearQaSessionContextIfCurrent();
+        }
+    }
+
+    private void ClearQaSessionContextIfCurrent()
+    {
+        if (_sessionContextService?.Current?.AccountId == QaSessionAccountId)
+        {
+            _sessionContextService.Clear();
+        }
     }
 
     private async Task<string> EnsureDatabasePreparedAsync(string databasePath)

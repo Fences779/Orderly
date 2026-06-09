@@ -25,11 +25,7 @@ public partial class App
         var connectionFactory = _connectionFactory ?? throw new InvalidOperationException("Database connection factory is not initialized.");
         var fieldEncryptionService = _fieldEncryptionService ?? throw new InvalidOperationException("Field encryption service is not initialized.");
 
-        if (_sessionContextService?.IsSignedIn == true)
-        {
-            var sensitiveMigrationService = new SensitiveFieldMigrationService(connectionFactory, fieldEncryptionService);
-            await sensitiveMigrationService.BackfillAsync();
-        }
+        await BackfillSensitiveFieldsAsync(connectionFactory);
 
         ICustomerRepository customerRepository = new CustomerRepository(connectionFactory, fieldEncryptionService);
         IOrderRepository orderRepository = new OrderRepository(connectionFactory, fieldEncryptionService);
@@ -223,5 +219,17 @@ public partial class App
         {
             _floatingWindow.Show();
         }
+    }
+
+    private async Task BackfillSensitiveFieldsAsync(SqliteConnectionFactory connectionFactory)
+    {
+        if (_sessionContextService?.IsSignedIn != true)
+        {
+            return;
+        }
+
+        var fieldEncryptionService = _fieldEncryptionService ?? throw new InvalidOperationException("Field encryption service is not initialized.");
+        var sensitiveMigrationService = new SensitiveFieldMigrationService(connectionFactory, fieldEncryptionService);
+        await sensitiveMigrationService.BackfillAsync();
     }
 }
