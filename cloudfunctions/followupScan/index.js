@@ -23,6 +23,7 @@ const MAX_CASHFLOW_AMOUNT = 100000000
 const MAX_INVENTORY_QUANTITY = 1000000
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
+const MAX_TAGS = 20
 
 function now() {
   return new Date().toISOString()
@@ -55,6 +56,20 @@ function normalizeText(value) {
 
 function limitText(value, maxLength) {
   return normalizeText(value).slice(0, maxLength)
+}
+
+function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[,\s，、;；|/]+/)
+  return Array.from(new Set(source.map((item) => limitText(item, MAX_SHORT_TEXT_LENGTH)).filter(Boolean))).slice(0, maxItems)
+}
+
+function normalizeBoundedNumber(value, minValue, maxValue) {
+  const number = normalizeNumber(value)
+  if (number < minValue) return minValue
+  if (number > maxValue) return maxValue
+  return number
 }
 
 function pickFields(source, allowedFields) {
@@ -199,6 +214,13 @@ function timestamp(value) {
 function normalizeIsoDate(value, fallbackValue) {
   const date = value ? new Date(value) : new Date(fallbackValue || Date.now())
   return Number.isNaN(date.getTime()) ? new Date(fallbackValue || Date.now()).toISOString() : date.toISOString()
+}
+
+function normalizeOptionalIsoDate(value) {
+  const text = normalizeText(value)
+  if (!text) return ''
+  const date = new Date(text)
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString()
 }
 
 function buildAvailability(status, sourceType, reason) {
@@ -563,20 +585,24 @@ async function handleRequest(event) {
     const mergedSku = Object.assign({}, baseSku, rawSku)
     const sku = Object.assign({ workspaceId, enabled: true, sortOrder: 10 }, mergedSku, {
       workspaceId,
-      basePrice: normalizeNumber(mergedSku.basePrice),
-      costPrice: normalizeNumber(mergedSku.costPrice),
-      purchasePrice: normalizeNumber(mergedSku.purchasePrice),
-      stockOnHand: normalizeNumber(mergedSku.stockOnHand),
-      stockReserved: normalizeNumber(mergedSku.stockReserved),
-      safetyStock: normalizeNumber(mergedSku.safetyStock),
-      stockUnit: normalizeText(mergedSku.stockUnit || '件'),
-      stockLocation: normalizeText(mergedSku.stockLocation),
-      supplierName: normalizeText(mergedSku.supplierName),
-      inventoryRemark: normalizeText(mergedSku.inventoryRemark),
+      name: limitText(mergedSku.name || mergedSku.title, MAX_SHORT_TEXT_LENGTH),
+      title: limitText(mergedSku.title || mergedSku.name, MAX_SHORT_TEXT_LENGTH),
+      category: limitText(mergedSku.category, MAX_SHORT_TEXT_LENGTH),
+      basePrice: normalizeBoundedNumber(mergedSku.basePrice, 0, MAX_CASHFLOW_AMOUNT),
+      costPrice: normalizeBoundedNumber(mergedSku.costPrice, 0, MAX_CASHFLOW_AMOUNT),
+      purchasePrice: normalizeBoundedNumber(mergedSku.purchasePrice, 0, MAX_CASHFLOW_AMOUNT),
+      stockOnHand: normalizeBoundedNumber(mergedSku.stockOnHand, 0, MAX_INVENTORY_QUANTITY),
+      stockReserved: normalizeBoundedNumber(mergedSku.stockReserved, 0, MAX_INVENTORY_QUANTITY),
+      safetyStock: normalizeBoundedNumber(mergedSku.safetyStock, 0, MAX_INVENTORY_QUANTITY),
+      stockUnit: limitText(mergedSku.stockUnit || mergedSku.unit || '件', 32),
+      stockLocation: limitText(mergedSku.stockLocation, MAX_SHORT_TEXT_LENGTH),
+      supplierName: limitText(mergedSku.supplierName, MAX_SHORT_TEXT_LENGTH),
+      inventoryRemark: limitText(mergedSku.inventoryRemark || mergedSku.remark, MAX_NOTE_TEXT_LENGTH),
       reorderEnabled: mergedSku.reorderEnabled === true,
-      lastRestockedAt: normalizeText(mergedSku.lastRestockedAt),
-      tags: normalizeArray(mergedSku.tags),
-      adjustableFields: normalizeArray(mergedSku.adjustableFields)
+      lastRestockedAt: normalizeOptionalIsoDate(mergedSku.lastRestockedAt),
+      tags: normalizeLimitedArray(mergedSku.tags),
+      adjustableFields: normalizeLimitedArray(mergedSku.adjustableFields),
+      sortOrder: normalizeBoundedNumber(mergedSku.sortOrder || 10, 0, 1000000)
     })
     const saved = await upsertById('sku_catalog', sku, workspaceId)
     if (!saved) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
