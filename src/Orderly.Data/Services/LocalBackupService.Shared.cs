@@ -1,7 +1,9 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Data.Sqlite;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -234,6 +236,7 @@ public sealed partial class LocalBackupService
             var existingKey = File.ReadAllBytes(keyPath);
             if (existingKey.Length >= 32)
             {
+                HardenMachineBackupIntegrityKeyFile(keyPath);
                 return existingKey;
             }
 
@@ -242,6 +245,12 @@ public sealed partial class LocalBackupService
 
         var key = RandomNumberGenerator.GetBytes(32);
         File.WriteAllBytes(keyPath, key);
+        HardenMachineBackupIntegrityKeyFile(keyPath);
+        return key;
+    }
+
+    private static void HardenMachineBackupIntegrityKeyFile(string keyPath)
+    {
         try
         {
             File.SetAttributes(keyPath, File.GetAttributes(keyPath) | FileAttributes.Hidden);
@@ -253,7 +262,43 @@ public sealed partial class LocalBackupService
         {
         }
 
-        return key;
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        try
+        {
+            var currentUser = WindowsIdentity.GetCurrent().User;
+            if (currentUser is null)
+            {
+                return;
+            }
+
+            var fileInfo = new FileInfo(keyPath);
+            var security = fileInfo.GetAccessControl();
+            foreach (FileSystemAccessRule rule in security.GetAccessRules(includeExplicit: true, includeInherited: true, targetType: typeof(SecurityIdentifier)))
+            {
+                security.RemoveAccessRuleAll(rule);
+            }
+
+            security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+            security.AddAccessRule(new FileSystemAccessRule(currentUser, FileSystemRights.FullControl, AccessControlType.Allow));
+            security.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.LocalSystemSid, domainSid: null),
+                FileSystemRights.FullControl,
+                AccessControlType.Allow));
+            fileInfo.SetAccessControl(security);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+        catch (SystemException)
+        {
+        }
     }
 
     private static string ComputeIntegrityTag(BackupManifest manifest, byte[] key)
