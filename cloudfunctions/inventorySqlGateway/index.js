@@ -631,7 +631,7 @@ exports.main = async (event) => {
     } else if (action === 'ping') {
       result = { ok: true, workspaceId, operatorId, at: Date.now() }
     } else {
-      throw createError(400, 'unsupported_action', `不支持的 action：${action || '(empty)'}`)
+      throw createError(400, 'unsupported_action', '不支持的 action。')
     }
 
     return jsonResponse(event, 200, result)
