@@ -7,6 +7,12 @@ function now() {
   return new Date().toISOString()
 }
 
+function requireOperatorId() {
+  const operatorId = cloud.getWXContext().OPENID || ''
+  if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
+  return { ok: true, operatorId }
+}
+
 function addHours(hours) {
   const date = new Date()
   date.setHours(date.getHours() + hours)
@@ -82,8 +88,12 @@ async function createQuoteTask(workspaceId, quote, deal, customer) {
 }
 
 exports.main = async (event) => {
+  const auth = requireOperatorId()
+  if (!auth.ok) return auth
+
+  event = event || {}
   const workspaceId = event.workspaceId || 'default'
-  const operatorId = cloud.getWXContext().OPENID || 'anonymous'
+  const operatorId = auth.operatorId
   const input = calculate(event.quote || {})
   const action = event.action || 'draft'
   if (!input.dealId) return { ok: false, message: '报价必须关联 dealId' }

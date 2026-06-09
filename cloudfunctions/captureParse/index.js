@@ -25,6 +25,12 @@ function now() {
   return new Date().toISOString()
 }
 
+function requireOperatorId() {
+  const operatorId = cloud.getWXContext().OPENID || ''
+  if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
+  return { ok: true, operatorId }
+}
+
 function addDays(days) {
   const date = new Date()
   date.setDate(date.getDate() + days)
@@ -147,8 +153,12 @@ async function matchCustomers(workspaceId, parserResult) {
 }
 
 exports.main = async (event) => {
+  const auth = requireOperatorId()
+  if (!auth.ok) return auth
+
+  event = event || {}
   const workspaceId = event.workspaceId || 'default'
-  const operatorId = cloud.getWXContext().OPENID || 'anonymous'
+  const operatorId = auth.operatorId
   const parserResult = event.parserResult || parseText(event.rawText || event.ocrText || '')
   const customerMatches = await matchCustomers(workspaceId, parserResult)
   if (event.mode === 'matchOnly') {

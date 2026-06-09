@@ -24,6 +24,12 @@ function now() {
   return new Date().toISOString()
 }
 
+function requireOperatorId() {
+  const operatorId = cloud.getWXContext().OPENID || ''
+  if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
+  return { ok: true, operatorId }
+}
+
 function addDays(days) {
   const date = new Date()
   date.setDate(date.getDate() + days)
@@ -77,8 +83,12 @@ async function createTaskIfMissing(workspaceId, deal, customer, triggerType, due
 }
 
 exports.main = async (event) => {
+  const auth = requireOperatorId()
+  if (!auth.ok) return auth
+
+  event = event || {}
   const workspaceId = event.workspaceId || 'default'
-  const operatorId = cloud.getWXContext().OPENID || 'anonymous'
+  const operatorId = auth.operatorId
   const { dealId, toStage } = event
   if (!dealId || !toStage) return { ok: false, message: '缺少 dealId 或 toStage' }
   const deal = (await db.collection('deals').doc(dealId).get()).data

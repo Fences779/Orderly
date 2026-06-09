@@ -7,6 +7,12 @@ function now() {
   return new Date().toISOString()
 }
 
+function requireOperatorId() {
+  const operatorId = cloud.getWXContext().OPENID || ''
+  if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
+  return { ok: true, operatorId }
+}
+
 function normalizeArray(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
@@ -20,8 +26,12 @@ async function log(workspaceId, entityId, actionType, beforeData, afterData, not
 }
 
 exports.main = async (event) => {
+  const auth = requireOperatorId()
+  if (!auth.ok) return auth
+
+  event = event || {}
   const workspaceId = event.workspaceId || 'default'
-  const operatorId = cloud.getWXContext().OPENID || 'anonymous'
+  const operatorId = auth.operatorId
   const input = event.customer || {}
   if (!input.name) return { ok: false, message: '客户名不能为空' }
   const data = Object.assign({
