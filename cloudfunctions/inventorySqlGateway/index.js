@@ -1,6 +1,11 @@
 const crypto = require('node:crypto')
 const mysql = require('mysql2/promise')
 
+const DEFAULT_PAGE_SIZE = 10
+const DEFAULT_MAX_PAGE_SIZE = 100
+const DEFAULT_MAX_QUERY_ROWS = 5000
+const DEFAULT_MAX_BULK_ROWS = 500
+
 let pool
 
 function getEnv(name, fallback = '') {
@@ -35,10 +40,11 @@ function getPool() {
   return pool
 }
 
-function createError(statusCode, code, message) {
+function createError(statusCode, code, message, expose = statusCode < 500) {
   const error = new Error(message)
   error.statusCode = statusCode
   error.code = code
+  error.expose = expose
   return error
 }
 
@@ -49,6 +55,16 @@ function normalizeText(value) {
 function normalizeNumber(value) {
   const number = Number(value || 0)
   return Number.isFinite(number) ? number : 0
+}
+
+function normalizePositiveInt(value, fallback, max) {
+  const number = Number(value)
+  if (!Number.isFinite(number) || number <= 0) return fallback
+  return Math.min(Math.floor(number), max)
+}
+
+function getPositiveIntEnv(name, fallback, max) {
+  return normalizePositiveInt(getEnv(name), fallback, max)
 }
 
 function normalizeBool(value, fallback = true) {
@@ -130,16 +146,28 @@ function normalizeRequest(event) {
 
 function validateToken(request) {
   const expected = getEnv('ORDERLY_INVENTORY_GATEWAY_TOKEN')
-  if (!expected) return
+  if (!expected) {
+    throw createError(500, 'gateway_token_missing', '库存云端网关未配置鉴权 token。', false)
+  }
 
   const authHeader = normalizeText((request.headers && (request.headers.authorization || request.headers.Authorization)) || '')
   const bearer = authHeader.toLowerCase().startsWith('bearer ')
     ? authHeader.slice(7).trim()
     : ''
-  const supplied = normalizeText(request.token || bearer)
-  if (!supplied || supplied !== expected) {
+  if (!tokensMatch(bearer, expected)) {
     throw createError(401, 'unauthorized', '库存云端网关 token 无效。')
   }
+}
+
+function tokensMatch(supplied, expected) {
+  const suppliedToken = normalizeText(supplied)
+  const expectedToken = normalizeText(expected)
+  if (!suppliedToken || !expectedToken) return false
+
+  const suppliedBuffer = Buffer.from(suppliedToken, 'utf8')
+  const expectedBuffer = Buffer.from(expectedToken, 'utf8')
+  return suppliedBuffer.length === expectedBuffer.length
+    && crypto.timingSafeEqual(suppliedBuffer, expectedBuffer)
 }
 
 function compareValue(left, right, sortBy, direction) {
@@ -233,6 +261,7 @@ function normalizeInputRow(input) {
 }
 
 async function queryInventoryRows(workspaceId) {
+  const maxRows = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_QUERY_ROWS', DEFAULT_MAX_QUERY_ROWS, 50000)
   const [rows] = await getPool().execute(
     `SELECT
         material_code,
@@ -254,15 +283,21 @@ async function queryInventoryRows(workspaceId) {
         updated_at
       FROM inventory_items
       WHERE workspace_id = ?
-      ORDER BY category ASC, material_name ASC`,
-    [workspaceId]
+      ORDER BY category ASC, material_name ASC
+      LIMIT ?`,
+    [workspaceId, maxRows + 1]
   )
+  if (rows.length > maxRows) {
+    throw createError(413, 'too_many_inventory_rows', `库存数据超过单次读取上限（${maxRows}）。`)
+  }
+
   return rows.map(mapDbRow)
 }
 
 async function inventoryDashboard(payload, workspaceId) {
-  const page = Math.max(1, Number(payload.page || 1))
-  const pageSize = Math.max(1, Number(payload.pageSize || 10))
+  const maxPageSize = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_PAGE_SIZE', DEFAULT_MAX_PAGE_SIZE, 1000)
+  const page = normalizePositiveInt(payload.page, 1, 1000000)
+  const pageSize = normalizePositiveInt(payload.pageSize, DEFAULT_PAGE_SIZE, maxPageSize)
   const keyword = normalizeText(payload.keyword).toLowerCase()
   const category = normalizeText(payload.category)
   const status = normalizeText(payload.status || 'all')
@@ -358,6 +393,11 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
   const inputRows = Array.isArray(payload.rows) ? payload.rows : []
   if (!inputRows.length) {
     throw createError(400, 'empty_rows', '库存导入数据不能为空。')
+  }
+
+  const maxBulkRows = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_BULK_ROWS', DEFAULT_MAX_BULK_ROWS, 5000)
+  if (inputRows.length > maxBulkRows) {
+    throw createError(413, 'too_many_import_rows', `库存导入行数超过单次上限（${maxBulkRows}）。`)
   }
 
   const connection = await getPool().getConnection()
@@ -561,8 +601,8 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
 
 exports.main = async (event) => {
   const request = normalizeRequest(event)
-  const workspaceId = normalizeText(request.workspaceId || getEnv('ORDERLY_INVENTORY_WORKSPACE_ID', 'default')) || 'default'
-  const operatorId = normalizeText(request.operatorId || getEnv('ORDERLY_INVENTORY_OPERATOR_ID', 'pc-admin')) || 'pc-admin'
+  const workspaceId = normalizeText(getEnv('ORDERLY_INVENTORY_WORKSPACE_ID', 'default')) || 'default'
+  const operatorId = normalizeText(getEnv('ORDERLY_INVENTORY_OPERATOR_ID', 'pc-admin')) || 'pc-admin'
   const action = normalizeText(request.action)
   const payload = request.payload && typeof request.payload === 'object' ? request.payload : {}
 
@@ -584,10 +624,11 @@ exports.main = async (event) => {
 
     return jsonResponse(event, 200, result)
   } catch (error) {
-    return jsonResponse(event, error.statusCode || 500, {
+    const statusCode = error.statusCode || 500
+    return jsonResponse(event, statusCode, {
       ok: false,
       code: error.code || 'internal_error',
-      message: error.message || '库存云端网关执行失败。'
+      message: error.expose ? error.message : '库存云端网关执行失败。'
     })
   }
 }

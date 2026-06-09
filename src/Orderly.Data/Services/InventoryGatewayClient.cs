@@ -25,9 +25,6 @@ public sealed class InventoryGatewayClient
         var requestPayload = new
         {
             action,
-            token = _options.Token,
-            workspaceId = _options.WorkspaceId,
-            operatorId = _options.OperatorId,
             payload
         };
 

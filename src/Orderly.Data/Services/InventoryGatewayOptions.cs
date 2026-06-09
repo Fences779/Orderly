@@ -57,6 +57,11 @@ public sealed class InventoryGatewayOptions
             throw new InvalidOperationException($"{EndpointEnvironmentVariableName} 必须是有效的绝对 URL。");
         }
 
+        if (uri.Scheme != Uri.UriSchemeHttps && !uri.IsLoopback)
+        {
+            throw new InvalidOperationException($"{EndpointEnvironmentVariableName} 必须使用 HTTPS，除非目标是本机回环地址。");
+        }
+
         return uri;
     }
 
