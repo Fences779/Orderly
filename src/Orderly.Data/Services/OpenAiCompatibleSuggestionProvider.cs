@@ -74,7 +74,6 @@ public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
             SuggestionText = suggestionText,
             MetadataJson = JsonSerializer.Serialize(new
             {
-                endpoint = endpoint.AbsoluteUri,
                 timeoutSeconds = _options.TimeoutSeconds
             })
         };

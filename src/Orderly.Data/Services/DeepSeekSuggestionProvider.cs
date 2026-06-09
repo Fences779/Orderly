@@ -62,7 +62,6 @@ public sealed class DeepSeekSuggestionProvider : IAiSuggestionProvider
             SuggestionText = suggestionText,
             MetadataJson = JsonSerializer.Serialize(new
             {
-                endpoint = endpoint.AbsoluteUri,
                 timeoutSeconds = _options.TimeoutSeconds,
                 stream = false
             })
