@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -62,22 +63,84 @@ public partial class App
         var sessionContextService = _sessionContextService ?? throw new InvalidOperationException("Session context service is not initialized.");
         var sessionLockService = _sessionLockService ?? throw new InvalidOperationException("Session lock service is not initialized.");
 
-        var keySeedBytes = Encoding.UTF8.GetBytes(QaSessionDataKeySeed);
-        var qaDataKey = SHA256.HashData(keySeedBytes);
-
-        var session = new LocalSessionContext
+        byte[]? qaDataKey = null;
+        try
         {
-            AccountId = QaSessionAccountId,
-            Username = QaSessionUsername,
-            DisplayName = QaSessionDisplayName,
-            Role = LocalAccountRole.Owner,
-            DatabasePath = databasePath,
-            DataKey = qaDataKey,
-            SignedInAt = DateTime.Now
-        };
+            qaDataKey = LoadOrCreateQaSessionDataKey(databasePath);
 
-        sessionContextService.SetCurrent(session);
-        sessionLockService.MarkSignedIn();
+            var session = new LocalSessionContext
+            {
+                AccountId = QaSessionAccountId,
+                Username = QaSessionUsername,
+                DisplayName = QaSessionDisplayName,
+                Role = LocalAccountRole.Owner,
+                DatabasePath = databasePath,
+                DataKey = qaDataKey,
+                SignedInAt = DateTime.Now
+            };
+
+            sessionContextService.SetCurrent(session);
+            sessionLockService.MarkSignedIn();
+        }
+        finally
+        {
+            if (qaDataKey is { Length: > 0 })
+            {
+                CryptographicOperations.ZeroMemory(qaDataKey);
+            }
+        }
+    }
+
+    private static byte[] LoadOrCreateQaSessionDataKey(string databasePath)
+    {
+        var keyPath = GetQaSessionDataKeyPath(databasePath);
+        if (File.Exists(keyPath))
+        {
+            var existingKey = File.ReadAllBytes(keyPath);
+            if (existingKey.Length == QaSessionDataKeyLength)
+            {
+                return existingKey;
+            }
+
+            CryptographicOperations.ZeroMemory(existingKey);
+        }
+
+        var key = RandomNumberGenerator.GetBytes(QaSessionDataKeyLength);
+        File.WriteAllBytes(keyPath, key);
+        TryHideFile(keyPath);
+        return key;
+    }
+
+    private static string GetQaSessionDataKeyPath(string databasePath)
+    {
+        var normalizedDatabasePath = Path.GetFullPath(databasePath).ToUpperInvariant();
+        var pathBytes = Encoding.UTF8.GetBytes(normalizedDatabasePath);
+        var hash = SHA256.HashData(pathBytes);
+        try
+        {
+            return Path.Combine(
+                DatabasePaths.GetIdentityDirectoryPath(),
+                $"{QaSessionKeyFilePrefix}{Convert.ToHexString(hash).ToLowerInvariant()}.key");
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(pathBytes);
+            CryptographicOperations.ZeroMemory(hash);
+        }
+    }
+
+    private static void TryHideFile(string path)
+    {
+        try
+        {
+            File.SetAttributes(path, File.GetAttributes(path) | FileAttributes.Hidden);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private async Task RunQaMaintenanceCommandAsync()

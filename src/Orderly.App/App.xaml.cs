@@ -24,7 +24,8 @@ public partial class App : System.Windows.Application
     private const string QaSessionAccountId = "qa-local-account";
     private const string QaSessionUsername = "qa-local-user";
     private const string QaSessionDisplayName = "QA Local User";
-    private const string QaSessionDataKeySeed = "Orderly-QA-Encryption-v1";
+    private const int QaSessionDataKeyLength = 32;
+    private const string QaSessionKeyFilePrefix = "qa-session-data-key-";
 
     private TrayIconService? _trayIconService;
     private GlobalHotkeyService? _hotkeyService;
