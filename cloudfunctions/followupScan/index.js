@@ -15,6 +15,7 @@ const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content'
 const SKU_FIELDS = ['_id', 'name', 'title', 'category', 'basePrice', 'costPrice', 'safetyStock', 'stockUnit', 'unit', 'stockLocation', 'inventoryRemark', 'remark', 'reorderEnabled', 'lastRestockedAt', 'tags', 'adjustableFields', 'enabled', 'sortOrder']
 const INVENTORY_MOVEMENT_FIELDS = ['skuId', 'skuName', 'movementType', 'type', 'quantity', 'unitCost', 'totalCost', 'relatedOrderId', 'relatedOrderNo', 'note', 'occurredAt']
 const CASHFLOW_FIELDS = ['_id', 'direction', 'amount', 'category', 'paymentMethod', 'channel', 'status', 'relatedOrderId', 'orderId', 'relatedOrderNo', 'orderNo', 'relatedQuoteId', 'quoteId', 'relatedSkuId', 'skuId', 'counterpartyName', 'counterparty', 'note', 'occurredAt']
+const TASK_ACTIONS = ['complete', 'skip', 'delay']
 
 function now() {
   return new Date().toISOString()
@@ -176,6 +177,11 @@ function dateKey(value) {
 function timestamp(value) {
   const date = value ? new Date(value) : new Date()
   return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+}
+
+function normalizeIsoDate(value, fallbackValue) {
+  const date = value ? new Date(value) : new Date(fallbackValue || Date.now())
+  return Number.isNaN(date.getTime()) ? new Date(fallbackValue || Date.now()).toISOString() : date.toISOString()
 }
 
 function buildAvailability(status, sourceType, reason) {
@@ -445,14 +451,20 @@ async function createTaskIfMissing(workspaceId, task) {
 
 async function taskAction(event, operatorId, workspaceId) {
   const taskId = normalizeText(event.taskId)
+  const action = normalizeText(event.action)
+  if (TASK_ACTIONS.indexOf(action) < 0) return { ok: false, code: 'invalid_action', message: '非法跟进任务动作。' }
+
   const task = await getWorkspaceDoc('followup_tasks', taskId, workspaceId)
   if (!task) return { ok: false, code: 'not_found', message: '跟进任务不存在。' }
   const patch = { updatedAt: now(), updatedBy: operatorId }
-  if (event.action === 'complete') Object.assign(patch, { taskStatus: 'completed', completedAt: now(), resultType: 'done' })
-  if (event.action === 'skip') Object.assign(patch, { taskStatus: 'skipped', completedAt: now(), resultType: 'skipped' })
-  if (event.action === 'delay') Object.assign(patch, { dueAt: event.payload && event.payload.dueAt ? event.payload.dueAt : addDaysFrom(new Date(), 1) })
+  if (action === 'complete') Object.assign(patch, { taskStatus: 'completed', completedAt: now(), resultType: 'done' })
+  if (action === 'skip') Object.assign(patch, { taskStatus: 'skipped', completedAt: now(), resultType: 'skipped' })
+  if (action === 'delay') {
+    const fallbackDueAt = addDaysFrom(new Date(), 1)
+    Object.assign(patch, { dueAt: normalizeIsoDate(event.payload && event.payload.dueAt, fallbackDueAt) })
+  }
   await db.collection('followup_tasks').doc(taskId).update({ data: patch })
-  await log(workspaceId, 'deal', task.dealId, 'followup_' + event.action, '跟进任务' + event.action, operatorId)
+  await log(workspaceId, 'deal', task.dealId, 'followup_' + action, '跟进任务' + action, operatorId)
   return { ok: true }
 }
 
