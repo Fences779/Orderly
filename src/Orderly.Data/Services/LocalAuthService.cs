@@ -9,9 +9,14 @@ namespace Orderly.Data.Services;
 
 public sealed class LocalAuthService : ILocalAuthService
 {
+    private const int MaxCredentialFailuresBeforeCooldown = 5;
+    private static readonly TimeSpan CredentialFailureCooldown = TimeSpan.FromMinutes(5);
+
     private readonly ILocalAccountRepository _accountRepository;
     private readonly ILegacyDatabaseMigrationService _legacyMigrationService;
     private readonly ISessionContextService _sessionContextService;
+    private readonly object _credentialAttemptsLock = new();
+    private readonly Dictionary<string, CredentialAttemptState> _credentialAttempts = new(StringComparer.Ordinal);
 
     public LocalAuthService(
         ILocalAccountRepository accountRepository,
@@ -146,19 +151,28 @@ public sealed class LocalAuthService : ILocalAuthService
             return LocalSignInResult.Failure("用户名和主密码不能为空。");
         }
 
-        var account = await _accountRepository.GetByUsernameAsync(username.Trim(), cancellationToken);
+        var normalizedUsername = username.Trim();
+        if (IsCredentialAttemptBlocked("signin", normalizedUsername))
+        {
+            return LocalSignInResult.Failure("认证尝试过于频繁，请稍后再试。");
+        }
+
+        var account = await _accountRepository.GetByUsernameAsync(normalizedUsername, cancellationToken);
         if (account is null)
         {
+            RecordCredentialFailure("signin", normalizedUsername);
             return LocalSignInResult.Failure("账号不存在或主密码错误。");
         }
 
         if (!account.IsEnabled)
         {
+            RecordCredentialFailure("signin", normalizedUsername);
             return LocalSignInResult.Failure("账号已被禁用。");
         }
 
         if (!LocalCredentialSecurity.VerifyHash(masterPassword, account.PasswordSalt, account.PasswordIterations, account.PasswordHash))
         {
+            RecordCredentialFailure("signin", normalizedUsername);
             return LocalSignInResult.Failure("账号不存在或主密码错误。");
         }
 
@@ -196,6 +210,7 @@ public sealed class LocalAuthService : ILocalAuthService
 
             var session = CreateSession(account, dataKey, account.LastLoginAt.Value);
             _sessionContextService.SetCurrent(session);
+            ClearCredentialFailures("signin", normalizedUsername);
             return LocalSignInResult.Success(session);
         }
         finally
@@ -206,41 +221,72 @@ public sealed class LocalAuthService : ILocalAuthService
 
     public async Task<bool> VerifyPinAsync(string accountId, string pin, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(accountId) || !LocalCredentialSecurity.IsValidPin(pin))
+        if (string.IsNullOrWhiteSpace(accountId))
         {
             return false;
         }
 
-        var account = await _accountRepository.GetByAccountIdAsync(accountId, cancellationToken);
+        var normalizedAccountId = accountId.Trim();
+        if (IsCredentialAttemptBlocked("pin", normalizedAccountId))
+        {
+            return false;
+        }
+
+        if (!LocalCredentialSecurity.IsValidPin(pin))
+        {
+            RecordCredentialFailure("pin", normalizedAccountId);
+            return false;
+        }
+
+        var account = await _accountRepository.GetByAccountIdAsync(normalizedAccountId, cancellationToken);
         if (account is null || !IsAccountUsableForCredentialCheck(account))
         {
+            RecordCredentialFailure("pin", normalizedAccountId);
             return false;
         }
 
-        return LocalCredentialSecurity.VerifyHash(pin, account.PinSalt, account.PinIterations, account.PinHash);
+        var verified = LocalCredentialSecurity.VerifyHash(pin, account.PinSalt, account.PinIterations, account.PinHash);
+        RecordCredentialResult("pin", normalizedAccountId, verified);
+        return verified;
     }
 
     public async Task<bool> VerifyRecoveryKeyAsync(string accountId, string recoveryKey, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(accountId) || string.IsNullOrWhiteSpace(recoveryKey))
+        if (string.IsNullOrWhiteSpace(accountId))
         {
             return false;
         }
 
-        var account = await _accountRepository.GetByAccountIdAsync(accountId, cancellationToken);
+        var normalizedAccountId = accountId.Trim();
+        if (IsCredentialAttemptBlocked("recovery", normalizedAccountId))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(recoveryKey))
+        {
+            RecordCredentialFailure("recovery", normalizedAccountId);
+            return false;
+        }
+
+        var account = await _accountRepository.GetByAccountIdAsync(normalizedAccountId, cancellationToken);
         if (account is null || !IsAccountUsableForCredentialCheck(account))
         {
+            RecordCredentialFailure("recovery", normalizedAccountId);
             return false;
         }
 
         if (!LocalCredentialSecurity.HasUsableHashParameters(account.RecoveryKeySalt, account.RecoveryKeyIterations, account.RecoveryKeyHash)
             || !LocalCredentialSecurity.HasUsableWrappedDataKey(account.RecoveryEncryptedDataKey, account.RecoveryDataKeyNonce, account.RecoveryDataKeyTag))
         {
+            RecordCredentialFailure("recovery", normalizedAccountId);
             return false;
         }
 
         var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
-        return LocalCredentialSecurity.VerifyHash(normalizedRecoveryKey, account.RecoveryKeySalt, account.RecoveryKeyIterations, account.RecoveryKeyHash);
+        var verified = LocalCredentialSecurity.VerifyHash(normalizedRecoveryKey, account.RecoveryKeySalt, account.RecoveryKeyIterations, account.RecoveryKeyHash);
+        RecordCredentialResult("recovery", normalizedAccountId, verified);
+        return verified;
     }
 
     private static void ValidateOwnerRequest(CreateFirstOwnerRequest request)
@@ -297,5 +343,88 @@ public sealed class LocalAuthService : ILocalAuthService
         return account.IsEnabled
             && DatabasePaths.IsExpectedAccountDatabasePath(account.AccountId, account.DatabasePath)
             && !LocalDataFileSecurity.IsReparsePoint(account.DatabasePath);
+    }
+
+    private bool IsCredentialAttemptBlocked(string purpose, string identifier)
+    {
+        var key = BuildCredentialAttemptKey(purpose, identifier);
+        var now = DateTimeOffset.UtcNow;
+        lock (_credentialAttemptsLock)
+        {
+            if (!_credentialAttempts.TryGetValue(key, out var state))
+            {
+                return false;
+            }
+
+            if (state.LockedUntil > now)
+            {
+                return true;
+            }
+
+            if (state.LockedUntil != default)
+            {
+                _credentialAttempts.Remove(key);
+            }
+
+            return false;
+        }
+    }
+
+    private void RecordCredentialResult(string purpose, string identifier, bool success)
+    {
+        if (success)
+        {
+            ClearCredentialFailures(purpose, identifier);
+            return;
+        }
+
+        RecordCredentialFailure(purpose, identifier);
+    }
+
+    private void RecordCredentialFailure(string purpose, string identifier)
+    {
+        var key = BuildCredentialAttemptKey(purpose, identifier);
+        var now = DateTimeOffset.UtcNow;
+        lock (_credentialAttemptsLock)
+        {
+            if (_credentialAttempts.TryGetValue(key, out var state) && state.LockedUntil > now)
+            {
+                return;
+            }
+
+            if (state is null || state.LockedUntil != default)
+            {
+                state = new CredentialAttemptState();
+                _credentialAttempts[key] = state;
+            }
+
+            state.FailedCount++;
+            if (state.FailedCount >= MaxCredentialFailuresBeforeCooldown)
+            {
+                state.FailedCount = 0;
+                state.LockedUntil = now.Add(CredentialFailureCooldown);
+            }
+        }
+    }
+
+    private void ClearCredentialFailures(string purpose, string identifier)
+    {
+        var key = BuildCredentialAttemptKey(purpose, identifier);
+        lock (_credentialAttemptsLock)
+        {
+            _credentialAttempts.Remove(key);
+        }
+    }
+
+    private static string BuildCredentialAttemptKey(string purpose, string identifier)
+    {
+        return purpose + ":" + identifier.Trim().ToLowerInvariant();
+    }
+
+    private sealed class CredentialAttemptState
+    {
+        public int FailedCount { get; set; }
+
+        public DateTimeOffset LockedUntil { get; set; }
     }
 }
