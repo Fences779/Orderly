@@ -9,6 +9,7 @@ namespace Orderly.Data.Services;
 
 public sealed class LocalAuthService : ILocalAuthService
 {
+    private const string GenericSignInFailureMessage = "账号不存在或主密码错误。";
     private const int MaxCredentialFailuresBeforeCooldown = 5;
     private static readonly TimeSpan CredentialFailureCooldown = TimeSpan.FromMinutes(5);
 
@@ -161,19 +162,19 @@ public sealed class LocalAuthService : ILocalAuthService
         if (account is null)
         {
             RecordCredentialFailure("signin", normalizedUsername);
-            return LocalSignInResult.Failure("账号不存在或主密码错误。");
+            return LocalSignInResult.Failure(GenericSignInFailureMessage);
         }
 
         if (!account.IsEnabled)
         {
             RecordCredentialFailure("signin", normalizedUsername);
-            return LocalSignInResult.Failure("账号已被禁用。");
+            return LocalSignInResult.Failure(GenericSignInFailureMessage);
         }
 
         if (!LocalCredentialSecurity.VerifyHash(masterPassword, account.PasswordSalt, account.PasswordIterations, account.PasswordHash))
         {
             RecordCredentialFailure("signin", normalizedUsername);
-            return LocalSignInResult.Failure("账号不存在或主密码错误。");
+            return LocalSignInResult.Failure(GenericSignInFailureMessage);
         }
 
         if (!DatabasePaths.IsExpectedAccountDatabasePath(account.AccountId, account.DatabasePath)
@@ -195,11 +196,13 @@ public sealed class LocalAuthService : ILocalAuthService
         }
         catch (CryptographicException)
         {
-            return LocalSignInResult.Failure("主密码验证通过，但密钥解包失败。");
+            RecordCredentialFailure("signin", normalizedUsername);
+            return LocalSignInResult.Failure(GenericSignInFailureMessage);
         }
         catch (InvalidOperationException)
         {
-            return LocalSignInResult.Failure("主密码验证通过，但密钥解包失败。");
+            RecordCredentialFailure("signin", normalizedUsername);
+            return LocalSignInResult.Failure(GenericSignInFailureMessage);
         }
 
         try
