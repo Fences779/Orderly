@@ -150,6 +150,21 @@ function Test-EnabledFlag {
     return $value.Trim().ToLowerInvariant() -in @('1', 'true', 'yes', 'on')
 }
 
+function Split-SecurityList {
+    param([string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return @()
+    }
+
+    return @(
+        $Value -split '[,\s，、;；/]+' |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            Sort-Object -Unique
+    )
+}
+
 function Resolve-RuntimeEnvironment {
     param(
         [hashtable]$ValuesFileValues,
@@ -175,6 +190,15 @@ foreach ($name in $RequiredVariable) {
     $allowDefault = $name -in @('ORDERLY_ALLOWED_WORKSPACE_IDS', 'ORDERLY_INVENTORY_WORKSPACE_ID')
     if (Test-WeakValue -Value $value -AllowDefault:$allowDefault) {
         $failures.Add("Missing or weak required variable: $name")
+    }
+}
+
+$allowedWorkspaceIdsValue = Resolve-VariableValue -Name 'ORDERLY_ALLOWED_WORKSPACE_IDS' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+$allowedWorkspaceIds = Split-SecurityList -Value $allowedWorkspaceIdsValue
+if ($allowedWorkspaceIds.Count -gt 1) {
+    $openidWorkspaceIds = Resolve-VariableValue -Name 'ORDERLY_OPENID_WORKSPACE_IDS' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+    if ([string]::IsNullOrWhiteSpace($openidWorkspaceIds)) {
+        $failures.Add('ORDERLY_OPENID_WORKSPACE_IDS is required when ORDERLY_ALLOWED_WORKSPACE_IDS contains multiple workspace IDs.')
     }
 }
 

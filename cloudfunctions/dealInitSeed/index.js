@@ -7,6 +7,7 @@ const db = cloud.database()
 const COLLECTIONS = ['customers', 'deals', 'quotes', 'sku_catalog', 'inventory_movements', 'cashflow_entries', 'followup_tasks', 'message_templates', 'captures', 'activity_logs']
 const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
+const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const ENABLE_SEED_ENV_NAME = 'ORDERLY_ENABLE_DEAL_INIT_SEED'
 const SEED_ADMIN_OPENIDS_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_OPENIDS'
 const MAX_EVENT_BYTES = 65536
@@ -37,12 +38,59 @@ function rejectOversizedEvent(event) {
   return bytes > MAX_EVENT_BYTES ? { ok: false, code: 'payload_too_large', message: '请求体过大。' } : null
 }
 
-function resolveWorkspaceId(event) {
+function resolveWorkspaceId(event, operatorId) {
   const workspaceId = String((event && event.workspaceId) || '').trim() || DEFAULT_WORKSPACE_ID
   const configured = normalizeList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
-  const allowed = configured.length ? configured : [DEFAULT_WORKSPACE_ID]
+  const allowed = Array.from(new Set(configured.length ? configured : [DEFAULT_WORKSPACE_ID]))
   if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  const binding = validateWorkspaceBinding(operatorId, workspaceId, allowed)
+  if (!binding.ok) return binding
   return { ok: true, workspaceId }
+}
+
+function validateWorkspaceBinding(operatorId, workspaceId, allowedWorkspaceIds) {
+  const boundWorkspaceIds = resolveOperatorWorkspaceIds(operatorId)
+  if (boundWorkspaceIds.length > 0) {
+    if (boundWorkspaceIds.indexOf('*') >= 0 || boundWorkspaceIds.indexOf(workspaceId) >= 0) return { ok: true }
+    return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  }
+
+  if (allowedWorkspaceIds.length > 1) {
+    return { ok: false, code: 'workspace_binding_required', message: '工作区权限未配置。' }
+  }
+
+  return { ok: true }
+}
+
+function resolveOperatorWorkspaceIds(operatorId) {
+  if (!operatorId) return []
+  const raw = String(process.env[OPENID_WORKSPACE_IDS_ENV_NAME] || '').trim()
+  if (!raw) return []
+
+  if (raw[0] === '{') {
+    try {
+      const parsed = JSON.parse(raw)
+      return normalizeWorkspaceBindingValue(parsed && parsed[operatorId])
+    } catch (err) {
+      return []
+    }
+  }
+
+  const entries = raw.split(/[;；\r\n]+/).map((item) => item.trim()).filter(Boolean)
+  for (const entry of entries) {
+    const separatorIndex = entry.indexOf('=') >= 0 ? entry.indexOf('=') : entry.indexOf(':')
+    if (separatorIndex <= 0) continue
+    const key = entry.slice(0, separatorIndex).trim()
+    if (key === operatorId) return normalizeWorkspaceBindingValue(entry.slice(separatorIndex + 1))
+  }
+
+  return []
+}
+
+function normalizeWorkspaceBindingValue(value) {
+  if (!value) return []
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean)
+  return String(value).split(/[,\s，、|/]+/).map((item) => item.trim()).filter(Boolean)
 }
 
 async function ensureCollections() {
@@ -83,7 +131,7 @@ async function handleRequest(event) {
   const oversized = rejectOversizedEvent(request)
   if (oversized) return oversized
 
-  const workspace = resolveWorkspaceId(request)
+  const workspace = resolveWorkspaceId(request, auth.operatorId)
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   await ensureCollections()
