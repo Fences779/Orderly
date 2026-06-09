@@ -19,6 +19,9 @@ public sealed partial class LocalBackupService : IBackupService
     private const string BackupIntegrityKeyFileName = "backup-integrity.key";
     private const long MaxBackupFileBytes = 64L * 1024L * 1024L;
     private const int MaxBackupJsonDepth = 32;
+    private const int MaxBackupTableRows = 50_000;
+    private const int MaxBackupRowColumns = 128;
+    private const int MaxBackupStringValueLength = 1_000_000;
 
     private static readonly string[] IncludedTableNames =
     [

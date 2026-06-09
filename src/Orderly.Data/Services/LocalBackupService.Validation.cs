@@ -171,7 +171,7 @@ public sealed partial class LocalBackupService
                         errors.Add($"表 {tableName} 的 counts 与实际记录数不一致。");
                     }
 
-                    ValidateTableColumns(tableName, tableElement, errors);
+                    ValidateTableShape(tableName, tableElement, errors);
                 }
 
                 if (manifest.Tables.TryGetValue(LauncherLocalAccountsTableName, out var launcherTableElement))
@@ -296,8 +296,14 @@ public sealed partial class LocalBackupService
         return manifest;
     }
 
-    private static void ValidateTableColumns(string tableName, JsonElement tableElement, ICollection<string> errors)
+    private static void ValidateTableShape(string tableName, JsonElement tableElement, ICollection<string> errors)
     {
+        if (tableElement.GetArrayLength() > MaxBackupTableRows)
+        {
+            errors.Add($"表 {tableName} 行数超过上限 {MaxBackupTableRows}。");
+            return;
+        }
+
         var allowedColumns = GetRestoreColumns(tableName);
         foreach (var row in tableElement.EnumerateArray())
         {
@@ -306,14 +312,48 @@ public sealed partial class LocalBackupService
                 continue;
             }
 
+            var properties = row.EnumerateObject().ToArray();
+            if (properties.Length > MaxBackupRowColumns)
+            {
+                errors.Add($"表 {tableName} 存在列数超过上限 {MaxBackupRowColumns} 的行。");
+                return;
+            }
+
             try
             {
-                ValidateRestoreColumns(tableName, row.EnumerateObject().ToArray(), allowedColumns);
+                ValidateRestoreColumns(tableName, properties, allowedColumns);
+                foreach (var property in properties)
+                {
+                    ValidateJsonValueLimits(tableName, property.Name, property.Value);
+                }
             }
             catch (InvalidOperationException ex)
             {
                 errors.Add(ex.Message);
                 return;
+            }
+        }
+    }
+
+    private static void ValidateJsonValueLimits(string tableName, string fieldName, JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.String && (value.GetString()?.Length ?? 0) > MaxBackupStringValueLength)
+        {
+            throw new InvalidOperationException($"表 {tableName} 字段 {fieldName} 的字符串长度超过上限。");
+        }
+
+        if (value.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in value.EnumerateObject())
+            {
+                ValidateJsonValueLimits(tableName, property.Name, property.Value);
+            }
+        }
+        else if (value.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in value.EnumerateArray())
+            {
+                ValidateJsonValueLimits(tableName, fieldName, item);
             }
         }
     }
