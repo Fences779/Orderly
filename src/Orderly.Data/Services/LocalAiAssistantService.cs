@@ -216,12 +216,13 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         }
 
         var preferences = await _settingRepository.GetPreferencesAsync(cancellationToken);
+        var providerRequest = ApplyRemoteContextPolicy(request, preferences, out var reducedContext);
         if (!ShouldRedactProviderRequest(preferences))
         {
-            return new ProviderRequest(request, false);
+            return new ProviderRequest(providerRequest, reducedContext);
         }
 
-        return new ProviderRequest(RedactRequest(request, preferences), true);
+        return new ProviderRequest(RedactRequest(providerRequest, preferences), true);
     }
 
     private async Task<AiSuggestion> UpdateAsync(AiSuggestion suggestion, CancellationToken cancellationToken)
@@ -325,6 +326,37 @@ public sealed class LocalAiAssistantService : IAiAssistantService
             || preferences.AiBlockPhone
             || preferences.AiBlockFullAddress
             || preferences.AiBlockPaymentTransactionId;
+    }
+
+    private static AiSuggestionRequest ApplyRemoteContextPolicy(
+        AiSuggestionRequest request,
+        AppPreferences preferences,
+        out bool reducedContext)
+    {
+        var allowCustomerContext = preferences.AiAllowCustomerProfileContext;
+        var allowOrderContext = preferences.AiAllowOrderContext;
+        reducedContext = !allowCustomerContext || !allowOrderContext;
+
+        if (!reducedContext)
+        {
+            return request;
+        }
+
+        return new AiSuggestionRequest
+        {
+            CustomerId = request.CustomerId,
+            OrderId = request.OrderId,
+            MessageId = request.MessageId,
+            CustomerName = allowCustomerContext ? request.CustomerName : string.Empty,
+            CustomerNickname = allowCustomerContext ? request.CustomerNickname : string.Empty,
+            CustomerRemark = allowCustomerContext ? request.CustomerRemark : string.Empty,
+            OrderTitle = allowOrderContext ? request.OrderTitle : string.Empty,
+            OrderBudgetText = allowOrderContext ? request.OrderBudgetText : string.Empty,
+            OrderStatusText = allowOrderContext ? request.OrderStatusText : string.Empty,
+            OrderRemark = allowOrderContext ? request.OrderRemark : string.Empty,
+            FocusMessage = allowCustomerContext ? request.FocusMessage : string.Empty,
+            RecentMessages = allowCustomerContext ? request.RecentMessages : Array.Empty<AiSuggestionContextMessage>()
+        };
     }
 
     private static AiSuggestionRequest RedactRequest(AiSuggestionRequest request, AppPreferences preferences)
