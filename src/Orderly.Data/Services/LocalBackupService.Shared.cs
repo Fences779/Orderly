@@ -7,11 +7,16 @@ using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Orderly.Data.Services;
 
 public sealed partial class LocalBackupService
 {
+    private static readonly Regex LocalPathRegex = new(
+        @"(?:[A-Za-z]:\\|\\\\)[^\r\n;；，。]*",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private async Task WriteValidationActivityAsync(
         BackupValidationResult result,
         string createdBy,
@@ -22,9 +27,12 @@ public sealed partial class LocalBackupService
             ? ActivityType.BackupValidationSucceeded
             : ActivityType.BackupValidationFailed;
         var title = result.IsValid ? "校验备份成功" : "校验备份失败";
+        var safeErrors = result.Errors
+            .Select(error => SanitizeBackupErrorSummary(error, result.BackupPath))
+            .ToArray();
         var description = result.IsValid
             ? $"已校验 {Path.GetFileName(result.BackupPath)}"
-            : $"校验失败：{string.Join("；", result.Errors)}";
+            : $"校验失败：{string.Join("；", safeErrors)}";
 
         await _activityLogRepository.CreateAsync(new ActivityLog
         {
@@ -409,6 +417,40 @@ public sealed partial class LocalBackupService
         return TagQaMetadataIfNeeded(metadata.ToJsonString(), tagForQaScope, Path.GetFileName(backupPath));
     }
 
+    private static string SanitizeBackupErrorSummary(string errorSummary, string? knownPath)
+    {
+        var sanitized = (errorSummary ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(knownPath))
+        {
+            try
+            {
+                var fullPath = Path.GetFullPath(knownPath);
+                var fileName = Path.GetFileName(fullPath);
+                if (!string.IsNullOrWhiteSpace(fileName))
+                {
+                    sanitized = sanitized.Replace(fullPath, fileName, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch (ArgumentException)
+            {
+            }
+            catch (NotSupportedException)
+            {
+            }
+            catch (PathTooLongException)
+            {
+            }
+        }
+
+        sanitized = LocalPathRegex.Replace(sanitized, "<local-path>");
+        if (sanitized.Length > 240)
+        {
+            sanitized = sanitized[..240].TrimEnd() + "...";
+        }
+
+        return string.IsNullOrWhiteSpace(sanitized) ? "操作失败，未提供错误摘要。" : sanitized;
+    }
+
     private static string BuildActivityMetadataJson(
         string backupPath,
         BackupManifest manifest,
@@ -460,7 +502,10 @@ public sealed partial class LocalBackupService
 
         if (result.Errors.Count > 0)
         {
-            metadata["errors"] = JsonSerializer.SerializeToNode(result.Errors);
+            var safeErrors = result.Errors
+                .Select(error => SanitizeBackupErrorSummary(error, result.BackupPath))
+                .ToArray();
+            metadata["errors"] = JsonSerializer.SerializeToNode(safeErrors);
         }
 
         return TagQaMetadataIfNeeded(metadata.ToJsonString(), tagForQaScope, Path.GetFileName(result.BackupPath));

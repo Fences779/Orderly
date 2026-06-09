@@ -66,11 +66,12 @@ public sealed partial class LocalBackupService
         }
         catch (Exception ex)
         {
+            var errorSummary = SanitizeBackupErrorSummary(ex.Message, outputPath);
             await _syncService.MarkFailedAsync(
                 BackupEntityType,
                 entityId,
-                ex.Message,
-                BuildFailureMetadataJson(outputPath, createdBy, ex.Message, tagForQaScope),
+                errorSummary,
+                BuildFailureMetadataJson(outputPath, createdBy, errorSummary, tagForQaScope),
                 cancellationToken);
 
             throw;

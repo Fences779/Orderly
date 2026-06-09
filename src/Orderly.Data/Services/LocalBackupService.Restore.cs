@@ -149,6 +149,7 @@ public sealed partial class LocalBackupService
         }
         catch (Exception ex)
         {
+            var errorSummary = SanitizeBackupErrorSummary(ex.Message, backupPath);
             if (!restoreStartedLogged)
             {
                 await _activityLogRepository.CreateAsync(new ActivityLog
@@ -175,14 +176,14 @@ public sealed partial class LocalBackupService
             var failureMetadata = BuildRestoreFailureMetadataJson(
                 backupPath,
                 createdBy,
-                ex.Message,
+                errorSummary,
                 inspection.TargetState,
                 tagForQaScope);
 
             await _syncService.MarkFailedAsync(
                 RestoreEntityType,
                 entityId,
-                ex.Message,
+                errorSummary,
                 failureMetadata,
                 cancellationToken);
 
@@ -190,7 +191,7 @@ public sealed partial class LocalBackupService
             {
                 Type = ActivityType.BackupRestoreFailed,
                 Title = "恢复本地备份失败",
-                Description = $"恢复失败：{ex.Message}",
+                Description = $"恢复失败：{errorSummary}",
                 Operator = RestoreOperator,
                 MetadataJson = failureMetadata
             }, cancellationToken);
