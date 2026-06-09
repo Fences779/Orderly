@@ -29,8 +29,9 @@ public sealed class StringNarrationGatewayClient
     {
         var endpoint = _options.GetEndpointUri();
         _options.ValidateToken();
+        var sendTokenInBody = _options.ShouldSendTokenInBody(endpoint);
 
-        object requestPayload = _options.SendTokenInBody
+        object requestPayload = sendTokenInBody
             ? new
             {
                 action,

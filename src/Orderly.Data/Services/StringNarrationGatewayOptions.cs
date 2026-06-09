@@ -7,7 +7,9 @@ public sealed class StringNarrationGatewayOptions
     public const string TimeoutEnvironmentVariableName = "ADMIN_PC_GATEWAY_TIMEOUT_SECONDS";
     public const string SendTokenInBodyEnvironmentVariableName = "ADMIN_PC_GATEWAY_SEND_TOKEN_IN_BODY";
     public const string AllowedHostsEnvironmentVariableName = "ADMIN_PC_GATEWAY_ALLOWED_HOSTS";
+    public const string MinTokenLengthEnvironmentVariableName = "ADMIN_PC_GATEWAY_MIN_TOKEN_LENGTH";
     public const int DefaultTimeoutSeconds = 15;
+    public const int DefaultMinTokenLength = 24;
 
     public StringNarrationGatewayOptions(string endpoint, string token, int timeoutSeconds, bool sendTokenInBody = false)
     {
@@ -66,6 +68,27 @@ public sealed class StringNarrationGatewayOptions
         {
             throw new InvalidOperationException($"{TokenEnvironmentVariableName} 未配置，无法调用串述 adminPcGateway。");
         }
+
+        var minLength = ReadMinTokenLength();
+        if (Token.Length < minLength || IsPlaceholderToken(Token))
+        {
+            throw new InvalidOperationException($"{TokenEnvironmentVariableName} 强度不足，长度至少需要 {minLength} 位，且不能使用占位 token。");
+        }
+    }
+
+    public bool ShouldSendTokenInBody(Uri endpoint)
+    {
+        if (!SendTokenInBody)
+        {
+            return false;
+        }
+
+        if (endpoint.IsLoopback)
+        {
+            return true;
+        }
+
+        throw new InvalidOperationException($"{SendTokenInBodyEnvironmentVariableName} 只能用于本机回环调试，生产链路必须通过 Authorization header 传递 token。");
     }
 
     private static int NormalizeTimeout(int timeoutSeconds)
@@ -78,5 +101,16 @@ public sealed class StringNarrationGatewayOptions
         return string.Equals(value?.Trim(), "1", StringComparison.OrdinalIgnoreCase)
             || string.Equals(value?.Trim(), "true", StringComparison.OrdinalIgnoreCase)
             || string.Equals(value?.Trim(), "yes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ReadMinTokenLength()
+    {
+        _ = int.TryParse(Environment.GetEnvironmentVariable(MinTokenLengthEnvironmentVariableName), out var minLength);
+        return minLength <= 0 ? DefaultMinTokenLength : Math.Clamp(minLength, 8, 128);
+    }
+
+    private static bool IsPlaceholderToken(string token)
+    {
+        return token.Trim().ToLowerInvariant() is "replace-me" or "changeme" or "change-me" or "test" or "token" or "password";
     }
 }

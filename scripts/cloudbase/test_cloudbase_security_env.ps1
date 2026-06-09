@@ -184,12 +184,28 @@ $resolvedEnvId = Resolve-CloudBaseEnvId -ExplicitEnvId $EnvId
 $valuesFileValues = Read-ValuesFile -Path $ValuesFile
 $cloudBaseValues = Read-CloudBaseConfiguredValues
 $failures = New-Object System.Collections.Generic.List[string]
+$minimumGatewayTokenLength = 24
 
 foreach ($name in $RequiredVariable) {
     $value = Resolve-VariableValue -Name $name -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
     $allowDefault = $name -in @('ORDERLY_ALLOWED_WORKSPACE_IDS', 'ORDERLY_INVENTORY_WORKSPACE_ID')
     if (Test-WeakValue -Value $value -AllowDefault:$allowDefault) {
         $failures.Add("Missing or weak required variable: $name")
+    }
+}
+
+$adminGatewayEndpoint = Resolve-VariableValue -Name 'ADMIN_PC_GATEWAY_ENDPOINT' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+$adminGatewayToken = Resolve-VariableValue -Name 'ADMIN_PC_GATEWAY_TOKEN' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+if ((-not [string]::IsNullOrWhiteSpace($adminGatewayEndpoint)) -or (-not [string]::IsNullOrWhiteSpace($adminGatewayToken))) {
+    if (Test-WeakValue -Value $adminGatewayToken) {
+        $failures.Add('Missing or weak required variable: ADMIN_PC_GATEWAY_TOKEN')
+    }
+}
+
+foreach ($name in @('ADMIN_PC_GATEWAY_TOKEN', 'ORDERLY_INVENTORY_GATEWAY_TOKEN')) {
+    $value = Resolve-VariableValue -Name $name -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+    if ((-not [string]::IsNullOrWhiteSpace($value)) -and $value.Trim().Length -lt $minimumGatewayTokenLength) {
+        $failures.Add("$name must be at least $minimumGatewayTokenLength characters.")
     }
 }
 
