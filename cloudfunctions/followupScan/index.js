@@ -2,6 +2,7 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 
 function now() {
@@ -37,6 +38,10 @@ function requireOperatorId() {
   const operatorId = cloud.getWXContext().OPENID || ''
   if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
   return { ok: true, operatorId }
+}
+
+function isAutoScanEnabled() {
+  return process.env[AUTO_SCAN_ENV_NAME] === '1'
 }
 
 function normalizeDirection(value) {
@@ -329,18 +334,19 @@ async function taskAction(event, operatorId) {
 
 exports.main = async (event) => {
   event = event || {}
+  const mode = normalizeText(event.mode)
   const workspaceId = event.workspaceId || 'default'
   let operatorId = ''
-  if (USER_AUTH_MODES.indexOf(event.mode) >= 0) {
+  if (USER_AUTH_MODES.indexOf(mode) >= 0) {
     const auth = requireOperatorId()
     if (!auth.ok) return auth
     operatorId = auth.operatorId
   }
 
-  if (event.mode === 'inventoryManagementDashboard') return inventoryManagementDashboard(event, workspaceId)
-  if (event.mode === 'cashflowHealthDashboard') return cashflowHealthDashboard(event, workspaceId)
-  if (event.mode === 'taskAction') return taskAction(event, operatorId)
-  if (event.mode === 'manualCreate') {
+  if (mode === 'inventoryManagementDashboard') return inventoryManagementDashboard(event, workspaceId)
+  if (mode === 'cashflowHealthDashboard') return cashflowHealthDashboard(event, workspaceId)
+  if (mode === 'taskAction') return taskAction(event, operatorId)
+  if (mode === 'manualCreate') {
     const task = Object.assign({
       workspaceId,
       triggerType: 'manual',
@@ -363,18 +369,18 @@ exports.main = async (event) => {
     await log(workspaceId, 'deal', task.dealId, 'followup_manual_create', '手动跟进任务创建', operatorId)
     return { ok: true, task: Object.assign({}, task, { _id: added._id }) }
   }
-  if (event.mode === 'templateSave') {
+  if (mode === 'templateSave') {
     const template = Object.assign({ workspaceId, enabled: true, useCount: 0 }, event.template || {}, { workspaceId })
     const saved = await upsertById('message_templates', template)
     return { ok: true, template: saved }
   }
-  if (event.mode === 'templateUse') {
+  if (mode === 'templateUse') {
     if (!event.templateId) return { ok: false, message: '缺少 templateId' }
     const _ = db.command
     await db.collection('message_templates').doc(event.templateId).update({ data: { useCount: _.inc(1), updatedAt: now() } })
     return { ok: true }
   }
-  if (event.mode === 'skuSave') {
+  if (mode === 'skuSave') {
     const rawSku = event.sku || {}
     let baseSku = {}
     if (rawSku._id) {
@@ -403,7 +409,7 @@ exports.main = async (event) => {
     const saved = await upsertById('sku_catalog', sku)
     return { ok: true, sku: saved }
   }
-  if (event.mode === 'inventoryMovementSave') {
+  if (mode === 'inventoryMovementSave') {
     const movementInput = event.movement || {}
     const movementType = normalizeMovementType(movementInput.movementType || movementInput.type)
     const quantity = normalizeNumber(movementInput.quantity)
@@ -450,7 +456,7 @@ exports.main = async (event) => {
     await db.collection('sku_catalog').doc(skuId).update({ data: stockPatch })
     return { ok: true, movement: Object.assign({}, movement, { _id: added._id }) }
   }
-  if (event.mode === 'cashflowSave') {
+  if (mode === 'cashflowSave') {
     const input = event.entry || {}
     const amount = normalizeNumber(input.amount)
     if (!amount) return { ok: false, message: '现金流金额不能为空' }
@@ -474,6 +480,11 @@ exports.main = async (event) => {
     })
     const saved = await upsertById('cashflow_entries', entry)
     return { ok: true, entry: saved }
+  }
+
+  if (mode) return { ok: false, code: 'unsupported_mode', message: '不支持的 mode。' }
+  if (!cloud.getWXContext().OPENID && !isAutoScanEnabled()) {
+    return { ok: false, code: 'auto_scan_disabled', message: '自动跟进扫描未启用。' }
   }
 
   const deals = (await db.collection('deals').where({ workspaceId }).limit(1000).get()).data || []
