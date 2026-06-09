@@ -70,67 +70,73 @@ public sealed class LocalAuthService : ILocalAuthService
         var recoveryHash = ComputeHash(normalizedRecoveryKey, recoverySalt, DefaultRecoveryIterations);
 
         var dataKey = RandomNumberGenerator.GetBytes(32);
-        var wrapped = WrapDataKey(request.MasterPassword, passwordSalt, DefaultPasswordIterations, dataKey);
-        var recoveryWrapped = WrapDataKey(normalizedRecoveryKey, recoverySalt, DefaultRecoveryIterations, dataKey);
-
-        var account = new LocalAccount
+        try
         {
-            AccountId = accountId,
-            Username = username,
-            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? username : request.DisplayName.Trim(),
-            PasswordHash = passwordHash,
-            PasswordSalt = passwordSalt,
-            PasswordIterations = DefaultPasswordIterations,
-            PinHash = pinHash,
-            PinSalt = pinSalt,
-            PinIterations = DefaultPinIterations,
-            RecoveryKeyHash = recoveryHash,
-            RecoveryKeySalt = recoverySalt,
-            RecoveryKeyIterations = DefaultRecoveryIterations,
-            RecoveryEncryptedDataKey = recoveryWrapped.Ciphertext,
-            RecoveryDataKeyNonce = recoveryWrapped.Nonce,
-            RecoveryDataKeyTag = recoveryWrapped.Tag,
-            EncryptedDataKey = wrapped.Ciphertext,
-            DataKeyNonce = wrapped.Nonce,
-            DataKeyTag = wrapped.Tag,
-            DatabasePath = databasePath,
-            Role = LocalAccountRole.Owner,
-            IsEnabled = true,
-            CreatedAt = now,
-            UpdatedAt = now,
-            LastLoginAt = now
-        };
+            var wrapped = WrapDataKey(request.MasterPassword, passwordSalt, DefaultPasswordIterations, dataKey);
+            var recoveryWrapped = WrapDataKey(normalizedRecoveryKey, recoverySalt, DefaultRecoveryIterations, dataKey);
 
-        await _accountRepository.CreateAsync(account, cancellationToken);
-
-        var migrationPlan = await _legacyMigrationService.BuildPlanAsync(accountId, cancellationToken);
-        LegacyDatabaseMigrationResult? migrationResult = null;
-        if (request.ImportLegacyDatabase && migrationPlan.LegacyDatabaseExists)
-        {
-            if (migrationPlan.State == LegacyDatabaseMigrationState.ReadyToCopy
-                || migrationPlan.State == LegacyDatabaseMigrationState.TargetAlreadyExists)
+            var account = new LocalAccount
             {
-                migrationResult = await _legacyMigrationService.CopyAsync(
-                    migrationPlan,
-                    overwriteTarget: request.OverwriteTargetOnLegacyImport,
-                    cancellationToken);
+                AccountId = accountId,
+                Username = username,
+                DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? username : request.DisplayName.Trim(),
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt,
+                PasswordIterations = DefaultPasswordIterations,
+                PinHash = pinHash,
+                PinSalt = pinSalt,
+                PinIterations = DefaultPinIterations,
+                RecoveryKeyHash = recoveryHash,
+                RecoveryKeySalt = recoverySalt,
+                RecoveryKeyIterations = DefaultRecoveryIterations,
+                RecoveryEncryptedDataKey = recoveryWrapped.Ciphertext,
+                RecoveryDataKeyNonce = recoveryWrapped.Nonce,
+                RecoveryDataKeyTag = recoveryWrapped.Tag,
+                EncryptedDataKey = wrapped.Ciphertext,
+                DataKeyNonce = wrapped.Nonce,
+                DataKeyTag = wrapped.Tag,
+                DatabasePath = databasePath,
+                Role = LocalAccountRole.Owner,
+                IsEnabled = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+                LastLoginAt = now
+            };
+
+            await _accountRepository.CreateAsync(account, cancellationToken);
+
+            var migrationPlan = await _legacyMigrationService.BuildPlanAsync(accountId, cancellationToken);
+            LegacyDatabaseMigrationResult? migrationResult = null;
+            if (request.ImportLegacyDatabase && migrationPlan.LegacyDatabaseExists)
+            {
+                if (migrationPlan.State == LegacyDatabaseMigrationState.ReadyToCopy
+                    || migrationPlan.State == LegacyDatabaseMigrationState.TargetAlreadyExists)
+                {
+                    migrationResult = await _legacyMigrationService.CopyAsync(
+                        migrationPlan,
+                        overwriteTarget: request.OverwriteTargetOnLegacyImport,
+                        cancellationToken);
+                }
             }
+
+            var accountConnectionFactory = new SqliteConnectionFactory(databasePath);
+            var initializer = new DatabaseInitializer(accountConnectionFactory);
+            await initializer.InitializeAsync(cancellationToken);
+
+            var session = CreateSession(account, dataKey, now);
+            _sessionContextService.SetCurrent(session);
+            return new CreateFirstOwnerResult
+            {
+                Session = session,
+                RecoveryKey = recoveryKey,
+                LegacyMigrationPlan = migrationPlan,
+                LegacyMigrationResult = migrationResult
+            };
         }
-
-        var accountConnectionFactory = new SqliteConnectionFactory(databasePath);
-        var initializer = new DatabaseInitializer(accountConnectionFactory);
-        await initializer.InitializeAsync(cancellationToken);
-
-        var session = CreateSession(account, dataKey, now);
-        _sessionContextService.SetCurrent(session);
-
-        return new CreateFirstOwnerResult
+        finally
         {
-            Session = session,
-            RecoveryKey = recoveryKey,
-            LegacyMigrationPlan = migrationPlan,
-            LegacyMigrationResult = migrationResult
-        };
+            CryptographicOperations.ZeroMemory(dataKey);
+        }
     }
 
     public async Task<LocalSignInResult> SignInAsync(string username, string masterPassword, CancellationToken cancellationToken = default)
@@ -172,13 +178,20 @@ public sealed class LocalAuthService : ILocalAuthService
             return LocalSignInResult.Failure("主密码验证通过，但密钥解包失败。");
         }
 
-        account.LastLoginAt = DateTime.Now;
-        account.UpdatedAt = account.LastLoginAt.Value;
-        await _accountRepository.UpdateAsync(account, cancellationToken);
+        try
+        {
+            account.LastLoginAt = DateTime.Now;
+            account.UpdatedAt = account.LastLoginAt.Value;
+            await _accountRepository.UpdateAsync(account, cancellationToken);
 
-        var session = CreateSession(account, dataKey, account.LastLoginAt.Value);
-        _sessionContextService.SetCurrent(session);
-        return LocalSignInResult.Success(session);
+            var session = CreateSession(account, dataKey, account.LastLoginAt.Value);
+            _sessionContextService.SetCurrent(session);
+            return LocalSignInResult.Success(session);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(dataKey);
+        }
     }
 
     public async Task<bool> VerifyPinAsync(string accountId, string pin, CancellationToken cancellationToken = default)
@@ -252,7 +265,14 @@ public sealed class LocalAuthService : ILocalAuthService
     private static bool VerifyHash(string value, byte[] salt, int iterations, byte[] expectedHash)
     {
         var actualHash = ComputeHash(value, salt, iterations);
-        return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        try
+        {
+            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(actualHash);
+        }
     }
 
     private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string masterPassword, byte[] passwordSalt, int iterations, byte[] dataKey)
@@ -262,9 +282,16 @@ public sealed class LocalAuthService : ILocalAuthService
         var ciphertext = new byte[dataKey.Length];
         var tag = new byte[16];
 
-        using var aes = new AesGcm(key, tag.Length);
-        aes.Encrypt(nonce, dataKey, ciphertext, tag);
-        return (ciphertext, nonce, tag);
+        try
+        {
+            using var aes = new AesGcm(key, tag.Length);
+            aes.Encrypt(nonce, dataKey, ciphertext, tag);
+            return (ciphertext, nonce, tag);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
     }
 
     private static byte[] UnwrapDataKey(
@@ -278,9 +305,16 @@ public sealed class LocalAuthService : ILocalAuthService
         var key = ComputeHash(masterPassword, passwordSalt, iterations);
         var dataKey = new byte[encryptedDataKey.Length];
 
-        using var aes = new AesGcm(key, tag.Length);
-        aes.Decrypt(nonce, encryptedDataKey, tag, dataKey);
-        return dataKey;
+        try
+        {
+            using var aes = new AesGcm(key, tag.Length);
+            aes.Decrypt(nonce, encryptedDataKey, tag, dataKey);
+            return dataKey;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
     }
 
     private static string GenerateRecoveryKey()

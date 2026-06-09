@@ -86,7 +86,14 @@ public sealed partial class LocalAccountManagementService
     private static bool VerifyHash(string value, byte[] salt, int iterations, byte[] expectedHash)
     {
         var actualHash = ComputeHash(value, salt, iterations);
-        return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        try
+        {
+            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(actualHash);
+        }
     }
 
     private static void DeleteAccountWorkspace(string databasePath)
@@ -162,7 +169,14 @@ public sealed partial class LocalAccountManagementService
     private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string secret, byte[] salt, int iterations, byte[] dataKey)
     {
         var key = ComputeHash(secret, salt, iterations);
-        return WrapDataKeyWithKey(key, dataKey);
+        try
+        {
+            return WrapDataKeyWithKey(key, dataKey);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
     }
 
     private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKeyWithKey(byte[] key, byte[] dataKey)
@@ -179,7 +193,14 @@ public sealed partial class LocalAccountManagementService
     private static byte[] UnwrapDataKey(string secret, byte[] salt, int iterations, byte[] ciphertext, byte[] nonce, byte[] tag)
     {
         var key = ComputeHash(secret, salt, iterations);
-        return UnwrapDataKeyWithKey(key, ciphertext, nonce, tag);
+        try
+        {
+            return UnwrapDataKeyWithKey(key, ciphertext, nonce, tag);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
     }
 
     private static byte[] UnwrapDataKeyWithKey(byte[] key, byte[] ciphertext, byte[] nonce, byte[] tag)

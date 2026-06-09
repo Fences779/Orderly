@@ -18,7 +18,7 @@ public sealed partial class LocalAccountManagementService
             ownerPin,
             cancellationToken);
 
-        Array.Clear(ownerDataKey, 0, ownerDataKey.Length);
+        CryptographicOperations.ZeroMemory(ownerDataKey);
     }
 
     private async Task<(LocalAccount Owner, byte[] OwnerDataKey)> VerifyOwnerCredentialsInternalAsync(
@@ -154,19 +154,26 @@ public sealed partial class LocalAccountManagementService
         }
 
         var memberDataKey = UnwrapDataKeyWithKey(ownerSession.DataKey, member.AdminEncryptedDataKey, member.AdminDataKeyNonce, member.AdminDataKeyTag);
-        var passwordSalt = RandomNumberGenerator.GetBytes(16);
-        var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-        var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
+        try
+        {
+            var passwordSalt = RandomNumberGenerator.GetBytes(16);
+            var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
+            var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
 
-        member.PasswordSalt = passwordSalt;
-        member.PasswordHash = passwordHash;
-        member.PasswordIterations = DefaultPasswordIterations;
-        member.EncryptedDataKey = wrappedByPassword.Ciphertext;
-        member.DataKeyNonce = wrappedByPassword.Nonce;
-        member.DataKeyTag = wrappedByPassword.Tag;
-        member.UpdatedAt = DateTime.Now;
+            member.PasswordSalt = passwordSalt;
+            member.PasswordHash = passwordHash;
+            member.PasswordIterations = DefaultPasswordIterations;
+            member.EncryptedDataKey = wrappedByPassword.Ciphertext;
+            member.DataKeyNonce = wrappedByPassword.Nonce;
+            member.DataKeyTag = wrappedByPassword.Tag;
+            member.UpdatedAt = DateTime.Now;
 
-        await _accountRepository.UpdateAsync(member, cancellationToken);
+            await _accountRepository.UpdateAsync(member, cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(memberDataKey);
+        }
     }
 
     public async Task VerifyMemberPasswordResetAsync(
@@ -185,7 +192,7 @@ public sealed partial class LocalAccountManagementService
             ownerPin,
             cancellationToken);
 
-        Array.Clear(ownerDataKey, 0, ownerDataKey.Length);
+        CryptographicOperations.ZeroMemory(ownerDataKey);
         GC.KeepAlive(member);
     }
 
@@ -226,9 +233,10 @@ public sealed partial class LocalAccountManagementService
             ownerPin,
             cancellationToken);
 
+        byte[]? memberDataKey = null;
         try
         {
-            var memberDataKey = UnwrapDataKeyWithKey(ownerDataKey, member.AdminEncryptedDataKey, member.AdminDataKeyNonce, member.AdminDataKeyTag);
+            memberDataKey = UnwrapDataKeyWithKey(ownerDataKey, member.AdminEncryptedDataKey, member.AdminDataKeyNonce, member.AdminDataKeyTag);
             var passwordSalt = RandomNumberGenerator.GetBytes(16);
             var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
             var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
@@ -245,7 +253,12 @@ public sealed partial class LocalAccountManagementService
         }
         finally
         {
-            Array.Clear(ownerDataKey, 0, ownerDataKey.Length);
+            if (memberDataKey is not null)
+            {
+                CryptographicOperations.ZeroMemory(memberDataKey);
+            }
+
+            CryptographicOperations.ZeroMemory(ownerDataKey);
         }
     }
 
@@ -302,18 +315,25 @@ public sealed partial class LocalAccountManagementService
             owner.RecoveryDataKeyNonce,
             owner.RecoveryDataKeyTag);
 
-        var passwordSalt = RandomNumberGenerator.GetBytes(16);
-        var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-        var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, ownerDataKey);
+        try
+        {
+            var passwordSalt = RandomNumberGenerator.GetBytes(16);
+            var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
+            var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, ownerDataKey);
 
-        owner.PasswordSalt = passwordSalt;
-        owner.PasswordHash = passwordHash;
-        owner.PasswordIterations = DefaultPasswordIterations;
-        owner.EncryptedDataKey = wrappedByPassword.Ciphertext;
-        owner.DataKeyNonce = wrappedByPassword.Nonce;
-        owner.DataKeyTag = wrappedByPassword.Tag;
-        owner.UpdatedAt = DateTime.Now;
-        await _accountRepository.UpdateAsync(owner, cancellationToken);
+            owner.PasswordSalt = passwordSalt;
+            owner.PasswordHash = passwordHash;
+            owner.PasswordIterations = DefaultPasswordIterations;
+            owner.EncryptedDataKey = wrappedByPassword.Ciphertext;
+            owner.DataKeyNonce = wrappedByPassword.Nonce;
+            owner.DataKeyTag = wrappedByPassword.Tag;
+            owner.UpdatedAt = DateTime.Now;
+            await _accountRepository.UpdateAsync(owner, cancellationToken);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(ownerDataKey);
+        }
     }
 
     public async Task VerifyOwnerPasswordRecoveryAsync(
@@ -398,7 +418,7 @@ public sealed partial class LocalAccountManagementService
 
         if (!string.Equals(member.AdminOwnerAccountId, owner.AccountId, StringComparison.OrdinalIgnoreCase))
         {
-            Array.Clear(ownerDataKey, 0, ownerDataKey.Length);
+            CryptographicOperations.ZeroMemory(ownerDataKey);
             throw new InvalidOperationException("该成员账号不属于当前主账号，无法重置主密码。");
         }
 
