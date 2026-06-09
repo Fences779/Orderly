@@ -19,7 +19,12 @@ internal static class EncryptedColumnReader
             throw new InvalidOperationException($"Encrypted field {fieldName} is empty.");
         }
 
-        return decimal.Parse(decrypted, CultureInfo.InvariantCulture);
+        if (!decimal.TryParse(decrypted, NumberStyles.Number, CultureInfo.InvariantCulture, out var value))
+        {
+            throw new InvalidOperationException($"Encrypted field {fieldName} is not a valid decimal.");
+        }
+
+        return value;
     }
 
     public static double? ReadOptionalDouble(SqliteDataReader reader, int cipherIndex, IFieldEncryptionService fieldEncryptionService, string fieldName)
@@ -30,7 +35,13 @@ internal static class EncryptedColumnReader
             return null;
         }
 
-        return double.Parse(decrypted, CultureInfo.InvariantCulture);
+        if (!double.TryParse(decrypted, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value)
+            || !double.IsFinite(value))
+        {
+            throw new InvalidOperationException($"Encrypted field {fieldName} is not a valid double.");
+        }
+
+        return value;
     }
 
     public static DateTime ReadRequiredDateTime(SqliteDataReader reader, int cipherIndex, IFieldEncryptionService fieldEncryptionService, string fieldName)
@@ -41,7 +52,12 @@ internal static class EncryptedColumnReader
             throw new InvalidOperationException($"Encrypted field {fieldName} is empty.");
         }
 
-        return DateTime.Parse(decrypted, null, DateTimeStyles.RoundtripKind);
+        if (!DateTime.TryParse(decrypted, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var value))
+        {
+            throw new InvalidOperationException($"Encrypted field {fieldName} is not a valid DateTime.");
+        }
+
+        return value;
     }
 
     public static DateTime? ReadOptionalDateTime(SqliteDataReader reader, int cipherIndex, IFieldEncryptionService fieldEncryptionService, string fieldName)
@@ -52,7 +68,12 @@ internal static class EncryptedColumnReader
             return null;
         }
 
-        return DateTime.Parse(decrypted, null, DateTimeStyles.RoundtripKind);
+        if (!DateTime.TryParse(decrypted, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var value))
+        {
+            throw new InvalidOperationException($"Encrypted field {fieldName} is not a valid DateTime.");
+        }
+
+        return value;
     }
 
     private static string DecryptRequired(SqliteDataReader reader, int cipherIndex, IFieldEncryptionService fieldEncryptionService, string fieldName)
@@ -68,6 +89,13 @@ internal static class EncryptedColumnReader
             throw new InvalidOperationException($"Encrypted field {fieldName} is empty.");
         }
 
-        return fieldEncryptionService.Decrypt(cipher);
+        try
+        {
+            return fieldEncryptionService.Decrypt(cipher);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new InvalidOperationException($"Encrypted field {fieldName} cannot be decrypted.", ex);
+        }
     }
 }
