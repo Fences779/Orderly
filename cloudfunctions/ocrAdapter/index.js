@@ -37,7 +37,7 @@ exports.main = async (event) => {
     ok: true,
     provider: 'mock',
     fileID: event.fileID || '',
-    ocrText: '客户：想定制一条简约珍珠项链，生日送人，这周要，预算 300 左右，白色，高级一点。vx: lin_vx88',
+    ocrText: '客户：想定制一条简约珍珠项链，生日送人，这周要，预算 300 左右，白色，高级一点。',
     confidenceScore: 72,
     message: 'mock OCR 已返回示例文本，可直接修改后解析。'
   }
