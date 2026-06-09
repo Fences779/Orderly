@@ -4,6 +4,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_FILE_ID_LENGTH = 512
+const OCR_PROVIDERS = ['mock']
 
 function requireOperatorId() {
   const operatorId = cloud.getWXContext().OPENID || ''
@@ -17,6 +19,20 @@ function normalizeList(value) {
     .split(/[,\s，、;；]+/)
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+function normalizeText(value, maxLength = 128) {
+  return value == null ? '' : String(value).trim().slice(0, maxLength)
+}
+
+function normalizeProvider(value) {
+  const provider = normalizeText(value || 'mock', 32).toLowerCase()
+  return OCR_PROVIDERS.indexOf(provider) >= 0 ? provider : ''
+}
+
+function normalizeFileId(value) {
+  const fileID = normalizeText(value, MAX_FILE_ID_LENGTH)
+  return /[\r\n\u0000-\u001f\u007f]/.test(fileID) ? '' : fileID
 }
 
 function isAllowedOperatorId(operatorId) {
@@ -62,12 +78,16 @@ async function handleRequest(event) {
   const auth = requireOperatorId()
   if (!auth.ok) return auth
 
-  const provider = event.provider || process.env.OCR_PROVIDER || 'mock'
+  const provider = normalizeProvider(event.provider || process.env.OCR_PROVIDER || 'mock')
+  if (!provider) return { ok: false, code: 'unsupported_ocr_provider', message: 'OCR provider 不受支持。' }
+  const fileID = normalizeFileId(event.fileID)
+  if (event.fileID && !fileID) return { ok: false, code: 'invalid_file_id', message: 'fileID 非法。' }
+
   if (provider !== 'mock') {
     return {
       ok: true,
-      provider,
-      fileID: event.fileID || '',
+      provider: 'unconfigured',
+      fileID,
       ocrText: '',
       confidenceScore: 0,
       message: '当前 OCR provider 未配置真实密钥，已降级为空文本，可在页面手动粘贴修正。'
@@ -76,7 +96,7 @@ async function handleRequest(event) {
   return {
     ok: true,
     provider: 'mock',
-    fileID: event.fileID || '',
+    fileID,
     ocrText: '客户：想定制一条简约珍珠项链，生日送人，这周要，预算 300 左右，白色，高级一点。',
     confidenceScore: 72,
     message: 'mock OCR 已返回示例文本，可直接修改后解析。'
