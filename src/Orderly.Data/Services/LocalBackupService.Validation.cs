@@ -37,6 +37,16 @@ public sealed partial class LocalBackupService
             };
         }
 
+        if (IsLinkedBackupPath(backupPath))
+        {
+            errors.Add("备份文件不能是链接文件。");
+            return new BackupValidationResult
+            {
+                BackupPath = backupPath,
+                Errors = errors
+            };
+        }
+
         if (!File.Exists(backupPath))
         {
             errors.Add("备份文件不存在。");

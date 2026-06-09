@@ -56,6 +56,11 @@ public sealed class LegacyDatabaseMigrationService : ILegacyDatabaseMigrationSer
             throw new FileNotFoundException("Legacy database not found.", plan.LegacyDatabasePath);
         }
 
+        if (LocalDataFileSecurity.IsReparsePoint(plan.LegacyDatabasePath))
+        {
+            throw new InvalidOperationException("Legacy database source cannot be a linked file.");
+        }
+
         if (plan.State == LegacyDatabaseMigrationState.SourceAndTargetAreSameFile)
         {
             return Task.FromResult(new LegacyDatabaseMigrationResult
@@ -77,6 +82,11 @@ public sealed class LegacyDatabaseMigrationService : ILegacyDatabaseMigrationSer
         if (targetExists && !overwriteTarget)
         {
             throw new InvalidOperationException("Target account database already exists. Explicit overwrite is required.");
+        }
+
+        if (LocalDataFileSecurity.IsReparsePoint(plan.TargetDatabasePath))
+        {
+            throw new InvalidOperationException("Target account database cannot be a linked file.");
         }
 
         File.Copy(plan.LegacyDatabasePath, plan.TargetDatabasePath, overwriteTarget);

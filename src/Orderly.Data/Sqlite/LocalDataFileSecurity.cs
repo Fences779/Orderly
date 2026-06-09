@@ -41,9 +41,26 @@ public static class LocalDataFileSecurity
 
     public static bool IsReparsePoint(string path)
     {
-        return !string.IsNullOrWhiteSpace(path)
-            && (File.Exists(path) || Directory.Exists(path))
-            && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (Exception ex) when (
+            ex is FileNotFoundException
+                or DirectoryNotFoundException
+                or IOException
+                or UnauthorizedAccessException
+                or ArgumentException
+                or NotSupportedException
+                or PathTooLongException)
+        {
+            return false;
+        }
     }
 
     [SupportedOSPlatform("windows")]

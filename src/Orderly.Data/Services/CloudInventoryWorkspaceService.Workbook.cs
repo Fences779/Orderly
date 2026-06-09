@@ -15,12 +15,7 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static List<InventoryWorkbookRow> LoadWorkbookRows(string workbookPath, out List<InventoryImportRowError> errors)
     {
-        if (!File.Exists(workbookPath))
-        {
-            throw new FileNotFoundException("未找到要导入的 Excel 文件。", workbookPath);
-        }
-
-        var fileInfo = new FileInfo(workbookPath);
+        var fileInfo = GetSafeExistingWorkbookFileInfo(workbookPath);
         if (fileInfo.Length > MaxInventoryWorkbookBytes)
         {
             throw new InvalidOperationException($"Excel 文件超过导入上限（{MaxInventoryWorkbookBytes / 1024 / 1024}MB）。");
@@ -126,6 +121,7 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static void WriteWorkbook(string workbookPath, IReadOnlyList<InventoryWorkbookRow> rows)
     {
+        EnsureWorkbookWriteTargetIsSafe(workbookPath);
         var directory = Path.GetDirectoryName(workbookPath);
         if (!string.IsNullOrWhiteSpace(directory))
         {
@@ -174,10 +170,20 @@ public sealed partial class CloudInventoryWorkspaceService
             return string.Empty;
         }
 
+        if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
+        {
+            throw new InvalidOperationException("Excel 文件不能是链接文件。");
+        }
+
         var directory = Path.GetDirectoryName(workbookPath) ?? string.Empty;
         var fileName = Path.GetFileNameWithoutExtension(workbookPath);
         var extension = Path.GetExtension(workbookPath);
         var backupPath = Path.Combine(directory, $"{fileName}.{DateTime.Now.ToString(WorkbookBackupTimestampFormat, CultureInfo.InvariantCulture)}.bak{extension}");
+        if (LocalDataFileSecurity.IsReparsePoint(backupPath))
+        {
+            throw new InvalidOperationException("Excel 备份文件不能是链接文件。");
+        }
+
         File.Copy(workbookPath, backupPath, overwrite: true);
         LocalDataFileSecurity.HardenFile(backupPath);
         PruneWorkbookBackups(directory, fileName, extension, backupPath);
@@ -437,8 +443,36 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static string ComputeFileHash(string path)
     {
+        if (LocalDataFileSecurity.IsReparsePoint(path))
+        {
+            throw new InvalidOperationException("Excel 文件不能是链接文件。");
+        }
+
         using var stream = File.OpenRead(path);
         var hash = SHA256.HashData(stream);
         return Convert.ToHexString(hash);
+    }
+
+    private static FileInfo GetSafeExistingWorkbookFileInfo(string workbookPath)
+    {
+        if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
+        {
+            throw new InvalidOperationException("Excel 文件不能是链接文件。");
+        }
+
+        if (!File.Exists(workbookPath))
+        {
+            throw new FileNotFoundException("未找到要导入的 Excel 文件。", workbookPath);
+        }
+
+        return new FileInfo(workbookPath);
+    }
+
+    private static void EnsureWorkbookWriteTargetIsSafe(string workbookPath)
+    {
+        if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
+        {
+            throw new InvalidOperationException("Excel 导出文件不能是链接文件。");
+        }
     }
 }

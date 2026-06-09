@@ -134,6 +134,19 @@ public sealed partial class LocalBackupService
         return false;
     }
 
+    private static bool IsLinkedBackupPath(string backupPath)
+    {
+        return LocalDataFileSecurity.IsReparsePoint(backupPath);
+    }
+
+    private static void EnsureBackupPathIsNotLinked(string backupPath)
+    {
+        if (IsLinkedBackupPath(backupPath))
+        {
+            throw new InvalidOperationException("备份文件不能是链接文件。");
+        }
+    }
+
     private static bool IsQaTaggedBackup(BackupManifest? manifest)
     {
         if (manifest is null)
