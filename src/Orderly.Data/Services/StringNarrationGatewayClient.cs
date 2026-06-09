@@ -54,7 +54,7 @@ public sealed class StringNarrationGatewayClient
         }
         catch (HttpRequestException ex)
         {
-            throw new InvalidOperationException($"连接串述 adminPcGateway 失败：{ex.Message}", ex);
+            throw new InvalidOperationException("连接串述 adminPcGateway 失败，请检查 endpoint、网络和 TLS 配置。", ex);
         }
 
         using var _ = response;
