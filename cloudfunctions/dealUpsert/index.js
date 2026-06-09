@@ -9,7 +9,7 @@ const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
 
 const STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing', 'quote_sent', 'waiting_deposit', 'scheduled', 'in_production', 'ready_to_ship', 'shipped', 'received', 'completed', 'repurchase_due', 'dormant', 'lost']
-const DEAL_FIELDS = ['_id', 'customerId', 'title', 'sourceEntry', 'dealStage', 'priorityLevel', 'intentCategory', 'demandSummary', 'styleTags', 'materialTags', 'sizeSpec', 'colorPref', 'budgetMin', 'budgetMax', 'deadlineAt', 'urgencyLevel', 'latestQuoteId', 'nextFollowupAt', 'lastInteractionAt', 'followupCount', 'lossReason', 'archivedAt', 'riskFlags']
+const DEAL_FIELDS = ['_id', 'customerId', 'title', 'sourceEntry', 'dealStage', 'priorityLevel', 'intentCategory', 'demandSummary', 'styleTags', 'materialTags', 'sizeSpec', 'colorPref', 'budgetMin', 'budgetMax', 'deadlineAt', 'urgencyLevel', 'lossReason', 'riskFlags']
 
 function now() {
   return new Date().toISOString()
@@ -113,6 +113,8 @@ async function handleRequest(event) {
   if (!input.title && !input.demandSummary) return { ok: false, message: 'deal 标题或需求摘要不能为空' }
   const stage = input.dealStage || 'new_inquiry'
   if (STAGES.indexOf(stage) < 0) return { ok: false, message: '非法 dealStage' }
+  const customer = (await db.collection('customers').doc(input.customerId).get()).data
+  if (!customer || customer.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
 
   const data = Object.assign({
     workspaceId,
@@ -156,6 +158,12 @@ async function handleRequest(event) {
     delete data._id
     delete data.createdAt
     delete data.createdBy
+    delete data.dealStage
+    delete data.latestQuoteId
+    delete data.nextFollowupAt
+    delete data.lastInteractionAt
+    delete data.followupCount
+    delete data.archivedAt
     await db.collection('deals').doc(input._id).update({ data })
     const deal = Object.assign({}, before, data, { _id: input._id })
     await log(workspaceId, input._id, 'deal_update', before, deal, 'deal 信息更新', operatorId)

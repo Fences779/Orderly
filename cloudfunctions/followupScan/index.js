@@ -11,7 +11,7 @@ const MAX_EVENT_BYTES = 65536
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
 const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
-const SKU_FIELDS = ['_id', 'name', 'title', 'category', 'basePrice', 'costPrice', 'purchasePrice', 'stockOnHand', 'stockReserved', 'safetyStock', 'stockUnit', 'unit', 'stockLocation', 'supplierName', 'supplier', 'inventoryRemark', 'remark', 'reorderEnabled', 'lastRestockedAt', 'tags', 'adjustableFields', 'enabled', 'sortOrder']
+const SKU_FIELDS = ['_id', 'name', 'title', 'category', 'basePrice', 'costPrice', 'safetyStock', 'stockUnit', 'unit', 'stockLocation', 'inventoryRemark', 'remark', 'reorderEnabled', 'lastRestockedAt', 'tags', 'adjustableFields', 'enabled', 'sortOrder']
 const INVENTORY_MOVEMENT_FIELDS = ['skuId', 'skuName', 'movementType', 'type', 'quantity', 'unitCost', 'totalCost', 'relatedOrderId', 'relatedOrderNo', 'note', 'occurredAt']
 const CASHFLOW_FIELDS = ['_id', 'direction', 'amount', 'category', 'paymentMethod', 'channel', 'status', 'relatedOrderId', 'orderId', 'relatedOrderNo', 'orderNo', 'relatedQuoteId', 'quoteId', 'relatedSkuId', 'skuId', 'counterpartyName', 'counterparty', 'note', 'occurredAt']
 

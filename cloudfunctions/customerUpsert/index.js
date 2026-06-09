@@ -7,7 +7,7 @@ const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
-const CUSTOMER_FIELDS = ['_id', 'name', 'platform', 'externalUid', 'contactHandle', 'sourceChannel', 'profileTags', 'preferenceNotes', 'tabooNotes', 'riskNotes', 'totalOrders', 'totalSpent', 'lastContactAt', 'lastPurchaseAt']
+const CUSTOMER_FIELDS = ['_id', 'name', 'platform', 'externalUid', 'contactHandle', 'sourceChannel', 'profileTags', 'preferenceNotes', 'tabooNotes', 'riskNotes']
 
 function now() {
   return new Date().toISOString()
@@ -147,6 +147,10 @@ async function handleRequest(event) {
     delete data._id
     delete data.createdAt
     delete data.createdBy
+    delete data.totalOrders
+    delete data.totalSpent
+    delete data.lastContactAt
+    delete data.lastPurchaseAt
     await db.collection('customers').doc(id).update({ data })
     const customer = Object.assign({}, existing, data, { _id: id })
     await log(workspaceId, id, 'customer_update', existing, customer, '客户档案更新', operatorId)
