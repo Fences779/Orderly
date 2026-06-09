@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using ClosedXML.Excel;
 using Orderly.Core.Models;
+using Orderly.Data.Sqlite;
 
 namespace Orderly.Data.Services;
 
@@ -9,6 +10,8 @@ public sealed partial class CloudInventoryWorkspaceService
 {
     private const long MaxInventoryWorkbookBytes = 10 * 1024 * 1024;
     private const int MaxInventoryWorkbookDataRows = 500;
+    private const int WorkbookBackupRetentionCount = 5;
+    private const string WorkbookBackupTimestampFormat = "yyyyMMdd-HHmmss";
 
     private static List<InventoryWorkbookRow> LoadWorkbookRows(string workbookPath, out List<InventoryImportRowError> errors)
     {
@@ -173,10 +176,97 @@ public sealed partial class CloudInventoryWorkspaceService
         var directory = Path.GetDirectoryName(workbookPath) ?? string.Empty;
         var fileName = Path.GetFileNameWithoutExtension(workbookPath);
         var extension = Path.GetExtension(workbookPath);
-        var backupPath = Path.Combine(directory, $"{fileName}.{DateTime.Now:yyyyMMdd-HHmmss}.bak{extension}");
+        var backupPath = Path.Combine(directory, $"{fileName}.{DateTime.Now.ToString(WorkbookBackupTimestampFormat, CultureInfo.InvariantCulture)}.bak{extension}");
         File.Copy(workbookPath, backupPath, overwrite: true);
+        LocalDataFileSecurity.HardenFile(backupPath);
+        PruneWorkbookBackups(directory, fileName, extension, backupPath);
         return backupPath;
     }
+
+    private static void PruneWorkbookBackups(string directory, string fileName, string extension, string currentBackupPath)
+    {
+        if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(extension))
+        {
+            return;
+        }
+
+        try
+        {
+            var directoryInfo = new DirectoryInfo(directory);
+            if (!directoryInfo.Exists)
+            {
+                return;
+            }
+
+            var fullDirectory = directoryInfo.FullName;
+            var currentFullPath = Path.GetFullPath(currentBackupPath);
+            var prefix = fileName + ".";
+            var suffix = ".bak" + extension;
+
+            var backups = directoryInfo
+                .EnumerateFiles($"{fileName}.*.bak{extension}", SearchOption.TopDirectoryOnly)
+                .Select(file => TryCreateWorkbookBackupCandidate(file, fullDirectory, prefix, suffix))
+                .Where(static candidate => candidate is not null)
+                .Select(static candidate => candidate!.Value)
+                .OrderByDescending(static candidate => candidate.CreatedAt)
+                .ThenByDescending(static candidate => candidate.FullPath, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            foreach (var expired in backups.Skip(WorkbookBackupRetentionCount))
+            {
+                if (string.Equals(expired.FullPath, currentFullPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                File.Delete(expired.FullPath);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+        catch (SystemException)
+        {
+        }
+    }
+
+    private static WorkbookBackupCandidate? TryCreateWorkbookBackupCandidate(
+        FileInfo file,
+        string expectedDirectory,
+        string prefix,
+        string suffix)
+    {
+        var fullPath = file.FullName;
+        if (!string.Equals(file.DirectoryName, expectedDirectory, StringComparison.OrdinalIgnoreCase)
+            || !file.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            || !file.Name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
+        {
+            return null;
+        }
+
+        var timestamp = file.Name.Substring(prefix.Length, file.Name.Length - prefix.Length - suffix.Length);
+        if (!DateTime.TryParseExact(
+                timestamp,
+                WorkbookBackupTimestampFormat,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeLocal,
+                out var createdAt))
+        {
+            return null;
+        }
+
+        return new WorkbookBackupCandidate(Path.GetFullPath(fullPath), createdAt);
+    }
+
+    private readonly record struct WorkbookBackupCandidate(string FullPath, DateTime CreatedAt);
 
     private static Dictionary<string, int> BuildHeaderMap(IXLRow headerRow)
     {
