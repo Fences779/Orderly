@@ -140,10 +140,10 @@ public sealed partial class CloudInventoryWorkspaceService
         {
             var row = rows[index];
             var excelRow = index + 2;
-            worksheet.Cell(excelRow, 1).Value = row.MaterialCode;
-            worksheet.Cell(excelRow, 2).Value = row.MaterialName;
-            worksheet.Cell(excelRow, 3).Value = row.Category;
-            worksheet.Cell(excelRow, 4).Value = row.StockUnit;
+            worksheet.Cell(excelRow, 1).Value = SafeExcelText(row.MaterialCode);
+            worksheet.Cell(excelRow, 2).Value = SafeExcelText(row.MaterialName);
+            worksheet.Cell(excelRow, 3).Value = SafeExcelText(row.Category);
+            worksheet.Cell(excelRow, 4).Value = SafeExcelText(row.StockUnit);
             worksheet.Cell(excelRow, 5).Value = row.CurrentStockQty;
             worksheet.Cell(excelRow, 6).Value = row.SafeStockQty;
             worksheet.Cell(excelRow, 7).Value = row.Sold7dQty;
@@ -151,16 +151,23 @@ public sealed partial class CloudInventoryWorkspaceService
             worksheet.Cell(excelRow, 9).Value = row.UnitCost;
             worksheet.Cell(excelRow, 10).Value = row.BraceletSalePrice;
             worksheet.Cell(excelRow, 11).Value = row.BraceletCostPrice;
-            worksheet.Cell(excelRow, 12).Value = row.SupplierName;
-            worksheet.Cell(excelRow, 13).Value = row.Remark;
-            worksheet.Cell(excelRow, 14).Value = row.Enabled ? "是" : "否";
-            worksheet.Cell(excelRow, 15).Value = row.LastRestockedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
-            worksheet.Cell(excelRow, 16).Value = row.SourceUpdatedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
+            worksheet.Cell(excelRow, 12).Value = SafeExcelText(row.SupplierName);
+            worksheet.Cell(excelRow, 13).Value = SafeExcelText(row.Remark);
+            worksheet.Cell(excelRow, 14).Value = SafeExcelText(row.Enabled ? "是" : "否");
+            worksheet.Cell(excelRow, 15).Value = SafeExcelText(row.LastRestockedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty);
+            worksheet.Cell(excelRow, 16).Value = SafeExcelText(row.SourceUpdatedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty);
         }
 
         worksheet.Columns().AdjustToContents();
         workbook.SaveAs(workbookPath);
         LocalDataFileSecurity.HardenFile(workbookPath);
+    }
+
+    private static string SafeExcelText(string? value)
+    {
+        var text = value ?? string.Empty;
+        var firstContent = text.FirstOrDefault(static ch => !char.IsWhiteSpace(ch));
+        return firstContent is '=' or '+' or '-' or '@' ? "'" + text : text;
     }
 
     private static string CreateWorkbookBackup(string workbookPath)
