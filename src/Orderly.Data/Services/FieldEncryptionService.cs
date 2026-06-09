@@ -22,16 +22,28 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
         var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
         var ciphertext = new byte[plaintextBytes.Length];
         var tag = new byte[16];
+        var payload = Array.Empty<byte>();
 
-        using var aes = new AesGcm(key, tag.Length);
-        aes.Encrypt(nonce, plaintextBytes, ciphertext, tag);
+        try
+        {
+            using var aes = new AesGcm(key, tag.Length);
+            aes.Encrypt(nonce, plaintextBytes, ciphertext, tag);
 
-        var payload = new byte[1 + nonce.Length + tag.Length + ciphertext.Length];
-        payload[0] = 1;
-        Buffer.BlockCopy(nonce, 0, payload, 1, nonce.Length);
-        Buffer.BlockCopy(tag, 0, payload, 1 + nonce.Length, tag.Length);
-        Buffer.BlockCopy(ciphertext, 0, payload, 1 + nonce.Length + tag.Length, ciphertext.Length);
-        return Prefix + Convert.ToBase64String(payload);
+            payload = new byte[1 + nonce.Length + tag.Length + ciphertext.Length];
+            payload[0] = 1;
+            Buffer.BlockCopy(nonce, 0, payload, 1, nonce.Length);
+            Buffer.BlockCopy(tag, 0, payload, 1 + nonce.Length, tag.Length);
+            Buffer.BlockCopy(ciphertext, 0, payload, 1 + nonce.Length + tag.Length, ciphertext.Length);
+            return Prefix + Convert.ToBase64String(payload);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(nonce);
+            CryptographicOperations.ZeroMemory(plaintextBytes);
+            CryptographicOperations.ZeroMemory(ciphertext);
+            CryptographicOperations.ZeroMemory(tag);
+            CryptographicOperations.ZeroMemory(payload);
+        }
     }
 
     public string Decrypt(string ciphertext)
@@ -59,14 +71,22 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
         }
 
         var key = RequireCurrentDataKey();
-        var nonce = payload[1..13];
-        var tag = payload[13..29];
-        var encryptedBytes = payload[29..];
+        var nonce = payload.AsSpan(1, 12);
+        var tag = payload.AsSpan(13, 16);
+        var encryptedBytes = payload.AsSpan(29);
         var plaintextBytes = new byte[encryptedBytes.Length];
 
-        using var aes = new AesGcm(key, tag.Length);
-        aes.Decrypt(nonce, encryptedBytes, tag, plaintextBytes);
-        return Encoding.UTF8.GetString(plaintextBytes);
+        try
+        {
+            using var aes = new AesGcm(key, tag.Length);
+            aes.Decrypt(nonce, encryptedBytes, tag, plaintextBytes);
+            return Encoding.UTF8.GetString(plaintextBytes);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plaintextBytes);
+            CryptographicOperations.ZeroMemory(payload);
+        }
     }
 
     private byte[] RequireCurrentDataKey()
