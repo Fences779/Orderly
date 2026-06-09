@@ -53,16 +53,21 @@ public partial class MainViewModel
                 SettingsStatusMessage = "未发现缓存目录，无需清理。";
                 return;
             }
+            if (HasReparsePoint(cachePath))
+            {
+                SettingsStatusMessage = "缓存目录为链接目录，已跳过清理。";
+                return;
+            }
 
             var removedFiles = 0;
             var removedDirectories = 0;
-            foreach (var file in Directory.GetFiles(cachePath, "*", SearchOption.AllDirectories))
+            foreach (var file in EnumerateCacheFiles(cachePath))
             {
                 File.Delete(file);
                 removedFiles++;
             }
 
-            foreach (var directory in Directory.GetDirectories(cachePath, "*", SearchOption.AllDirectories).OrderByDescending(path => path.Length))
+            foreach (var directory in EnumerateCacheDirectories(cachePath).OrderByDescending(path => path.Length))
             {
                 if (!Directory.EnumerateFileSystemEntries(directory).Any())
                 {
@@ -78,6 +83,63 @@ public partial class MainViewModel
             SettingsStatusMessage = $"清理缓存失败：{ex.Message}";
             ShowErrorMessage("清理缓存失败", ex);
         }
+    }
+
+    private static IEnumerable<string> EnumerateCacheFiles(string directory)
+    {
+        foreach (var file in Directory.EnumerateFiles(directory, "*", GetCacheEnumerationOptions()))
+        {
+            if (!HasReparsePoint(file))
+            {
+                yield return file;
+            }
+        }
+
+        foreach (var subdirectory in Directory.EnumerateDirectories(directory, "*", GetCacheEnumerationOptions()))
+        {
+            if (HasReparsePoint(subdirectory))
+            {
+                continue;
+            }
+
+            foreach (var file in EnumerateCacheFiles(subdirectory))
+            {
+                yield return file;
+            }
+        }
+    }
+
+    private static IEnumerable<string> EnumerateCacheDirectories(string directory)
+    {
+        foreach (var subdirectory in Directory.EnumerateDirectories(directory, "*", GetCacheEnumerationOptions()))
+        {
+            if (HasReparsePoint(subdirectory))
+            {
+                continue;
+            }
+
+            yield return subdirectory;
+
+            foreach (var child in EnumerateCacheDirectories(subdirectory))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private static EnumerationOptions GetCacheEnumerationOptions()
+    {
+        return new EnumerationOptions
+        {
+            AttributesToSkip = 0,
+            IgnoreInaccessible = false,
+            RecurseSubdirectories = false
+        };
+    }
+
+    private static bool HasReparsePoint(string path)
+    {
+        return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
     }
 
     [RelayCommand]
