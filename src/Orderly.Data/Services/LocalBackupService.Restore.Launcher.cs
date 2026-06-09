@@ -150,33 +150,71 @@ public sealed partial class LocalBackupService
         command.Parameters.AddWithValue("$accountId", row.AccountId);
         command.Parameters.AddWithValue("$username", row.Username);
         command.Parameters.AddWithValue("$displayName", row.DisplayName);
-        command.Parameters.AddWithValue("$passwordHash", FromBase64(row.PasswordHash, "PasswordHash"));
-        command.Parameters.AddWithValue("$passwordSalt", FromBase64(row.PasswordSalt, "PasswordSalt"));
-        command.Parameters.AddWithValue("$passwordIterations", row.PasswordIterations);
-        command.Parameters.AddWithValue("$pinHash", FromBase64(row.PinHash, "PinHash"));
-        command.Parameters.AddWithValue("$pinSalt", FromBase64(row.PinSalt, "PinSalt"));
-        command.Parameters.AddWithValue("$pinIterations", row.PinIterations);
-        command.Parameters.AddWithValue("$recoveryKeyHash", ToDbBlobFromBase64(row.RecoveryKeyHash));
-        command.Parameters.AddWithValue("$recoveryKeySalt", ToDbBlobFromBase64(row.RecoveryKeySalt));
-        command.Parameters.AddWithValue("$recoveryKeyIterations", row.RecoveryKeyIterations is null ? DBNull.Value : row.RecoveryKeyIterations.Value);
-        command.Parameters.AddWithValue("$recoveryEncryptedDataKey", ToDbBlobFromBase64(row.RecoveryEncryptedDataKey));
-        command.Parameters.AddWithValue("$recoveryDataKeyNonce", ToDbBlobFromBase64(row.RecoveryDataKeyNonce));
-        command.Parameters.AddWithValue("$recoveryDataKeyTag", ToDbBlobFromBase64(row.RecoveryDataKeyTag));
-        command.Parameters.AddWithValue("$encryptedDataKey", FromBase64(row.EncryptedDataKey, "EncryptedDataKey"));
-        command.Parameters.AddWithValue("$dataKeyNonce", FromBase64(row.DataKeyNonce, "DataKeyNonce"));
-        command.Parameters.AddWithValue("$dataKeyTag", FromBase64(row.DataKeyTag, "DataKeyTag"));
-        command.Parameters.AddWithValue("$adminOwnerAccountId", string.IsNullOrWhiteSpace(row.AdminOwnerAccountId) ? DBNull.Value : row.AdminOwnerAccountId);
-        command.Parameters.AddWithValue("$adminEncryptedDataKey", ToDbBlobFromBase64(row.AdminEncryptedDataKey));
-        command.Parameters.AddWithValue("$adminDataKeyNonce", ToDbBlobFromBase64(row.AdminDataKeyNonce));
-        command.Parameters.AddWithValue("$adminDataKeyTag", ToDbBlobFromBase64(row.AdminDataKeyTag));
-        command.Parameters.AddWithValue("$databasePath", restoredDatabasePath);
-        command.Parameters.AddWithValue("$role", row.Role);
-        command.Parameters.AddWithValue("$isEnabled", row.IsEnabled ? 1 : 0);
-        command.Parameters.AddWithValue("$createdAt", row.CreatedAt);
-        command.Parameters.AddWithValue("$updatedAt", row.UpdatedAt);
-        command.Parameters.AddWithValue("$lastLoginAt", string.IsNullOrWhiteSpace(row.LastLoginAt) ? DBNull.Value : row.LastLoginAt);
+        var passwordHash = FromBase64(row.PasswordHash, "PasswordHash");
+        var passwordSalt = FromBase64(row.PasswordSalt, "PasswordSalt");
+        var pinHash = FromBase64(row.PinHash, "PinHash");
+        var pinSalt = FromBase64(row.PinSalt, "PinSalt");
+        var recoveryKeyHash = FromBase64OrEmpty(row.RecoveryKeyHash, "RecoveryKeyHash");
+        var recoveryKeySalt = FromBase64OrEmpty(row.RecoveryKeySalt, "RecoveryKeySalt");
+        var recoveryEncryptedDataKey = FromBase64OrEmpty(row.RecoveryEncryptedDataKey, "RecoveryEncryptedDataKey");
+        var recoveryDataKeyNonce = FromBase64OrEmpty(row.RecoveryDataKeyNonce, "RecoveryDataKeyNonce");
+        var recoveryDataKeyTag = FromBase64OrEmpty(row.RecoveryDataKeyTag, "RecoveryDataKeyTag");
+        var encryptedDataKey = FromBase64(row.EncryptedDataKey, "EncryptedDataKey");
+        var dataKeyNonce = FromBase64(row.DataKeyNonce, "DataKeyNonce");
+        var dataKeyTag = FromBase64(row.DataKeyTag, "DataKeyTag");
+        var adminEncryptedDataKey = FromBase64OrEmpty(row.AdminEncryptedDataKey, "AdminEncryptedDataKey");
+        var adminDataKeyNonce = FromBase64OrEmpty(row.AdminDataKeyNonce, "AdminDataKeyNonce");
+        var adminDataKeyTag = FromBase64OrEmpty(row.AdminDataKeyTag, "AdminDataKeyTag");
 
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        try
+        {
+            command.Parameters.AddWithValue("$passwordHash", passwordHash);
+            command.Parameters.AddWithValue("$passwordSalt", passwordSalt);
+            command.Parameters.AddWithValue("$passwordIterations", row.PasswordIterations);
+            command.Parameters.AddWithValue("$pinHash", pinHash);
+            command.Parameters.AddWithValue("$pinSalt", pinSalt);
+            command.Parameters.AddWithValue("$pinIterations", row.PinIterations);
+            command.Parameters.AddWithValue("$recoveryKeyHash", ToDbBlob(recoveryKeyHash));
+            command.Parameters.AddWithValue("$recoveryKeySalt", ToDbBlob(recoveryKeySalt));
+            command.Parameters.AddWithValue("$recoveryKeyIterations", row.RecoveryKeyIterations is null ? DBNull.Value : row.RecoveryKeyIterations.Value);
+            command.Parameters.AddWithValue("$recoveryEncryptedDataKey", ToDbBlob(recoveryEncryptedDataKey));
+            command.Parameters.AddWithValue("$recoveryDataKeyNonce", ToDbBlob(recoveryDataKeyNonce));
+            command.Parameters.AddWithValue("$recoveryDataKeyTag", ToDbBlob(recoveryDataKeyTag));
+            command.Parameters.AddWithValue("$encryptedDataKey", encryptedDataKey);
+            command.Parameters.AddWithValue("$dataKeyNonce", dataKeyNonce);
+            command.Parameters.AddWithValue("$dataKeyTag", dataKeyTag);
+            command.Parameters.AddWithValue("$adminOwnerAccountId", string.IsNullOrWhiteSpace(row.AdminOwnerAccountId) ? DBNull.Value : row.AdminOwnerAccountId);
+            command.Parameters.AddWithValue("$adminEncryptedDataKey", ToDbBlob(adminEncryptedDataKey));
+            command.Parameters.AddWithValue("$adminDataKeyNonce", ToDbBlob(adminDataKeyNonce));
+            command.Parameters.AddWithValue("$adminDataKeyTag", ToDbBlob(adminDataKeyTag));
+            command.Parameters.AddWithValue("$databasePath", restoredDatabasePath);
+            command.Parameters.AddWithValue("$role", row.Role);
+            command.Parameters.AddWithValue("$isEnabled", row.IsEnabled ? 1 : 0);
+            command.Parameters.AddWithValue("$createdAt", row.CreatedAt);
+            command.Parameters.AddWithValue("$updatedAt", row.UpdatedAt);
+            command.Parameters.AddWithValue("$lastLoginAt", string.IsNullOrWhiteSpace(row.LastLoginAt) ? DBNull.Value : row.LastLoginAt);
+
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(
+                passwordHash,
+                passwordSalt,
+                pinHash,
+                pinSalt,
+                recoveryKeyHash,
+                recoveryKeySalt,
+                recoveryEncryptedDataKey,
+                recoveryDataKeyNonce,
+                recoveryDataKeyTag,
+                encryptedDataKey,
+                dataKeyNonce,
+                dataKeyTag,
+                adminEncryptedDataKey,
+                adminDataKeyNonce,
+                adminDataKeyTag);
+        }
     }
 
     private static void ValidateLauncherSnapshotRow(LauncherAccountBackupRow row)
@@ -196,5 +234,15 @@ public sealed partial class LocalBackupService
         {
             throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在缺失关键字段的账号快照。");
         }
+    }
+
+    private static byte[] FromBase64OrEmpty(string? base64, string fieldName)
+    {
+        return string.IsNullOrWhiteSpace(base64) ? [] : FromBase64(base64, fieldName);
+    }
+
+    private static object ToDbBlob(byte[] value)
+    {
+        return value.Length == 0 ? DBNull.Value : value;
     }
 }
