@@ -245,7 +245,7 @@ public sealed partial class CloudInventoryWorkspaceService
             return current;
         }
 
-        throw new InvalidOperationException($"无法解析数字：{text}");
+        throw new InvalidOperationException("无法解析数字。");
     }
 
     private static bool ReadCellBool(IXLRow row, Dictionary<string, int> headerMap, IEnumerable<string> aliases, bool defaultValue)
@@ -288,7 +288,7 @@ public sealed partial class CloudInventoryWorkspaceService
             return parsed;
         }
 
-        throw new InvalidOperationException($"无法解析日期时间：{text}");
+        throw new InvalidOperationException("无法解析日期时间。");
     }
 
     private static string NormalizeHeader(string value)
