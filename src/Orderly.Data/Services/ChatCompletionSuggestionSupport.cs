@@ -27,7 +27,10 @@ internal static class ChatCompletionSuggestionSupport
         ];
     }
 
-    public static Uri BuildChatCompletionsEndpoint(string baseUrl, string invalidBaseUrlMessage = "AI provider base URL is not a valid absolute URL.")
+    public static Uri BuildChatCompletionsEndpoint(
+        string baseUrl,
+        string invalidBaseUrlMessage = "AI provider base URL is not a valid absolute URL.",
+        string insecureBaseUrlMessage = "AI provider base URL must use HTTPS unless it targets a loopback address.")
     {
         if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
         {
@@ -36,7 +39,7 @@ internal static class ChatCompletionSuggestionSupport
 
         if (baseUri.Scheme != Uri.UriSchemeHttps && !baseUri.IsLoopback)
         {
-            throw new InvalidOperationException("AI provider base URL must use HTTPS unless it targets a loopback address.");
+            throw new InvalidOperationException(insecureBaseUrlMessage);
         }
 
         var path = baseUri.AbsolutePath.TrimEnd('/');
