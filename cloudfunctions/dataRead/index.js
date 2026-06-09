@@ -5,6 +5,7 @@ const db = cloud.database()
 const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const MAX_LIMIT = 200
+const MAX_EVENT_BYTES = 65536
 const COLLECTIONS = {
   customers: 'customers',
   deals: 'deals',
@@ -33,6 +34,11 @@ function requireOperatorId() {
   const operatorId = cloud.getWXContext().OPENID || ''
   if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
   return { ok: true, operatorId }
+}
+
+function rejectOversizedEvent(event) {
+  const bytes = Buffer.byteLength(JSON.stringify(event || {}), 'utf8')
+  return bytes > MAX_EVENT_BYTES ? { ok: false, code: 'payload_too_large', message: '请求体过大。' } : null
 }
 
 function resolveWorkspaceId(event) {
@@ -94,6 +100,9 @@ async function listByQuery(collection, event, workspaceId) {
 
 exports.main = async (event) => {
   event = event || {}
+  const oversized = rejectOversizedEvent(event)
+  if (oversized) return oversized
+
   const auth = requireOperatorId()
   if (!auth.ok) return auth
 

@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+const MAX_EVENT_BYTES = 65536
 
 function requireOperatorId() {
   const operatorId = cloud.getWXContext().OPENID || ''
@@ -8,8 +9,16 @@ function requireOperatorId() {
   return { ok: true, operatorId }
 }
 
+function rejectOversizedEvent(event) {
+  const bytes = Buffer.byteLength(JSON.stringify(event || {}), 'utf8')
+  return bytes > MAX_EVENT_BYTES ? { ok: false, code: 'payload_too_large', message: '请求体过大。' } : null
+}
+
 exports.main = async (event) => {
   event = event || {}
+  const oversized = rejectOversizedEvent(event)
+  if (oversized) return oversized
+
   const auth = requireOperatorId()
   if (!auth.ok) return auth
 

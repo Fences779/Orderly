@@ -9,6 +9,7 @@ const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const ENABLE_SEED_ENV_NAME = 'ORDERLY_ENABLE_DEAL_INIT_SEED'
 const SEED_ADMIN_OPENIDS_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_OPENIDS'
+const MAX_EVENT_BYTES = 65536
 
 function normalizeList(value) {
   return String(value || '')
@@ -29,6 +30,11 @@ function requireSeedAuthorization() {
   }
 
   return { ok: true, operatorId }
+}
+
+function rejectOversizedEvent(event) {
+  const bytes = Buffer.byteLength(JSON.stringify(event || {}), 'utf8')
+  return bytes > MAX_EVENT_BYTES ? { ok: false, code: 'payload_too_large', message: '请求体过大。' } : null
 }
 
 function resolveWorkspaceId(event) {
@@ -69,6 +75,9 @@ exports.main = async (event) => {
   if (!auth.ok) return auth
 
   const request = event || {}
+  const oversized = rejectOversizedEvent(request)
+  if (oversized) return oversized
+
   const workspace = resolveWorkspaceId(request)
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId

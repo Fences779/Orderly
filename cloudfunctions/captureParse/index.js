@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
+const MAX_EVENT_BYTES = 65536
 
 const STYLE_WORDS = ['简约', '高级', '复古', '甜酷', '清冷', '温柔', '国风', '通勤', '可爱', '低调', '显白']
 const MATERIAL_WORDS = ['珍珠', '水晶', '玛瑙', '银', '14k', '18k', '朱砂', '檀木', '贝母', '琉璃', '天然石']
@@ -31,6 +32,11 @@ function requireOperatorId() {
   const operatorId = cloud.getWXContext().OPENID || ''
   if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
   return { ok: true, operatorId }
+}
+
+function rejectOversizedEvent(event) {
+  const bytes = Buffer.byteLength(JSON.stringify(event || {}), 'utf8')
+  return bytes > MAX_EVENT_BYTES ? { ok: false, code: 'payload_too_large', message: '请求体过大。' } : null
 }
 
 function normalizeList(value) {
@@ -174,6 +180,9 @@ exports.main = async (event) => {
   if (!auth.ok) return auth
 
   event = event || {}
+  const oversized = rejectOversizedEvent(event)
+  if (oversized) return oversized
+
   const workspace = resolveWorkspaceId(event)
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId

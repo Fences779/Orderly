@@ -5,6 +5,7 @@ const db = cloud.database()
 const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
+const MAX_EVENT_BYTES = 65536
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 
 function now() {
@@ -40,6 +41,11 @@ function requireOperatorId() {
   const operatorId = cloud.getWXContext().OPENID || ''
   if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
   return { ok: true, operatorId }
+}
+
+function rejectOversizedEvent(event) {
+  const bytes = Buffer.byteLength(JSON.stringify(event || {}), 'utf8')
+  return bytes > MAX_EVENT_BYTES ? { ok: false, code: 'payload_too_large', message: '请求体过大。' } : null
 }
 
 function resolveWorkspaceId(event) {
@@ -358,6 +364,9 @@ async function taskAction(event, operatorId, workspaceId) {
 
 exports.main = async (event) => {
   event = event || {}
+  const oversized = rejectOversizedEvent(event)
+  if (oversized) return oversized
+
   const mode = normalizeText(event.mode)
   const workspace = resolveWorkspaceId(event)
   if (!workspace.ok) return workspace
