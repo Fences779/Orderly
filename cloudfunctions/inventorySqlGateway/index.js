@@ -5,6 +5,7 @@ const DEFAULT_PAGE_SIZE = 10
 const DEFAULT_MAX_PAGE_SIZE = 100
 const DEFAULT_MAX_QUERY_ROWS = 5000
 const DEFAULT_MAX_BULK_ROWS = 500
+const DEFAULT_MAX_EVENT_BYTES = 1048576
 
 let pool
 
@@ -65,6 +66,16 @@ function normalizePositiveInt(value, fallback, max) {
 
 function getPositiveIntEnv(name, fallback, max) {
   return normalizePositiveInt(getEnv(name), fallback, max)
+}
+
+function rejectOversizedEvent(event) {
+  const maxBytes = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_EVENT_BYTES', DEFAULT_MAX_EVENT_BYTES, 5 * 1024 * 1024)
+  const bytes = event && typeof event.body === 'string'
+    ? Buffer.byteLength(event.body, 'utf8')
+    : Buffer.byteLength(JSON.stringify(event || {}), 'utf8')
+  if (bytes > maxBytes) {
+    throw createError(413, 'payload_too_large', `库存网关请求体超过单次上限（${maxBytes} bytes）。`)
+  }
 }
 
 function normalizeBool(value, fallback = true) {
@@ -600,13 +611,14 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
 }
 
 exports.main = async (event) => {
-  const request = normalizeRequest(event)
-  const workspaceId = normalizeText(getEnv('ORDERLY_INVENTORY_WORKSPACE_ID', 'default')) || 'default'
-  const operatorId = normalizeText(getEnv('ORDERLY_INVENTORY_OPERATOR_ID', 'pc-admin')) || 'pc-admin'
-  const action = normalizeText(request.action)
-  const payload = request.payload && typeof request.payload === 'object' ? request.payload : {}
-
   try {
+    rejectOversizedEvent(event)
+    const request = normalizeRequest(event)
+    const workspaceId = normalizeText(getEnv('ORDERLY_INVENTORY_WORKSPACE_ID', 'default')) || 'default'
+    const operatorId = normalizeText(getEnv('ORDERLY_INVENTORY_OPERATOR_ID', 'pc-admin')) || 'pc-admin'
+    const action = normalizeText(request.action)
+    const payload = request.payload && typeof request.payload === 'object' ? request.payload : {}
+
     validateToken(request)
 
     let result
