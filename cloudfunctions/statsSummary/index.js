@@ -8,6 +8,8 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_LABEL_TEXT_LENGTH = 128
+const MAX_TEMPLATE_TOP_ITEMS = 5
 
 const WON_STAGES = ['scheduled', 'in_production', 'ready_to_ship', 'shipped', 'received', 'completed', 'repurchase_due']
 const OPEN_STAGES = ['paid_pending_confirm', 'scheduled', 'in_production', 'ready_to_ship', 'exception']
@@ -136,15 +138,24 @@ function inPeriod(value, start) {
 }
 
 function uniqueCount(rows, field) {
-  const set = {}
+  const set = Object.create(null)
   rows.forEach((row) => { if (row[field]) set[row[field]] = true })
   return Object.keys(set).length
 }
 
+function normalizeText(value) {
+  if (value == null || typeof value === 'object') return ''
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
+}
+
+function limitText(value, maxLength = MAX_LABEL_TEXT_LENGTH) {
+  return normalizeText(value).slice(0, maxLength)
+}
+
 function groupCount(rows, getter) {
-  const map = {}
+  const map = Object.create(null)
   rows.forEach((row) => {
-    const key = getter(row) || '未填'
+    const key = limitText(getter(row)) || '未填'
     map[key] = (map[key] || 0) + 1
   })
   return Object.keys(map).map((key) => ({ label: key, count: map[key] })).sort((a, b) => b.count - a.count)
@@ -186,6 +197,18 @@ function buildPressureItem(status, label, count, targetCount) {
     targetCount,
     ratio: targetCount > 0 ? count / targetCount : 0
   }
+}
+
+function buildTemplateTop(templates) {
+  return templates
+    .slice()
+    .sort((a, b) => normalizeNumber(b.useCount) - normalizeNumber(a.useCount))
+    .slice(0, MAX_TEMPLATE_TOP_ITEMS)
+    .map((template) => ({
+      _id: limitText(template._id),
+      title: limitText(template.title || template.name),
+      useCount: normalizeNumber(template.useCount)
+    }))
 }
 
 function buildWorkbenchDashboard(deals, skus, cashflows, nowValue) {
@@ -267,13 +290,13 @@ async function handleRequest(event) {
 
   const periodDeals = deals.filter((deal) => inPeriod(deal.createdAt, start))
   const periodQuotes = quotes.filter((quote) => inPeriod(quote.createdAt, start) || inPeriod(quote.sentAt, start))
-  const wonLogDealIds = {}
+  const wonLogDealIds = Object.create(null)
   logs.filter((log) => inPeriod(log.createdAt, start) && log.actionType === 'stage_update' && log.afterData && WON_STAGES.indexOf(log.afterData.dealStage) >= 0)
     .forEach((log) => { wonLogDealIds[log.entityId] = true })
   deals.filter((deal) => inPeriod(deal.updatedAt, start) && WON_STAGES.indexOf(deal.dealStage) >= 0)
     .forEach((deal) => { wonLogDealIds[deal._id] = true })
 
-  const lostLogDealIds = {}
+  const lostLogDealIds = Object.create(null)
   logs.filter((log) => inPeriod(log.createdAt, start) && log.actionType === 'stage_update' && log.afterData && log.afterData.dealStage === 'lost')
     .forEach((log) => { lostLogDealIds[log.entityId] = true })
   deals.filter((deal) => inPeriod(deal.updatedAt, start) && deal.dealStage === 'lost')
@@ -304,7 +327,7 @@ async function handleRequest(event) {
     },
     workbenchDashboard: buildWorkbenchDashboard(deals, skus, cashflows, now),
     platformDistribution: platformGroups.map((row) => ({ platform: row.label, count: row.count, percent: Math.round(row.count / maxPlatform * 100) })),
-    templateTop: templates.sort((a, b) => (b.useCount || 0) - (a.useCount || 0)).slice(0, 5),
+    templateTop: buildTemplateTop(templates),
     riskReasons
   }
 }
