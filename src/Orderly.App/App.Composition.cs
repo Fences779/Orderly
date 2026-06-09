@@ -82,7 +82,7 @@ public partial class App
 
     private async Task RunQaMaintenanceCommandAsync()
     {
-        await EnsureDatabasePreparedAsync(DatabasePaths.GetDefaultDatabasePath());
+        await EnsureDatabasePreparedAsync(DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true));
 
         var connectionFactory = _connectionFactory ?? throw new InvalidOperationException("Database connection factory is not initialized.");
         var maintenanceService = new QaDataMaintenanceService(connectionFactory);

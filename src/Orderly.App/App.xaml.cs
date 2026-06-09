@@ -75,12 +75,12 @@ public partial class App : System.Windows.Application
 
             if (QaDataSeeder.IsRequested(_startupArgs))
             {
-                await EnsureDatabasePreparedAsync(DatabasePaths.GetDefaultDatabasePath());
+                await EnsureDatabasePreparedAsync(DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true));
             }
 
-            if (QaDataSeeder.IsQaMode(_startupArgs))
+            if (isQaMode)
             {
-                var qaDatabasePath = DatabasePaths.GetDefaultDatabasePath();
+                var qaDatabasePath = DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true);
                 InitializeQaSessionContext(qaDatabasePath);
                 await InitializeWorkspaceAsync(qaDatabasePath);
                 return;

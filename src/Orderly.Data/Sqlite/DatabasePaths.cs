@@ -17,22 +17,36 @@ public static class DatabasePaths
         return Path.Combine(GetAppRootPath(), "orderly.db");
     }
 
-    public static string GetDefaultDatabasePath()
+    public static string GetDefaultDatabasePath(bool allowQaOverride = false)
     {
-        var qaOverridePath = Environment.GetEnvironmentVariable("ORDERLY_QA_DB_PATH");
-        if (!string.IsNullOrWhiteSpace(qaOverridePath))
+        if (allowQaOverride
+            && TryGetQaOverrideDatabasePath(out var qaOverridePath))
         {
-            var fullPath = Path.GetFullPath(qaOverridePath);
-            var directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            return fullPath;
+            return qaOverridePath;
         }
 
         return GetLegacyDatabasePath();
+    }
+
+    private static bool TryGetQaOverrideDatabasePath(out string databasePath)
+    {
+        databasePath = string.Empty;
+
+        var qaOverridePath = Environment.GetEnvironmentVariable("ORDERLY_QA_DB_PATH");
+        if (string.IsNullOrWhiteSpace(qaOverridePath))
+        {
+            return false;
+        }
+
+        var fullPath = Path.GetFullPath(qaOverridePath);
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        databasePath = fullPath;
+        return true;
     }
 
     public static string GetIdentityDirectoryPath()
