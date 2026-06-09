@@ -18,6 +18,7 @@ public sealed partial class DatabaseInitializer
         if (!string.IsNullOrWhiteSpace(directory))
         {
             Directory.CreateDirectory(directory);
+            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "数据库目录");
             LocalDataFileSecurity.HardenDirectory(directory);
         }
 

@@ -16,6 +16,19 @@ public static class LocalDataFileSecurity
         HardenDirectoryWindows(directoryPath);
     }
 
+    public static void EnsureDirectoryIsNotLinked(string directoryPath, string description)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath) || !Directory.Exists(directoryPath))
+        {
+            return;
+        }
+
+        if (IsReparsePoint(directoryPath))
+        {
+            throw new InvalidOperationException($"{description}不能是链接目录。");
+        }
+    }
+
     public static void HardenSqliteDatabaseFiles(string databasePath)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(databasePath))

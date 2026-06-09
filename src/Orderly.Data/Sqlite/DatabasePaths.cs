@@ -9,6 +9,7 @@ public static class DatabasePaths
             "Orderly-SN");
 
         Directory.CreateDirectory(root);
+        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(root, "应用数据目录");
         LocalDataFileSecurity.HardenDirectory(root);
         return root;
     }
@@ -44,6 +45,7 @@ public static class DatabasePaths
         if (!string.IsNullOrWhiteSpace(directory))
         {
             Directory.CreateDirectory(directory);
+            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "QA 数据库目录");
             LocalDataFileSecurity.HardenDirectory(directory);
         }
 
@@ -55,6 +57,7 @@ public static class DatabasePaths
     {
         var identityPath = Path.Combine(GetAppRootPath(), "identity");
         Directory.CreateDirectory(identityPath);
+        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(identityPath, "身份数据目录");
         LocalDataFileSecurity.HardenDirectory(identityPath);
         return identityPath;
     }
@@ -68,6 +71,7 @@ public static class DatabasePaths
     {
         var accountsPath = Path.Combine(GetAppRootPath(), "accounts");
         Directory.CreateDirectory(accountsPath);
+        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(accountsPath, "账号数据目录");
         LocalDataFileSecurity.HardenDirectory(accountsPath);
         return accountsPath;
     }
@@ -76,6 +80,7 @@ public static class DatabasePaths
     {
         var accountPath = GetExpectedAccountDirectoryPath(accountId);
         Directory.CreateDirectory(accountPath);
+        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(accountPath, "账号工作区目录");
         LocalDataFileSecurity.HardenDirectory(accountPath);
         return accountPath;
     }
