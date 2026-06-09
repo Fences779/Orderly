@@ -6,6 +6,7 @@ const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const MAX_EVENT_BYTES = 65536
+const CUSTOMER_FIELDS = ['_id', 'name', 'platform', 'externalUid', 'contactHandle', 'sourceChannel', 'profileTags', 'preferenceNotes', 'tabooNotes', 'riskNotes', 'totalOrders', 'totalSpent', 'lastContactAt', 'lastPurchaseAt']
 
 function now() {
   return new Date().toISOString()
@@ -32,6 +33,15 @@ function normalizeArray(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
   return String(value).split(/[,\s，、/]+/).map((item) => item.trim()).filter(Boolean)
+}
+
+function pickFields(source, allowedFields) {
+  const result = {}
+  const input = source || {}
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(input, field)) result[field] = input[field]
+  })
+  return result
 }
 
 function resolveWorkspaceId(event) {
@@ -80,7 +90,7 @@ exports.main = async (event) => {
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
-  const input = event.customer || {}
+  const input = pickFields(event.customer, CUSTOMER_FIELDS)
   if (!input.name) return { ok: false, message: '客户名不能为空' }
   const data = Object.assign({
     workspaceId,

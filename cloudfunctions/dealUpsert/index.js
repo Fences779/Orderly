@@ -8,6 +8,7 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const MAX_EVENT_BYTES = 65536
 
 const STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing', 'quote_sent', 'waiting_deposit', 'scheduled', 'in_production', 'ready_to_ship', 'shipped', 'received', 'completed', 'repurchase_due', 'dormant', 'lost']
+const DEAL_FIELDS = ['_id', 'customerId', 'title', 'sourceEntry', 'dealStage', 'priorityLevel', 'intentCategory', 'demandSummary', 'styleTags', 'materialTags', 'sizeSpec', 'colorPref', 'budgetMin', 'budgetMax', 'deadlineAt', 'urgencyLevel', 'latestQuoteId', 'nextFollowupAt', 'lastInteractionAt', 'followupCount', 'lossReason', 'archivedAt', 'riskFlags']
 
 function now() {
   return new Date().toISOString()
@@ -34,6 +35,15 @@ function normalizeArray(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
   return String(value).split(/[,\s，、/]+/).map((item) => item.trim()).filter(Boolean)
+}
+
+function pickFields(source, allowedFields) {
+  const result = {}
+  const input = source || {}
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(input, field)) result[field] = input[field]
+  })
+  return result
 }
 
 function resolveWorkspaceId(event) {
@@ -87,7 +97,7 @@ exports.main = async (event) => {
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
-  const input = event.deal || {}
+  const input = pickFields(event.deal, DEAL_FIELDS)
   if (!input.customerId) return { ok: false, message: 'deal 必须关联 customerId' }
   if (!input.title && !input.demandSummary) return { ok: false, message: 'deal 标题或需求摘要不能为空' }
   const stage = input.dealStage || 'new_inquiry'
