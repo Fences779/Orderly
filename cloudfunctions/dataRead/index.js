@@ -134,7 +134,12 @@ async function listByQuery(collection, event, workspaceId) {
   return (await ref.limit(sanitizeLimit(options.limit)).get()).data || []
 }
 
-exports.main = async (event) => {
+function logInternalError(scope, err) {
+  const name = err && err.name ? String(err.name).slice(0, 64) : 'Error'
+  console.error(scope, { name })
+}
+
+async function handleRequest(event) {
   event = event || {}
   const oversized = rejectOversizedEvent(event)
   if (oversized) return oversized
@@ -158,4 +163,13 @@ exports.main = async (event) => {
     return { ok: true, rows }
   }
   return { ok: false, code: 'unsupported_action', message: '不支持的读取动作。' }
+}
+
+exports.main = async (event) => {
+  try {
+    return await handleRequest(event)
+  } catch (err) {
+    logInternalError('dataRead failed', err)
+    return { ok: false, code: 'internal_error', message: '数据读取失败。' }
+  }
 }
