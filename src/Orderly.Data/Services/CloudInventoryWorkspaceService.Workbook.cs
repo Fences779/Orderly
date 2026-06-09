@@ -164,6 +164,7 @@ public sealed partial class CloudInventoryWorkspaceService
 
         worksheet.Columns().AdjustToContents();
         workbook.SaveAs(workbookPath);
+        LocalDataFileSecurity.HardenFile(workbookPath);
     }
 
     private static string CreateWorkbookBackup(string workbookPath)
