@@ -101,15 +101,23 @@ public sealed partial class LocalAccountManagementService
         var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
         var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, session.DataKey);
 
-        account.PasswordSalt = passwordSalt;
-        account.PasswordHash = passwordHash;
-        account.PasswordIterations = DefaultPasswordIterations;
-        account.EncryptedDataKey = wrappedByPassword.Ciphertext;
-        account.DataKeyNonce = wrappedByPassword.Nonce;
-        account.DataKeyTag = wrappedByPassword.Tag;
-        account.UpdatedAt = DateTime.Now;
+        try
+        {
+            account.PasswordSalt = passwordSalt;
+            account.PasswordHash = passwordHash;
+            account.PasswordIterations = DefaultPasswordIterations;
+            account.EncryptedDataKey = wrappedByPassword.Ciphertext;
+            account.DataKeyNonce = wrappedByPassword.Nonce;
+            account.DataKeyTag = wrappedByPassword.Tag;
+            account.UpdatedAt = DateTime.Now;
 
-        await _accountRepository.UpdateAsync(account, cancellationToken);
+            await _accountRepository.UpdateAsync(account, cancellationToken);
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(passwordSalt, passwordHash);
+            SensitiveBuffer.ClearWrappedDataKey(wrappedByPassword);
+        }
     }
 
     public async Task ChangeCurrentPinAsync(string currentPin, string newPin, CancellationToken cancellationToken = default)
@@ -132,11 +140,20 @@ public sealed partial class LocalAccountManagementService
         }
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        account.PinSalt = pinSalt;
-        account.PinHash = ComputeHash(newPin, pinSalt, DefaultPinIterations);
-        account.PinIterations = DefaultPinIterations;
-        account.UpdatedAt = DateTime.Now;
-        await _accountRepository.UpdateAsync(account, cancellationToken);
+        var pinHash = ComputeHash(newPin, pinSalt, DefaultPinIterations);
+
+        try
+        {
+            account.PinSalt = pinSalt;
+            account.PinHash = pinHash;
+            account.PinIterations = DefaultPinIterations;
+            account.UpdatedAt = DateTime.Now;
+            await _accountRepository.UpdateAsync(account, cancellationToken);
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(pinSalt, pinHash);
+        }
     }
 
     public async Task ResetMemberMasterPasswordAsync(string memberAccountId, string newMasterPassword, CancellationToken cancellationToken = default)
@@ -154,11 +171,14 @@ public sealed partial class LocalAccountManagementService
         }
 
         var memberDataKey = UnwrapDataKeyWithKey(ownerSession.DataKey, member.AdminEncryptedDataKey, member.AdminDataKeyNonce, member.AdminDataKeyTag);
+        byte[] passwordSalt = [];
+        byte[] passwordHash = [];
+        (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByPassword = ([], [], []);
         try
         {
-            var passwordSalt = RandomNumberGenerator.GetBytes(16);
-            var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-            var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
+            passwordSalt = RandomNumberGenerator.GetBytes(16);
+            passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
+            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
 
             member.PasswordSalt = passwordSalt;
             member.PasswordHash = passwordHash;
@@ -172,7 +192,8 @@ public sealed partial class LocalAccountManagementService
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(memberDataKey);
+            SensitiveBuffer.Clear(memberDataKey, passwordSalt, passwordHash);
+            SensitiveBuffer.ClearWrappedDataKey(wrappedByPassword);
         }
     }
 
@@ -234,12 +255,15 @@ public sealed partial class LocalAccountManagementService
             cancellationToken);
 
         byte[]? memberDataKey = null;
+        byte[] passwordSalt = [];
+        byte[] passwordHash = [];
+        (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByPassword = ([], [], []);
         try
         {
             memberDataKey = UnwrapDataKeyWithKey(ownerDataKey, member.AdminEncryptedDataKey, member.AdminDataKeyNonce, member.AdminDataKeyTag);
-            var passwordSalt = RandomNumberGenerator.GetBytes(16);
-            var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-            var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
+            passwordSalt = RandomNumberGenerator.GetBytes(16);
+            passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
+            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
 
             member.PasswordSalt = passwordSalt;
             member.PasswordHash = passwordHash;
@@ -255,10 +279,11 @@ public sealed partial class LocalAccountManagementService
         {
             if (memberDataKey is not null)
             {
-                CryptographicOperations.ZeroMemory(memberDataKey);
+                SensitiveBuffer.Clear(memberDataKey);
             }
 
-            CryptographicOperations.ZeroMemory(ownerDataKey);
+            SensitiveBuffer.Clear(ownerDataKey, passwordSalt, passwordHash);
+            SensitiveBuffer.ClearWrappedDataKey(wrappedByPassword);
         }
     }
 
@@ -277,11 +302,20 @@ public sealed partial class LocalAccountManagementService
         }
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        member.PinSalt = pinSalt;
-        member.PinHash = ComputeHash(newPin, pinSalt, DefaultPinIterations);
-        member.PinIterations = DefaultPinIterations;
-        member.UpdatedAt = DateTime.Now;
-        await _accountRepository.UpdateAsync(member, cancellationToken);
+        var pinHash = ComputeHash(newPin, pinSalt, DefaultPinIterations);
+
+        try
+        {
+            member.PinSalt = pinSalt;
+            member.PinHash = pinHash;
+            member.PinIterations = DefaultPinIterations;
+            member.UpdatedAt = DateTime.Now;
+            await _accountRepository.UpdateAsync(member, cancellationToken);
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(pinSalt, pinHash);
+        }
     }
 
     public async Task ResetOwnerMasterPasswordWithRecoveryKeyAsync(
@@ -315,11 +349,14 @@ public sealed partial class LocalAccountManagementService
             owner.RecoveryDataKeyNonce,
             owner.RecoveryDataKeyTag);
 
+        byte[] passwordSalt = [];
+        byte[] passwordHash = [];
+        (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByPassword = ([], [], []);
         try
         {
-            var passwordSalt = RandomNumberGenerator.GetBytes(16);
-            var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-            var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, ownerDataKey);
+            passwordSalt = RandomNumberGenerator.GetBytes(16);
+            passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
+            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, ownerDataKey);
 
             owner.PasswordSalt = passwordSalt;
             owner.PasswordHash = passwordHash;
@@ -332,7 +369,8 @@ public sealed partial class LocalAccountManagementService
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(ownerDataKey);
+            SensitiveBuffer.Clear(ownerDataKey, passwordSalt, passwordHash);
+            SensitiveBuffer.ClearWrappedDataKey(wrappedByPassword);
         }
     }
 

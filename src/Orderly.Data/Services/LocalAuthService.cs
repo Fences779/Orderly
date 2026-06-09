@@ -70,10 +70,12 @@ public sealed class LocalAuthService : ILocalAuthService
         var recoveryHash = ComputeHash(normalizedRecoveryKey, recoverySalt, DefaultRecoveryIterations);
 
         var dataKey = RandomNumberGenerator.GetBytes(32);
+        (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrapped = ([], [], []);
+        (byte[] Ciphertext, byte[] Nonce, byte[] Tag) recoveryWrapped = ([], [], []);
         try
         {
-            var wrapped = WrapDataKey(request.MasterPassword, passwordSalt, DefaultPasswordIterations, dataKey);
-            var recoveryWrapped = WrapDataKey(normalizedRecoveryKey, recoverySalt, DefaultRecoveryIterations, dataKey);
+            wrapped = WrapDataKey(request.MasterPassword, passwordSalt, DefaultPasswordIterations, dataKey);
+            recoveryWrapped = WrapDataKey(normalizedRecoveryKey, recoverySalt, DefaultRecoveryIterations, dataKey);
 
             var account = new LocalAccount
             {
@@ -135,7 +137,9 @@ public sealed class LocalAuthService : ILocalAuthService
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(dataKey);
+            SensitiveBuffer.Clear(dataKey, passwordSalt, passwordHash, pinSalt, pinHash, recoverySalt, recoveryHash);
+            SensitiveBuffer.ClearWrappedDataKey(wrapped);
+            SensitiveBuffer.ClearWrappedDataKey(recoveryWrapped);
         }
     }
 

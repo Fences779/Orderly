@@ -67,7 +67,7 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
         }
         finally
         {
-            Array.Clear(ownerDataKey, 0, ownerDataKey.Length);
+            CryptographicOperations.ZeroMemory(ownerDataKey);
         }
     }
 
@@ -103,43 +103,54 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
         var memberDataKey = RandomNumberGenerator.GetBytes(32);
         var passwordSalt = RandomNumberGenerator.GetBytes(16);
         var passwordHash = ComputeHash(request.MasterPassword, passwordSalt, DefaultPasswordIterations);
-        var wrappedByPassword = WrapDataKey(request.MasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
-
         var pinSalt = RandomNumberGenerator.GetBytes(16);
         var pinHash = ComputeHash(request.Pin, pinSalt, DefaultPinIterations);
-        var wrappedByOwner = WrapDataKeyWithKey(ownerDataKey, memberDataKey);
+        (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByPassword = ([], [], []);
+        (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByOwner = ([], [], []);
 
-        var member = new LocalAccount
+        try
         {
-            AccountId = accountId,
-            Username = username,
-            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? username : request.DisplayName.Trim(),
-            PasswordHash = passwordHash,
-            PasswordSalt = passwordSalt,
-            PasswordIterations = DefaultPasswordIterations,
-            PinHash = pinHash,
-            PinSalt = pinSalt,
-            PinIterations = DefaultPinIterations,
-            EncryptedDataKey = wrappedByPassword.Ciphertext,
-            DataKeyNonce = wrappedByPassword.Nonce,
-            DataKeyTag = wrappedByPassword.Tag,
-            AdminOwnerAccountId = ownerAccountId,
-            AdminEncryptedDataKey = wrappedByOwner.Ciphertext,
-            AdminDataKeyNonce = wrappedByOwner.Nonce,
-            AdminDataKeyTag = wrappedByOwner.Tag,
-            DatabasePath = DatabasePaths.GetAccountDatabasePath(accountId),
-            Role = LocalAccountRole.Member,
-            IsEnabled = true,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+            wrappedByPassword = WrapDataKey(request.MasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
+            wrappedByOwner = WrapDataKeyWithKey(ownerDataKey, memberDataKey);
 
-        await _accountRepository.CreateAsync(member, cancellationToken);
+            var member = new LocalAccount
+            {
+                AccountId = accountId,
+                Username = username,
+                DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? username : request.DisplayName.Trim(),
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt,
+                PasswordIterations = DefaultPasswordIterations,
+                PinHash = pinHash,
+                PinSalt = pinSalt,
+                PinIterations = DefaultPinIterations,
+                EncryptedDataKey = wrappedByPassword.Ciphertext,
+                DataKeyNonce = wrappedByPassword.Nonce,
+                DataKeyTag = wrappedByPassword.Tag,
+                AdminOwnerAccountId = ownerAccountId,
+                AdminEncryptedDataKey = wrappedByOwner.Ciphertext,
+                AdminDataKeyNonce = wrappedByOwner.Nonce,
+                AdminDataKeyTag = wrappedByOwner.Tag,
+                DatabasePath = DatabasePaths.GetAccountDatabasePath(accountId),
+                Role = LocalAccountRole.Member,
+                IsEnabled = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
 
-        var initializer = new DatabaseInitializer(new SqliteConnectionFactory(member.DatabasePath));
-        await initializer.InitializeAsync(cancellationToken);
+            await _accountRepository.CreateAsync(member, cancellationToken);
 
-        return MapSummary(member);
+            var initializer = new DatabaseInitializer(new SqliteConnectionFactory(member.DatabasePath));
+            await initializer.InitializeAsync(cancellationToken);
+
+            return MapSummary(member);
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(memberDataKey, passwordSalt, passwordHash, pinSalt, pinHash);
+            SensitiveBuffer.ClearWrappedDataKey(wrappedByPassword);
+            SensitiveBuffer.ClearWrappedDataKey(wrappedByOwner);
+        }
     }
 
     public async Task DisableMemberAsync(string memberAccountId, CancellationToken cancellationToken = default)
