@@ -11,6 +11,8 @@ internal static class OutboundEndpointPolicy
     {
         ArgumentNullException.ThrowIfNull(endpoint);
 
+        ValidateUriSurface(endpoint, configurationName);
+
         if (IsRestrictedLocalEndpoint(endpoint) && !IsLocalEndpointAllowedForDevelopment())
         {
             throw new InvalidOperationException($"{configurationName} 不允许指向本机、私网、链路本地或 metadata 地址，除非显式启用本地开发模式。");
@@ -23,6 +25,19 @@ internal static class OutboundEndpointPolicy
         }
 
         ValidateResolvedAddresses(endpoint, configurationName);
+    }
+
+    private static void ValidateUriSurface(Uri endpoint, string configurationName)
+    {
+        if (!string.IsNullOrWhiteSpace(endpoint.UserInfo))
+        {
+            throw new InvalidOperationException($"{configurationName} 不允许在 URL 中包含用户名、密码或其他 userinfo。");
+        }
+
+        if (!string.IsNullOrWhiteSpace(endpoint.Fragment))
+        {
+            throw new InvalidOperationException($"{configurationName} 不允许包含 URL fragment。");
+        }
     }
 
     private static bool IsRestrictedLocalEndpoint(Uri endpoint)
