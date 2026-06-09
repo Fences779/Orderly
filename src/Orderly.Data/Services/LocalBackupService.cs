@@ -17,7 +17,8 @@ public sealed partial class LocalBackupService : IBackupService
     private const string BackupIntegritySessionKeyScope = "session-data-key";
     private const string BackupIntegrityMachineKeyScope = "machine-local-key";
     private const string BackupIntegrityKeyFileName = "backup-integrity.key";
-    private const long MaxBackupFileBytes = 256L * 1024L * 1024L;
+    private const long MaxBackupFileBytes = 64L * 1024L * 1024L;
+    private const int MaxBackupJsonDepth = 32;
 
     private static readonly string[] IncludedTableNames =
     [
@@ -122,6 +123,11 @@ public sealed partial class LocalBackupService : IBackupService
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true
+    };
+
+    private static readonly JsonDocumentOptions BackupJsonDocumentOptions = new()
+    {
+        MaxDepth = MaxBackupJsonDepth
     };
 
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(false);

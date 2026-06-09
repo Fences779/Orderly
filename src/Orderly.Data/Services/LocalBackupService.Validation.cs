@@ -88,7 +88,7 @@ public sealed partial class LocalBackupService
         JsonDocument document;
         try
         {
-            document = JsonDocument.Parse(json);
+            document = JsonDocument.Parse(json, BackupJsonDocumentOptions);
         }
         catch (JsonException ex)
         {
