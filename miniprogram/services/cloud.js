@@ -14,16 +14,8 @@ const COLLECTIONS = {
   logs: 'activity_logs'
 }
 
-function getDb() {
-  return wx.cloud.database()
-}
-
 function workspaceId() {
   return getAppWorkspaceId() || appConfig.workspaceId || 'default'
-}
-
-function isCurrentWorkspaceRow(row) {
-  return row && row.workspaceId === workspaceId()
 }
 
 function call(name, data) {
@@ -41,39 +33,32 @@ function call(name, data) {
 
 function getById(collection, id) {
   if (!id) return Promise.resolve(null)
-  return getDb().collection(collection).doc(id).get().then(function(res) {
-    const row = res.data || null
-    return isCurrentWorkspaceRow(row) ? row : null
-  }).catch(function() {
-    return null
+  return call('dataRead', {
+    action: 'getById',
+    collection,
+    id
+  }).then(function(res) {
+    return res.row || null
   })
 }
 
 function listByQuery(collection, query, options) {
-  const db = getDb()
-  let ref = db.collection(collection).where(Object.assign({}, query || {}, { workspaceId: workspaceId() }))
-  const opts = options || {}
-  if (opts.orderBy) {
-    ref = ref.orderBy(opts.orderBy.field, opts.orderBy.direction || 'desc')
-  }
-  if (opts.limit) ref = ref.limit(opts.limit)
-  return ref.get().then(function(res) {
-    return res.data || []
+  return call('dataRead', {
+    action: 'list',
+    collection,
+    query: query || {},
+    options: options || {}
+  }).then(function(res) {
+    return res.rows || []
   })
 }
 
 function updateById(collection, id, data) {
-  return getById(collection, id).then(function(row) {
-    if (!row) throw new Error('记录不存在或无权访问')
-    return getDb().collection(collection).doc(id).update({
-      data: Object.assign({}, data || {}, { workspaceId: workspaceId() })
-    })
-  })
+  return Promise.reject(new Error('直接更新已禁用，请使用云函数写入。'))
 }
 
 module.exports = {
   COLLECTIONS,
-  getDb,
   workspaceId,
   call,
   getById,
