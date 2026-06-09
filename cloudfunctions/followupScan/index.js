@@ -8,6 +8,11 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
 const MAX_EVENT_BYTES = 65536
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
+const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
+const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
+const SKU_FIELDS = ['_id', 'name', 'title', 'category', 'basePrice', 'costPrice', 'purchasePrice', 'stockOnHand', 'stockReserved', 'safetyStock', 'stockUnit', 'unit', 'stockLocation', 'supplierName', 'supplier', 'inventoryRemark', 'remark', 'reorderEnabled', 'lastRestockedAt', 'tags', 'adjustableFields', 'enabled', 'sortOrder']
+const INVENTORY_MOVEMENT_FIELDS = ['skuId', 'skuName', 'movementType', 'type', 'quantity', 'unitCost', 'totalCost', 'relatedOrderId', 'relatedOrderNo', 'note', 'occurredAt']
+const CASHFLOW_FIELDS = ['_id', 'direction', 'amount', 'category', 'paymentMethod', 'channel', 'status', 'relatedOrderId', 'orderId', 'relatedOrderNo', 'orderNo', 'relatedQuoteId', 'quoteId', 'relatedSkuId', 'skuId', 'counterpartyName', 'counterparty', 'note', 'occurredAt']
 
 function now() {
   return new Date().toISOString()
@@ -36,6 +41,15 @@ function normalizeNumber(value) {
 
 function normalizeText(value) {
   return value == null ? '' : String(value).trim()
+}
+
+function pickFields(source, allowedFields) {
+  const result = {}
+  const input = source || {}
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(input, field)) result[field] = input[field]
+  })
+  return result
 }
 
 function requireOperatorId() {
@@ -401,7 +415,7 @@ exports.main = async (event) => {
       resultType: '',
       createdBy: operatorId,
       updatedBy: operatorId
-    }, event.task || {}, {
+    }, pickFields(event.task, MANUAL_TASK_FIELDS), {
       workspaceId,
       dedupeKey: 'manual:' + Date.now() + ':' + Math.random().toString(36).slice(2),
       createdAt: now(),
@@ -412,7 +426,7 @@ exports.main = async (event) => {
     return { ok: true, task: Object.assign({}, task, { _id: added._id }) }
   }
   if (mode === 'templateSave') {
-    const template = Object.assign({ workspaceId, enabled: true, useCount: 0 }, event.template || {}, { workspaceId })
+    const template = Object.assign({ workspaceId, enabled: true, useCount: 0 }, pickFields(event.template, TEMPLATE_FIELDS), { workspaceId })
     const saved = await upsertById('message_templates', template, workspaceId)
     if (!saved) return { ok: false, code: 'not_found', message: '模板不存在。' }
     return { ok: true, template: saved }
@@ -427,7 +441,7 @@ exports.main = async (event) => {
     return { ok: true }
   }
   if (mode === 'skuSave') {
-    const rawSku = event.sku || {}
+    const rawSku = pickFields(event.sku, SKU_FIELDS)
     let baseSku = {}
     if (rawSku._id) {
       baseSku = await getWorkspaceDoc('sku_catalog', rawSku._id, workspaceId)
@@ -456,7 +470,7 @@ exports.main = async (event) => {
     return { ok: true, sku: saved }
   }
   if (mode === 'inventoryMovementSave') {
-    const movementInput = event.movement || {}
+    const movementInput = pickFields(event.movement, INVENTORY_MOVEMENT_FIELDS)
     const movementType = normalizeMovementType(movementInput.movementType || movementInput.type)
     const quantity = normalizeNumber(movementInput.quantity)
     const unitCost = normalizeNumber(movementInput.unitCost)
@@ -501,7 +515,7 @@ exports.main = async (event) => {
     return { ok: true, movement: Object.assign({}, movement, { _id: added._id }) }
   }
   if (mode === 'cashflowSave') {
-    const input = event.entry || {}
+    const input = pickFields(event.entry, CASHFLOW_FIELDS)
     const amount = normalizeNumber(input.amount)
     if (!amount) return { ok: false, message: '现金流金额不能为空' }
     const entry = Object.assign({}, input, {
