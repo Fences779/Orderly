@@ -2,6 +2,7 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const USER_WRITE_MODES = ['taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 
 function now() {
   return new Date().toISOString()
@@ -30,6 +31,12 @@ function normalizeNumber(value) {
 
 function normalizeText(value) {
   return value == null ? '' : String(value).trim()
+}
+
+function requireOperatorId() {
+  const operatorId = cloud.getWXContext().OPENID || ''
+  if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
+  return { ok: true, operatorId }
 }
 
 function normalizeDirection(value) {
@@ -321,10 +328,18 @@ async function taskAction(event, operatorId) {
 }
 
 exports.main = async (event) => {
+  event = event || {}
   const workspaceId = event.workspaceId || 'default'
-  const operatorId = cloud.getWXContext().OPENID || 'anonymous'
   if (event.mode === 'inventoryManagementDashboard') return inventoryManagementDashboard(event, workspaceId)
   if (event.mode === 'cashflowHealthDashboard') return cashflowHealthDashboard(event, workspaceId)
+
+  let operatorId = ''
+  if (USER_WRITE_MODES.indexOf(event.mode) >= 0) {
+    const auth = requireOperatorId()
+    if (!auth.ok) return auth
+    operatorId = auth.operatorId
+  }
+
   if (event.mode === 'taskAction') return taskAction(event, operatorId)
   if (event.mode === 'manualCreate') {
     const task = Object.assign({
