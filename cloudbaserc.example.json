@@ -1,5 +1,5 @@
 {
   "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
   "version": "2.0",
-  "envId": "prod-7gxdllg3263aae26"
+  "envId": "replace-with-your-cloudbase-env-id"
 }
