@@ -99,13 +99,64 @@ public sealed partial class LocalAccountManagementService
         var accountsRoot = Path.GetFullPath(DatabasePaths.GetAccountsDirectoryPath());
         var targetDirectory = Path.GetFullPath(Path.GetDirectoryName(databasePath) ?? string.Empty);
         if (string.IsNullOrWhiteSpace(targetDirectory)
-            || !targetDirectory.StartsWith(accountsRoot, StringComparison.OrdinalIgnoreCase)
+            || !IsPathInsideDirectory(targetDirectory, accountsRoot)
+            || ContainsReparsePoint(targetDirectory)
             || !Directory.Exists(targetDirectory))
         {
             return;
         }
 
         Directory.Delete(targetDirectory, recursive: true);
+    }
+
+    private static bool IsPathInsideDirectory(string targetDirectory, string rootDirectory)
+    {
+        var relative = Path.GetRelativePath(rootDirectory, targetDirectory);
+        return !string.IsNullOrWhiteSpace(relative)
+            && relative != "."
+            && !relative.StartsWith("..", StringComparison.Ordinal)
+            && !Path.IsPathRooted(relative);
+    }
+
+    private static bool ContainsReparsePoint(string directory)
+    {
+        try
+        {
+            if (HasReparsePoint(directory))
+            {
+                return true;
+            }
+
+            var options = new EnumerationOptions
+            {
+                AttributesToSkip = 0,
+                IgnoreInaccessible = false,
+                RecurseSubdirectories = false
+            };
+
+            foreach (var subdirectory in Directory.EnumerateDirectories(directory, "*", options))
+            {
+                if (ContainsReparsePoint(subdirectory))
+                {
+                    return true;
+                }
+            }
+
+            return Directory.EnumerateFiles(directory, "*", options).Any(HasReparsePoint);
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
+
+    private static bool HasReparsePoint(string path)
+    {
+        return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
     }
 
     private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string secret, byte[] salt, int iterations, byte[] dataKey)
