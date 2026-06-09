@@ -5,6 +5,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 const COLLECTIONS = ['customers', 'deals', 'quotes', 'sku_catalog', 'inventory_movements', 'cashflow_entries', 'followup_tasks', 'message_templates', 'captures', 'activity_logs']
+const DEFAULT_WORKSPACE_ID = 'default'
+const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const ENABLE_SEED_ENV_NAME = 'ORDERLY_ENABLE_DEAL_INIT_SEED'
 const SEED_ADMIN_OPENIDS_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_OPENIDS'
 
@@ -27,6 +29,14 @@ function requireSeedAuthorization() {
   }
 
   return { ok: true, operatorId }
+}
+
+function resolveWorkspaceId(event) {
+  const workspaceId = String((event && event.workspaceId) || '').trim() || DEFAULT_WORKSPACE_ID
+  const configured = normalizeList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
+  const allowed = configured.length ? configured : [DEFAULT_WORKSPACE_ID]
+  if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  return { ok: true, workspaceId }
 }
 
 async function ensureCollections() {
@@ -59,7 +69,9 @@ exports.main = async (event) => {
   if (!auth.ok) return auth
 
   const request = event || {}
-  const workspaceId = request.workspaceId || 'default'
+  const workspace = resolveWorkspaceId(request)
+  if (!workspace.ok) return workspace
+  const workspaceId = workspace.workspaceId
   await ensureCollections()
   const seed = createSeed(workspaceId)
   const counts = {}

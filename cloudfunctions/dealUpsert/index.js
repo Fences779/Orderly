@@ -2,6 +2,8 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const DEFAULT_WORKSPACE_ID = 'default'
+const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 
 const STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing', 'quote_sent', 'waiting_deposit', 'scheduled', 'in_production', 'ready_to_ship', 'shipped', 'received', 'completed', 'repurchase_due', 'dormant', 'lost']
 
@@ -19,6 +21,14 @@ function normalizeArray(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
   return String(value).split(/[,\s，、/]+/).map((item) => item.trim()).filter(Boolean)
+}
+
+function resolveWorkspaceId(event) {
+  const workspaceId = String((event && event.workspaceId) || '').trim() || DEFAULT_WORKSPACE_ID
+  const configured = normalizeArray(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
+  const allowed = configured.length ? configured : [DEFAULT_WORKSPACE_ID]
+  if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  return { ok: true, workspaceId }
 }
 
 function money(value) {
@@ -57,7 +67,9 @@ exports.main = async (event) => {
   if (!auth.ok) return auth
 
   event = event || {}
-  const workspaceId = event.workspaceId || 'default'
+  const workspace = resolveWorkspaceId(event)
+  if (!workspace.ok) return workspace
+  const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
   const input = event.deal || {}
   if (!input.customerId) return { ok: false, message: 'deal 必须关联 customerId' }

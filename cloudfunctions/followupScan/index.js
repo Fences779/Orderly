@@ -2,6 +2,8 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const DEFAULT_WORKSPACE_ID = 'default'
+const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 
@@ -38,6 +40,14 @@ function requireOperatorId() {
   const operatorId = cloud.getWXContext().OPENID || ''
   if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
   return { ok: true, operatorId }
+}
+
+function resolveWorkspaceId(event) {
+  const workspaceId = normalizeText(event && event.workspaceId) || DEFAULT_WORKSPACE_ID
+  const configured = normalizeArray(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
+  const allowed = configured.length ? configured : [DEFAULT_WORKSPACE_ID]
+  if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  return { ok: true, workspaceId }
 }
 
 function isAutoScanEnabled() {
@@ -319,23 +329,24 @@ async function createTaskIfMissing(workspaceId, task) {
   return Object.assign({}, task, { _id: added._id })
 }
 
-async function taskAction(event, operatorId) {
+async function taskAction(event, operatorId, workspaceId) {
   const task = (await db.collection('followup_tasks').doc(event.taskId).get()).data
+  if (!task || task.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '跟进任务不存在。' }
   const patch = { updatedAt: now(), updatedBy: operatorId }
   if (event.action === 'complete') Object.assign(patch, { taskStatus: 'completed', completedAt: now(), resultType: 'done' })
   if (event.action === 'skip') Object.assign(patch, { taskStatus: 'skipped', completedAt: now(), resultType: 'skipped' })
   if (event.action === 'delay') Object.assign(patch, { dueAt: event.payload && event.payload.dueAt ? event.payload.dueAt : addDaysFrom(new Date(), 1) })
   await db.collection('followup_tasks').doc(event.taskId).update({ data: patch })
-  if (task) {
-    await log(task.workspaceId || event.workspaceId || 'default', 'deal', task.dealId, 'followup_' + event.action, '跟进任务' + event.action, operatorId)
-  }
+  await log(workspaceId, 'deal', task.dealId, 'followup_' + event.action, '跟进任务' + event.action, operatorId)
   return { ok: true }
 }
 
 exports.main = async (event) => {
   event = event || {}
   const mode = normalizeText(event.mode)
-  const workspaceId = event.workspaceId || 'default'
+  const workspace = resolveWorkspaceId(event)
+  if (!workspace.ok) return workspace
+  const workspaceId = workspace.workspaceId
   let operatorId = ''
   if (USER_AUTH_MODES.indexOf(mode) >= 0) {
     const auth = requireOperatorId()
@@ -345,7 +356,7 @@ exports.main = async (event) => {
 
   if (mode === 'inventoryManagementDashboard') return inventoryManagementDashboard(event, workspaceId)
   if (mode === 'cashflowHealthDashboard') return cashflowHealthDashboard(event, workspaceId)
-  if (mode === 'taskAction') return taskAction(event, operatorId)
+  if (mode === 'taskAction') return taskAction(event, operatorId, workspaceId)
   if (mode === 'manualCreate') {
     const task = Object.assign({
       workspaceId,
