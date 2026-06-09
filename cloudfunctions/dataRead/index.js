@@ -54,10 +54,11 @@ const RESPONSE_FIELDS = {
   cashflow_entries: ['_id', 'direction', 'amount', 'category', 'paymentMethod', 'status', 'relatedOrderId', 'relatedOrderNo', 'relatedQuoteId', 'relatedSkuId', 'occurredAt', 'createdAt', 'updatedAt'],
   followup_tasks: ['_id', 'dealId', 'customerId', 'customerName', 'triggerType', 'triggerAt', 'dueAt', 'priorityScore', 'templateId', 'suggestedText', 'taskStatus', 'completedAt', 'resultType', 'createdAt', 'updatedAt'],
   message_templates: ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder', 'useCount', 'createdAt', 'updatedAt'],
-  captures: ['_id', 'parserResult', 'confidenceScore', 'confirmStatus', 'linkedCustomerId', 'linkedDealId', 'createdAt', 'updatedAt', 'createdBy'],
+  captures: ['_id', 'confidenceScore', 'confirmStatus', 'linkedCustomerId', 'linkedDealId', 'createdAt', 'updatedAt', 'createdBy'],
   activity_logs: ['_id', 'entityType', 'entityId', 'actionType', 'note', 'operatorId', 'createdAt']
 }
-const CAPTURE_DETAIL_FIELDS = RESPONSE_FIELDS.captures.concat(['rawText', 'ocrText'])
+const CAPTURE_DETAIL_FIELDS = RESPONSE_FIELDS.captures
+const CAPTURE_SENSITIVE_DETAIL_FIELDS = ['parserResult', 'rawText', 'ocrText']
 const QUOTE_ITEM_RESPONSE_FIELDS = ['name', 'qty', 'price', 'note', 'skuId', 'materialCode', 'unit']
 
 function normalizeText(value) {
@@ -200,10 +201,17 @@ function projectQuoteItems(items) {
   return items.slice(0, 100).map((item) => pickFields(item, QUOTE_ITEM_RESPONSE_FIELDS))
 }
 
-function projectRow(collection, row, detail) {
+function canReadCaptureSensitiveDetail(row, operatorId) {
+  return row && row.createdBy === operatorId && (!row.confirmStatus || row.confirmStatus === 'draft')
+}
+
+function projectRow(collection, row, detail, operatorId) {
   if (!row) return null
   const fields = collection === 'captures' && detail ? CAPTURE_DETAIL_FIELDS : RESPONSE_FIELDS[collection]
   const projected = pickFields(row, fields || ['_id'])
+  if (collection === 'captures' && detail && canReadCaptureSensitiveDetail(row, operatorId)) {
+    Object.assign(projected, pickFields(row, CAPTURE_SENSITIVE_DETAIL_FIELDS))
+  }
   if (collection === 'quotes') {
     projected.items = projectQuoteItems(projected.items)
   }
@@ -216,12 +224,12 @@ function sanitizeLimit(value) {
   return Math.min(MAX_LIMIT, Math.floor(limit))
 }
 
-async function getById(collection, id, workspaceId) {
+async function getById(collection, id, workspaceId, operatorId) {
   const docId = normalizeText(id)
   if (!docId) return null
   try {
     const row = (await db.collection(collection).doc(docId).get()).data
-    return row && row.workspaceId === workspaceId ? projectRow(collection, row, true) : null
+    return row && row.workspaceId === workspaceId ? projectRow(collection, row, true, operatorId) : null
   } catch (err) {
     return null
   }
@@ -237,7 +245,7 @@ async function listByQuery(collection, event, workspaceId) {
     ref = ref.orderBy(orderField, direction)
   }
   const rows = (await ref.limit(sanitizeLimit(options.limit)).get()).data || []
-  return rows.map((row) => projectRow(collection, row, false)).filter(Boolean)
+  return rows.map((row) => projectRow(collection, row, false, '')).filter(Boolean)
 }
 
 function logInternalError(scope, err) {
@@ -263,7 +271,7 @@ async function handleRequest(event) {
 
   const action = normalizeText(event.action || 'list')
   if (action === 'getById') {
-    const row = await getById(collection, event.id, workspace.workspaceId)
+    const row = await getById(collection, event.id, workspace.workspaceId, auth.operatorId)
     return { ok: true, row }
   }
   if (action === 'list') {
