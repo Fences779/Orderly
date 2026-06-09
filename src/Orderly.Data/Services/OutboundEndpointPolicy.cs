@@ -21,6 +21,8 @@ internal static class OutboundEndpointPolicy
         {
             throw new InvalidOperationException($"{configurationName} 的主机不在允许的出站主机列表内。");
         }
+
+        ValidateResolvedAddresses(endpoint, configurationName);
     }
 
     private static bool IsRestrictedLocalEndpoint(Uri endpoint)
@@ -32,6 +34,40 @@ internal static class OutboundEndpointPolicy
         }
 
         return IPAddress.TryParse(host, out var address) && IsRestrictedAddress(address);
+    }
+
+    private static void ValidateResolvedAddresses(Uri endpoint, string configurationName)
+    {
+        if (IsLocalEndpointAllowedForDevelopment())
+        {
+            return;
+        }
+
+        var host = endpoint.DnsSafeHost.Trim('[', ']').Trim();
+        if (string.IsNullOrWhiteSpace(host) || IPAddress.TryParse(host, out _))
+        {
+            return;
+        }
+
+        IPAddress[] addresses;
+        try
+        {
+            addresses = Dns.GetHostAddresses(host);
+        }
+        catch (System.Net.Sockets.SocketException ex)
+        {
+            throw new InvalidOperationException($"{configurationName} 的主机无法解析。", ex);
+        }
+
+        if (addresses.Length == 0)
+        {
+            throw new InvalidOperationException($"{configurationName} 的主机无法解析。");
+        }
+
+        if (addresses.Any(IsRestrictedAddress))
+        {
+            throw new InvalidOperationException($"{configurationName} 解析到了本机、私网、链路本地或 metadata 地址，已拒绝出站请求。");
+        }
     }
 
     private static bool IsRestrictedAddress(IPAddress address)
