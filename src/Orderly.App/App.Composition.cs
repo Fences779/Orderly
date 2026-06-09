@@ -1,6 +1,8 @@
 using System.IO;
 using System.Net.Http;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using Microsoft.Win32;
@@ -118,6 +120,7 @@ public partial class App
             var existingKey = File.ReadAllBytes(keyPath);
             if (existingKey.Length == QaSessionDataKeyLength)
             {
+                HardenQaSessionDataKeyFile(keyPath);
                 return existingKey;
             }
 
@@ -126,7 +129,7 @@ public partial class App
 
         var key = RandomNumberGenerator.GetBytes(QaSessionDataKeyLength);
         File.WriteAllBytes(keyPath, key);
-        TryHideFile(keyPath);
+        HardenQaSessionDataKeyFile(keyPath);
         return key;
     }
 
@@ -148,7 +151,7 @@ public partial class App
         }
     }
 
-    private static void TryHideFile(string path)
+    private static void HardenQaSessionDataKeyFile(string path)
     {
         try
         {
@@ -158,6 +161,39 @@ public partial class App
         {
         }
         catch (UnauthorizedAccessException)
+        {
+        }
+
+        try
+        {
+            var currentUser = WindowsIdentity.GetCurrent().User;
+            if (currentUser is null)
+            {
+                return;
+            }
+
+            var fileInfo = new FileInfo(path);
+            var security = fileInfo.GetAccessControl();
+            foreach (FileSystemAccessRule rule in security.GetAccessRules(includeExplicit: true, includeInherited: true, targetType: typeof(SecurityIdentifier)))
+            {
+                security.RemoveAccessRuleAll(rule);
+            }
+
+            security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+            security.AddAccessRule(new FileSystemAccessRule(currentUser, FileSystemRights.FullControl, AccessControlType.Allow));
+            security.AddAccessRule(new FileSystemAccessRule(
+                new SecurityIdentifier(WellKnownSidType.LocalSystemSid, domainSid: null),
+                FileSystemRights.FullControl,
+                AccessControlType.Allow));
+            fileInfo.SetAccessControl(security);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+        catch (SystemException)
         {
         }
     }
