@@ -83,6 +83,9 @@ public sealed class SensitiveFieldMigrationService
 
         await BackfillTextColumnAsync(connection, transaction, "ReplyTemplates", "Content", "ContentCiphertext", "1=1", "", treatDbNullAsEmpty: false, cancellationToken);
 
+        await BackfillTextColumnAsync(connection, transaction, "SyncRecords", "ErrorMessage", "ErrorMessageCiphertext", "1=1", "", treatDbNullAsEmpty: false, cancellationToken);
+        await BackfillTextColumnAsync(connection, transaction, "SyncRecords", "MetadataJson", "MetadataJsonCiphertext", "1=1", "", treatDbNullAsEmpty: false, cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
     }
 

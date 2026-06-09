@@ -241,7 +241,9 @@ public sealed partial class DatabaseInitializer
                 SyncStatus INTEGER NOT NULL,
                 LastSyncedAt TEXT NULL,
                 ErrorMessage TEXT NOT NULL DEFAULT '',
+                ErrorMessageCiphertext TEXT NOT NULL DEFAULT '',
                 MetadataJson TEXT NOT NULL DEFAULT '',
+                MetadataJsonCiphertext TEXT NOT NULL DEFAULT '',
                 CreatedAt TEXT NOT NULL,
                 UpdatedAt TEXT NOT NULL,
                 DeletedAt TEXT NULL,
@@ -374,6 +376,9 @@ public sealed partial class DatabaseInitializer
         await EnsureColumnAsync(connection, "PriceAdjustments", "ApprovedAtCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
 
         await EnsureColumnAsync(connection, "ReplyTemplates", "ContentCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+
+        await EnsureColumnAsync(connection, "SyncRecords", "ErrorMessageCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
+        await EnsureColumnAsync(connection, "SyncRecords", "MetadataJsonCiphertext", "TEXT NOT NULL DEFAULT ''", cancellationToken);
     }
 
     private static async Task EnsureEntityColumnsAsync(SqliteConnection connection, string table, CancellationToken cancellationToken)

@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Core.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -9,10 +10,12 @@ namespace Orderly.Data.Repositories;
 public sealed class SyncRecordRepository : ISyncRecordRepository
 {
     private readonly SqliteConnectionFactory _connectionFactory;
+    private readonly IFieldEncryptionService _fieldEncryptionService;
 
-    public SyncRecordRepository(SqliteConnectionFactory connectionFactory)
+    public SyncRecordRepository(SqliteConnectionFactory connectionFactory, IFieldEncryptionService fieldEncryptionService)
     {
         _connectionFactory = connectionFactory;
+        _fieldEncryptionService = fieldEncryptionService ?? throw new ArgumentNullException(nameof(fieldEncryptionService));
     }
 
     public async Task<SyncRecord> CreateAsync(SyncRecord record, CancellationToken cancellationToken = default)
@@ -33,16 +36,16 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO SyncRecords (
-                EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, MetadataJson,
+                EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, ErrorMessageCiphertext, MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
             )
             VALUES (
-                $entityType, $entityId, $remoteId, $syncStatus, $lastSyncedAt, $errorMessage, $metadataJson,
+                $entityType, $entityId, $remoteId, $syncStatus, $lastSyncedAt, $errorMessage, $errorMessageCiphertext, $metadataJson, $metadataJsonCiphertext,
                 $createdAt, $updatedAt, $deletedAt, $isSynced, $version
             );
             SELECT last_insert_rowid();
             """;
-        AddParameters(command, record);
+        AddParameters(command, record, _fieldEncryptionService);
         record.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
         return await GetByIdAsync(record.Id, cancellationToken) ?? record;
     }
@@ -64,14 +67,16 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
                 SyncStatus = $syncStatus,
                 LastSyncedAt = $lastSyncedAt,
                 ErrorMessage = $errorMessage,
+                ErrorMessageCiphertext = $errorMessageCiphertext,
                 MetadataJson = $metadataJson,
+                MetadataJsonCiphertext = $metadataJsonCiphertext,
                 UpdatedAt = $updatedAt,
                 DeletedAt = $deletedAt,
                 IsSynced = $isSynced,
                 Version = $version
             WHERE Id = $id AND DeletedAt IS NULL;
             """;
-        AddParameters(command, record);
+        AddParameters(command, record, _fieldEncryptionService);
         command.Parameters.AddWithValue("$id", record.Id);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
@@ -83,7 +88,7 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, MetadataJson,
+                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, ErrorMessageCiphertext, MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
             FROM SyncRecords
             WHERE Id = $id AND DeletedAt IS NULL;
@@ -91,7 +96,7 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         command.Parameters.AddWithValue("$id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public async Task<SyncRecord?> GetByEntityAsync(string entityType, int entityId, CancellationToken cancellationToken = default)
@@ -101,7 +106,7 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, MetadataJson,
+                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, ErrorMessageCiphertext, MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
             FROM SyncRecords
             WHERE EntityType = $entityType AND EntityId = $entityId AND DeletedAt IS NULL
@@ -112,7 +117,7 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         command.Parameters.AddWithValue("$entityId", entityId);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public async Task<SyncRecord?> GetLatestByEntityTypeAsync(string entityType, CancellationToken cancellationToken = default)
@@ -122,7 +127,7 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, MetadataJson,
+                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, ErrorMessageCiphertext, MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
             FROM SyncRecords
             WHERE EntityType = $entityType AND DeletedAt IS NULL
@@ -132,7 +137,7 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         command.Parameters.AddWithValue("$entityType", entityType);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
+        return await reader.ReadAsync(cancellationToken) ? Map(reader, _fieldEncryptionService) : null;
     }
 
     public async Task<IReadOnlyList<SyncRecord>> ListPendingAsync(CancellationToken cancellationToken = default)
@@ -142,7 +147,7 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT
-                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, MetadataJson,
+                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, ErrorMessageCiphertext, MetadataJson, MetadataJsonCiphertext,
                 CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
             FROM SyncRecords
             WHERE DeletedAt IS NULL AND SyncStatus = $syncStatus
@@ -154,21 +159,23 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            rows.Add(Map(reader));
+            rows.Add(Map(reader, _fieldEncryptionService));
         }
 
         return rows;
     }
 
-    private static void AddParameters(SqliteCommand command, SyncRecord record)
+    private static void AddParameters(SqliteCommand command, SyncRecord record, IFieldEncryptionService fieldEncryptionService)
     {
         command.Parameters.AddWithValue("$entityType", record.EntityType);
         command.Parameters.AddWithValue("$entityId", record.EntityId);
         command.Parameters.AddWithValue("$remoteId", record.RemoteId);
         command.Parameters.AddWithValue("$syncStatus", (int)record.SyncStatus);
         command.Parameters.AddWithValue("$lastSyncedAt", ToDbDate(record.LastSyncedAt));
-        command.Parameters.AddWithValue("$errorMessage", record.ErrorMessage);
-        command.Parameters.AddWithValue("$metadataJson", record.MetadataJson);
+        command.Parameters.AddWithValue("$errorMessage", string.Empty);
+        command.Parameters.AddWithValue("$errorMessageCiphertext", fieldEncryptionService.Encrypt(record.ErrorMessage));
+        command.Parameters.AddWithValue("$metadataJson", string.Empty);
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(record.MetadataJson));
         command.Parameters.AddWithValue("$createdAt", record.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", record.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(record.DeletedAt));
@@ -176,8 +183,11 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         command.Parameters.AddWithValue("$version", record.Version);
     }
 
-    private static SyncRecord Map(SqliteDataReader reader)
+    private static SyncRecord Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)
     {
+        var errorMessage = EncryptedColumnReader.ReadRequiredString(reader, 7, fieldEncryptionService, "SyncRecords.ErrorMessageCiphertext");
+        var metadataJson = EncryptedColumnReader.ReadRequiredString(reader, 9, fieldEncryptionService, "SyncRecords.MetadataJsonCiphertext");
+
         return new SyncRecord
         {
             Id = reader.GetInt32(0),
@@ -186,13 +196,13 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
             RemoteId = reader.GetString(3),
             SyncStatus = (SyncStatus)reader.GetInt32(4),
             LastSyncedAt = reader.IsDBNull(5) ? null : DateTime.Parse(reader.GetString(5), null, DateTimeStyles.RoundtripKind),
-            ErrorMessage = reader.GetString(6),
-            MetadataJson = reader.GetString(7),
-            CreatedAt = DateTime.Parse(reader.GetString(8), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(9), null, DateTimeStyles.RoundtripKind),
-            DeletedAt = reader.IsDBNull(10) ? null : DateTime.Parse(reader.GetString(10), null, DateTimeStyles.RoundtripKind),
-            IsSynced = reader.GetInt32(11) == 1,
-            Version = reader.GetInt32(12)
+            ErrorMessage = errorMessage,
+            MetadataJson = metadataJson,
+            CreatedAt = DateTime.Parse(reader.GetString(10), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(11), null, DateTimeStyles.RoundtripKind),
+            DeletedAt = reader.IsDBNull(12) ? null : DateTime.Parse(reader.GetString(12), null, DateTimeStyles.RoundtripKind),
+            IsSynced = reader.GetInt32(13) == 1,
+            Version = reader.GetInt32(14)
         };
     }
 

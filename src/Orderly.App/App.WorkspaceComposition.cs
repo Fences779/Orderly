@@ -40,7 +40,7 @@ public partial class App
         IOcrResultRepository ocrResultRepository = new OcrResultRepository(connectionFactory, fieldEncryptionService);
         IAiSuggestionRepository aiSuggestionRepository = new AiSuggestionRepository(connectionFactory, fieldEncryptionService);
         IActivityLogRepository activityLogRepository = new ActivityLogRepository(connectionFactory, fieldEncryptionService);
-        ISyncRecordRepository syncRecordRepository = new SyncRecordRepository(connectionFactory);
+        ISyncRecordRepository syncRecordRepository = new SyncRecordRepository(connectionFactory, fieldEncryptionService);
         IPriceAdjustmentRepository priceAdjustmentRepository = new PriceAdjustmentRepository(connectionFactory, fieldEncryptionService);
         IReplyTemplateRepository replyTemplateRepository = new ReplyTemplateRepository(connectionFactory, fieldEncryptionService);
         IAppSettingRepository settingRepository = new AppSettingRepository(connectionFactory);
