@@ -28,6 +28,8 @@ function call(name, data) {
       throw new Error(result.message || '云函数调用失败')
     }
     return result
+  }, function() {
+    throw new Error('云函数调用失败')
   })
 }
 
