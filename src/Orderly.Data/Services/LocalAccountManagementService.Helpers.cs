@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Orderly.Core.Models;
 using Orderly.Data.Sqlite;
 
@@ -73,29 +72,6 @@ public sealed partial class LocalAccountManagementService
             .ToList();
     }
 
-    private static bool IsValidPin(string pin)
-    {
-        return pin.Length == 6 && pin.All(char.IsDigit);
-    }
-
-    private static byte[] ComputeHash(string value, byte[] salt, int iterations)
-    {
-        return Rfc2898DeriveBytes.Pbkdf2(value, salt, iterations, HashAlgorithmName.SHA256, 32);
-    }
-
-    private static bool VerifyHash(string value, byte[] salt, int iterations, byte[] expectedHash)
-    {
-        var actualHash = ComputeHash(value, salt, iterations);
-        try
-        {
-            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(actualHash);
-        }
-    }
-
     private static void DeleteAccountWorkspace(string databasePath)
     {
         if (string.IsNullOrWhiteSpace(databasePath))
@@ -168,51 +144,21 @@ public sealed partial class LocalAccountManagementService
 
     private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string secret, byte[] salt, int iterations, byte[] dataKey)
     {
-        var key = ComputeHash(secret, salt, iterations);
-        try
-        {
-            return WrapDataKeyWithKey(key, dataKey);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(key);
-        }
+        return LocalCredentialSecurity.WrapDataKey(secret, salt, iterations, dataKey);
     }
 
     private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKeyWithKey(byte[] key, byte[] dataKey)
     {
-        var nonce = RandomNumberGenerator.GetBytes(12);
-        var ciphertext = new byte[dataKey.Length];
-        var tag = new byte[16];
-
-        using var aes = new AesGcm(key, tag.Length);
-        aes.Encrypt(nonce, dataKey, ciphertext, tag);
-        return (ciphertext, nonce, tag);
+        return LocalCredentialSecurity.WrapDataKeyWithKey(key, dataKey);
     }
 
     private static byte[] UnwrapDataKey(string secret, byte[] salt, int iterations, byte[] ciphertext, byte[] nonce, byte[] tag)
     {
-        var key = ComputeHash(secret, salt, iterations);
-        try
-        {
-            return UnwrapDataKeyWithKey(key, ciphertext, nonce, tag);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(key);
-        }
+        return LocalCredentialSecurity.UnwrapDataKey(secret, salt, iterations, ciphertext, nonce, tag);
     }
 
     private static byte[] UnwrapDataKeyWithKey(byte[] key, byte[] ciphertext, byte[] nonce, byte[] tag)
     {
-        if (ciphertext.Length == 0 || nonce.Length == 0 || tag.Length == 0)
-        {
-            throw new InvalidOperationException("账号缺少可用的数据密钥包裹信息。");
-        }
-
-        var dataKey = new byte[ciphertext.Length];
-        using var aes = new AesGcm(key, tag.Length);
-        aes.Decrypt(nonce, ciphertext, tag, dataKey);
-        return dataKey;
+        return LocalCredentialSecurity.UnwrapDataKeyWithKey(key, ciphertext, nonce, tag);
     }
 }

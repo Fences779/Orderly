@@ -9,10 +9,6 @@ namespace Orderly.Data.Services;
 
 public sealed class LocalAuthService : ILocalAuthService
 {
-    private const int DefaultPasswordIterations = 200000;
-    private const int DefaultPinIterations = 200000;
-    private const int DefaultRecoveryIterations = 200000;
-
     private readonly ILocalAccountRepository _accountRepository;
     private readonly ILegacyDatabaseMigrationService _legacyMigrationService;
     private readonly ISessionContextService _sessionContextService;
@@ -59,23 +55,23 @@ public sealed class LocalAuthService : ILocalAuthService
         var databasePath = DatabasePaths.GetAccountDatabasePath(accountId);
 
         var passwordSalt = RandomNumberGenerator.GetBytes(16);
-        var passwordHash = ComputeHash(request.MasterPassword, passwordSalt, DefaultPasswordIterations);
+        var passwordHash = LocalCredentialSecurity.ComputeHash(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        var pinHash = ComputeHash(request.Pin, pinSalt, DefaultPinIterations);
+        var pinHash = LocalCredentialSecurity.ComputeHash(request.Pin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
 
-        var recoveryKey = GenerateRecoveryKey();
-        var normalizedRecoveryKey = NormalizeRecoveryKey(recoveryKey);
+        var recoveryKey = LocalCredentialSecurity.GenerateRecoveryKey();
+        var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
         var recoverySalt = RandomNumberGenerator.GetBytes(16);
-        var recoveryHash = ComputeHash(normalizedRecoveryKey, recoverySalt, DefaultRecoveryIterations);
+        var recoveryHash = LocalCredentialSecurity.ComputeHash(normalizedRecoveryKey, recoverySalt, LocalCredentialSecurity.DefaultRecoveryIterations);
 
         var dataKey = RandomNumberGenerator.GetBytes(32);
         (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrapped = ([], [], []);
         (byte[] Ciphertext, byte[] Nonce, byte[] Tag) recoveryWrapped = ([], [], []);
         try
         {
-            wrapped = WrapDataKey(request.MasterPassword, passwordSalt, DefaultPasswordIterations, dataKey);
-            recoveryWrapped = WrapDataKey(normalizedRecoveryKey, recoverySalt, DefaultRecoveryIterations, dataKey);
+            wrapped = LocalCredentialSecurity.WrapDataKey(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, dataKey);
+            recoveryWrapped = LocalCredentialSecurity.WrapDataKey(normalizedRecoveryKey, recoverySalt, LocalCredentialSecurity.DefaultRecoveryIterations, dataKey);
 
             var account = new LocalAccount
             {
@@ -84,13 +80,13 @@ public sealed class LocalAuthService : ILocalAuthService
                 DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? username : request.DisplayName.Trim(),
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
-                PasswordIterations = DefaultPasswordIterations,
+                PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations,
                 PinHash = pinHash,
                 PinSalt = pinSalt,
-                PinIterations = DefaultPinIterations,
+                PinIterations = LocalCredentialSecurity.DefaultPinIterations,
                 RecoveryKeyHash = recoveryHash,
                 RecoveryKeySalt = recoverySalt,
-                RecoveryKeyIterations = DefaultRecoveryIterations,
+                RecoveryKeyIterations = LocalCredentialSecurity.DefaultRecoveryIterations,
                 RecoveryEncryptedDataKey = recoveryWrapped.Ciphertext,
                 RecoveryDataKeyNonce = recoveryWrapped.Nonce,
                 RecoveryDataKeyTag = recoveryWrapped.Tag,
@@ -161,7 +157,7 @@ public sealed class LocalAuthService : ILocalAuthService
             return LocalSignInResult.Failure("账号已被禁用。");
         }
 
-        if (!VerifyHash(masterPassword, account.PasswordSalt, account.PasswordIterations, account.PasswordHash))
+        if (!LocalCredentialSecurity.VerifyHash(masterPassword, account.PasswordSalt, account.PasswordIterations, account.PasswordHash))
         {
             return LocalSignInResult.Failure("账号不存在或主密码错误。");
         }
@@ -178,6 +174,10 @@ public sealed class LocalAuthService : ILocalAuthService
                 account.DataKeyTag);
         }
         catch (CryptographicException)
+        {
+            return LocalSignInResult.Failure("主密码验证通过，但密钥解包失败。");
+        }
+        catch (InvalidOperationException)
         {
             return LocalSignInResult.Failure("主密码验证通过，但密钥解包失败。");
         }
@@ -200,7 +200,7 @@ public sealed class LocalAuthService : ILocalAuthService
 
     public async Task<bool> VerifyPinAsync(string accountId, string pin, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(accountId) || !IsValidPin(pin))
+        if (string.IsNullOrWhiteSpace(accountId) || !LocalCredentialSecurity.IsValidPin(pin))
         {
             return false;
         }
@@ -211,7 +211,7 @@ public sealed class LocalAuthService : ILocalAuthService
             return false;
         }
 
-        return VerifyHash(pin, account.PinSalt, account.PinIterations, account.PinHash);
+        return LocalCredentialSecurity.VerifyHash(pin, account.PinSalt, account.PinIterations, account.PinHash);
     }
 
     public async Task<bool> VerifyRecoveryKeyAsync(string accountId, string recoveryKey, CancellationToken cancellationToken = default)
@@ -222,20 +222,19 @@ public sealed class LocalAuthService : ILocalAuthService
         }
 
         var account = await _accountRepository.GetByAccountIdAsync(accountId, cancellationToken);
-        if (account is null)
+        if (account is null || !account.IsEnabled)
         {
             return false;
         }
 
-        if (account.RecoveryKeyIterations <= 0
-            || account.RecoveryKeySalt.Length == 0
-            || account.RecoveryKeyHash.Length == 0)
+        if (!LocalCredentialSecurity.HasUsableHashParameters(account.RecoveryKeySalt, account.RecoveryKeyIterations, account.RecoveryKeyHash)
+            || !LocalCredentialSecurity.HasUsableWrappedDataKey(account.RecoveryEncryptedDataKey, account.RecoveryDataKeyNonce, account.RecoveryDataKeyTag))
         {
             return false;
         }
 
-        var normalizedRecoveryKey = NormalizeRecoveryKey(recoveryKey);
-        return VerifyHash(normalizedRecoveryKey, account.RecoveryKeySalt, account.RecoveryKeyIterations, account.RecoveryKeyHash);
+        var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
+        return LocalCredentialSecurity.VerifyHash(normalizedRecoveryKey, account.RecoveryKeySalt, account.RecoveryKeyIterations, account.RecoveryKeyHash);
     }
 
     private static void ValidateOwnerRequest(CreateFirstOwnerRequest request)
@@ -250,51 +249,9 @@ public sealed class LocalAuthService : ILocalAuthService
             throw new InvalidOperationException(passwordValidationError);
         }
 
-        if (!IsValidPin(request.Pin))
+        if (!LocalCredentialSecurity.IsValidPin(request.Pin))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
-        }
-    }
-
-    private static bool IsValidPin(string pin)
-    {
-        return pin.Length == 6 && pin.All(char.IsDigit);
-    }
-
-    private static byte[] ComputeHash(string value, byte[] salt, int iterations)
-    {
-        return Rfc2898DeriveBytes.Pbkdf2(value, salt, iterations, HashAlgorithmName.SHA256, 32);
-    }
-
-    private static bool VerifyHash(string value, byte[] salt, int iterations, byte[] expectedHash)
-    {
-        var actualHash = ComputeHash(value, salt, iterations);
-        try
-        {
-            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(actualHash);
-        }
-    }
-
-    private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string masterPassword, byte[] passwordSalt, int iterations, byte[] dataKey)
-    {
-        var key = ComputeHash(masterPassword, passwordSalt, iterations);
-        var nonce = RandomNumberGenerator.GetBytes(12);
-        var ciphertext = new byte[dataKey.Length];
-        var tag = new byte[16];
-
-        try
-        {
-            using var aes = new AesGcm(key, tag.Length);
-            aes.Encrypt(nonce, dataKey, ciphertext, tag);
-            return (ciphertext, nonce, tag);
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(key);
         }
     }
 
@@ -306,30 +263,13 @@ public sealed class LocalAuthService : ILocalAuthService
         byte[] nonce,
         byte[] tag)
     {
-        var key = ComputeHash(masterPassword, passwordSalt, iterations);
-        var dataKey = new byte[encryptedDataKey.Length];
-
-        try
-        {
-            using var aes = new AesGcm(key, tag.Length);
-            aes.Decrypt(nonce, encryptedDataKey, tag, dataKey);
-            return dataKey;
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(key);
-        }
-    }
-
-    private static string GenerateRecoveryKey()
-    {
-        var raw = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
-        return string.Join("-", Enumerable.Range(0, raw.Length / 4).Select(index => raw.Substring(index * 4, 4)));
-    }
-
-    private static string NormalizeRecoveryKey(string recoveryKey)
-    {
-        return recoveryKey.Trim().ToUpperInvariant();
+        return LocalCredentialSecurity.UnwrapDataKey(
+            masterPassword,
+            passwordSalt,
+            iterations,
+            encryptedDataKey,
+            nonce,
+            tag);
     }
 
     private static LocalSessionContext CreateSession(LocalAccount account, byte[] dataKey, DateTime signedInAt)

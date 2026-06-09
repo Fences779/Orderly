@@ -34,7 +34,7 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("管理员验证信息不完整。");
         }
 
-        if (!IsValidPin(ownerPin.Trim()))
+        if (!LocalCredentialSecurity.IsValidPin(ownerPin.Trim()))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
@@ -45,12 +45,12 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("主账号不存在或不可用。");
         }
 
-        if (!VerifyHash(ownerMasterPassword, owner.PasswordSalt, owner.PasswordIterations, owner.PasswordHash))
+        if (!LocalCredentialSecurity.VerifyHash(ownerMasterPassword, owner.PasswordSalt, owner.PasswordIterations, owner.PasswordHash))
         {
             throw new InvalidOperationException("主账号主密码错误。");
         }
 
-        if (!VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
+        if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
         {
             throw new InvalidOperationException("主账号 PIN 错误。");
         }
@@ -68,6 +68,10 @@ public sealed partial class LocalAccountManagementService
                     owner.DataKeyTag));
         }
         catch (CryptographicException)
+        {
+            throw new InvalidOperationException("主账号密钥解包失败。");
+        }
+        catch (InvalidOperationException)
         {
             throw new InvalidOperationException("主账号密钥解包失败。");
         }
@@ -92,20 +96,20 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("当前账号已被禁用。");
         }
 
-        if (!VerifyHash(currentMasterPassword, account.PasswordSalt, account.PasswordIterations, account.PasswordHash))
+        if (!LocalCredentialSecurity.VerifyHash(currentMasterPassword, account.PasswordSalt, account.PasswordIterations, account.PasswordHash))
         {
             throw new InvalidOperationException("当前主密码错误。");
         }
 
         var passwordSalt = RandomNumberGenerator.GetBytes(16);
-        var passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-        var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, session.DataKey);
+        var passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
+        var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, session.DataKey);
 
         try
         {
             account.PasswordSalt = passwordSalt;
             account.PasswordHash = passwordHash;
-            account.PasswordIterations = DefaultPasswordIterations;
+            account.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
             account.EncryptedDataKey = wrappedByPassword.Ciphertext;
             account.DataKeyNonce = wrappedByPassword.Nonce;
             account.DataKeyTag = wrappedByPassword.Tag;
@@ -122,7 +126,7 @@ public sealed partial class LocalAccountManagementService
 
     public async Task ChangeCurrentPinAsync(string currentPin, string newPin, CancellationToken cancellationToken = default)
     {
-        if (!IsValidPin(currentPin) || !IsValidPin(newPin))
+        if (!LocalCredentialSecurity.IsValidPin(currentPin) || !LocalCredentialSecurity.IsValidPin(newPin))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
@@ -134,19 +138,19 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("当前账号已被禁用。");
         }
 
-        if (!VerifyHash(currentPin, account.PinSalt, account.PinIterations, account.PinHash))
+        if (!LocalCredentialSecurity.VerifyHash(currentPin, account.PinSalt, account.PinIterations, account.PinHash))
         {
             throw new InvalidOperationException("当前 PIN 错误。");
         }
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        var pinHash = ComputeHash(newPin, pinSalt, DefaultPinIterations);
+        var pinHash = LocalCredentialSecurity.ComputeHash(newPin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
 
         try
         {
             account.PinSalt = pinSalt;
             account.PinHash = pinHash;
-            account.PinIterations = DefaultPinIterations;
+            account.PinIterations = LocalCredentialSecurity.DefaultPinIterations;
             account.UpdatedAt = DateTime.Now;
             await _accountRepository.UpdateAsync(account, cancellationToken);
         }
@@ -177,12 +181,12 @@ public sealed partial class LocalAccountManagementService
         try
         {
             passwordSalt = RandomNumberGenerator.GetBytes(16);
-            passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
+            passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
+            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
 
             member.PasswordSalt = passwordSalt;
             member.PasswordHash = passwordHash;
-            member.PasswordIterations = DefaultPasswordIterations;
+            member.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
             member.EncryptedDataKey = wrappedByPassword.Ciphertext;
             member.DataKeyNonce = wrappedByPassword.Nonce;
             member.DataKeyTag = wrappedByPassword.Tag;
@@ -236,7 +240,7 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("重置 Member 主密码所需参数不完整。");
         }
 
-        if (!IsValidPin(memberPin.Trim()) || !IsValidPin(ownerPin.Trim()))
+        if (!LocalCredentialSecurity.IsValidPin(memberPin.Trim()) || !LocalCredentialSecurity.IsValidPin(ownerPin.Trim()))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
@@ -262,12 +266,12 @@ public sealed partial class LocalAccountManagementService
         {
             memberDataKey = UnwrapDataKeyWithKey(ownerDataKey, member.AdminEncryptedDataKey, member.AdminDataKeyNonce, member.AdminDataKeyTag);
             passwordSalt = RandomNumberGenerator.GetBytes(16);
-            passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
+            passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
+            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
 
             member.PasswordSalt = passwordSalt;
             member.PasswordHash = passwordHash;
-            member.PasswordIterations = DefaultPasswordIterations;
+            member.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
             member.EncryptedDataKey = wrappedByPassword.Ciphertext;
             member.DataKeyNonce = wrappedByPassword.Nonce;
             member.DataKeyTag = wrappedByPassword.Tag;
@@ -290,7 +294,7 @@ public sealed partial class LocalAccountManagementService
     public async Task ResetMemberPinAsync(string memberAccountId, string newPin, CancellationToken cancellationToken = default)
     {
         RequireOwnerSession();
-        if (!IsValidPin(newPin))
+        if (!LocalCredentialSecurity.IsValidPin(newPin))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
@@ -302,13 +306,13 @@ public sealed partial class LocalAccountManagementService
         }
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        var pinHash = ComputeHash(newPin, pinSalt, DefaultPinIterations);
+        var pinHash = LocalCredentialSecurity.ComputeHash(newPin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
 
         try
         {
             member.PinSalt = pinSalt;
             member.PinHash = pinHash;
-            member.PinIterations = DefaultPinIterations;
+            member.PinIterations = LocalCredentialSecurity.DefaultPinIterations;
             member.UpdatedAt = DateTime.Now;
             await _accountRepository.UpdateAsync(member, cancellationToken);
         }
@@ -340,14 +344,26 @@ public sealed partial class LocalAccountManagementService
         var owner = await _accountRepository.GetByUsernameAsync(ownerUsername.Trim(), cancellationToken)
             ?? throw new InvalidOperationException("Owner 账号不存在或不可用。");
 
-        var normalizedRecoveryKey = recoveryKey.Trim().ToUpperInvariant();
-        var ownerDataKey = UnwrapDataKey(
-            normalizedRecoveryKey,
-            owner.RecoveryKeySalt,
-            owner.RecoveryKeyIterations,
-            owner.RecoveryEncryptedDataKey,
-            owner.RecoveryDataKeyNonce,
-            owner.RecoveryDataKeyTag);
+        var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
+        byte[] ownerDataKey;
+        try
+        {
+            ownerDataKey = UnwrapDataKey(
+                normalizedRecoveryKey,
+                owner.RecoveryKeySalt,
+                owner.RecoveryKeyIterations,
+                owner.RecoveryEncryptedDataKey,
+                owner.RecoveryDataKeyNonce,
+                owner.RecoveryDataKeyTag);
+        }
+        catch (CryptographicException)
+        {
+            throw new InvalidOperationException("Owner 账号恢复密钥解包失败。");
+        }
+        catch (InvalidOperationException)
+        {
+            throw new InvalidOperationException("Owner 账号恢复密钥解包失败。");
+        }
 
         byte[] passwordSalt = [];
         byte[] passwordHash = [];
@@ -355,12 +371,12 @@ public sealed partial class LocalAccountManagementService
         try
         {
             passwordSalt = RandomNumberGenerator.GetBytes(16);
-            passwordHash = ComputeHash(newMasterPassword, passwordSalt, DefaultPasswordIterations);
-            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, DefaultPasswordIterations, ownerDataKey);
+            passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
+            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, ownerDataKey);
 
             owner.PasswordSalt = passwordSalt;
             owner.PasswordHash = passwordHash;
-            owner.PasswordIterations = DefaultPasswordIterations;
+            owner.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
             owner.EncryptedDataKey = wrappedByPassword.Ciphertext;
             owner.DataKeyNonce = wrappedByPassword.Nonce;
             owner.DataKeyTag = wrappedByPassword.Tag;
@@ -387,7 +403,7 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("恢复流程参数不完整。");
         }
 
-        if (!IsValidPin(ownerPin.Trim()))
+        if (!LocalCredentialSecurity.IsValidPin(ownerPin.Trim()))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
@@ -398,20 +414,21 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("Owner 账号不存在或不可用。");
         }
 
-        if (!VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
+        if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
         {
             throw new InvalidOperationException("PIN 校验失败。");
         }
 
-        var normalizedRecoveryKey = recoveryKey.Trim().ToUpperInvariant();
-        if (!VerifyHash(normalizedRecoveryKey, owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash))
+        if (!LocalCredentialSecurity.HasUsableHashParameters(owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash)
+            || !LocalCredentialSecurity.HasUsableWrappedDataKey(owner.RecoveryEncryptedDataKey, owner.RecoveryDataKeyNonce, owner.RecoveryDataKeyTag))
         {
-            throw new InvalidOperationException("Recovery Key 校验失败。");
+            throw new InvalidOperationException("Owner 账号缺少可用的恢复密钥信息，无法执行恢复。");
         }
 
-        if (owner.RecoveryEncryptedDataKey.Length == 0 || owner.RecoveryDataKeyNonce.Length == 0 || owner.RecoveryDataKeyTag.Length == 0)
+        var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
+        if (!LocalCredentialSecurity.VerifyHash(normalizedRecoveryKey, owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash))
         {
-            throw new InvalidOperationException("Owner 账号缺少恢复密钥包裹的数据密钥，无法执行恢复。");
+            throw new InvalidOperationException("Recovery Key 校验失败。");
         }
     }
 
@@ -432,7 +449,7 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("重置 Member 主密码所需参数不完整。");
         }
 
-        if (!IsValidPin(memberPin.Trim()) || !IsValidPin(ownerPin.Trim()))
+        if (!LocalCredentialSecurity.IsValidPin(memberPin.Trim()) || !LocalCredentialSecurity.IsValidPin(ownerPin.Trim()))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
@@ -443,7 +460,7 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("成员账号不存在或不可用。");
         }
 
-        if (!VerifyHash(memberPin.Trim(), member.PinSalt, member.PinIterations, member.PinHash))
+        if (!LocalCredentialSecurity.VerifyHash(memberPin.Trim(), member.PinSalt, member.PinIterations, member.PinHash))
         {
             throw new InvalidOperationException("成员账号 PIN 错误。");
         }

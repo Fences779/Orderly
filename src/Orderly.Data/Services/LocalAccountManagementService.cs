@@ -9,9 +9,6 @@ namespace Orderly.Data.Services;
 
 public sealed partial class LocalAccountManagementService : ILocalAccountManagementService
 {
-    private const int DefaultPasswordIterations = 200000;
-    private const int DefaultPinIterations = 200000;
-
     private readonly ILocalAccountRepository _accountRepository;
     private readonly ISessionContextService _sessionContextService;
 
@@ -87,7 +84,7 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
             throw new InvalidOperationException(passwordValidationError);
         }
 
-        if (!IsValidPin(request.Pin))
+        if (!LocalCredentialSecurity.IsValidPin(request.Pin))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
@@ -102,15 +99,15 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
         var accountId = Guid.NewGuid().ToString("N");
         var memberDataKey = RandomNumberGenerator.GetBytes(32);
         var passwordSalt = RandomNumberGenerator.GetBytes(16);
-        var passwordHash = ComputeHash(request.MasterPassword, passwordSalt, DefaultPasswordIterations);
+        var passwordHash = LocalCredentialSecurity.ComputeHash(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        var pinHash = ComputeHash(request.Pin, pinSalt, DefaultPinIterations);
+        var pinHash = LocalCredentialSecurity.ComputeHash(request.Pin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
         (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByPassword = ([], [], []);
         (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByOwner = ([], [], []);
 
         try
         {
-            wrappedByPassword = WrapDataKey(request.MasterPassword, passwordSalt, DefaultPasswordIterations, memberDataKey);
+            wrappedByPassword = LocalCredentialSecurity.WrapDataKey(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
             wrappedByOwner = WrapDataKeyWithKey(ownerDataKey, memberDataKey);
 
             var member = new LocalAccount
@@ -120,10 +117,10 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
                 DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? username : request.DisplayName.Trim(),
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
-                PasswordIterations = DefaultPasswordIterations,
+                PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations,
                 PinHash = pinHash,
                 PinSalt = pinSalt,
-                PinIterations = DefaultPinIterations,
+                PinIterations = LocalCredentialSecurity.DefaultPinIterations,
                 EncryptedDataKey = wrappedByPassword.Ciphertext,
                 DataKeyNonce = wrappedByPassword.Nonce,
                 DataKeyTag = wrappedByPassword.Tag,
@@ -182,7 +179,7 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
             throw new InvalidOperationException("删除账号所需的主账号验证信息不完整。");
         }
 
-        if (!IsValidPin(ownerPin.Trim()))
+        if (!LocalCredentialSecurity.IsValidPin(ownerPin.Trim()))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
@@ -193,12 +190,12 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
             throw new InvalidOperationException("主账号不存在或不可用。");
         }
 
-        if (!VerifyHash(ownerMasterPassword, owner.PasswordSalt, owner.PasswordIterations, owner.PasswordHash))
+        if (!LocalCredentialSecurity.VerifyHash(ownerMasterPassword, owner.PasswordSalt, owner.PasswordIterations, owner.PasswordHash))
         {
             throw new InvalidOperationException("主账号主密码错误。");
         }
 
-        if (!VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
+        if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
         {
             throw new InvalidOperationException("主账号 PIN 错误。");
         }
