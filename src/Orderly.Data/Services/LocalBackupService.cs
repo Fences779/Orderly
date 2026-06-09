@@ -17,6 +17,7 @@ public sealed partial class LocalBackupService : IBackupService
     private const string BackupIntegritySessionKeyScope = "session-data-key";
     private const string BackupIntegrityMachineKeyScope = "machine-local-key";
     private const string BackupIntegrityKeyFileName = "backup-integrity.key";
+    private const long MaxBackupFileBytes = 256L * 1024L * 1024L;
 
     private static readonly string[] IncludedTableNames =
     [

@@ -47,6 +47,29 @@ public sealed partial class LocalBackupService
             };
         }
 
+        try
+        {
+            var fileLength = new FileInfo(backupPath).Length;
+            if (fileLength > MaxBackupFileBytes)
+            {
+                errors.Add($"备份文件过大，最大支持 {MaxBackupFileBytes / 1024L / 1024L} MB。");
+                return new BackupValidationResult
+                {
+                    BackupPath = backupPath,
+                    Errors = errors
+                };
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            errors.Add($"读取备份文件信息失败：{SanitizeBackupErrorSummary(ex.Message, backupPath)}");
+            return new BackupValidationResult
+            {
+                BackupPath = backupPath,
+                Errors = errors
+            };
+        }
+
         string json;
         try
         {
