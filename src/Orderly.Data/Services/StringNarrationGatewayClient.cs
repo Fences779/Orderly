@@ -8,8 +8,13 @@ public sealed class StringNarrationGatewayClient
 {
     public const string OperatorId = "pc-admin";
     private const long MaxResponseBodyBytes = 1024L * 1024L;
+    private const int MaxResponseJsonDepth = 32;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonDocumentOptions ResponseJsonDocumentOptions = new()
+    {
+        MaxDepth = MaxResponseJsonDepth
+    };
 
     private readonly HttpClient _httpClient;
     private readonly StringNarrationGatewayOptions _options;
@@ -82,7 +87,7 @@ public sealed class StringNarrationGatewayClient
         JsonDocument document;
         try
         {
-            document = JsonDocument.Parse(body);
+            document = JsonDocument.Parse(body, ResponseJsonDocumentOptions);
         }
         catch (JsonException ex)
         {
@@ -151,7 +156,7 @@ public sealed class StringNarrationGatewayClient
 
         try
         {
-            using var document = JsonDocument.Parse(body);
+            using var document = JsonDocument.Parse(body, ResponseJsonDocumentOptions);
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
             {

@@ -6,7 +6,13 @@ namespace Orderly.Data.Services;
 
 internal static class ChatCompletionSuggestionSupport
 {
+    private const int MaxProviderJsonDepth = 32;
     private const string SystemPrompt = "你是一个中文私域成交助手。根据客户信息、订单信息和最近沟通记录，生成一条自然、克制、不油腻、可直接编辑的回复建议。不要发送，只生成建议文本。不要夸大，不要承诺无法保证的内容。";
+
+    private static readonly JsonDocumentOptions ProviderJsonDocumentOptions = new()
+    {
+        MaxDepth = MaxProviderJsonDepth
+    };
 
     public static object[] BuildMessages(AiSuggestionRequest request)
     {
@@ -61,7 +67,7 @@ internal static class ChatCompletionSuggestionSupport
 
     public static string ExtractAssistantContent(string body, string providerDisplayName)
     {
-        using var document = JsonDocument.Parse(body);
+        using var document = JsonDocument.Parse(body, ProviderJsonDocumentOptions);
         if (!document.RootElement.TryGetProperty("choices", out var choices)
             || choices.ValueKind != JsonValueKind.Array
             || choices.GetArrayLength() == 0)
