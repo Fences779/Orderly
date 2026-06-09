@@ -23,6 +23,7 @@ const MAX_CASHFLOW_AMOUNT = 100000000
 const MAX_INVENTORY_QUANTITY = 1000000
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
+const MAX_TEMPLATE_CONTENT_LENGTH = 2000
 const MAX_TAGS = 20
 
 function now() {
@@ -578,7 +579,19 @@ async function handleRequest(event) {
     return { ok: true, task: Object.assign({}, task, { _id: added._id }) }
   }
   if (mode === 'templateSave') {
-    const template = Object.assign({ workspaceId, enabled: true, useCount: 0 }, pickFields(event.template, TEMPLATE_FIELDS), { workspaceId })
+    const input = pickFields(event.template, TEMPLATE_FIELDS)
+    const template = Object.assign({ workspaceId, enabled: true, useCount: 0 }, input, {
+      workspaceId,
+      title: limitText(input.title || input.name, MAX_SHORT_TEXT_LENGTH),
+      name: limitText(input.name || input.title, MAX_SHORT_TEXT_LENGTH),
+      scene: limitText(input.scene, MAX_SHORT_TEXT_LENGTH),
+      sceneType: limitText(input.sceneType, MAX_SHORT_TEXT_LENGTH),
+      content: limitText(input.content, MAX_TEMPLATE_CONTENT_LENGTH),
+      variables: normalizeLimitedArray(input.variables),
+      enabled: input.enabled !== false,
+      tags: normalizeLimitedArray(input.tags),
+      sortOrder: normalizeBoundedNumber(input.sortOrder || 10, 0, 1000000)
+    })
     const saved = await upsertById('message_templates', template, workspaceId)
     if (!saved) return { ok: false, code: 'not_found', message: '模板不存在。' }
     return { ok: true, template: saved }
