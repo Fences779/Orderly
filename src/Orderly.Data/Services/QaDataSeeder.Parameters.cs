@@ -182,6 +182,7 @@ public sealed partial class QaDataSeeder
     {
         command.Parameters.AddWithValue("$entityType", syncRecord.EntityType);
         command.Parameters.AddWithValue("$entityId", entityId);
+        command.Parameters.AddWithValue("$remoteId", syncRecord.RemoteId);
         command.Parameters.AddWithValue("$syncStatus", (int)syncRecord.Status);
         command.Parameters.AddWithValue("$lastSyncedAt", syncRecord.Status == SyncStatus.Synced ? now.ToString("O") : DBNull.Value);
         command.Parameters.AddWithValue("$errorMessage", syncRecord.ErrorMessage);

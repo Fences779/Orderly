@@ -414,7 +414,8 @@ public sealed partial class QaDataSeeder
             FROM SyncRecords
             WHERE DeletedAt IS NULL
               AND (
-                    (EntityType = $entityType AND EntityId = $entityId)
+                    RemoteId = $remoteId
+                 OR (EntityType = $entityType AND EntityId = $entityId)
                  OR (MetadataJson = $metadataJson AND {QaDataScope.BuildSyncRecordSelfPredicate()})
               )
             LIMIT 1;
@@ -423,6 +424,7 @@ public sealed partial class QaDataSeeder
             {
                 command.Parameters.AddWithValue("$entityType", syncRecord.EntityType);
                 command.Parameters.AddWithValue("$entityId", entityId);
+                command.Parameters.AddWithValue("$remoteId", syncRecord.RemoteId);
                 command.Parameters.AddWithValue("$metadataJson", BuildQaMetadata(syncRecord.RemoteId));
                 QaDataScope.AddScopeParameters(command);
             },
@@ -436,7 +438,7 @@ public sealed partial class QaDataSeeder
                 UPDATE SyncRecords
                 SET EntityType = $entityType,
                     EntityId = $entityId,
-                    RemoteId = '',
+                    RemoteId = $remoteId,
                     SyncStatus = $syncStatus,
                     LastSyncedAt = $lastSyncedAt,
                     ErrorMessage = $errorMessage,
@@ -462,7 +464,7 @@ public sealed partial class QaDataSeeder
                 CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
             )
             VALUES (
-                $entityType, $entityId, '', $syncStatus, $lastSyncedAt, $errorMessage, $metadataJson,
+                $entityType, $entityId, $remoteId, $syncStatus, $lastSyncedAt, $errorMessage, $metadataJson,
                 $createdAt, $updatedAt, NULL, $isSynced, 1
             );
             """;
