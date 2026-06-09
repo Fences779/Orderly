@@ -19,6 +19,7 @@ public sealed partial class LocalBackupService
             throw new ArgumentException("备份文件路径不能为空。", nameof(outputPath));
         }
 
+        EnsureBackupFileExtensionIsSafe(outputPath);
         EnsureBackupPathIsNotLinked(outputPath);
         var entityId = GenerateBackupEntityId();
 

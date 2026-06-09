@@ -37,6 +37,16 @@ public sealed partial class LocalBackupService
             };
         }
 
+        if (!IsBackupFileExtensionSafe(backupPath))
+        {
+            errors.Add("备份文件必须是 .json 文件。");
+            return new BackupValidationResult
+            {
+                BackupPath = backupPath,
+                Errors = errors
+            };
+        }
+
         if (IsLinkedBackupPath(backupPath))
         {
             errors.Add("备份文件不能是链接文件。");

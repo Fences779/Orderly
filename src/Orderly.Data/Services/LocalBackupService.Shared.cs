@@ -139,6 +139,19 @@ public sealed partial class LocalBackupService
         return LocalDataFileSecurity.IsReparsePoint(backupPath);
     }
 
+    private static bool IsBackupFileExtensionSafe(string backupPath)
+    {
+        return string.Equals(Path.GetExtension(backupPath), ".json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void EnsureBackupFileExtensionIsSafe(string backupPath)
+    {
+        if (!IsBackupFileExtensionSafe(backupPath))
+        {
+            throw new InvalidOperationException("备份文件必须是 .json 文件。");
+        }
+    }
+
     private static void EnsureBackupPathIsNotLinked(string backupPath)
     {
         if (IsLinkedBackupPath(backupPath))
