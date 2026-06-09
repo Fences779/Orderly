@@ -6,6 +6,8 @@ namespace Orderly.Data.Services;
 
 public sealed class InventoryGatewayClient
 {
+    private const long MaxResponseBodyBytes = 1024L * 1024L;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _httpClient;
@@ -47,7 +49,11 @@ public sealed class InventoryGatewayClient
         }
 
         using var _ = response;
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        var body = await HttpContentSafety.ReadAsStringWithLimitAsync(
+            response.Content,
+            MaxResponseBodyBytes,
+            "库存云端网关",
+            cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)

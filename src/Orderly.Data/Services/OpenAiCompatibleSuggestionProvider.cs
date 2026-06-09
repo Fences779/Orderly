@@ -8,6 +8,8 @@ namespace Orderly.Data.Services;
 
 public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
 {
+    private const long MaxResponseBodyBytes = 2L * 1024L * 1024L;
+
     private readonly HttpClient _httpClient;
     private readonly AiProviderOptions _options;
 
@@ -54,7 +56,11 @@ public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
             throw new InvalidOperationException($"OpenAI-compatible provider returned HTTP {(int)response.StatusCode}.");
         }
 
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        var body = await HttpContentSafety.ReadAsStringWithLimitAsync(
+            response.Content,
+            MaxResponseBodyBytes,
+            "OpenAI-compatible provider",
+            cancellationToken);
         var suggestionText = ExtractAssistantContent(body);
         if (string.IsNullOrWhiteSpace(suggestionText))
         {

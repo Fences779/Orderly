@@ -7,6 +7,7 @@ namespace Orderly.Data.Services;
 public sealed class StringNarrationGatewayClient
 {
     public const string OperatorId = "pc-admin";
+    private const long MaxResponseBodyBytes = 1024L * 1024L;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -58,7 +59,11 @@ public sealed class StringNarrationGatewayClient
         }
 
         using var _ = response;
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        var body = await HttpContentSafety.ReadAsStringWithLimitAsync(
+            response.Content,
+            MaxResponseBodyBytes,
+            "串述 adminPcGateway",
+            cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)

@@ -7,6 +7,8 @@ namespace Orderly.Data.Services;
 
 public sealed class DeepSeekSuggestionProvider : IAiSuggestionProvider
 {
+    private const long MaxResponseBodyBytes = 2L * 1024L * 1024L;
+
     private readonly HttpClient _httpClient;
     private readonly AiProviderOptions _options;
 
@@ -42,7 +44,11 @@ public sealed class DeepSeekSuggestionProvider : IAiSuggestionProvider
             throw new InvalidOperationException($"DeepSeek provider returned HTTP {(int)response.StatusCode}.");
         }
 
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        var body = await HttpContentSafety.ReadAsStringWithLimitAsync(
+            response.Content,
+            MaxResponseBodyBytes,
+            "DeepSeek provider",
+            cancellationToken);
         var suggestionText = ChatCompletionSuggestionSupport.ExtractAssistantContent(body, "DeepSeek provider");
         if (string.IsNullOrWhiteSpace(suggestionText))
         {
