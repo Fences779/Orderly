@@ -101,12 +101,12 @@ public sealed partial class DemoDataSeeder
     private static async Task<DemoCounts> CountDemoDataAsync(SqliteConnection connection, SqliteTransaction transaction, CancellationToken cancellationToken)
     {
         return new DemoCounts(
-            await CountAsync(connection, transaction, "Customers", "Name LIKE $marker OR Remark LIKE $marker OR ExternalId LIKE $demoKey", cancellationToken),
-            await CountAsync(connection, transaction, "Orders", "Title LIKE $marker OR Requirement LIKE $marker OR ExternalId LIKE $demoKey", cancellationToken),
-            await CountAsync(connection, transaction, "FollowUps", "Title LIKE $marker OR Content LIKE $marker OR RemoteId LIKE $demoKey", cancellationToken),
-            await CountAsync(connection, transaction, "CustomerNotes", "Content LIKE $marker OR RemoteId LIKE $demoKey", cancellationToken),
-            await CountAsync(connection, transaction, "PriceAdjustments", "Reason LIKE $marker OR RemoteId LIKE $demoKey", cancellationToken),
-            await CountAsync(connection, transaction, "ActivityLogs", "Title LIKE $marker OR Description LIKE $marker OR MetadataJson LIKE $marker OR RemoteId LIKE $demoKey", cancellationToken));
+            await CountAsync(connection, transaction, "Customers", "RemoteId LIKE $demoKey", cancellationToken),
+            await CountAsync(connection, transaction, "Orders", "RemoteId LIKE $demoKey", cancellationToken),
+            await CountAsync(connection, transaction, "FollowUps", "RemoteId LIKE $demoKey", cancellationToken),
+            await CountAsync(connection, transaction, "CustomerNotes", "RemoteId LIKE $demoKey", cancellationToken),
+            await CountAsync(connection, transaction, "PriceAdjustments", "RemoteId LIKE $demoKey", cancellationToken),
+            await CountAsync(connection, transaction, "ActivityLogs", "RemoteId LIKE $demoKey", cancellationToken));
     }
 
     private static async Task<int> CountAsync(
@@ -119,7 +119,6 @@ public sealed partial class DemoDataSeeder
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = $"SELECT COUNT(1) FROM {table} WHERE DeletedAt IS NULL AND ({demoPredicate});";
-        command.Parameters.AddWithValue("$marker", $"%{DemoMarker}%");
         command.Parameters.AddWithValue("$demoKey", DemoKeyPattern);
 
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
@@ -139,7 +138,7 @@ public sealed partial class DemoDataSeeder
                 return;
             }
 
-            if (await GetIdByTextKeyAsync(connection, transaction, "Customers", "ExternalId", customer.ExternalId, cancellationToken) is not null)
+            if (await GetIdByTextKeyAsync(connection, transaction, "Customers", "RemoteId", customer.RemoteId, cancellationToken) is not null)
             {
                 continue;
             }
@@ -163,7 +162,7 @@ public sealed partial class DemoDataSeeder
                 return;
             }
 
-            if (await GetIdByTextKeyAsync(connection, transaction, "Orders", "ExternalId", order.ExternalId, cancellationToken) is not null)
+            if (await GetIdByTextKeyAsync(connection, transaction, "Orders", "RemoteId", order.RemoteId, cancellationToken) is not null)
             {
                 continue;
             }
@@ -194,7 +193,7 @@ public sealed partial class DemoDataSeeder
             }
 
             var customerId = await EnsureCustomerAsync(connection, transaction, followUp.CustomerExternalId, now, cancellationToken);
-            var orderId = await GetIdByTextKeyAsync(connection, transaction, "Orders", "ExternalId", followUp.OrderExternalId, cancellationToken);
+            var orderId = await GetIdByTextKeyAsync(connection, transaction, "Orders", "RemoteId", GetDemoOrderRemoteId(followUp.OrderExternalId), cancellationToken);
             await InsertFollowUpAsync(connection, transaction, followUp, customerId, orderId, now, cancellationToken);
             currentCount++;
         }
@@ -220,7 +219,7 @@ public sealed partial class DemoDataSeeder
             }
 
             var customerId = await EnsureCustomerAsync(connection, transaction, note.CustomerExternalId, now, cancellationToken);
-            var orderId = await GetIdByTextKeyAsync(connection, transaction, "Orders", "ExternalId", note.OrderExternalId, cancellationToken);
+            var orderId = await GetIdByTextKeyAsync(connection, transaction, "Orders", "RemoteId", GetDemoOrderRemoteId(note.OrderExternalId), cancellationToken);
             await InsertNoteAsync(connection, transaction, note, customerId, orderId, now, cancellationToken);
             currentCount++;
         }
@@ -246,7 +245,7 @@ public sealed partial class DemoDataSeeder
             }
 
             var customerId = await EnsureCustomerAsync(connection, transaction, adjustment.CustomerExternalId, now, cancellationToken);
-            var orderId = await GetIdByTextKeyAsync(connection, transaction, "Orders", "ExternalId", adjustment.OrderExternalId, cancellationToken);
+            var orderId = await GetIdByTextKeyAsync(connection, transaction, "Orders", "RemoteId", GetDemoOrderRemoteId(adjustment.OrderExternalId), cancellationToken);
             await InsertPriceAdjustmentAsync(connection, transaction, adjustment, customerId, orderId, now, cancellationToken);
             currentCount++;
         }
@@ -271,8 +270,8 @@ public sealed partial class DemoDataSeeder
                 continue;
             }
 
-            var customerId = await GetIdByTextKeyAsync(connection, transaction, "Customers", "ExternalId", activity.CustomerExternalId, cancellationToken);
-            var orderId = await GetIdByTextKeyAsync(connection, transaction, "Orders", "ExternalId", activity.OrderExternalId, cancellationToken);
+            var customerId = await GetIdByTextKeyAsync(connection, transaction, "Customers", "RemoteId", GetDemoCustomerRemoteId(activity.CustomerExternalId), cancellationToken);
+            var orderId = await GetIdByTextKeyAsync(connection, transaction, "Orders", "RemoteId", GetDemoOrderRemoteId(activity.OrderExternalId), cancellationToken);
             await InsertActivityLogAsync(connection, transaction, activity, customerId, orderId, now, cancellationToken);
             currentCount++;
         }
@@ -285,14 +284,24 @@ public sealed partial class DemoDataSeeder
         DateTime now,
         CancellationToken cancellationToken)
     {
-        var existingId = await GetIdByTextKeyAsync(connection, transaction, "Customers", "ExternalId", externalId, cancellationToken);
+        var customer = DemoCustomers.First(item => item.ExternalId == externalId);
+        var existingId = await GetIdByTextKeyAsync(connection, transaction, "Customers", "RemoteId", customer.RemoteId, cancellationToken);
         if (existingId is not null)
         {
             return existingId.Value;
         }
 
-        var customer = DemoCustomers.First(item => item.ExternalId == externalId);
         return await InsertCustomerAsync(connection, transaction, customer, now, cancellationToken);
+    }
+
+    private static string GetDemoCustomerRemoteId(string externalId)
+    {
+        return DemoCustomers.First(item => item.ExternalId == externalId).RemoteId;
+    }
+
+    private static string GetDemoOrderRemoteId(string externalId)
+    {
+        return DemoOrders.First(item => item.ExternalId == externalId).RemoteId;
     }
 
     private static async Task<int?> GetIdByTextKeyAsync(
