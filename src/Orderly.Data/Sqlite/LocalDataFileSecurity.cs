@@ -29,6 +29,16 @@ internal static class LocalDataFileSecurity
         HardenFileWindows(databasePath + "-shm");
     }
 
+    public static void HardenFile(string filePath)
+    {
+        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        HardenFileWindows(filePath);
+    }
+
     [SupportedOSPlatform("windows")]
     private static void HardenDirectoryWindows(string directoryPath)
     {

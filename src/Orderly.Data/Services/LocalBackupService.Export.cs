@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
+using Orderly.Data.Sqlite;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -34,6 +35,7 @@ public sealed partial class LocalBackupService
 
             var json = JsonSerializer.Serialize(manifest, SerializerOptions);
             await File.WriteAllTextAsync(outputPath, json, Utf8NoBom, cancellationToken);
+            LocalDataFileSecurity.HardenFile(outputPath);
 
             var syncMetadata = BuildExportMetadataJson(outputPath, manifest, createdBy, tagForQaScope);
             var syncRecord = await _syncService.MarkSyncedAsync(
