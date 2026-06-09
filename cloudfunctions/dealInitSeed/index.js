@@ -5,6 +5,29 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 const COLLECTIONS = ['customers', 'deals', 'quotes', 'sku_catalog', 'inventory_movements', 'cashflow_entries', 'followup_tasks', 'message_templates', 'captures', 'activity_logs']
+const ENABLE_SEED_ENV_NAME = 'ORDERLY_ENABLE_DEAL_INIT_SEED'
+const SEED_ADMIN_OPENIDS_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_OPENIDS'
+
+function normalizeList(value) {
+  return String(value || '')
+    .split(/[,\s，、;；]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function requireSeedAuthorization() {
+  if (process.env[ENABLE_SEED_ENV_NAME] !== '1') {
+    return { ok: false, code: 'seed_disabled', message: '演示数据初始化未启用。' }
+  }
+
+  const operatorId = cloud.getWXContext().OPENID || ''
+  const allowedOpenids = normalizeList(process.env[SEED_ADMIN_OPENIDS_ENV_NAME])
+  if (!operatorId || !allowedOpenids.includes(operatorId)) {
+    return { ok: false, code: 'unauthorized', message: '无权执行演示数据初始化。' }
+  }
+
+  return { ok: true, operatorId }
+}
 
 async function ensureCollections() {
   for (const name of COLLECTIONS) {
@@ -32,7 +55,11 @@ async function upsertDoc(collection, row) {
 }
 
 exports.main = async (event) => {
-  const workspaceId = event.workspaceId || 'default'
+  const auth = requireSeedAuthorization()
+  if (!auth.ok) return auth
+
+  const request = event || {}
+  const workspaceId = request.workspaceId || 'default'
   await ensureCollections()
   const seed = createSeed(workspaceId)
   const counts = {}
