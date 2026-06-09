@@ -34,6 +34,11 @@ internal static class ChatCompletionSuggestionSupport
             throw new InvalidOperationException(invalidBaseUrlMessage);
         }
 
+        if (baseUri.Scheme != Uri.UriSchemeHttps && !baseUri.IsLoopback)
+        {
+            throw new InvalidOperationException("AI provider base URL must use HTTPS unless it targets a loopback address.");
+        }
+
         var path = baseUri.AbsolutePath.TrimEnd('/');
         if (path.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
         {
@@ -72,17 +77,6 @@ internal static class ChatCompletionSuggestionSupport
             JsonValueKind.Array => ExtractContentArray(content),
             _ => string.Empty
         };
-    }
-
-    public static string BuildErrorSnippet(string body)
-    {
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            return "empty response body";
-        }
-
-        var normalized = body.Trim();
-        return normalized.Length <= 120 ? normalized : $"{normalized[..120]}...";
     }
 
     public static void ApplyBearerToken(HttpRequestMessage request, string apiKey)

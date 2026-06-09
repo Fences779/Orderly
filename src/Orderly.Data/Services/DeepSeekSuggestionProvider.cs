@@ -37,13 +37,12 @@ public sealed class DeepSeekSuggestionProvider : IAiSuggestionProvider
         httpRequest.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
         using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException($"DeepSeek provider returned HTTP {(int)response.StatusCode}: {ChatCompletionSuggestionSupport.BuildErrorSnippet(body)}");
+            throw new InvalidOperationException($"DeepSeek provider returned HTTP {(int)response.StatusCode}.");
         }
 
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
         var suggestionText = ChatCompletionSuggestionSupport.ExtractAssistantContent(body, "DeepSeek provider");
         if (string.IsNullOrWhiteSpace(suggestionText))
         {

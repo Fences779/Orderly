@@ -49,13 +49,12 @@ public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
         httpRequest.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
         using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
         if (!response.IsSuccessStatusCode)
         {
-            throw new InvalidOperationException($"OpenAI-compatible provider returned HTTP {(int)response.StatusCode}: {BuildErrorSnippet(body)}");
+            throw new InvalidOperationException($"OpenAI-compatible provider returned HTTP {(int)response.StatusCode}.");
         }
 
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
         var suggestionText = ExtractAssistantContent(body);
         if (string.IsNullOrWhiteSpace(suggestionText))
         {
@@ -90,6 +89,11 @@ public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
         if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
         {
             throw new InvalidOperationException("ORDERLY_AI_BASE_URL is not a valid absolute URL.");
+        }
+
+        if (baseUri.Scheme != Uri.UriSchemeHttps && !baseUri.IsLoopback)
+        {
+            throw new InvalidOperationException("ORDERLY_AI_BASE_URL must use HTTPS unless it targets a loopback address.");
         }
 
         var path = baseUri.AbsolutePath.TrimEnd('/');
@@ -197,14 +201,4 @@ public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
         return normalized.Length == 0 ? "暂无" : string.Join(" / ", normalized);
     }
 
-    private static string BuildErrorSnippet(string body)
-    {
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            return "empty response body";
-        }
-
-        var normalized = body.Trim();
-        return normalized.Length <= 120 ? normalized : $"{normalized[..120]}...";
-    }
 }

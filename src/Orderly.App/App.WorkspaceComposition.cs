@@ -65,7 +65,8 @@ public partial class App
             activityLogRepository,
             primaryAiSuggestionProvider,
             localAiSuggestionProvider,
-            aiProviderOptions);
+            aiProviderOptions,
+            settingRepository);
         IAutoReplyService autoReplyService = new LocalAutoReplyService(aiSuggestionRepository, orderRepository, activityLogRepository, clipboardService);
         IActivityLogService activityLogService = new ActivityLogService(activityLogRepository);
         IPipelineStageResolver pipelineStageResolver = new PipelineStageResolver(

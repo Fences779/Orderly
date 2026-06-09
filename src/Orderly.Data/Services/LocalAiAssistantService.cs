@@ -3,6 +3,7 @@ using Orderly.Core.Repositories;
 using Orderly.Core.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace Orderly.Data.Services;
 
@@ -18,6 +19,19 @@ public sealed class LocalAiAssistantService : IAiAssistantService
     private readonly IAiSuggestionProvider _primaryProvider;
     private readonly IAiSuggestionProvider _fallbackProvider;
     private readonly AiProviderOptions _providerOptions;
+    private readonly IAppSettingRepository _settingRepository;
+
+    private static readonly Regex PhoneRegex = new(
+        @"(?<!\d)(?:\+?86[-\s]?)?1[3-9]\d(?:[-\s]?\d){8}(?!\d)",
+        RegexOptions.Compiled);
+
+    private static readonly Regex AddressRegex = new(
+        @"[\u4e00-\u9fa5A-Za-z0-9#\-]{2,}(?:省|市|区|县|镇|乡|街道|路|街|巷|号|栋|幢|单元|室)[\u4e00-\u9fa5A-Za-z0-9#\-]{0,40}",
+        RegexOptions.Compiled);
+
+    private static readonly Regex TransactionIdRegex = new(
+        @"(?i)(?:(?:transaction|payment)[_\s-]?id|支付单号|交易号|微信支付单号)[:：\s]*[A-Za-z0-9_-]{12,64}|\b420000\d{16,48}\b",
+        RegexOptions.Compiled);
 
     public LocalAiAssistantService(
         ICustomerRepository customerRepository,
@@ -27,7 +41,8 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         IActivityLogRepository activityLogRepository,
         IAiSuggestionProvider primaryProvider,
         IAiSuggestionProvider fallbackProvider,
-        AiProviderOptions providerOptions)
+        AiProviderOptions providerOptions,
+        IAppSettingRepository settingRepository)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -37,12 +52,14 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         _primaryProvider = primaryProvider;
         _fallbackProvider = fallbackProvider;
         _providerOptions = providerOptions;
+        _settingRepository = settingRepository;
     }
 
     public async Task<AiSuggestion> GenerateReplySuggestionAsync(int customerId, int? orderId = null, int? messageId = null, CancellationToken cancellationToken = default)
     {
         var request = await BuildRequestAsync(customerId, orderId, messageId, cancellationToken);
-        var execution = await ExecuteProviderAsync(request, cancellationToken);
+        var providerRequest = await BuildProviderRequestAsync(request, cancellationToken);
+        var execution = await ExecuteProviderAsync(providerRequest.Request, providerRequest.RedactedBeforeSend, cancellationToken);
 
         var suggestion = new AiSuggestion
         {
@@ -172,20 +189,39 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         };
     }
 
-    private async Task<ProviderExecution> ExecuteProviderAsync(AiSuggestionRequest request, CancellationToken cancellationToken)
+    private async Task<ProviderExecution> ExecuteProviderAsync(
+        AiSuggestionRequest request,
+        bool redactedBeforeSend,
+        CancellationToken cancellationToken)
     {
         try
         {
             var primaryResult = await _primaryProvider.GenerateAsync(request, cancellationToken);
             EnsureSuggestionText(primaryResult);
-            return new ProviderExecution(primaryResult, false, null);
+            return new ProviderExecution(primaryResult, false, null, redactedBeforeSend);
         }
         catch (Exception ex) when (ShouldFallback())
         {
             var fallbackResult = await _fallbackProvider.GenerateAsync(request, cancellationToken);
             EnsureSuggestionText(fallbackResult);
-            return new ProviderExecution(fallbackResult, true, SummarizeProviderError(ex));
+            return new ProviderExecution(fallbackResult, true, SummarizeProviderError(ex), redactedBeforeSend);
         }
+    }
+
+    private async Task<ProviderRequest> BuildProviderRequestAsync(AiSuggestionRequest request, CancellationToken cancellationToken)
+    {
+        if (IsLocalProvider(_primaryProvider.Name))
+        {
+            return new ProviderRequest(request, false);
+        }
+
+        var preferences = await _settingRepository.GetPreferencesAsync(cancellationToken);
+        if (!ShouldRedactProviderRequest(preferences))
+        {
+            return new ProviderRequest(request, false);
+        }
+
+        return new ProviderRequest(RedactRequest(request, preferences), true);
     }
 
     private async Task<AiSuggestion> UpdateAsync(AiSuggestion suggestion, CancellationToken cancellationToken)
@@ -283,6 +319,67 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         return normalized.Length <= limit ? normalized : $"{normalized[..limit]}...";
     }
 
+    private static bool ShouldRedactProviderRequest(AppPreferences preferences)
+    {
+        return preferences.AiAutoRedactBeforeSend
+            || preferences.AiBlockPhone
+            || preferences.AiBlockFullAddress
+            || preferences.AiBlockPaymentTransactionId;
+    }
+
+    private static AiSuggestionRequest RedactRequest(AiSuggestionRequest request, AppPreferences preferences)
+    {
+        return new AiSuggestionRequest
+        {
+            CustomerId = request.CustomerId,
+            OrderId = request.OrderId,
+            MessageId = request.MessageId,
+            CustomerName = RedactText(request.CustomerName, preferences),
+            CustomerNickname = RedactText(request.CustomerNickname, preferences),
+            CustomerRemark = RedactText(request.CustomerRemark, preferences),
+            OrderTitle = RedactText(request.OrderTitle, preferences),
+            OrderBudgetText = RedactText(request.OrderBudgetText, preferences),
+            OrderStatusText = RedactText(request.OrderStatusText, preferences),
+            OrderRemark = RedactText(request.OrderRemark, preferences),
+            FocusMessage = RedactText(request.FocusMessage, preferences),
+            RecentMessages = request.RecentMessages
+                .Select(message => new AiSuggestionContextMessage
+                {
+                    RoleLabel = message.RoleLabel,
+                    SenderName = RedactText(message.SenderName, preferences),
+                    Content = RedactText(message.Content, preferences),
+                    MessageTime = message.MessageTime
+                })
+                .ToList()
+        };
+    }
+
+    private static string RedactText(string value, AppPreferences preferences)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var redacted = value;
+        if (preferences.AiBlockPhone)
+        {
+            redacted = PhoneRegex.Replace(redacted, "[手机号已隐藏]");
+        }
+
+        if (preferences.AiBlockFullAddress)
+        {
+            redacted = AddressRegex.Replace(redacted, "[地址已隐藏]");
+        }
+
+        if (preferences.AiBlockPaymentTransactionId)
+        {
+            redacted = TransactionIdRegex.Replace(redacted, "[支付交易号已隐藏]");
+        }
+
+        return redacted;
+    }
+
     private static void EnsureSuggestionText(AiSuggestionProviderResult result)
     {
         if (string.IsNullOrWhiteSpace(result.SuggestionText))
@@ -296,6 +393,11 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         return !string.Equals(_primaryProvider.Name, _fallbackProvider.Name, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsLocalProvider(string providerName)
+    {
+        return string.Equals(providerName, "local-stub", StringComparison.OrdinalIgnoreCase);
+    }
+
     private string BuildSuggestionMetadata(AiSuggestionRequest request, ProviderExecution execution)
     {
         var root = new JsonObject
@@ -306,7 +408,8 @@ public sealed class LocalAiAssistantService : IAiAssistantService
             ["createdBy"] = "p2.4",
             ["contextMessageCount"] = request.RecentMessages.Count,
             ["timeoutSeconds"] = _providerOptions.TimeoutSeconds,
-            ["requestedProvider"] = _providerOptions.RequestedProvider
+            ["requestedProvider"] = _providerOptions.RequestedProvider,
+            ["redactedBeforeSend"] = execution.RedactedBeforeSend
         };
 
         if (!string.IsNullOrWhiteSpace(execution.ErrorSummary))
@@ -444,5 +547,10 @@ public sealed class LocalAiAssistantService : IAiAssistantService
     private sealed record ProviderExecution(
         AiSuggestionProviderResult Result,
         bool UsedFallback,
-        string? ErrorSummary);
+        string? ErrorSummary,
+        bool RedactedBeforeSend);
+
+    private sealed record ProviderRequest(
+        AiSuggestionRequest Request,
+        bool RedactedBeforeSend);
 }
