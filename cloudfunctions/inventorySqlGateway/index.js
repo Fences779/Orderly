@@ -6,6 +6,26 @@ const DEFAULT_MAX_PAGE_SIZE = 100
 const DEFAULT_MAX_QUERY_ROWS = 5000
 const DEFAULT_MAX_BULK_ROWS = 500
 const DEFAULT_MAX_EVENT_BYTES = 1048576
+const DEFAULT_MIN_GATEWAY_TOKEN_LENGTH = 24
+const INVENTORY_SORT_FIELDS = [
+  'materialCode',
+  'materialName',
+  'category',
+  'stockUnit',
+  'currentStockQty',
+  'safeStockQty',
+  'sold7dQty',
+  'sold7dRatio',
+  'sold30dQty',
+  'sold30dRatio',
+  'unitCost',
+  'braceletSalePrice',
+  'braceletCostPrice',
+  'supplierName',
+  'status',
+  'updatedAt',
+  'sourceUpdatedAt'
+]
 
 let pool
 
@@ -27,7 +47,7 @@ function getPool() {
     throw createError(500, 'sql_config_missing', '库存 SQL 连接环境变量未配置完整。')
   }
 
-  pool = mysql.createPool({
+  const config = {
     host,
     port,
     user,
@@ -37,8 +57,40 @@ function getPool() {
     connectionLimit: Number(getEnv('ORDERLY_INVENTORY_SQL_CONNECTION_LIMIT', '4')),
     decimalNumbers: true,
     dateStrings: true
-  })
+  }
+  const ssl = resolveSqlSsl(host)
+  if (ssl) config.ssl = ssl
+
+  pool = mysql.createPool(config)
   return pool
+}
+
+function resolveSqlSsl(host) {
+  const allowPlaintext = normalizeBool(getEnv('ORDERLY_INVENTORY_SQL_ALLOW_PLAINTEXT'), false)
+  const rawMode = getEnv('ORDERLY_INVENTORY_SQL_SSL_MODE')
+  const mode = (rawMode || (allowPlaintext || isLocalSqlHost(host) ? 'disabled' : 'required')).toLowerCase()
+  if (['disabled', 'disable', 'off', 'false', '0', 'plaintext'].includes(mode)) {
+    if (!allowPlaintext && !isLocalSqlHost(host)) {
+      throw createError(500, 'sql_tls_required', '库存 SQL 连接必须启用 TLS。', false)
+    }
+    return null
+  }
+
+  if (!['required', 'require', 'true', '1', 'verify_ca', 'verify_identity'].includes(mode)) {
+    throw createError(500, 'sql_tls_mode_invalid', '库存 SQL TLS 模式配置无效。', false)
+  }
+
+  const ssl = {
+    rejectUnauthorized: normalizeBool(getEnv('ORDERLY_INVENTORY_SQL_SSL_REJECT_UNAUTHORIZED'), true)
+  }
+  const ca = getEnv('ORDERLY_INVENTORY_SQL_SSL_CA')
+  if (ca) ssl.ca = ca.replace(/\\n/g, '\n')
+  return ssl
+}
+
+function isLocalSqlHost(host) {
+  const normalized = String(host || '').trim().toLowerCase()
+  return normalized === 'localhost' || normalized === '::1' || normalized.startsWith('127.')
 }
 
 function createError(statusCode, code, message, expose = statusCode < 500) {
@@ -175,6 +227,7 @@ function validateToken(request) {
   if (!expected) {
     throw createError(500, 'gateway_token_missing', '库存云端网关未配置鉴权 token。', false)
   }
+  validateGatewayTokenStrength(expected)
 
   const authHeader = normalizeText((request.headers && (request.headers.authorization || request.headers.Authorization)) || '')
   const bearer = authHeader.toLowerCase().startsWith('bearer ')
@@ -182,6 +235,15 @@ function validateToken(request) {
     : ''
   if (!tokensMatch(bearer, expected)) {
     throw createError(401, 'unauthorized', '库存云端网关 token 无效。')
+  }
+}
+
+function validateGatewayTokenStrength(expected) {
+  const minLength = getPositiveIntEnv('ORDERLY_INVENTORY_GATEWAY_MIN_TOKEN_LENGTH', DEFAULT_MIN_GATEWAY_TOKEN_LENGTH, 128)
+  const normalized = normalizeText(expected)
+  const lowered = normalized.toLowerCase()
+  if (normalized.length < minLength || ['replace-me', 'changeme', 'change-me', 'test', 'token', 'password'].includes(lowered)) {
+    throw createError(500, 'gateway_token_weak', '库存云端网关 token 强度不足。', false)
   }
 }
 
@@ -203,6 +265,11 @@ function compareValue(left, right, sortBy, direction) {
     ? String(leftValue || '').localeCompare(String(rightValue || ''), 'zh-Hans-CN')
     : normalizeNumber(leftValue) - normalizeNumber(rightValue)
   return direction === 'asc' ? result : -result
+}
+
+function normalizeInventorySortBy(value) {
+  const sortBy = normalizeText(value || 'sold30dRatio')
+  return INVENTORY_SORT_FIELDS.includes(sortBy) ? sortBy : 'sold30dRatio'
 }
 
 function buildStatus(item) {
@@ -327,7 +394,7 @@ async function inventoryDashboard(payload, workspaceId) {
   const keyword = normalizeText(payload.keyword).toLowerCase()
   const category = normalizeText(payload.category)
   const status = normalizeText(payload.status || 'all')
-  const sortBy = normalizeText(payload.sortBy || 'sold30dRatio')
+  const sortBy = normalizeInventorySortBy(payload.sortBy)
   const sortDirection = normalizeText(payload.sortDirection || 'desc') === 'asc' ? 'asc' : 'desc'
 
   const rows = await queryInventoryRows(workspaceId)
