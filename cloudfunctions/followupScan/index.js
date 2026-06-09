@@ -16,6 +16,11 @@ const SKU_FIELDS = ['_id', 'name', 'title', 'category', 'basePrice', 'costPrice'
 const INVENTORY_MOVEMENT_FIELDS = ['skuId', 'skuName', 'movementType', 'type', 'quantity', 'unitCost', 'totalCost', 'relatedOrderId', 'relatedOrderNo', 'note', 'occurredAt']
 const CASHFLOW_FIELDS = ['_id', 'direction', 'amount', 'category', 'paymentMethod', 'channel', 'status', 'relatedOrderId', 'orderId', 'relatedOrderNo', 'orderNo', 'relatedQuoteId', 'quoteId', 'relatedSkuId', 'skuId', 'counterpartyName', 'counterparty', 'note', 'occurredAt']
 const TASK_ACTIONS = ['complete', 'skip', 'delay']
+const CASHFLOW_DIRECTIONS = ['income', 'expense']
+const CASHFLOW_STATUSES = ['pending', 'confirmed', 'cancelled']
+const MAX_CASHFLOW_AMOUNT = 100000000
+const MAX_SHORT_TEXT_LENGTH = 128
+const MAX_NOTE_TEXT_LENGTH = 512
 
 function now() {
   return new Date().toISOString()
@@ -44,6 +49,10 @@ function normalizeNumber(value) {
 
 function normalizeText(value) {
   return value == null ? '' : String(value).trim()
+}
+
+function limitText(value, maxLength) {
+  return normalizeText(value).slice(0, maxLength)
 }
 
 function pickFields(source, allowedFields) {
@@ -157,7 +166,13 @@ function requireScanTriggerAccess() {
 
 function normalizeDirection(value) {
   const direction = normalizeText(value).toLowerCase()
-  return direction === 'expense' ? 'expense' : 'income'
+  if (!direction) return 'income'
+  return CASHFLOW_DIRECTIONS.indexOf(direction) >= 0 ? direction : ''
+}
+
+function normalizeCashflowStatus(value) {
+  const status = normalizeText(value || 'confirmed').toLowerCase()
+  return CASHFLOW_STATUSES.indexOf(status) >= 0 ? status : ''
 }
 
 async function safeList(collection, where) {
@@ -614,22 +629,27 @@ async function handleRequest(event) {
   if (mode === 'cashflowSave') {
     const input = pickFields(event.entry, CASHFLOW_FIELDS)
     const amount = normalizeNumber(input.amount)
+    const direction = normalizeDirection(input.direction)
+    const status = normalizeCashflowStatus(input.status || 'confirmed')
     if (!amount) return { ok: false, message: '现金流金额不能为空' }
+    if (amount < 0 || amount > MAX_CASHFLOW_AMOUNT) return { ok: false, code: 'invalid_cashflow_amount', message: '现金流金额超出允许范围。' }
+    if (!direction) return { ok: false, code: 'invalid_cashflow_direction', message: '非法现金流方向。' }
+    if (!status) return { ok: false, code: 'invalid_cashflow_status', message: '非法现金流状态。' }
     const entry = Object.assign({}, input, {
       workspaceId,
-      direction: normalizeDirection(input.direction),
+      direction,
       amount,
-      category: normalizeText(input.category),
-      paymentMethod: normalizeText(input.paymentMethod || input.channel),
-      status: normalizeText(input.status || 'confirmed'),
-      relatedOrderId: normalizeText(input.relatedOrderId || input.orderId),
-      relatedOrderNo: normalizeText(input.relatedOrderNo || input.orderNo),
-      relatedQuoteId: normalizeText(input.relatedQuoteId || input.quoteId),
-      relatedSkuId: normalizeText(input.relatedSkuId || input.skuId),
-      counterpartyName: normalizeText(input.counterpartyName || input.counterparty),
+      category: limitText(input.category, MAX_SHORT_TEXT_LENGTH),
+      paymentMethod: limitText(input.paymentMethod || input.channel, MAX_SHORT_TEXT_LENGTH),
+      status,
+      relatedOrderId: limitText(input.relatedOrderId || input.orderId, MAX_SHORT_TEXT_LENGTH),
+      relatedOrderNo: limitText(input.relatedOrderNo || input.orderNo, MAX_SHORT_TEXT_LENGTH),
+      relatedQuoteId: limitText(input.relatedQuoteId || input.quoteId, MAX_SHORT_TEXT_LENGTH),
+      relatedSkuId: limitText(input.relatedSkuId || input.skuId, MAX_SHORT_TEXT_LENGTH),
+      counterpartyName: limitText(input.counterpartyName || input.counterparty, MAX_SHORT_TEXT_LENGTH),
       operatorId,
-      note: normalizeText(input.note),
-      occurredAt: normalizeText(input.occurredAt) || now(),
+      note: limitText(input.note, MAX_NOTE_TEXT_LENGTH),
+      occurredAt: normalizeIsoDate(input.occurredAt, now()),
       createdBy: operatorId,
       updatedBy: operatorId
     })
