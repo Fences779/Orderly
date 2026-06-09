@@ -61,14 +61,14 @@ public sealed class StringNarrationGatewayClient
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            if (TryParseGatewayError(body, out var gatewayError))
-            {
-                throw new InvalidOperationException(gatewayError);
-            }
-
             if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
             {
                 throw new InvalidOperationException($"串述 adminPcGateway 未授权或 token 无效（HTTP {(int)response.StatusCode}）。");
+            }
+
+            if (TryReadGatewayErrorCode(body, out var gatewayErrorCode))
+            {
+                throw new InvalidOperationException($"串述 adminPcGateway 调用失败：{gatewayErrorCode}");
             }
 
             throw new InvalidOperationException($"串述 adminPcGateway 返回 HTTP {(int)response.StatusCode}。");
@@ -94,11 +94,10 @@ public sealed class StringNarrationGatewayClient
 
             if (TryReadBool(root, "ok") == false)
             {
-                var code = ReadString(root, "code");
-                var message = ReadString(root, "message");
+                var code = NormalizeGatewayErrorCode(ReadString(root, "code"));
                 throw new InvalidOperationException(string.IsNullOrWhiteSpace(code)
-                    ? $"串述 adminPcGateway 调用失败：{message}"
-                    : $"串述 adminPcGateway 调用失败：{code} {message}".Trim());
+                    ? "串述 adminPcGateway 调用失败。"
+                    : $"串述 adminPcGateway 调用失败：{code}");
             }
 
             return root.Clone();
@@ -137,9 +136,9 @@ public sealed class StringNarrationGatewayClient
         };
     }
 
-    private static bool TryParseGatewayError(string body, out string errorMessage)
+    private static bool TryReadGatewayErrorCode(string body, out string errorCode)
     {
-        errorMessage = string.Empty;
+        errorCode = string.Empty;
         if (string.IsNullOrWhiteSpace(body))
         {
             return false;
@@ -155,21 +154,42 @@ public sealed class StringNarrationGatewayClient
             }
 
             var code = ReadString(root, "code");
-            var message = ReadString(root, "message");
-            if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(message))
+            if (string.IsNullOrWhiteSpace(code))
             {
                 return false;
             }
 
-            errorMessage = string.IsNullOrWhiteSpace(code)
-                ? $"串述 adminPcGateway 调用失败：{message}"
-                : $"串述 adminPcGateway 调用失败：{code} {message}".Trim();
+            errorCode = NormalizeGatewayErrorCode(code);
+            if (string.IsNullOrWhiteSpace(errorCode))
+            {
+                return false;
+            }
+
             return true;
         }
         catch (JsonException)
         {
             return false;
         }
+    }
+
+    private static string NormalizeGatewayErrorCode(string value)
+    {
+        var code = value.Trim();
+        if (code.Length == 0 || code.Length > 64)
+        {
+            return string.Empty;
+        }
+
+        foreach (var ch in code)
+        {
+            if (!char.IsAsciiLetterOrDigit(ch) && ch is not '_' and not '-' and not '.')
+            {
+                return string.Empty;
+            }
+        }
+
+        return code;
     }
 
 }
