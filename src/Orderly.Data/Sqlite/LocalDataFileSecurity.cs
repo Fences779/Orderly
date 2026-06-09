@@ -4,7 +4,7 @@ using System.Runtime.Versioning;
 
 namespace Orderly.Data.Sqlite;
 
-internal static class LocalDataFileSecurity
+public static class LocalDataFileSecurity
 {
     public static void HardenDirectory(string directoryPath)
     {

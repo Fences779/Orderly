@@ -221,6 +221,7 @@ public partial class MainViewModel
         });
 
         await File.WriteAllTextAsync(dialog.FileName, json);
+        LocalDataFileSecurity.HardenFile(dialog.FileName);
         SettingsStatusMessage = $"失败类日志已导出：{dialog.FileName}";
     }
 
@@ -466,6 +467,7 @@ public partial class MainViewModel
         {
             WriteIndented = true
         }));
+        LocalDataFileSecurity.HardenFile(dialog.FileName);
 
         SettingsStatusMessage = $"SN 同步日志已导出：{dialog.FileName}";
     }
