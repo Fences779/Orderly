@@ -150,6 +150,21 @@ function Test-EnabledFlag {
     return $value.Trim().ToLowerInvariant() -in @('1', 'true', 'yes', 'on')
 }
 
+function Resolve-RuntimeEnvironment {
+    param(
+        [hashtable]$ValuesFileValues,
+        [hashtable]$CloudBaseValues
+    )
+
+    $runtime = Resolve-VariableValue -Name 'ORDERLY_RUNTIME_ENV' -ValuesFileValues $ValuesFileValues -CloudBaseValues $CloudBaseValues
+    if (-not [string]::IsNullOrWhiteSpace($runtime)) {
+        return $runtime.Trim().ToLowerInvariant()
+    }
+
+    $nodeEnv = Resolve-VariableValue -Name 'NODE_ENV' -ValuesFileValues $ValuesFileValues -CloudBaseValues $CloudBaseValues
+    return $nodeEnv.Trim().ToLowerInvariant()
+}
+
 $resolvedEnvId = Resolve-CloudBaseEnvId -ExplicitEnvId $EnvId
 $valuesFileValues = Read-ValuesFile -Path $ValuesFile
 $cloudBaseValues = Read-CloudBaseConfiguredValues
@@ -174,6 +189,14 @@ if ($seedEnabled) {
 foreach ($name in @('ADMIN_PC_GATEWAY_SEND_TOKEN_IN_BODY', 'ORDERLY_INVENTORY_GATEWAY_SEND_TOKEN_IN_BODY')) {
     if (Test-EnabledFlag -Name $name -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues) {
         $failures.Add("Compatibility token-in-body flag must be disabled for production: $name")
+    }
+}
+
+$authAllowAllDev = Test-EnabledFlag -Name 'ORDERLY_AUTH_ALLOW_ALL_DEV' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+if ($authAllowAllDev) {
+    $runtime = Resolve-RuntimeEnvironment -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+    if ($runtime -notin @('development', 'dev', 'test', 'local')) {
+        $failures.Add('ORDERLY_AUTH_ALLOW_ALL_DEV can only be enabled when ORDERLY_RUNTIME_ENV or NODE_ENV is development/dev/test/local.')
     }
 }
 
