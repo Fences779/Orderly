@@ -8,6 +8,11 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_SHORT_TEXT_LENGTH = 128
+const MAX_SUMMARY_TEXT_LENGTH = 512
+const MAX_TAGS = 20
+const URGENCY_LEVELS = ['low', 'medium', 'high']
+const SUGGESTED_STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing']
 
 const STYLE_WORDS = ['简约', '高级', '复古', '甜酷', '清冷', '温柔', '国风', '通勤', '可爱', '低调', '显白']
 const MATERIAL_WORDS = ['珍珠', '水晶', '玛瑙', '银', '14k', '18k', '朱砂', '檀木', '贝母', '琉璃', '天然石']
@@ -71,6 +76,25 @@ function normalizeList(value) {
     .split(/[,\s，、;；]+/)
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+function normalizeText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
+  return value == null ? '' : String(value).trim().slice(0, maxLength)
+}
+
+function normalizeTagList(value) {
+  const source = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[,\s，、;；|/]+/)
+  return unique(source.map((item) => normalizeText(item)).filter(Boolean)).slice(0, MAX_TAGS)
+}
+
+function normalizeRiskFlags(value) {
+  const flags = Array.isArray(value) ? value : []
+  return flags.slice(0, MAX_TAGS).map((flag) => ({
+    key: normalizeText(flag && flag.key),
+    label: normalizeText(flag && flag.label)
+  })).filter((flag) => flag.key || flag.label)
 }
 
 function resolveWorkspaceId(event, operatorId) {
@@ -203,6 +227,41 @@ function risk(text) {
   return RISK_WORDS.filter((group) => group.words.some((word) => text.indexOf(word) >= 0)).map((group) => ({ key: group.key, label: group.label }))
 }
 
+function normalizeMoney(value) {
+  const num = Number(value || 0)
+  return Number.isFinite(num) && num >= 0 ? num : 0
+}
+
+function normalizeParserResult(value) {
+  const input = value && typeof value === 'object' ? value : {}
+  const hints = input.customerHints && typeof input.customerHints === 'object' ? input.customerHints : {}
+  const urgencyLevel = normalizeText(input.urgencyLevel || 'low', 16)
+  const suggestedStage = normalizeText(input.suggestedStage || 'needs_clarification', 32)
+  const confidenceScore = Number(input.confidenceScore || 0)
+
+  return {
+    customerHints: {
+      name: normalizeText(hints.name),
+      externalUid: normalizeText(hints.externalUid),
+      contactHandle: normalizeText(hints.contactHandle),
+      platformHint: normalizeText(hints.platformHint, 32)
+    },
+    intentCategory: normalizeText(input.intentCategory),
+    demandSummary: normalizeText(input.demandSummary, MAX_SUMMARY_TEXT_LENGTH),
+    styleTags: normalizeTagList(input.styleTags),
+    materialTags: normalizeTagList(input.materialTags),
+    sizeSpec: normalizeText(input.sizeSpec),
+    colorPref: normalizeText(input.colorPref),
+    deadlineAt: normalizeText(input.deadlineAt, 64),
+    urgencyLevel: URGENCY_LEVELS.indexOf(urgencyLevel) >= 0 ? urgencyLevel : 'low',
+    riskFlags: normalizeRiskFlags(input.riskFlags),
+    suggestedStage: SUGGESTED_STAGES.indexOf(suggestedStage) >= 0 ? suggestedStage : 'needs_clarification',
+    budgetMin: normalizeMoney(input.budgetMin),
+    budgetMax: normalizeMoney(input.budgetMax),
+    confidenceScore: Number.isFinite(confidenceScore) ? Math.max(0, Math.min(100, Math.round(confidenceScore))) : 0
+  }
+}
+
 function parseText(rawText) {
   const text = String(rawText || '').trim()
   const riskFlags = risk(text)
@@ -268,7 +327,7 @@ async function handleRequest(event) {
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
-  const parserResult = event.parserResult || parseText(event.rawText || event.ocrText || '')
+  const parserResult = normalizeParserResult(event.parserResult || parseText(event.rawText || event.ocrText || ''))
   const customerMatches = await matchCustomers(workspaceId, parserResult)
   if (event.mode === 'matchOnly') {
     return { ok: true, parserResult, customerMatches }
