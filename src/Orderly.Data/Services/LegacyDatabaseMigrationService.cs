@@ -80,6 +80,7 @@ public sealed class LegacyDatabaseMigrationService : ILegacyDatabaseMigrationSer
         }
 
         File.Copy(plan.LegacyDatabasePath, plan.TargetDatabasePath, overwriteTarget);
+        LocalDataFileSecurity.HardenSqliteDatabaseFiles(plan.TargetDatabasePath);
 
         return Task.FromResult(new LegacyDatabaseMigrationResult
         {
