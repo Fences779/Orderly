@@ -81,6 +81,12 @@ function isAutoScanEnabled() {
   return process.env[AUTO_SCAN_ENV_NAME] === '1'
 }
 
+function requireScanTriggerAccess() {
+  if (cloud.getWXContext().OPENID) return requireOperatorId()
+  if (isAutoScanEnabled()) return { ok: true, operatorId: 'system' }
+  return { ok: false, code: 'auto_scan_disabled', message: '自动跟进扫描未启用。' }
+}
+
 function normalizeDirection(value) {
   const direction = normalizeText(value).toLowerCase()
   return direction === 'expense' ? 'expense' : 'income'
@@ -547,9 +553,8 @@ async function handleRequest(event) {
   }
 
   if (mode) return { ok: false, code: 'unsupported_mode', message: '不支持的 mode。' }
-  if (!cloud.getWXContext().OPENID && !isAutoScanEnabled()) {
-    return { ok: false, code: 'auto_scan_disabled', message: '自动跟进扫描未启用。' }
-  }
+  const scanAuth = requireScanTriggerAccess()
+  if (!scanAuth.ok) return scanAuth
 
   const deals = (await db.collection('deals').where({ workspaceId }).limit(1000).get()).data || []
   const customers = (await db.collection('customers').where({ workspaceId }).limit(1000).get()).data || []
