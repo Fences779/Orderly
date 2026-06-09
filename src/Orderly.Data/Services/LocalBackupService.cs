@@ -13,6 +13,10 @@ public sealed partial class LocalBackupService : IBackupService
     private const string RestoreEntityType = "local-restore";
     private const string RestoreOperator = "local-restore";
     private const string LauncherLocalAccountsTableName = "LocalAccountsSnapshot";
+    private const string BackupIntegrityAlgorithm = "HMACSHA256";
+    private const string BackupIntegritySessionKeyScope = "session-data-key";
+    private const string BackupIntegrityMachineKeyScope = "machine-local-key";
+    private const string BackupIntegrityKeyFileName = "backup-integrity.key";
 
     private static readonly string[] IncludedTableNames =
     [

@@ -97,6 +97,9 @@ public sealed partial class LocalBackupService
                     inspection.TargetState,
                     validation.Manifest.Counts,
                     validation.Manifest.Checksum,
+                    validation.Manifest.IntegrityAlgorithm,
+                    validation.Manifest.IntegrityKeyScope,
+                    validation.Manifest.IntegrityTag,
                     validation.Manifest.SchemaVersion,
                     restoredAt,
                     tagForQaScope)
@@ -160,6 +163,9 @@ public sealed partial class LocalBackupService
                         inspection.TargetState,
                         validation.Manifest?.Counts,
                         validation.Manifest?.Checksum,
+                        validation.Manifest?.IntegrityAlgorithm,
+                        validation.Manifest?.IntegrityKeyScope,
+                        validation.Manifest?.IntegrityTag,
                         validation.Manifest?.SchemaVersion,
                         DateTimeOffset.Now,
                         tagForQaScope)

@@ -23,6 +23,9 @@ public sealed partial class LocalBackupService
         var errors = new List<string>();
         BackupManifest? manifest = null;
         string actualChecksum = string.Empty;
+        string actualIntegrityTag = string.Empty;
+        var isChecksumValid = false;
+        var isIntegrityValid = false;
 
         if (string.IsNullOrWhiteSpace(backupPath))
         {
@@ -90,9 +93,30 @@ public sealed partial class LocalBackupService
                 {
                     errors.Add("缺少 checksum。");
                 }
-                else if (!string.Equals(manifest.Checksum, actualChecksum, StringComparison.OrdinalIgnoreCase))
+                else
+                {
+                    isChecksumValid = string.Equals(manifest.Checksum, actualChecksum, StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (!isChecksumValid)
                 {
                     errors.Add("checksum 校验失败。");
+                }
+
+                try
+                {
+                    var integrityResult = VerifyIntegrityTag(manifest);
+                    actualIntegrityTag = integrityResult.ActualTag;
+                    isIntegrityValid = integrityResult.IsValid;
+
+                    if (integrityResult.HasTag && !integrityResult.IsValid)
+                    {
+                        errors.Add("integrityTag 校验失败。");
+                    }
+                }
+                catch (InvalidOperationException ex)
+                {
+                    errors.Add($"integrityTag 校验失败：{ex.Message}");
                 }
 
                 foreach (var tableName in IncludedTableNames)
@@ -134,6 +158,11 @@ public sealed partial class LocalBackupService
                     {
                         errors.Add($"表 {LauncherLocalAccountsTableName} 的 counts 与实际记录数不一致。");
                     }
+
+                    if (!isIntegrityValid)
+                    {
+                        errors.Add($"包含 {LauncherLocalAccountsTableName} 的备份必须通过 keyed integrity 校验。");
+                    }
                 }
             }
         }
@@ -144,9 +173,9 @@ public sealed partial class LocalBackupService
             IsValid = errors.Count == 0,
             Manifest = manifest,
             ActualChecksum = actualChecksum,
-            IsChecksumValid = manifest is not null
-                && !string.IsNullOrWhiteSpace(manifest.Checksum)
-                && string.Equals(manifest.Checksum, actualChecksum, StringComparison.OrdinalIgnoreCase),
+            ActualIntegrityTag = actualIntegrityTag,
+            IsChecksumValid = isChecksumValid,
+            IsIntegrityValid = isIntegrityValid,
             Errors = errors
         };
     }
@@ -202,6 +231,18 @@ public sealed partial class LocalBackupService
                 : default,
             Checksum = root.TryGetProperty("checksum", out var checksumElement) && checksumElement.ValueKind == JsonValueKind.String
                 ? checksumElement.GetString() ?? string.Empty
+                : string.Empty,
+            IntegrityAlgorithm = root.TryGetProperty("integrityAlgorithm", out var integrityAlgorithmElement)
+                && integrityAlgorithmElement.ValueKind == JsonValueKind.String
+                ? integrityAlgorithmElement.GetString() ?? string.Empty
+                : string.Empty,
+            IntegrityKeyScope = root.TryGetProperty("integrityKeyScope", out var integrityKeyScopeElement)
+                && integrityKeyScopeElement.ValueKind == JsonValueKind.String
+                ? integrityKeyScopeElement.GetString() ?? string.Empty
+                : string.Empty,
+            IntegrityTag = root.TryGetProperty("integrityTag", out var integrityTagElement)
+                && integrityTagElement.ValueKind == JsonValueKind.String
+                ? integrityTagElement.GetString() ?? string.Empty
                 : string.Empty
         };
 

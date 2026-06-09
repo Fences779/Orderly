@@ -22,4 +22,13 @@ public sealed class BackupManifest
 
     [JsonPropertyName("checksum")]
     public string Checksum { get; set; } = string.Empty;
+
+    [JsonPropertyName("integrityAlgorithm")]
+    public string IntegrityAlgorithm { get; set; } = string.Empty;
+
+    [JsonPropertyName("integrityKeyScope")]
+    public string IntegrityKeyScope { get; set; } = string.Empty;
+
+    [JsonPropertyName("integrityTag")]
+    public string IntegrityTag { get; set; } = string.Empty;
 }

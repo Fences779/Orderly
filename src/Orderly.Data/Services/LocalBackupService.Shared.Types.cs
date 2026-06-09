@@ -105,4 +105,25 @@ public sealed partial class LocalBackupService
                 new Dictionary<string, int>(StringComparer.Ordinal));
         }
     }
+
+    private sealed record BackupIntegrityVerificationResult(
+        bool HasTag,
+        bool IsValid,
+        string ActualTag)
+    {
+        public static BackupIntegrityVerificationResult Missing()
+        {
+            return new(false, false, string.Empty);
+        }
+
+        public static BackupIntegrityVerificationResult Invalid(string actualTag)
+        {
+            return new(true, false, actualTag);
+        }
+
+        public static BackupIntegrityVerificationResult FromComparison(string actualTag, bool isValid)
+        {
+            return new(true, isValid, actualTag);
+        }
+    }
 }

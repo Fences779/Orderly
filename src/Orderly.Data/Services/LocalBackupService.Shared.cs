@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
+using Orderly.Data.Sqlite;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -122,7 +123,7 @@ public sealed partial class LocalBackupService
         return false;
     }
 
-    private static string ComputeChecksum(BackupManifest manifest)
+    private static string BuildChecksumPayloadJson(BackupManifest manifest)
     {
         var normalizedTables = new SortedDictionary<string, JsonElement>(StringComparer.Ordinal);
         foreach (var pair in manifest.Tables.OrderBy(static pair => pair.Key, StringComparer.Ordinal))
@@ -145,9 +146,132 @@ public sealed partial class LocalBackupService
             counts = normalizedCounts
         };
 
-        var payloadJson = JsonSerializer.Serialize(checksumPayload);
+        return JsonSerializer.Serialize(checksumPayload);
+    }
+
+    private static string ComputeChecksum(BackupManifest manifest)
+    {
+        var payloadJson = BuildChecksumPayloadJson(manifest);
         var hash = SHA256.HashData(Utf8NoBom.GetBytes(payloadJson));
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    private void StampIntegrityTag(BackupManifest manifest)
+    {
+        var keyScope = ResolveBackupIntegrityKeyScope();
+        var key = GetBackupIntegrityKey(keyScope);
+        try
+        {
+            manifest.IntegrityAlgorithm = BackupIntegrityAlgorithm;
+            manifest.IntegrityKeyScope = keyScope;
+            manifest.IntegrityTag = ComputeIntegrityTag(manifest, key);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    private BackupIntegrityVerificationResult VerifyIntegrityTag(BackupManifest manifest)
+    {
+        if (string.IsNullOrWhiteSpace(manifest.IntegrityTag))
+        {
+            return BackupIntegrityVerificationResult.Missing();
+        }
+
+        if (!string.Equals(manifest.IntegrityAlgorithm, BackupIntegrityAlgorithm, StringComparison.Ordinal))
+        {
+            return BackupIntegrityVerificationResult.Invalid(string.Empty);
+        }
+
+        var key = GetBackupIntegrityKey(manifest.IntegrityKeyScope);
+        try
+        {
+            var actualTag = ComputeIntegrityTag(manifest, key);
+            return BackupIntegrityVerificationResult.FromComparison(
+                actualTag,
+                FixedTimeEqualsHex(manifest.IntegrityTag, actualTag));
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    private string ResolveBackupIntegrityKeyScope()
+    {
+        return _sessionContextService?.Current?.DataKey is { Length: > 0 }
+            ? BackupIntegritySessionKeyScope
+            : BackupIntegrityMachineKeyScope;
+    }
+
+    private byte[] GetBackupIntegrityKey(string keyScope)
+    {
+        return keyScope switch
+        {
+            BackupIntegritySessionKeyScope => GetSessionBackupIntegrityKey(),
+            BackupIntegrityMachineKeyScope => GetMachineBackupIntegrityKey(),
+            _ => throw new InvalidOperationException("备份完整性 key scope 不受支持。")
+        };
+    }
+
+    private byte[] GetSessionBackupIntegrityKey()
+    {
+        var dataKey = _sessionContextService?.Current?.DataKey;
+        if (dataKey is not { Length: > 0 })
+        {
+            throw new InvalidOperationException("当前会话缺少备份完整性校验所需的数据密钥。");
+        }
+
+        return dataKey.ToArray();
+    }
+
+    private static byte[] GetMachineBackupIntegrityKey()
+    {
+        var keyPath = Path.Combine(DatabasePaths.GetIdentityDirectoryPath(), BackupIntegrityKeyFileName);
+        if (File.Exists(keyPath))
+        {
+            var existingKey = File.ReadAllBytes(keyPath);
+            if (existingKey.Length >= 32)
+            {
+                return existingKey;
+            }
+
+            CryptographicOperations.ZeroMemory(existingKey);
+        }
+
+        var key = RandomNumberGenerator.GetBytes(32);
+        File.WriteAllBytes(keyPath, key);
+        try
+        {
+            File.SetAttributes(keyPath, File.GetAttributes(keyPath) | FileAttributes.Hidden);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+
+        return key;
+    }
+
+    private static string ComputeIntegrityTag(BackupManifest manifest, byte[] key)
+    {
+        var payloadJson = BuildChecksumPayloadJson(manifest);
+        using var hmac = new HMACSHA256(key);
+        var tag = hmac.ComputeHash(Utf8NoBom.GetBytes(payloadJson));
+        return Convert.ToHexString(tag).ToLowerInvariant();
+    }
+
+    private static bool FixedTimeEqualsHex(string expected, string actual)
+    {
+        var expectedValue = expected.Trim().ToLowerInvariant();
+        var actualValue = actual.Trim().ToLowerInvariant();
+        return expectedValue.Length == actualValue.Length
+            && CryptographicOperations.FixedTimeEquals(
+                Utf8NoBom.GetBytes(expectedValue),
+                Utf8NoBom.GetBytes(actualValue));
     }
 
     private static JsonObject ParseMetadata(string? metadataJson)
@@ -217,6 +341,9 @@ public sealed partial class LocalBackupService
             ["exportedAt"] = manifest.ExportedAt.ToString("O"),
             ["backupPath"] = backupPath,
             ["checksum"] = manifest.Checksum,
+            ["integrityAlgorithm"] = manifest.IntegrityAlgorithm,
+            ["integrityKeyScope"] = manifest.IntegrityKeyScope,
+            ["integrityTag"] = manifest.IntegrityTag,
             ["createdBy"] = createdBy,
             ["counts"] = JsonSerializer.SerializeToNode(manifest.Counts)
         };
@@ -249,6 +376,9 @@ public sealed partial class LocalBackupService
             ["operation"] = operation,
             ["backupPath"] = backupPath,
             ["checksum"] = manifest.Checksum,
+            ["integrityAlgorithm"] = manifest.IntegrityAlgorithm,
+            ["integrityKeyScope"] = manifest.IntegrityKeyScope,
+            ["integrityTag"] = manifest.IntegrityTag,
             ["createdBy"] = createdBy,
             ["schemaVersion"] = manifest.SchemaVersion,
             ["counts"] = JsonSerializer.SerializeToNode(manifest.Counts)
@@ -268,12 +398,17 @@ public sealed partial class LocalBackupService
             ["backupPath"] = result.BackupPath,
             ["createdBy"] = createdBy,
             ["isValid"] = result.IsValid,
-            ["actualChecksum"] = result.ActualChecksum
+            ["actualChecksum"] = result.ActualChecksum,
+            ["actualIntegrityTag"] = result.ActualIntegrityTag,
+            ["isIntegrityValid"] = result.IsIntegrityValid
         };
 
         if (result.Manifest is not null)
         {
             metadata["checksum"] = result.Manifest.Checksum;
+            metadata["integrityAlgorithm"] = result.Manifest.IntegrityAlgorithm;
+            metadata["integrityKeyScope"] = result.Manifest.IntegrityKeyScope;
+            metadata["integrityTag"] = result.Manifest.IntegrityTag;
             metadata["schemaVersion"] = result.Manifest.SchemaVersion;
             metadata["counts"] = JsonSerializer.SerializeToNode(result.Manifest.Counts);
         }
@@ -300,6 +435,9 @@ public sealed partial class LocalBackupService
             ["mode"] = RestoreEntityType,
             ["backupPath"] = backupPath,
             ["checksum"] = manifest.Checksum,
+            ["integrityAlgorithm"] = manifest.IntegrityAlgorithm,
+            ["integrityKeyScope"] = manifest.IntegrityKeyScope,
+            ["integrityTag"] = manifest.IntegrityTag,
             ["schemaVersion"] = manifest.SchemaVersion,
             ["counts"] = JsonSerializer.SerializeToNode(manifest.Counts),
             ["restoredAt"] = restoredAt.ToString("O"),
@@ -336,6 +474,9 @@ public sealed partial class LocalBackupService
         BackupRestoreTargetState targetState,
         IReadOnlyDictionary<string, int>? counts,
         string? checksum,
+        string? integrityAlgorithm,
+        string? integrityKeyScope,
+        string? integrityTag,
         int? schemaVersion,
         DateTimeOffset restoredAt,
         bool tagForQaScope)
@@ -352,6 +493,21 @@ public sealed partial class LocalBackupService
         if (!string.IsNullOrWhiteSpace(checksum))
         {
             metadata["checksum"] = checksum;
+        }
+
+        if (!string.IsNullOrWhiteSpace(integrityAlgorithm))
+        {
+            metadata["integrityAlgorithm"] = integrityAlgorithm;
+        }
+
+        if (!string.IsNullOrWhiteSpace(integrityKeyScope))
+        {
+            metadata["integrityKeyScope"] = integrityKeyScope;
+        }
+
+        if (!string.IsNullOrWhiteSpace(integrityTag))
+        {
+            metadata["integrityTag"] = integrityTag;
         }
 
         if (schemaVersion is not null)
@@ -382,6 +538,9 @@ public sealed partial class LocalBackupService
             ["operation"] = operation,
             ["backupPath"] = backupPath,
             ["checksum"] = manifest.Checksum,
+            ["integrityAlgorithm"] = manifest.IntegrityAlgorithm,
+            ["integrityKeyScope"] = manifest.IntegrityKeyScope,
+            ["integrityTag"] = manifest.IntegrityTag,
             ["schemaVersion"] = manifest.SchemaVersion,
             ["counts"] = JsonSerializer.SerializeToNode(manifest.Counts),
             ["createdBy"] = createdBy,
