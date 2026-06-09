@@ -7,6 +7,15 @@ namespace Orderly.Data.Services;
 public sealed class FieldEncryptionService : IFieldEncryptionService
 {
     private const string Prefix = "v1:";
+    private const int PrefixLength = 3;
+    private const int NonceByteLength = 12;
+    private const int TagByteLength = 16;
+    private const int HeaderByteLength = 1 + NonceByteLength + TagByteLength;
+    private const int MaxPayloadByteLength = 16 * 1024 * 1024;
+    private const int MaxPlaintextByteLength = MaxPayloadByteLength - HeaderByteLength;
+    private const int MaxEncodedPayloadLength = ((MaxPayloadByteLength + 2) / 3) * 4;
+    private const int MaxCiphertextLength = PrefixLength + MaxEncodedPayloadLength;
+
     private readonly ISessionContextService _sessionContextService;
 
     public FieldEncryptionService(ISessionContextService sessionContextService)
@@ -18,10 +27,16 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
     {
         plaintext ??= string.Empty;
         var key = RequireCurrentDataKey();
-        var nonce = RandomNumberGenerator.GetBytes(12);
         var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
+        if (plaintextBytes.Length > MaxPlaintextByteLength)
+        {
+            CryptographicOperations.ZeroMemory(plaintextBytes);
+            throw new InvalidOperationException("Plaintext is too large to encrypt.");
+        }
+
+        var nonce = RandomNumberGenerator.GetBytes(NonceByteLength);
         var ciphertext = new byte[plaintextBytes.Length];
-        var tag = new byte[16];
+        var tag = new byte[TagByteLength];
         var payload = Array.Empty<byte>();
 
         try
@@ -29,7 +44,7 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
             using var aes = new AesGcm(key, tag.Length);
             aes.Encrypt(nonce, plaintextBytes, ciphertext, tag);
 
-            payload = new byte[1 + nonce.Length + tag.Length + ciphertext.Length];
+            payload = new byte[HeaderByteLength + ciphertext.Length];
             payload[0] = 1;
             Buffer.BlockCopy(nonce, 0, payload, 1, nonce.Length);
             Buffer.BlockCopy(tag, 0, payload, 1 + nonce.Length, tag.Length);
@@ -54,26 +69,44 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
             return string.Empty;
         }
 
-        if (!ciphertext.StartsWith(Prefix, StringComparison.Ordinal))
+        if (ciphertext.Length > MaxCiphertextLength
+            || !ciphertext.StartsWith(Prefix, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("Ciphertext does not use a supported encryption prefix.");
+            throw new InvalidOperationException("Ciphertext payload is invalid.");
         }
 
-        var payload = Convert.FromBase64String(ciphertext[Prefix.Length..]);
-        if (payload.Length < 1 + 12 + 16)
+        var encodedPayload = ciphertext[Prefix.Length..];
+        if (encodedPayload.Length == 0 || encodedPayload.Length > MaxEncodedPayloadLength)
         {
+            throw new InvalidOperationException("Ciphertext payload is invalid.");
+        }
+
+        byte[] payload;
+        try
+        {
+            payload = Convert.FromBase64String(encodedPayload);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("Ciphertext payload is invalid.");
+        }
+
+        if (payload.Length < HeaderByteLength || payload.Length > MaxPayloadByteLength)
+        {
+            CryptographicOperations.ZeroMemory(payload);
             throw new InvalidOperationException("Ciphertext payload is invalid.");
         }
 
         if (payload[0] != 1)
         {
+            CryptographicOperations.ZeroMemory(payload);
             throw new InvalidOperationException("Ciphertext version is not supported.");
         }
 
         var key = RequireCurrentDataKey();
-        var nonce = payload.AsSpan(1, 12);
-        var tag = payload.AsSpan(13, 16);
-        var encryptedBytes = payload.AsSpan(29);
+        var nonce = payload.AsSpan(1, NonceByteLength);
+        var tag = payload.AsSpan(1 + NonceByteLength, TagByteLength);
+        var encryptedBytes = payload.AsSpan(HeaderByteLength);
         var plaintextBytes = new byte[encryptedBytes.Length];
 
         try
@@ -81,6 +114,10 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
             using var aes = new AesGcm(key, tag.Length);
             aes.Decrypt(nonce, encryptedBytes, tag, plaintextBytes);
             return Encoding.UTF8.GetString(plaintextBytes);
+        }
+        catch (CryptographicException)
+        {
+            throw new InvalidOperationException("Ciphertext authentication failed.");
         }
         finally
         {
