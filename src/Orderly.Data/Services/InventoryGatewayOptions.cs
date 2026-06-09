@@ -7,6 +7,7 @@ public sealed class InventoryGatewayOptions
     public const string TimeoutEnvironmentVariableName = "ORDERLY_INVENTORY_GATEWAY_TIMEOUT_SECONDS";
     public const string WorkspaceIdEnvironmentVariableName = "ORDERLY_INVENTORY_WORKSPACE_ID";
     public const string OperatorIdEnvironmentVariableName = "ORDERLY_INVENTORY_OPERATOR_ID";
+    public const string AllowedHostsEnvironmentVariableName = "ORDERLY_INVENTORY_GATEWAY_ALLOWED_HOSTS";
     public const int DefaultTimeoutSeconds = 15;
 
     public InventoryGatewayOptions(string endpoint, string token, int timeoutSeconds, string workspaceId, string operatorId)
@@ -62,7 +63,7 @@ public sealed class InventoryGatewayOptions
             throw new InvalidOperationException($"{EndpointEnvironmentVariableName} 必须使用 HTTPS，除非目标是本机回环地址。");
         }
 
-        OutboundEndpointPolicy.Validate(uri, EndpointEnvironmentVariableName);
+        OutboundEndpointPolicy.Validate(uri, EndpointEnvironmentVariableName, AllowedHostsEnvironmentVariableName);
         return uri;
     }
 

@@ -24,7 +24,9 @@ public sealed class DeepSeekSuggestionProvider : IAiSuggestionProvider
     {
         ValidateConfiguration();
 
-        var endpoint = ChatCompletionSuggestionSupport.BuildChatCompletionsEndpoint(_options.BaseUrl);
+        var endpoint = ChatCompletionSuggestionSupport.BuildChatCompletionsEndpoint(
+            _options.BaseUrl,
+            allowedHostsEnvironmentVariableName: AiProviderOptions.AllowedHostsEnvironmentVariableName);
         var payload = new
         {
             model = _options.Model,

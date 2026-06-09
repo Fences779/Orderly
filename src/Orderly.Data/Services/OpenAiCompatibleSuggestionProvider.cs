@@ -27,7 +27,8 @@ public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
         var endpoint = ChatCompletionSuggestionSupport.BuildChatCompletionsEndpoint(
             _options.BaseUrl,
             "ORDERLY_AI_BASE_URL is not a valid absolute URL.",
-            "ORDERLY_AI_BASE_URL must use HTTPS unless it targets a loopback address.");
+            "ORDERLY_AI_BASE_URL must use HTTPS unless it targets a loopback address.",
+            AiProviderOptions.AllowedHostsEnvironmentVariableName);
         var payload = new
         {
             model = _options.Model,

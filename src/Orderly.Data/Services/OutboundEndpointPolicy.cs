@@ -5,14 +5,21 @@ namespace Orderly.Data.Services;
 internal static class OutboundEndpointPolicy
 {
     private const string AllowLocalEndpointsEnvironmentVariableName = "ORDERLY_ALLOW_LOCAL_ENDPOINTS";
+    private const string AllowedOutboundHostsEnvironmentVariableName = "ORDERLY_ALLOWED_OUTBOUND_HOSTS";
 
-    public static void Validate(Uri endpoint, string configurationName)
+    public static void Validate(Uri endpoint, string configurationName, string? allowedHostsEnvironmentVariableName = null)
     {
         ArgumentNullException.ThrowIfNull(endpoint);
 
         if (IsRestrictedLocalEndpoint(endpoint) && !IsLocalEndpointAllowedForDevelopment())
         {
             throw new InvalidOperationException($"{configurationName} 不允许指向本机、私网、链路本地或 metadata 地址，除非显式启用本地开发模式。");
+        }
+
+        var allowedHosts = ReadAllowedHosts(allowedHostsEnvironmentVariableName);
+        if (allowedHosts.Count > 0 && !IsHostAllowed(endpoint.Host, allowedHosts))
+        {
+            throw new InvalidOperationException($"{configurationName} 的主机不在允许的出站主机列表内。");
         }
     }
 
@@ -73,6 +80,45 @@ internal static class OutboundEndpointPolicy
             ?? string.Empty).Trim().ToLowerInvariant();
 
         return runtime is "development" or "dev" or "test" or "local";
+    }
+
+    private static IReadOnlyList<string> ReadAllowedHosts(string? scopedEnvironmentVariableName)
+    {
+        var values = new List<string>();
+        AddAllowedHosts(values, Environment.GetEnvironmentVariable(AllowedOutboundHostsEnvironmentVariableName));
+        if (!string.IsNullOrWhiteSpace(scopedEnvironmentVariableName))
+        {
+            AddAllowedHosts(values, Environment.GetEnvironmentVariable(scopedEnvironmentVariableName));
+        }
+
+        return values
+            .Select(static value => value.Trim().ToLowerInvariant())
+            .Where(static value => value.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static void AddAllowedHosts(ICollection<string> values, string? rawValue)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return;
+        }
+
+        foreach (var item in rawValue.Split([',', ';', ' ', '\t', '\r', '\n', '，', '；'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            values.Add(item);
+        }
+    }
+
+    private static bool IsHostAllowed(string host, IReadOnlyList<string> allowedHosts)
+    {
+        var normalizedHost = host.Trim('[', ']').Trim().ToLowerInvariant();
+        return allowedHosts.Any(pattern =>
+            string.Equals(normalizedHost, pattern, StringComparison.Ordinal)
+            || (pattern.StartsWith("*.", StringComparison.Ordinal)
+                && normalizedHost.EndsWith(pattern[1..], StringComparison.Ordinal)
+                && normalizedHost.Length > pattern.Length - 1));
     }
 
     private static bool IsEnabled(string? value)

@@ -6,6 +6,7 @@ public sealed class StringNarrationGatewayOptions
     public const string TokenEnvironmentVariableName = "ADMIN_PC_GATEWAY_TOKEN";
     public const string TimeoutEnvironmentVariableName = "ADMIN_PC_GATEWAY_TIMEOUT_SECONDS";
     public const string SendTokenInBodyEnvironmentVariableName = "ADMIN_PC_GATEWAY_SEND_TOKEN_IN_BODY";
+    public const string AllowedHostsEnvironmentVariableName = "ADMIN_PC_GATEWAY_ALLOWED_HOSTS";
     public const int DefaultTimeoutSeconds = 15;
 
     public StringNarrationGatewayOptions(string endpoint, string token, int timeoutSeconds, bool sendTokenInBody = false)
@@ -55,7 +56,7 @@ public sealed class StringNarrationGatewayOptions
             throw new InvalidOperationException($"{EndpointEnvironmentVariableName} 必须使用 HTTPS，除非目标是本机回环地址。");
         }
 
-        OutboundEndpointPolicy.Validate(uri, EndpointEnvironmentVariableName);
+        OutboundEndpointPolicy.Validate(uri, EndpointEnvironmentVariableName, AllowedHostsEnvironmentVariableName);
         return uri;
     }
 

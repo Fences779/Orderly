@@ -8,6 +8,7 @@ public sealed class AiProviderOptions
     public const string DeepSeekBaseUrl = "https://api.deepseek.com";
     public const string DeepSeekDefaultModel = "deepseek-chat";
     public const string DeepSeekApiKeyEnvironmentVariableName = "DEEPSEEK_API_KEY";
+    public const string AllowedHostsEnvironmentVariableName = "ORDERLY_AI_ALLOWED_HOSTS";
     public const int MinTimeoutSeconds = 5;
     public const int MaxTimeoutSeconds = 120;
     public const int DefaultTimeoutSeconds = 15;
