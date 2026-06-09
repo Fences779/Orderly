@@ -44,6 +44,20 @@ const ORDER_FIELDS = {
   captures: ['createdAt', 'updatedAt'],
   activity_logs: ['createdAt']
 }
+const RESPONSE_FIELDS = {
+  customers: ['_id', 'name', 'platform', 'externalUid', 'contactHandle', 'sourceChannel', 'profileTags', 'preferenceNotes', 'tabooNotes', 'riskNotes', 'totalOrders', 'totalSpent', 'lastContactAt', 'lastPurchaseAt', 'createdAt', 'updatedAt'],
+  deals: ['_id', 'customerId', 'title', 'sourceEntry', 'dealStage', 'priorityLevel', 'intentCategory', 'demandSummary', 'styleTags', 'materialTags', 'sizeSpec', 'colorPref', 'budgetMin', 'budgetMax', 'deadlineAt', 'urgencyLevel', 'latestQuoteId', 'nextFollowupAt', 'lastInteractionAt', 'followupCount', 'lossReason', 'archivedAt', 'riskFlags', 'createdAt', 'updatedAt'],
+  quotes: ['_id', 'dealId', 'quoteNo', 'quoteStatus', 'validUntil', 'quoteNote', 'sentAt', 'respondedAt', 'items', 'baseAmount', 'customFee', 'laborFee', 'shippingFee', 'discountAmount', 'depositRequired', 'totalAmount', 'createdAt', 'updatedAt'],
+  sku_catalog: ['_id', 'name', 'title', 'category', 'basePrice', 'costPrice', 'specSchema', 'stockOnHand', 'stockReserved', 'safetyStock', 'stockUnit', 'stockLocation', 'tags', 'enabled', 'sortOrder', 'lastRestockedAt', 'createdAt', 'updatedAt'],
+  inventory_movements: ['_id', 'skuId', 'skuName', 'movementType', 'quantity', 'relatedOrderId', 'relatedOrderNo', 'occurredAt', 'createdAt', 'updatedAt'],
+  cashflow_entries: ['_id', 'direction', 'amount', 'category', 'paymentMethod', 'status', 'relatedOrderId', 'relatedOrderNo', 'relatedQuoteId', 'relatedSkuId', 'occurredAt', 'createdAt', 'updatedAt'],
+  followup_tasks: ['_id', 'dealId', 'customerId', 'customerName', 'triggerType', 'triggerAt', 'dueAt', 'priorityScore', 'templateId', 'suggestedText', 'taskStatus', 'completedAt', 'resultType', 'createdAt', 'updatedAt'],
+  message_templates: ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder', 'useCount', 'createdAt', 'updatedAt'],
+  captures: ['_id', 'parserResult', 'confidenceScore', 'confirmStatus', 'linkedCustomerId', 'linkedDealId', 'createdAt', 'updatedAt', 'createdBy'],
+  activity_logs: ['_id', 'entityType', 'entityId', 'actionType', 'note', 'operatorId', 'createdAt']
+}
+const CAPTURE_DETAIL_FIELDS = RESPONSE_FIELDS.captures.concat(['rawText', 'ocrText'])
+const QUOTE_ITEM_RESPONSE_FIELDS = ['name', 'qty', 'price', 'note', 'skuId', 'materialCode', 'unit']
 
 function normalizeText(value) {
   return value == null ? '' : String(value).trim()
@@ -111,6 +125,30 @@ function sanitizeQuery(collection, query) {
   }, {})
 }
 
+function pickFields(source, fields) {
+  const output = {}
+  const input = source || {}
+  fields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(input, field)) output[field] = input[field]
+  })
+  return output
+}
+
+function projectQuoteItems(items) {
+  if (!Array.isArray(items)) return []
+  return items.slice(0, 100).map((item) => pickFields(item, QUOTE_ITEM_RESPONSE_FIELDS))
+}
+
+function projectRow(collection, row, detail) {
+  if (!row) return null
+  const fields = collection === 'captures' && detail ? CAPTURE_DETAIL_FIELDS : RESPONSE_FIELDS[collection]
+  const projected = pickFields(row, fields || ['_id'])
+  if (collection === 'quotes') {
+    projected.items = projectQuoteItems(projected.items)
+  }
+  return projected
+}
+
 function sanitizeLimit(value) {
   const limit = Number(value || 100)
   if (!Number.isFinite(limit) || limit <= 0) return 100
@@ -122,7 +160,7 @@ async function getById(collection, id, workspaceId) {
   if (!docId) return null
   try {
     const row = (await db.collection(collection).doc(docId).get()).data
-    return row && row.workspaceId === workspaceId ? row : null
+    return row && row.workspaceId === workspaceId ? projectRow(collection, row, true) : null
   } catch (err) {
     return null
   }
@@ -137,7 +175,8 @@ async function listByQuery(collection, event, workspaceId) {
     const direction = normalizeText(options.orderBy.direction) === 'asc' ? 'asc' : 'desc'
     ref = ref.orderBy(orderField, direction)
   }
-  return (await ref.limit(sanitizeLimit(options.limit)).get()).data || []
+  const rows = (await ref.limit(sanitizeLimit(options.limit)).get()).data || []
+  return rows.map((row) => projectRow(collection, row, false)).filter(Boolean)
 }
 
 function logInternalError(scope, err) {
