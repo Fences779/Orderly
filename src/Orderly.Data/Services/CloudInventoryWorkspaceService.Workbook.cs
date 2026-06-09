@@ -7,11 +7,20 @@ namespace Orderly.Data.Services;
 
 public sealed partial class CloudInventoryWorkspaceService
 {
+    private const long MaxInventoryWorkbookBytes = 10 * 1024 * 1024;
+    private const int MaxInventoryWorkbookDataRows = 500;
+
     private static List<InventoryWorkbookRow> LoadWorkbookRows(string workbookPath, out List<InventoryImportRowError> errors)
     {
         if (!File.Exists(workbookPath))
         {
             throw new FileNotFoundException("未找到要导入的 Excel 文件。", workbookPath);
+        }
+
+        var fileInfo = new FileInfo(workbookPath);
+        if (fileInfo.Length > MaxInventoryWorkbookBytes)
+        {
+            throw new InvalidOperationException($"Excel 文件超过导入上限（{MaxInventoryWorkbookBytes / 1024 / 1024}MB）。");
         }
 
         using var workbook = new XLWorkbook(workbookPath);
@@ -29,6 +38,12 @@ public sealed partial class CloudInventoryWorkspaceService
         errors = new List<InventoryImportRowError>();
 
         var lastRowNumber = worksheet.LastRowUsed()?.RowNumber() ?? headerRow.RowNumber();
+        if (lastRowNumber - headerRow.RowNumber() > MaxInventoryWorkbookDataRows)
+        {
+            throw new InvalidOperationException($"Excel 数据行超过单次导入上限（{MaxInventoryWorkbookDataRows} 行）。");
+        }
+
+        var processedDataRows = 0;
         for (var rowNumber = headerRow.RowNumber() + 1; rowNumber <= lastRowNumber; rowNumber++)
         {
             var row = worksheet.Row(rowNumber);
@@ -42,6 +57,12 @@ public sealed partial class CloudInventoryWorkspaceService
             if (string.IsNullOrWhiteSpace(materialCode) && string.IsNullOrWhiteSpace(materialName))
             {
                 continue;
+            }
+
+            processedDataRows++;
+            if (processedDataRows > MaxInventoryWorkbookDataRows)
+            {
+                throw new InvalidOperationException($"Excel 数据行超过单次导入上限（{MaxInventoryWorkbookDataRows} 行）。");
             }
 
             if (string.IsNullOrWhiteSpace(materialCode))
