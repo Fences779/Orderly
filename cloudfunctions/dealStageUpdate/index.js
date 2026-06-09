@@ -48,9 +48,29 @@ function priority(triggerType, deal, customer) {
   return score
 }
 
+const REDACTED_LOG_VALUE = '[redacted]'
+const SAFE_LOG_TEXT_KEYS = ['_id', 'workspaceId', 'customerId', 'dealId', 'quoteId', 'latestQuoteId', 'linkedCustomerId', 'linkedDealId', 'dealStage', 'quoteStatus', 'confirmStatus', 'taskStatus', 'resultType', 'triggerType', 'actionType', 'priorityLevel', 'urgencyLevel', 'sourceEntry', 'platform', 'createdAt', 'updatedAt', 'sentAt', 'respondedAt', 'validUntil', 'lastContactAt', 'lastPurchaseAt', 'deadlineAt', 'nextFollowupAt', 'archivedAt', 'createdBy', 'updatedBy']
+
+function isSafeLogTextKey(key) {
+  return SAFE_LOG_TEXT_KEYS.indexOf(key) >= 0 || /Id$/.test(key || '') || /At$/.test(key || '')
+}
+
+function sanitizeLogData(value, key) {
+  if (value == null) return value
+  if (Array.isArray(value)) return { redactedArrayLength: value.length }
+  if (typeof value === 'object') {
+    return Object.keys(value).reduce((result, field) => {
+      result[field] = sanitizeLogData(value[field], field)
+      return result
+    }, {})
+  }
+  if (typeof value === 'string') return isSafeLogTextKey(key) ? value : REDACTED_LOG_VALUE
+  return value
+}
+
 async function addLog(workspaceId, entityId, beforeData, afterData, note, operatorId) {
   await db.collection('activity_logs').add({
-    data: { workspaceId, entityType: 'deal', entityId, actionType: 'stage_update', beforeData, afterData, note, operatorId, createdAt: now() }
+    data: { workspaceId, entityType: 'deal', entityId, actionType: 'stage_update', beforeData: sanitizeLogData(beforeData), afterData: sanitizeLogData(afterData), note, operatorId, createdAt: now() }
   })
 }
 
@@ -119,6 +139,6 @@ exports.main = async (event) => {
     task = await createTaskIfMissing(workspaceId, updatedDeal, customer, 'repurchase', addDays(30), (customer.name || '您好') + '，上次这单已经完成一段时间了，如果想做同风格升级版，我可以按历史档案直接给你配。')
   }
 
-  await addLog(workspaceId, dealId, before, { dealStage: toStage }, event.note || '状态变更', operatorId)
+  await addLog(workspaceId, dealId, before, { dealStage: toStage }, '状态变更', operatorId)
   return { ok: true, deal: updatedDeal, task }
 }
