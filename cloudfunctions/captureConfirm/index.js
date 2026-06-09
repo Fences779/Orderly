@@ -8,6 +8,8 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing', 'quote_sent', 'waiting_deposit', 'scheduled', 'in_production', 'ready_to_ship', 'shipped', 'received', 'completed', 'repurchase_due', 'dormant', 'lost']
+const URGENCY_LEVELS = ['low', 'medium', 'high']
 
 function now() {
   return new Date().toISOString()
@@ -52,6 +54,20 @@ function normalizeArray(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
   return String(value).split(/[,\s，、/]+/).map((item) => item.trim()).filter(Boolean)
+}
+
+function normalizeText(value) {
+  return value == null ? '' : String(value).trim()
+}
+
+function normalizeDealStage(value) {
+  const stage = normalizeText(value || 'new_inquiry')
+  return STAGES.indexOf(stage) >= 0 ? stage : ''
+}
+
+function normalizeUrgencyLevel(value) {
+  const urgencyLevel = normalizeText(value || 'low')
+  return URGENCY_LEVELS.indexOf(urgencyLevel) >= 0 ? urgencyLevel : ''
 }
 
 function resolveWorkspaceId(event, operatorId) {
@@ -189,6 +205,10 @@ async function handleRequest(event) {
   const form = event.form || {}
   if (!event.captureId) return { ok: false, message: '缺少 captureId' }
   if (!form.customerName || !form.demandSummary) return { ok: false, message: '客户名和需求摘要必填' }
+  const dealStage = normalizeDealStage(form.dealStage || 'new_inquiry')
+  if (!dealStage) return { ok: false, code: 'invalid_deal_stage', message: '非法 dealStage。' }
+  const urgencyLevel = normalizeUrgencyLevel(form.urgencyLevel || 'low')
+  if (!urgencyLevel) return { ok: false, code: 'invalid_urgency_level', message: '非法 urgencyLevel。' }
 
   const capture = (await db.collection('captures').doc(event.captureId).get()).data
   if (!capture || capture.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'capture 不存在。' }
@@ -210,8 +230,8 @@ async function handleRequest(event) {
     customerId: customer._id,
     title: form.title || form.demandSummary.slice(0, 24),
     sourceEntry: form.platform || customer.platform || 'wechat',
-    dealStage: form.dealStage || 'new_inquiry',
-    priorityLevel: form.urgencyLevel === 'high' ? 'high' : 'medium',
+    dealStage,
+    priorityLevel: urgencyLevel === 'high' ? 'high' : 'medium',
     intentCategory: form.intentCategory || '',
     demandSummary: form.demandSummary,
     styleTags: normalizeArray(form.styleTags),
@@ -221,7 +241,7 @@ async function handleRequest(event) {
     budgetMin: money(form.budgetMin),
     budgetMax: money(form.budgetMax),
     deadlineAt: form.deadlineAt || '',
-    urgencyLevel: form.urgencyLevel || 'low',
+    urgencyLevel,
     riskFlags: normalizeArray(form.riskFlags),
     latestQuoteId: '',
     nextFollowupAt: '',

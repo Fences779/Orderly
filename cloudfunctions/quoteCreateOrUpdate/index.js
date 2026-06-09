@@ -8,6 +8,11 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_QUOTE_ITEMS = 50
+const MAX_SHORT_TEXT_LENGTH = 128
+const MAX_NOTE_TEXT_LENGTH = 512
+const ACTIONS = ['draft', 'send', 'status']
+const QUOTE_STATUSES = ['draft', 'sent', 'accepted', 'rejected']
 const QUOTE_FIELDS = ['_id', 'dealId', 'quoteNo', 'quoteStatus', 'validUntil', 'quoteNote', 'sentAt', 'respondedAt', 'items', 'baseAmount', 'customFee', 'laborFee', 'shippingFee', 'discountAmount', 'depositRequired']
 const QUOTE_ITEM_FIELDS = ['name', 'qty', 'price', 'note', 'skuId', 'materialCode', 'unit']
 
@@ -59,6 +64,20 @@ function normalizeList(value) {
 
 function normalizeText(value) {
   return value == null ? '' : String(value).trim()
+}
+
+function limitText(value, maxLength) {
+  return normalizeText(value).slice(0, maxLength)
+}
+
+function normalizeAction(value) {
+  const action = normalizeText(value || 'draft')
+  return ACTIONS.indexOf(action) >= 0 ? action : ''
+}
+
+function normalizeQuoteStatus(value) {
+  const status = normalizeText(value)
+  return QUOTE_STATUSES.indexOf(status) >= 0 ? status : ''
 }
 
 function pickFields(source, allowedFields) {
@@ -145,17 +164,17 @@ function money(value) {
 }
 
 function normalizeQuoteItems(value) {
-  const items = Array.isArray(value) ? value : []
+  const items = Array.isArray(value) ? value.slice(0, MAX_QUOTE_ITEMS) : []
   return items.map((item) => {
     const input = pickFields(item, QUOTE_ITEM_FIELDS)
     return {
-      name: normalizeText(input.name),
+      name: limitText(input.name, MAX_SHORT_TEXT_LENGTH),
       qty: money(input.qty || 1),
       price: money(input.price),
-      note: normalizeText(input.note),
-      skuId: normalizeText(input.skuId),
-      materialCode: normalizeText(input.materialCode),
-      unit: normalizeText(input.unit)
+      note: limitText(input.note, MAX_NOTE_TEXT_LENGTH),
+      skuId: limitText(input.skuId, MAX_SHORT_TEXT_LENGTH),
+      materialCode: limitText(input.materialCode, MAX_SHORT_TEXT_LENGTH),
+      unit: limitText(input.unit, 32)
     }
   }).filter((item) => item.name || item.price > 0)
 }
@@ -176,6 +195,7 @@ function calculate(input) {
     laborFee,
     shippingFee,
     discountAmount,
+    quoteStatus: normalizeQuoteStatus(input.quoteStatus) || 'draft',
     depositRequired: money(input.depositRequired),
     totalAmount: Math.max(0, baseAmount + customFee + laborFee + shippingFee - discountAmount)
   })
@@ -255,8 +275,20 @@ async function handleRequest(event) {
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
-  const input = calculate(event.quote || {})
-  const action = event.action || 'draft'
+  const action = normalizeAction(event.action || 'draft')
+  if (!action) return { ok: false, code: 'invalid_action', message: '非法报价动作。' }
+
+  const rawQuote = event.quote || {}
+  if (Array.isArray(rawQuote.items) && rawQuote.items.length > MAX_QUOTE_ITEMS) {
+    return { ok: false, code: 'too_many_quote_items', message: `报价项不能超过 ${MAX_QUOTE_ITEMS} 条。` }
+  }
+
+  const rawQuoteStatus = normalizeText(rawQuote.quoteStatus)
+  if (rawQuoteStatus && !normalizeQuoteStatus(rawQuoteStatus)) {
+    return { ok: false, code: 'invalid_quote_status', message: '非法报价状态。' }
+  }
+
+  const input = calculate(rawQuote)
   if (!input.dealId) return { ok: false, message: '报价必须关联 dealId' }
   if (!input.items.length && !input.baseAmount) return { ok: false, message: '报价项或基础金额不能为空' }
 
