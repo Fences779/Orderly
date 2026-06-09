@@ -18,10 +18,12 @@ public sealed partial class DatabaseInitializer
         if (!string.IsNullOrWhiteSpace(directory))
         {
             Directory.CreateDirectory(directory);
+            LocalDataFileSecurity.HardenDirectory(directory);
         }
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        LocalDataFileSecurity.HardenSqliteDatabaseFiles(_connectionFactory.DatabasePath);
 
         await ExecuteAsync(connection, """
             CREATE TABLE IF NOT EXISTS Customers (

@@ -9,6 +9,7 @@ public static class DatabasePaths
             "Orderly-SN");
 
         Directory.CreateDirectory(root);
+        LocalDataFileSecurity.HardenDirectory(root);
         return root;
     }
 
@@ -43,6 +44,7 @@ public static class DatabasePaths
         if (!string.IsNullOrWhiteSpace(directory))
         {
             Directory.CreateDirectory(directory);
+            LocalDataFileSecurity.HardenDirectory(directory);
         }
 
         databasePath = fullPath;
@@ -53,6 +55,7 @@ public static class DatabasePaths
     {
         var identityPath = Path.Combine(GetAppRootPath(), "identity");
         Directory.CreateDirectory(identityPath);
+        LocalDataFileSecurity.HardenDirectory(identityPath);
         return identityPath;
     }
 
@@ -65,6 +68,7 @@ public static class DatabasePaths
     {
         var accountsPath = Path.Combine(GetAppRootPath(), "accounts");
         Directory.CreateDirectory(accountsPath);
+        LocalDataFileSecurity.HardenDirectory(accountsPath);
         return accountsPath;
     }
 
@@ -73,6 +77,7 @@ public static class DatabasePaths
         var normalizedAccountId = NormalizeAccountIdSegment(accountId);
         var accountPath = Path.Combine(GetAccountsDirectoryPath(), normalizedAccountId);
         Directory.CreateDirectory(accountPath);
+        LocalDataFileSecurity.HardenDirectory(accountPath);
         return accountPath;
     }
 
