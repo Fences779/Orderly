@@ -188,7 +188,12 @@ async function matchCustomers(workspaceId, parserResult) {
   }).slice(0, 5)
 }
 
-exports.main = async (event) => {
+function logInternalError(scope, err) {
+  const name = err && err.name ? String(err.name).slice(0, 64) : 'Error'
+  console.error(scope, { name })
+}
+
+async function handleRequest(event) {
   const auth = requireOperatorId()
   if (!auth.ok) return auth
 
@@ -228,5 +233,14 @@ exports.main = async (event) => {
     parserResult,
     confidenceScore: parserResult.confidenceScore,
     customerMatches
+  }
+}
+
+exports.main = async (event) => {
+  try {
+    return await handleRequest(event)
+  } catch (err) {
+    logInternalError('captureParse failed', err)
+    return { ok: false, code: 'internal_error', message: '素材解析失败。' }
   }
 }

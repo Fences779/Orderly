@@ -175,7 +175,12 @@ async function createQuoteTask(workspaceId, quote, deal, customer) {
   return Object.assign({}, task, { _id: added._id })
 }
 
-exports.main = async (event) => {
+function logInternalError(scope, err) {
+  const name = err && err.name ? String(err.name).slice(0, 64) : 'Error'
+  console.error(scope, { name })
+}
+
+async function handleRequest(event) {
   const auth = requireOperatorId()
   if (!auth.ok) return auth
 
@@ -248,4 +253,13 @@ exports.main = async (event) => {
 
   await addLog(workspaceId, 'quote', quote._id, action === 'send' ? 'quote_sent' : 'quote_save', before, quote, action === 'send' ? '报价发送' : '报价保存', operatorId)
   return { ok: true, quote, task }
+}
+
+exports.main = async (event) => {
+  try {
+    return await handleRequest(event)
+  } catch (err) {
+    logInternalError('quoteCreateOrUpdate failed', err)
+    return { ok: false, code: 'internal_error', message: '报价保存失败。' }
+  }
 }

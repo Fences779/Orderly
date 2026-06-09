@@ -138,7 +138,12 @@ async function createTaskIfMissing(workspaceId, deal, customer, triggerType, due
   return Object.assign({}, task, { _id: added._id })
 }
 
-exports.main = async (event) => {
+function logInternalError(scope, err) {
+  const name = err && err.name ? String(err.name).slice(0, 64) : 'Error'
+  console.error(scope, { name })
+}
+
+async function handleRequest(event) {
   const auth = requireOperatorId()
   if (!auth.ok) return auth
 
@@ -183,4 +188,13 @@ exports.main = async (event) => {
 
   await addLog(workspaceId, dealId, before, { dealStage: toStage }, '状态变更', operatorId)
   return { ok: true, deal: updatedDeal, task }
+}
+
+exports.main = async (event) => {
+  try {
+    return await handleRequest(event)
+  } catch (err) {
+    logInternalError('dealStageUpdate failed', err)
+    return { ok: false, code: 'internal_error', message: '状态更新失败。' }
+  }
 }

@@ -34,7 +34,12 @@ function rejectOversizedEvent(event) {
   return bytes > MAX_EVENT_BYTES ? { ok: false, code: 'payload_too_large', message: '请求体过大。' } : null
 }
 
-exports.main = async (event) => {
+function logInternalError(scope, err) {
+  const name = err && err.name ? String(err.name).slice(0, 64) : 'Error'
+  console.error(scope, { name })
+}
+
+async function handleRequest(event) {
   event = event || {}
   const oversized = rejectOversizedEvent(event)
   if (oversized) return oversized
@@ -60,5 +65,14 @@ exports.main = async (event) => {
     ocrText: '客户：想定制一条简约珍珠项链，生日送人，这周要，预算 300 左右，白色，高级一点。',
     confidenceScore: 72,
     message: 'mock OCR 已返回示例文本，可直接修改后解析。'
+  }
+}
+
+exports.main = async (event) => {
+  try {
+    return await handleRequest(event)
+  } catch (err) {
+    logInternalError('ocrAdapter failed', err)
+    return { ok: false, code: 'internal_error', message: 'OCR 处理失败。' }
   }
 }

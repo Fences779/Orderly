@@ -91,7 +91,12 @@ async function log(workspaceId, entityId, actionType, beforeData, afterData, not
   })
 }
 
-exports.main = async (event) => {
+function logInternalError(scope, err) {
+  const name = err && err.name ? String(err.name).slice(0, 64) : 'Error'
+  console.error(scope, { name })
+}
+
+async function handleRequest(event) {
   const auth = requireOperatorId()
   if (!auth.ok) return auth
 
@@ -162,4 +167,13 @@ exports.main = async (event) => {
   const deal = Object.assign({}, data, { _id: added._id })
   await log(workspaceId, added._id, 'deal_create', {}, deal, 'deal 创建', operatorId)
   return { ok: true, deal }
+}
+
+exports.main = async (event) => {
+  try {
+    return await handleRequest(event)
+  } catch (err) {
+    logInternalError('dealUpsert failed', err)
+    return { ok: false, code: 'internal_error', message: 'deal 保存失败。' }
+  }
 }
