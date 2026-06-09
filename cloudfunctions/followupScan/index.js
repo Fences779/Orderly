@@ -308,9 +308,23 @@ async function log(workspaceId, entityType, entityId, actionType, note, operator
   })
 }
 
-async function upsertById(collection, data) {
+async function getWorkspaceDoc(collection, id, workspaceId) {
+  const docId = normalizeText(id)
+  if (!docId) return null
+  try {
+    const data = (await db.collection(collection).doc(docId).get()).data
+    return data && data.workspaceId === workspaceId ? data : null
+  } catch (err) {
+    return null
+  }
+}
+
+async function upsertById(collection, data, workspaceId) {
   if (data._id) {
-    const id = data._id
+    const id = normalizeText(data._id)
+    if (!id) return null
+    const existing = await getWorkspaceDoc(collection, id, workspaceId)
+    if (!existing) return null
     delete data._id
     data.updatedAt = now()
     await db.collection(collection).doc(id).update({ data })
@@ -330,13 +344,14 @@ async function createTaskIfMissing(workspaceId, task) {
 }
 
 async function taskAction(event, operatorId, workspaceId) {
-  const task = (await db.collection('followup_tasks').doc(event.taskId).get()).data
-  if (!task || task.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '跟进任务不存在。' }
+  const taskId = normalizeText(event.taskId)
+  const task = await getWorkspaceDoc('followup_tasks', taskId, workspaceId)
+  if (!task) return { ok: false, code: 'not_found', message: '跟进任务不存在。' }
   const patch = { updatedAt: now(), updatedBy: operatorId }
   if (event.action === 'complete') Object.assign(patch, { taskStatus: 'completed', completedAt: now(), resultType: 'done' })
   if (event.action === 'skip') Object.assign(patch, { taskStatus: 'skipped', completedAt: now(), resultType: 'skipped' })
   if (event.action === 'delay') Object.assign(patch, { dueAt: event.payload && event.payload.dueAt ? event.payload.dueAt : addDaysFrom(new Date(), 1) })
-  await db.collection('followup_tasks').doc(event.taskId).update({ data: patch })
+  await db.collection('followup_tasks').doc(taskId).update({ data: patch })
   await log(workspaceId, 'deal', task.dealId, 'followup_' + event.action, '跟进任务' + event.action, operatorId)
   return { ok: true }
 }
@@ -382,22 +397,25 @@ exports.main = async (event) => {
   }
   if (mode === 'templateSave') {
     const template = Object.assign({ workspaceId, enabled: true, useCount: 0 }, event.template || {}, { workspaceId })
-    const saved = await upsertById('message_templates', template)
+    const saved = await upsertById('message_templates', template, workspaceId)
+    if (!saved) return { ok: false, code: 'not_found', message: '模板不存在。' }
     return { ok: true, template: saved }
   }
   if (mode === 'templateUse') {
-    if (!event.templateId) return { ok: false, message: '缺少 templateId' }
+    const templateId = normalizeText(event.templateId)
+    if (!templateId) return { ok: false, message: '缺少 templateId' }
+    const template = await getWorkspaceDoc('message_templates', templateId, workspaceId)
+    if (!template) return { ok: false, code: 'not_found', message: '模板不存在。' }
     const _ = db.command
-    await db.collection('message_templates').doc(event.templateId).update({ data: { useCount: _.inc(1), updatedAt: now() } })
+    await db.collection('message_templates').doc(templateId).update({ data: { useCount: _.inc(1), updatedAt: now() } })
     return { ok: true }
   }
   if (mode === 'skuSave') {
     const rawSku = event.sku || {}
     let baseSku = {}
     if (rawSku._id) {
-      try {
-        baseSku = (await db.collection('sku_catalog').doc(rawSku._id).get()).data || {}
-      } catch (err) {}
+      baseSku = await getWorkspaceDoc('sku_catalog', rawSku._id, workspaceId)
+      if (!baseSku) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
     }
     const mergedSku = Object.assign({}, baseSku, rawSku)
     const sku = Object.assign({ workspaceId, enabled: true, sortOrder: 10 }, mergedSku, {
@@ -417,7 +435,8 @@ exports.main = async (event) => {
       tags: normalizeArray(mergedSku.tags),
       adjustableFields: normalizeArray(mergedSku.adjustableFields)
     })
-    const saved = await upsertById('sku_catalog', sku)
+    const saved = await upsertById('sku_catalog', sku, workspaceId)
+    if (!saved) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
     return { ok: true, sku: saved }
   }
   if (mode === 'inventoryMovementSave') {
@@ -429,10 +448,8 @@ exports.main = async (event) => {
     if (!skuId) return { ok: false, message: '缺少 skuId' }
     if (!quantity) return { ok: false, message: '库存流水数量不能为空' }
 
-    let sku = {}
-    try {
-      sku = (await db.collection('sku_catalog').doc(skuId).get()).data || {}
-    } catch (err) {}
+    const sku = await getWorkspaceDoc('sku_catalog', skuId, workspaceId)
+    if (!sku) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
 
     const signedQuantity = movementType === 'out' || movementType === 'reserve' ? -Math.abs(quantity) : quantity
     const movement = Object.assign({}, movementInput, {
@@ -489,7 +506,8 @@ exports.main = async (event) => {
       createdBy: operatorId,
       updatedBy: operatorId
     })
-    const saved = await upsertById('cashflow_entries', entry)
+    const saved = await upsertById('cashflow_entries', entry, workspaceId)
+    if (!saved) return { ok: false, code: 'not_found', message: '现金流记录不存在。' }
     return { ok: true, entry: saved }
   }
 
@@ -507,7 +525,7 @@ exports.main = async (event) => {
   for (const deal of deals) {
     const customer = customerMap[deal.customerId] || {}
     if (deal.dealStage === 'quote_sent' && deal.latestQuoteId) {
-      const quote = (await db.collection('quotes').doc(deal.latestQuoteId).get().catch(() => ({ data: null }))).data
+      const quote = await getWorkspaceDoc('quotes', deal.latestQuoteId, workspaceId)
       if (quote && quote.sentAt && hoursSince(quote.sentAt) >= 24) {
         const dueAt = addDaysFrom(quote.sentAt, 1)
         const task = {
