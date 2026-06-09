@@ -115,6 +115,7 @@ exports.main = async (event) => {
 
   if (input._id) {
     const before = (await db.collection('deals').doc(input._id).get()).data
+    if (!before || before.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }
     delete data._id
     delete data.createdAt
     delete data.createdBy

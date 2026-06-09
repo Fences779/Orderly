@@ -101,7 +101,7 @@ exports.main = async (event) => {
   if (!form.customerName || !form.demandSummary) return { ok: false, message: '客户名和需求摘要必填' }
 
   const capture = (await db.collection('captures').doc(event.captureId).get()).data
-  if (!capture) return { ok: false, message: 'capture 不存在' }
+  if (!capture || capture.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'capture 不存在。' }
   if (capture.confirmStatus === 'confirmed' && capture.linkedDealId) {
     return { ok: true, customerId: capture.linkedCustomerId, dealId: capture.linkedDealId, message: 'capture 已确认' }
   }
@@ -109,6 +109,7 @@ exports.main = async (event) => {
   let customer
   if (event.customerMode === 'existing' && event.selectedCustomerId) {
     customer = (await db.collection('customers').doc(event.selectedCustomerId).get()).data
+    if (!customer || customer.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
     await db.collection('customers').doc(event.selectedCustomerId).update({ data: { lastContactAt: now(), updatedAt: now(), updatedBy: operatorId } })
   } else {
     customer = await createCustomer(workspaceId, form, operatorId)

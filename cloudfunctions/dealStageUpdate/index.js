@@ -131,7 +131,7 @@ exports.main = async (event) => {
   const { dealId, toStage } = event
   if (!dealId || !toStage) return { ok: false, message: '缺少 dealId 或 toStage' }
   const deal = (await db.collection('deals').doc(dealId).get()).data
-  if (!deal) return { ok: false, message: 'deal 不存在' }
+  if (!deal || deal.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }
   if (!canTransition(deal.dealStage, toStage)) return { ok: false, message: '非法状态流转：' + deal.dealStage + ' -> ' + toStage }
 
   const before = { dealStage: deal.dealStage, nextFollowupAt: deal.nextFollowupAt }
@@ -148,7 +148,8 @@ exports.main = async (event) => {
     }
   }
 
-  const customer = (await db.collection('customers').doc(deal.customerId).get()).data || {}
+  const customerDoc = (await db.collection('customers').doc(deal.customerId).get()).data || {}
+  const customer = customerDoc.workspaceId === workspaceId ? customerDoc : {}
   const updatedDeal = Object.assign({}, deal, patch)
   let task = null
   if (toStage === 'received') {

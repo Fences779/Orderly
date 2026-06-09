@@ -139,8 +139,9 @@ exports.main = async (event) => {
   if (!input.items.length && !input.baseAmount) return { ok: false, message: '报价项或基础金额不能为空' }
 
   const deal = (await db.collection('deals').doc(input.dealId).get()).data
-  if (!deal) return { ok: false, message: 'deal 不存在' }
-  const customer = (await db.collection('customers').doc(deal.customerId).get()).data || {}
+  if (!deal || deal.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }
+  const customerDoc = (await db.collection('customers').doc(deal.customerId).get()).data || {}
+  const customer = customerDoc.workspaceId === workspaceId ? customerDoc : {}
   const quote = Object.assign({
     workspaceId,
     quoteNo: quoteNo(),
@@ -168,6 +169,7 @@ exports.main = async (event) => {
   let before = {}
   if (quote._id) {
     before = (await db.collection('quotes').doc(quote._id).get()).data || {}
+    if (before.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '报价不存在。' }
     const id = quote._id
     delete quote._id
     delete quote.createdAt

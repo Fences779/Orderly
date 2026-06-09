@@ -94,6 +94,7 @@ exports.main = async (event) => {
     try {
       existing = (await db.collection('customers').doc(input._id).get()).data
     } catch (err) {}
+    if (existing && existing.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
   }
   if (!existing && input.platform && input.externalUid) {
     const matched = await db.collection('customers').where({ workspaceId, platform: input.platform, externalUid: input.externalUid }).limit(1).get()
