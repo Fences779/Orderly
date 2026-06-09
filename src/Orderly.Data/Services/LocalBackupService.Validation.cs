@@ -166,6 +166,8 @@ public sealed partial class LocalBackupService
                     {
                         errors.Add($"表 {tableName} 的 counts 与实际记录数不一致。");
                     }
+
+                    ValidateTableColumns(tableName, tableElement, errors);
                 }
 
                 if (manifest.Tables.TryGetValue(LauncherLocalAccountsTableName, out var launcherTableElement))
@@ -288,5 +290,27 @@ public sealed partial class LocalBackupService
         }
 
         return manifest;
+    }
+
+    private static void ValidateTableColumns(string tableName, JsonElement tableElement, ICollection<string> errors)
+    {
+        var allowedColumns = GetRestoreColumns(tableName);
+        foreach (var row in tableElement.EnumerateArray())
+        {
+            if (row.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            try
+            {
+                ValidateRestoreColumns(tableName, row.EnumerateObject().ToArray(), allowedColumns);
+            }
+            catch (InvalidOperationException ex)
+            {
+                errors.Add(ex.Message);
+                return;
+            }
+        }
     }
 }

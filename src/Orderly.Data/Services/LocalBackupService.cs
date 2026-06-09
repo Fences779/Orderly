@@ -65,6 +65,60 @@ public sealed partial class LocalBackupService : IBackupService
         "SyncRecords"
     ];
 
+    private static readonly IReadOnlyDictionary<string, HashSet<string>> RestoreTableColumns =
+        new Dictionary<string, HashSet<string>>(StringComparer.Ordinal)
+        {
+            ["Customers"] = BuildColumnSet(
+                "Id", "Name", "Status", "Priority", "SourcePlatform", "Channel", "ContactHandle", "Phone", "Remark",
+                "ExternalId", "RawPayload", "LastContactAt", "CreatedAt", "UpdatedAt", "DeletedAt", "RemoteId",
+                "IsSynced", "Version", "NameCiphertext", "ContactHandleCiphertext", "PhoneCiphertext",
+                "RemarkCiphertext", "ExternalIdCiphertext", "RawPayloadCiphertext", "LastContactAtCiphertext"),
+            ["Deals"] = BuildColumnSet(
+                "Id", "CustomerId", "Title", "Stage", "EstimatedAmount", "Requirement", "SourcePlatform", "Channel",
+                "ExpectedCloseAt", "ClosedAt", "LostReason", "CreatedAt", "UpdatedAt", "DeletedAt", "RemoteId",
+                "IsSynced", "Version", "TitleCiphertext", "EstimatedAmountCiphertext", "RequirementCiphertext",
+                "ExpectedCloseAtCiphertext", "ClosedAtCiphertext", "LostReasonCiphertext"),
+            ["Orders"] = BuildColumnSet(
+                "Id", "CustomerId", "DealId", "Title", "Status", "Amount", "Requirement", "SourcePlatform", "Channel",
+                "ExternalId", "RawPayload", "NextFollowUpAt", "CreatedAt", "UpdatedAt", "DeletedAt", "RemoteId",
+                "IsSynced", "Version", "TitleCiphertext", "AmountCiphertext", "RequirementCiphertext",
+                "ExternalIdCiphertext", "RawPayloadCiphertext", "NextFollowUpAtCiphertext"),
+            ["FollowUps"] = BuildColumnSet(
+                "Id", "CustomerId", "DealId", "OrderId", "Title", "Content", "Status", "ScheduledAt", "CompletedAt",
+                "ReminderAt", "CreatedAt", "UpdatedAt", "DeletedAt", "RemoteId", "IsSynced", "Version",
+                "TitleCiphertext", "ContentCiphertext", "ScheduledAtCiphertext", "CompletedAtCiphertext",
+                "ReminderAtCiphertext"),
+            ["CustomerNotes"] = BuildColumnSet(
+                "Id", "CustomerId", "DealId", "OrderId", "Type", "Content", "IsPinned", "CreatedAt", "UpdatedAt",
+                "DeletedAt", "RemoteId", "IsSynced", "Version", "ContentCiphertext"),
+            ["ReplyTemplates"] = BuildColumnSet(
+                "Id", "Title", "Scene", "Content", "IsFavorite", "SourcePlatform", "CreatedAt", "UpdatedAt",
+                "ContentCiphertext"),
+            ["PriceAdjustments"] = BuildColumnSet(
+                "Id", "CustomerId", "DealId", "OrderId", "OriginalAmount", "AdjustedAmount", "Reason", "Status",
+                "RequestedBy", "ApprovedBy", "ApprovedAt", "CreatedAt", "UpdatedAt", "DeletedAt", "RemoteId",
+                "IsSynced", "Version", "OriginalAmountCiphertext", "AdjustedAmountCiphertext", "ReasonCiphertext",
+                "RequestedByCiphertext", "ApprovedByCiphertext", "ApprovedAtCiphertext"),
+            ["ActivityLogs"] = BuildColumnSet(
+                "Id", "Type", "CustomerId", "DealId", "OrderId", "Title", "Description", "Operator", "MetadataJson",
+                "CreatedAt", "UpdatedAt", "DeletedAt", "RemoteId", "IsSynced", "Version", "TitleCiphertext",
+                "DescriptionCiphertext", "OperatorCiphertext", "MetadataJsonCiphertext"),
+            ["ConversationMessages"] = BuildColumnSet(
+                "Id", "CustomerId", "OrderId", "DealId", "Direction", "Channel", "SenderName", "Content",
+                "MessageTime", "SourceMessageId", "MetadataJson", "CreatedAt", "UpdatedAt", "DeletedAt",
+                "RemoteId", "IsSynced", "Version", "SenderNameCiphertext", "ContentCiphertext",
+                "MessageTimeCiphertext", "SourceMessageIdCiphertext", "MetadataJsonCiphertext"),
+            ["AiSuggestions"] = BuildColumnSet(
+                "Id", "CustomerId", "OrderId", "MessageId", "SuggestionText", "Reason", "Confidence", "Status",
+                "MetadataJson", "CreatedAt", "UpdatedAt", "DeletedAt", "RemoteId", "IsSynced", "Version",
+                "SuggestionTextCiphertext", "ReasonCiphertext", "ConfidenceCiphertext", "MetadataJsonCiphertext"),
+            ["OcrResults"] = BuildColumnSet(
+                "Id", "CustomerId", "OrderId", "SourcePath", "SourceName", "ExtractedText", "Status", "ErrorMessage",
+                "MetadataJson", "CreatedAt", "UpdatedAt", "DeletedAt", "RemoteId", "IsSynced", "Version",
+                "SourcePathCiphertext", "SourceNameCiphertext", "ExtractedTextCiphertext", "ErrorMessageCiphertext",
+                "MetadataJsonCiphertext")
+        };
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true
@@ -93,5 +147,10 @@ public sealed partial class LocalBackupService : IBackupService
         _activityLogRepository = activityLogRepository;
         _launcherConnectionFactory = launcherConnectionFactory;
         _sessionContextService = sessionContextService;
+    }
+
+    private static HashSet<string> BuildColumnSet(params string[] columns)
+    {
+        return new HashSet<string>(columns, StringComparer.Ordinal);
     }
 }

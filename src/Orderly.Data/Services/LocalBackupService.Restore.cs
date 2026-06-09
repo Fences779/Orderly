@@ -207,6 +207,7 @@ public sealed partial class LocalBackupService
         JsonElement tableElement,
         CancellationToken cancellationToken)
     {
+        var allowedColumns = GetRestoreColumns(tableName);
         if (tableElement.ValueKind != JsonValueKind.Array)
         {
             throw new InvalidOperationException($"表 {tableName} 的备份结构无效。");
@@ -220,7 +221,8 @@ public sealed partial class LocalBackupService
             }
 
             var properties = row.EnumerateObject().ToArray();
-            var columnNames = string.Join(", ", properties.Select(static property => $"\"{property.Name}\""));
+            ValidateRestoreColumns(tableName, properties, allowedColumns);
+            var columnNames = string.Join(", ", properties.Select(static property => QuoteSqlIdentifier(property.Name)));
             var parameterNames = string.Join(", ", properties.Select((_, index) => $"$p{index}"));
 
             await using var command = connection.CreateCommand();
@@ -234,5 +236,39 @@ public sealed partial class LocalBackupService
 
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
+    }
+
+    private static HashSet<string> GetRestoreColumns(string tableName)
+    {
+        return RestoreTableColumns.TryGetValue(tableName, out var columns)
+            ? columns
+            : throw new InvalidOperationException($"表 {tableName} 不允许恢复。");
+    }
+
+    private static void ValidateRestoreColumns(
+        string tableName,
+        IReadOnlyCollection<JsonProperty> properties,
+        HashSet<string> allowedColumns)
+    {
+        if (properties.Count == 0)
+        {
+            throw new InvalidOperationException($"表 {tableName} 存在空对象行。");
+        }
+
+        var unknownColumns = properties
+            .Select(static property => property.Name)
+            .Where(column => !allowedColumns.Contains(column))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (unknownColumns.Length > 0)
+        {
+            throw new InvalidOperationException($"表 {tableName} 包含不允许恢复的列：{string.Join(", ", unknownColumns)}。");
+        }
+    }
+
+    private static string QuoteSqlIdentifier(string identifier)
+    {
+        return "\"" + identifier.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
     }
 }
