@@ -38,6 +38,19 @@ function rejectOversizedEvent(event) {
   return bytes > MAX_EVENT_BYTES ? { ok: false, code: 'payload_too_large', message: '请求体过大。' } : null
 }
 
+function rejectPollutedEvent(event) {
+  return hasUnsafeObjectKey(event, 0) ? { ok: false, code: 'invalid_payload', message: '请求参数非法。' } : null
+}
+
+function hasUnsafeObjectKey(value, depth) {
+  if (depth > 32) return true
+  if (value == null || typeof value !== 'object') return false
+  return Object.keys(value).some((key) => {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return true
+    return hasUnsafeObjectKey(value[key], depth + 1)
+  })
+}
+
 function resolveWorkspaceId(event, operatorId) {
   const workspaceId = String((event && event.workspaceId) || '').trim() || DEFAULT_WORKSPACE_ID
   const configured = normalizeList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
@@ -130,6 +143,8 @@ async function handleRequest(event) {
   const request = event || {}
   const oversized = rejectOversizedEvent(request)
   if (oversized) return oversized
+  const polluted = rejectPollutedEvent(request)
+  if (polluted) return polluted
 
   const workspace = resolveWorkspaceId(request, auth.operatorId)
   if (!workspace.ok) return workspace

@@ -78,6 +78,21 @@ function rejectOversizedEvent(event) {
   }
 }
 
+function rejectPollutedObject(value) {
+  if (hasUnsafeObjectKey(value, 0)) {
+    throw createError(400, 'invalid_payload', '请求参数非法。')
+  }
+}
+
+function hasUnsafeObjectKey(value, depth) {
+  if (depth > 32) return true
+  if (value == null || typeof value !== 'object') return false
+  return Object.keys(value).some((key) => {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return true
+    return hasUnsafeObjectKey(value[key], depth + 1)
+  })
+}
+
 function normalizeBool(value, fallback = true) {
   if (value == null || value === '') return fallback
   if (typeof value === 'boolean') return value
@@ -613,7 +628,9 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
 exports.main = async (event) => {
   try {
     rejectOversizedEvent(event)
+    rejectPollutedObject(event)
     const request = normalizeRequest(event)
+    rejectPollutedObject(request)
     const workspaceId = normalizeText(getEnv('ORDERLY_INVENTORY_WORKSPACE_ID', 'default')) || 'default'
     const operatorId = normalizeText(getEnv('ORDERLY_INVENTORY_OPERATOR_ID', 'pc-admin')) || 'pc-admin'
     const action = normalizeText(request.action)
