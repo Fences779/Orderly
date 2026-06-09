@@ -19,6 +19,30 @@ const COLLECTIONS = {
   captures: 'captures',
   activity_logs: 'activity_logs'
 }
+const QUERY_FIELDS = {
+  customers: [],
+  deals: [],
+  quotes: ['dealId', 'quoteStatus'],
+  sku_catalog: ['enabled', 'category'],
+  inventory_movements: ['skuId', 'movementType', 'relatedOrderId'],
+  cashflow_entries: ['direction', 'status', 'category', 'relatedOrderId', 'relatedQuoteId', 'relatedSkuId'],
+  followup_tasks: ['dealId', 'customerId', 'taskStatus', 'triggerType', 'resultType'],
+  message_templates: ['sceneType', 'enabled'],
+  captures: ['confirmStatus', 'linkedCustomerId', 'linkedDealId'],
+  activity_logs: ['entityId', 'entityType', 'actionType']
+}
+const ORDER_FIELDS = {
+  customers: ['createdAt', 'updatedAt', 'lastContactAt', 'lastPurchaseAt'],
+  deals: ['createdAt', 'updatedAt', 'lastInteractionAt', 'nextFollowupAt'],
+  quotes: ['createdAt', 'updatedAt', 'sentAt', 'validUntil'],
+  sku_catalog: ['createdAt', 'updatedAt', 'sortOrder', 'lastRestockedAt'],
+  inventory_movements: ['createdAt', 'updatedAt', 'occurredAt'],
+  cashflow_entries: ['createdAt', 'updatedAt', 'occurredAt'],
+  followup_tasks: ['createdAt', 'updatedAt', 'dueAt', 'priorityScore'],
+  message_templates: ['createdAt', 'updatedAt', 'sortOrder'],
+  captures: ['createdAt', 'updatedAt'],
+  activity_logs: ['createdAt']
+}
 
 function normalizeText(value) {
   return value == null ? '' : String(value).trim()
@@ -61,18 +85,22 @@ function resolveCollection(value) {
   return COLLECTIONS[collection] ? collection : ''
 }
 
-function isSafeQueryField(field) {
+function isSafeFieldName(field) {
   return /^[A-Za-z0-9_]+$/.test(field) && field !== 'workspaceId'
+}
+
+function isAllowedField(collection, field, map) {
+  return isSafeFieldName(field) && (map[collection] || []).indexOf(field) >= 0
 }
 
 function isSafeQueryValue(value) {
   return value == null || ['string', 'number', 'boolean'].indexOf(typeof value) >= 0
 }
 
-function sanitizeQuery(query) {
+function sanitizeQuery(collection, query) {
   if (!query || typeof query !== 'object' || Array.isArray(query)) return {}
   return Object.keys(query).reduce((result, field) => {
-    if (isSafeQueryField(field) && isSafeQueryValue(query[field])) result[field] = query[field]
+    if (isAllowedField(collection, field, QUERY_FIELDS) && isSafeQueryValue(query[field])) result[field] = query[field]
     return result
   }, {})
 }
@@ -96,11 +124,12 @@ async function getById(collection, id, workspaceId) {
 
 async function listByQuery(collection, event, workspaceId) {
   const options = event.options || {}
-  const query = Object.assign(sanitizeQuery(event.query), { workspaceId })
+  const query = Object.assign(sanitizeQuery(collection, event.query), { workspaceId })
   let ref = db.collection(collection).where(query)
-  if (options.orderBy && /^[A-Za-z0-9_]+$/.test(normalizeText(options.orderBy.field))) {
+  const orderField = normalizeText(options.orderBy && options.orderBy.field)
+  if (isAllowedField(collection, orderField, ORDER_FIELDS)) {
     const direction = normalizeText(options.orderBy.direction) === 'asc' ? 'asc' : 'desc'
-    ref = ref.orderBy(normalizeText(options.orderBy.field), direction)
+    ref = ref.orderBy(orderField, direction)
   }
   return (await ref.limit(sanitizeLimit(options.limit)).get()).data || []
 }
