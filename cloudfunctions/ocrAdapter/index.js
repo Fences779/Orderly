@@ -2,7 +2,17 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
+function requireOperatorId() {
+  const operatorId = cloud.getWXContext().OPENID || ''
+  if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
+  return { ok: true, operatorId }
+}
+
 exports.main = async (event) => {
+  event = event || {}
+  const auth = requireOperatorId()
+  if (!auth.ok) return auth
+
   const provider = event.provider || process.env.OCR_PROVIDER || 'mock'
   if (provider !== 'mock') {
     return {
