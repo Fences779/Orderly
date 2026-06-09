@@ -212,7 +212,7 @@ public sealed class LocalAuthService : ILocalAuthService
         }
 
         var account = await _accountRepository.GetByAccountIdAsync(accountId, cancellationToken);
-        if (account is null || !account.IsEnabled)
+        if (account is null || !IsAccountUsableForCredentialCheck(account))
         {
             return false;
         }
@@ -228,7 +228,7 @@ public sealed class LocalAuthService : ILocalAuthService
         }
 
         var account = await _accountRepository.GetByAccountIdAsync(accountId, cancellationToken);
-        if (account is null || !account.IsEnabled)
+        if (account is null || !IsAccountUsableForCredentialCheck(account))
         {
             return false;
         }
@@ -290,5 +290,12 @@ public sealed class LocalAuthService : ILocalAuthService
             DataKey = dataKey.ToArray(),
             SignedInAt = signedInAt
         };
+    }
+
+    private static bool IsAccountUsableForCredentialCheck(LocalAccount account)
+    {
+        return account.IsEnabled
+            && DatabasePaths.IsExpectedAccountDatabasePath(account.AccountId, account.DatabasePath)
+            && !LocalDataFileSecurity.IsReparsePoint(account.DatabasePath);
     }
 }
