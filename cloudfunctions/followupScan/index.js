@@ -383,7 +383,12 @@ async function taskAction(event, operatorId, workspaceId) {
   return { ok: true }
 }
 
-exports.main = async (event) => {
+function logInternalError(scope, err) {
+  const name = err && err.name ? String(err.name).slice(0, 64) : 'Error'
+  console.error(scope, { name })
+}
+
+async function handleRequest(event) {
   event = event || {}
   const oversized = rejectOversizedEvent(event)
   if (oversized) return oversized
@@ -632,4 +637,13 @@ exports.main = async (event) => {
   }
 
   return { ok: true, created }
+}
+
+exports.main = async (event) => {
+  try {
+    return await handleRequest(event)
+  } catch (err) {
+    logInternalError('followupScan failed', err)
+    return { ok: false, code: 'internal_error', message: '跟进处理失败。' }
+  }
 }
