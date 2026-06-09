@@ -538,6 +538,16 @@ async function handleRequest(event) {
   if (mode === 'cashflowHealthDashboard') return cashflowHealthDashboard(event, workspaceId)
   if (mode === 'taskAction') return taskAction(event, operatorId, workspaceId)
   if (mode === 'manualCreate') {
+    const input = pickFields(event.task, MANUAL_TASK_FIELDS)
+    const dealId = limitText(input.dealId, MAX_SHORT_TEXT_LENGTH)
+    const customerId = limitText(input.customerId, MAX_SHORT_TEXT_LENGTH)
+    if (dealId && !(await getWorkspaceDoc('deals', dealId, workspaceId))) {
+      return { ok: false, code: 'not_found', message: 'deal 不存在。' }
+    }
+    if (customerId && !(await getWorkspaceDoc('customers', customerId, workspaceId))) {
+      return { ok: false, code: 'not_found', message: '客户不存在。' }
+    }
+
     const task = Object.assign({
       workspaceId,
       triggerType: 'manual',
@@ -550,8 +560,15 @@ async function handleRequest(event) {
       resultType: '',
       createdBy: operatorId,
       updatedBy: operatorId
-    }, pickFields(event.task, MANUAL_TASK_FIELDS), {
+    }, input, {
       workspaceId,
+      dealId,
+      customerId,
+      customerName: limitText(input.customerName, MAX_SHORT_TEXT_LENGTH),
+      dueAt: normalizeIsoDate(input.dueAt, addDaysFrom(new Date(), 1)),
+      priorityScore: normalizeBoundedNumber(input.priorityScore || 28, 0, 100),
+      templateId: limitText(input.templateId, MAX_SHORT_TEXT_LENGTH),
+      suggestedText: limitText(input.suggestedText, MAX_NOTE_TEXT_LENGTH),
       dedupeKey: 'manual:' + Date.now() + ':' + Math.random().toString(36).slice(2),
       createdAt: now(),
       updatedAt: now()
