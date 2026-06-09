@@ -20,6 +20,12 @@ function startOfPeriod(period) {
   return date.toISOString()
 }
 
+function requireOperatorId() {
+  const operatorId = cloud.getWXContext().OPENID || ''
+  if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
+  return { ok: true, operatorId }
+}
+
 async function safeList(collection, where) {
   try {
     return (await db.collection(collection).where(where).limit(1000).get()).data || []
@@ -134,6 +140,10 @@ function buildWorkbenchDashboard(deals, skus, cashflows, nowValue) {
 }
 
 exports.main = async (event) => {
+  const auth = requireOperatorId()
+  if (!auth.ok) return auth
+
+  event = event || {}
   const workspaceId = event.workspaceId || 'default'
   const period = event.period || '7d'
   const start = startOfPeriod(period)

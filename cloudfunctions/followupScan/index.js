@@ -2,7 +2,7 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
-const USER_WRITE_MODES = ['taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
+const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 
 function now() {
   return new Date().toISOString()
@@ -330,16 +330,15 @@ async function taskAction(event, operatorId) {
 exports.main = async (event) => {
   event = event || {}
   const workspaceId = event.workspaceId || 'default'
-  if (event.mode === 'inventoryManagementDashboard') return inventoryManagementDashboard(event, workspaceId)
-  if (event.mode === 'cashflowHealthDashboard') return cashflowHealthDashboard(event, workspaceId)
-
   let operatorId = ''
-  if (USER_WRITE_MODES.indexOf(event.mode) >= 0) {
+  if (USER_AUTH_MODES.indexOf(event.mode) >= 0) {
     const auth = requireOperatorId()
     if (!auth.ok) return auth
     operatorId = auth.operatorId
   }
 
+  if (event.mode === 'inventoryManagementDashboard') return inventoryManagementDashboard(event, workspaceId)
+  if (event.mode === 'cashflowHealthDashboard') return cashflowHealthDashboard(event, workspaceId)
   if (event.mode === 'taskAction') return taskAction(event, operatorId)
   if (event.mode === 'manualCreate') {
     const task = Object.assign({
