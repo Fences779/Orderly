@@ -132,7 +132,11 @@ public sealed partial class LocalBackupService
                     actualIntegrityTag = integrityResult.ActualTag;
                     isIntegrityValid = integrityResult.IsValid;
 
-                    if (integrityResult.HasTag && !integrityResult.IsValid)
+                    if (!integrityResult.HasTag)
+                    {
+                        errors.Add("缺少 keyed integrityTag。");
+                    }
+                    else if (!integrityResult.IsValid)
                     {
                         errors.Add("integrityTag 校验失败。");
                     }
