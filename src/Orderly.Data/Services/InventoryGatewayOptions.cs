@@ -8,7 +8,9 @@ public sealed class InventoryGatewayOptions
     public const string WorkspaceIdEnvironmentVariableName = "ORDERLY_INVENTORY_WORKSPACE_ID";
     public const string OperatorIdEnvironmentVariableName = "ORDERLY_INVENTORY_OPERATOR_ID";
     public const string AllowedHostsEnvironmentVariableName = "ORDERLY_INVENTORY_GATEWAY_ALLOWED_HOSTS";
+    public const string MinTokenLengthEnvironmentVariableName = "ORDERLY_INVENTORY_GATEWAY_MIN_TOKEN_LENGTH";
     public const int DefaultTimeoutSeconds = 15;
+    public const int DefaultMinTokenLength = 24;
 
     public InventoryGatewayOptions(string endpoint, string token, int timeoutSeconds, string workspaceId, string operatorId)
     {
@@ -73,10 +75,27 @@ public sealed class InventoryGatewayOptions
         {
             throw new InvalidOperationException($"{TokenEnvironmentVariableName} 未配置，无法调用库存云端网关。");
         }
+
+        var minLength = ReadMinTokenLength();
+        if (Token.Length < minLength || IsPlaceholderToken(Token))
+        {
+            throw new InvalidOperationException($"{TokenEnvironmentVariableName} 强度不足，长度至少需要 {minLength} 位，且不能使用占位 token。");
+        }
     }
 
     private static int NormalizeTimeout(int timeoutSeconds)
     {
         return timeoutSeconds <= 0 ? DefaultTimeoutSeconds : Math.Clamp(timeoutSeconds, 1, 120);
+    }
+
+    private static int ReadMinTokenLength()
+    {
+        _ = int.TryParse(Environment.GetEnvironmentVariable(MinTokenLengthEnvironmentVariableName), out var minLength);
+        return minLength <= 0 ? DefaultMinTokenLength : Math.Clamp(minLength, 8, 128);
+    }
+
+    private static bool IsPlaceholderToken(string token)
+    {
+        return token.Trim().ToLowerInvariant() is "replace-me" or "changeme" or "change-me" or "test" or "token" or "password";
     }
 }
