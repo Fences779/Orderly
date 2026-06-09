@@ -42,6 +42,7 @@ internal static class ChatCompletionSuggestionSupport
             throw new InvalidOperationException(insecureBaseUrlMessage);
         }
 
+        OutboundEndpointPolicy.Validate(baseUri, "AI provider base URL");
         var path = baseUri.AbsolutePath.TrimEnd('/');
         if (path.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
         {

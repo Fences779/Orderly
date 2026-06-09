@@ -55,6 +55,7 @@ public sealed class StringNarrationGatewayOptions
             throw new InvalidOperationException($"{EndpointEnvironmentVariableName} 必须使用 HTTPS，除非目标是本机回环地址。");
         }
 
+        OutboundEndpointPolicy.Validate(uri, EndpointEnvironmentVariableName);
         return uri;
     }
 
