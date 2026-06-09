@@ -40,7 +40,21 @@ public sealed class DeepSeekSuggestionProvider : IAiSuggestionProvider
         ChatCompletionSuggestionSupport.ApplyBearerToken(httpRequest, _options.ApiKey);
         httpRequest.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-        using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new InvalidOperationException($"DeepSeek provider request timed out after {_options.TimeoutSeconds} seconds.", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InvalidOperationException("DeepSeek provider request failed; check endpoint, network, proxy, and TLS configuration.", ex);
+        }
+
+        using var _ = response;
         if (!response.IsSuccessStatusCode)
         {
             throw new InvalidOperationException($"DeepSeek provider returned HTTP {(int)response.StatusCode}.");
