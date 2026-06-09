@@ -24,13 +24,20 @@ public sealed class StringNarrationGatewayClient
         var endpoint = _options.GetEndpointUri();
         _options.ValidateToken();
 
-        var requestPayload = new
-        {
-            action,
-            token = _options.Token,
-            operatorId = OperatorId,
-            payload
-        };
+        object requestPayload = _options.SendTokenInBody
+            ? new
+            {
+                action,
+                token = _options.Token,
+                operatorId = OperatorId,
+                payload
+            }
+            : new
+            {
+                action,
+                operatorId = OperatorId,
+                payload
+            };
 
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.Token);
