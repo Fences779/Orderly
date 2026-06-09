@@ -7,6 +7,22 @@ namespace Orderly.Data.Services;
 
 public sealed class SensitiveFieldMigrationService
 {
+    private static readonly HashSet<string> AllowedBackfillTables = new(StringComparer.Ordinal)
+    {
+        "ActivityLogs",
+        "AiSuggestions",
+        "ConversationMessages",
+        "CustomerNotes",
+        "Customers",
+        "Deals",
+        "FollowUps",
+        "OcrResults",
+        "Orders",
+        "PriceAdjustments",
+        "ReplyTemplates",
+        "SyncRecords"
+    };
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -99,6 +115,7 @@ public sealed class SensitiveFieldMigrationService
         bool treatDbNullAsEmpty,
         CancellationToken cancellationToken)
     {
+        ValidateBackfillSqlInputs(table, plainColumn, cipherColumn, condition);
         await using var query = connection.CreateCommand();
         query.Transaction = transaction;
         query.CommandText = $"""
@@ -155,6 +172,7 @@ public sealed class SensitiveFieldMigrationService
         bool treatDbNullAsEmpty,
         CancellationToken cancellationToken)
     {
+        ValidateBackfillSqlInputs(table, plainColumn, cipherColumn, condition);
         await using var query = connection.CreateCommand();
         query.Transaction = transaction;
         if (clearValue == DBNull.Value)
@@ -212,5 +230,47 @@ public sealed class SensitiveFieldMigrationService
             update.Parameters.AddWithValue("$id", row.Id);
             await update.ExecuteNonQueryAsync(cancellationToken);
         }
+    }
+
+    private static void ValidateBackfillSqlInputs(string table, string plainColumn, string cipherColumn, string condition)
+    {
+        if (!AllowedBackfillTables.Contains(table) || !IsSqlIdentifier(table))
+        {
+            throw new InvalidOperationException("敏感字段迁移表名不在允许列表内。");
+        }
+
+        if (!IsSqlIdentifier(plainColumn) || !IsSqlIdentifier(cipherColumn))
+        {
+            throw new InvalidOperationException("敏感字段迁移列名必须是安全 SQL 标识符。");
+        }
+
+        if (!string.Equals(cipherColumn, plainColumn + "Ciphertext", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("敏感字段迁移明文字段与密文字段不匹配。");
+        }
+
+        if (!string.Equals(condition, "1=1", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("敏感字段迁移条件不在允许列表内。");
+        }
+    }
+
+    private static bool IsSqlIdentifier(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !(char.IsAsciiLetter(value[0]) || value[0] == '_'))
+        {
+            return false;
+        }
+
+        for (var index = 1; index < value.Length; index++)
+        {
+            var ch = value[index];
+            if (!(char.IsAsciiLetterOrDigit(ch) || ch == '_'))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
