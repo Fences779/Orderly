@@ -462,6 +462,7 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static FileInfo GetSafeExistingWorkbookFileInfo(string workbookPath)
     {
+        EnsureWorkbookExtensionIsSafe(workbookPath);
         if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
         {
             throw new InvalidOperationException("Excel 文件不能是链接文件。");
@@ -477,9 +478,18 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static void EnsureWorkbookWriteTargetIsSafe(string workbookPath)
     {
+        EnsureWorkbookExtensionIsSafe(workbookPath);
         if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
         {
             throw new InvalidOperationException("Excel 导出文件不能是链接文件。");
+        }
+    }
+
+    private static void EnsureWorkbookExtensionIsSafe(string workbookPath)
+    {
+        if (!string.Equals(Path.GetExtension(workbookPath), ".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("库存 Excel 仅支持 .xlsx 工作簿，不支持宏工作簿或旧版 Excel 格式。");
         }
     }
 }
