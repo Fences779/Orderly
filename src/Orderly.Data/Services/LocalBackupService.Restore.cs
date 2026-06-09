@@ -231,7 +231,9 @@ public sealed partial class LocalBackupService
 
             for (var index = 0; index < properties.Length; index++)
             {
-                command.Parameters.AddWithValue($"$p{index}", ConvertJsonValue(properties[index].Value));
+                command.Parameters.AddWithValue(
+                    $"$p{index}",
+                    ConvertRestoreJsonValue(tableName, properties[index].Name, properties[index].Value));
             }
 
             await command.ExecuteNonQueryAsync(cancellationToken);

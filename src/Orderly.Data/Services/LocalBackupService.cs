@@ -123,6 +123,72 @@ public sealed partial class LocalBackupService : IBackupService
                 "MetadataJsonCiphertext")
         };
 
+    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> SensitivePlaintextColumnDefaults =
+        new Dictionary<string, IReadOnlyDictionary<string, object>>(StringComparer.Ordinal)
+        {
+            ["Customers"] = BuildDefaultMap(
+                ("Name", ""),
+                ("ContactHandle", ""),
+                ("Phone", ""),
+                ("Remark", ""),
+                ("ExternalId", ""),
+                ("RawPayload", ""),
+                ("LastContactAt", DBNull.Value)),
+            ["Deals"] = BuildDefaultMap(
+                ("Title", ""),
+                ("EstimatedAmount", 0),
+                ("Requirement", ""),
+                ("ExpectedCloseAt", DBNull.Value),
+                ("ClosedAt", DBNull.Value),
+                ("LostReason", "")),
+            ["Orders"] = BuildDefaultMap(
+                ("Title", ""),
+                ("Amount", 0),
+                ("Requirement", ""),
+                ("ExternalId", ""),
+                ("RawPayload", ""),
+                ("NextFollowUpAt", DBNull.Value)),
+            ["FollowUps"] = BuildDefaultMap(
+                ("Title", ""),
+                ("Content", ""),
+                ("ScheduledAt", ""),
+                ("CompletedAt", DBNull.Value),
+                ("ReminderAt", DBNull.Value)),
+            ["CustomerNotes"] = BuildDefaultMap(
+                ("Content", "")),
+            ["ReplyTemplates"] = BuildDefaultMap(
+                ("Content", "")),
+            ["PriceAdjustments"] = BuildDefaultMap(
+                ("OriginalAmount", 0),
+                ("AdjustedAmount", 0),
+                ("Reason", ""),
+                ("RequestedBy", ""),
+                ("ApprovedBy", ""),
+                ("ApprovedAt", DBNull.Value)),
+            ["ActivityLogs"] = BuildDefaultMap(
+                ("Title", ""),
+                ("Description", ""),
+                ("Operator", ""),
+                ("MetadataJson", "")),
+            ["ConversationMessages"] = BuildDefaultMap(
+                ("SenderName", ""),
+                ("Content", ""),
+                ("MessageTime", ""),
+                ("SourceMessageId", ""),
+                ("MetadataJson", "")),
+            ["AiSuggestions"] = BuildDefaultMap(
+                ("SuggestionText", ""),
+                ("Reason", ""),
+                ("Confidence", DBNull.Value),
+                ("MetadataJson", "")),
+            ["OcrResults"] = BuildDefaultMap(
+                ("SourcePath", ""),
+                ("SourceName", ""),
+                ("ExtractedText", ""),
+                ("ErrorMessage", ""),
+                ("MetadataJson", ""))
+        };
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true
@@ -161,5 +227,13 @@ public sealed partial class LocalBackupService : IBackupService
     private static HashSet<string> BuildColumnSet(params string[] columns)
     {
         return new HashSet<string>(columns, StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyDictionary<string, object> BuildDefaultMap(params (string Column, object DefaultValue)[] columns)
+    {
+        return columns.ToDictionary(
+            static column => column.Column,
+            static column => column.DefaultValue,
+            StringComparer.Ordinal);
     }
 }

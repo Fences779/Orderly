@@ -60,6 +60,13 @@ public sealed partial class LocalBackupService
         };
     }
 
+    private static object ConvertRestoreJsonValue(string tableName, string columnName, JsonElement element)
+    {
+        return TryGetSensitivePlaintextDefault(tableName, columnName, out var defaultValue)
+            ? defaultValue
+            : ConvertJsonValue(element);
+    }
+
     private static string? ToBase64Nullable(SqliteDataReader reader, int index)
     {
         if (reader.IsDBNull(index))
@@ -94,6 +101,11 @@ public sealed partial class LocalBackupService
 
     private static object? SanitizeValue(string tableName, string columnName, object value)
     {
+        if (TryGetSensitivePlaintextDefault(tableName, columnName, out var defaultValue))
+        {
+            return defaultValue == DBNull.Value ? null : defaultValue;
+        }
+
         if (value == DBNull.Value)
         {
             return null;
@@ -108,6 +120,18 @@ public sealed partial class LocalBackupService
         }
 
         return value;
+    }
+
+    private static bool TryGetSensitivePlaintextDefault(string tableName, string columnName, out object defaultValue)
+    {
+        if (SensitivePlaintextColumnDefaults.TryGetValue(tableName, out var tableDefaults)
+            && tableDefaults.TryGetValue(columnName, out defaultValue!))
+        {
+            return true;
+        }
+
+        defaultValue = DBNull.Value;
+        return false;
     }
 
     private static bool IsQaTaggedBackup(BackupManifest? manifest)
