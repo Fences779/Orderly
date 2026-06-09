@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
+const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const MAX_EVENT_BYTES = 65536
 
 const STYLE_WORDS = ['简约', '高级', '复古', '甜酷', '清冷', '温柔', '国风', '通勤', '可爱', '低调', '显白']
@@ -31,7 +32,13 @@ function now() {
 function requireOperatorId() {
   const operatorId = cloud.getWXContext().OPENID || ''
   if (!operatorId) return { ok: false, code: 'unauthorized', message: '未授权调用。' }
+  if (!isAllowedOperatorId(operatorId)) return { ok: false, code: 'forbidden', message: '无权访问。' }
   return { ok: true, operatorId }
+}
+
+function isAllowedOperatorId(operatorId) {
+  const allowed = normalizeList(process.env[ALLOWED_OPENIDS_ENV_NAME])
+  return allowed.length === 0 || allowed.indexOf(operatorId) >= 0
 }
 
 function rejectOversizedEvent(event) {
