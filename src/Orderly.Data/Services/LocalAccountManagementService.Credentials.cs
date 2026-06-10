@@ -6,6 +6,10 @@ namespace Orderly.Data.Services;
 
 public sealed partial class LocalAccountManagementService
 {
+    private const string GenericOwnerCredentialFailureMessage = "管理员验证失败。";
+    private const string GenericOwnerRecoveryFailureMessage = "恢复验证失败。";
+    private const string GenericMemberRecoveryFailureMessage = "成员恢复验证失败。";
+
     public async Task VerifyOwnerCredentialsAsync(
         string ownerUsername,
         string ownerMasterPassword,
@@ -48,12 +52,12 @@ public sealed partial class LocalAccountManagementService
         catch (CryptographicException)
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, owner.Username);
-            throw new InvalidOperationException("主账号密钥解包失败。");
+            throw new InvalidOperationException(GenericOwnerCredentialFailureMessage);
         }
         catch (InvalidOperationException)
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, owner.Username);
-            throw new InvalidOperationException("主账号密钥解包失败。");
+            throw new InvalidOperationException(GenericOwnerCredentialFailureMessage);
         }
     }
 
@@ -82,13 +86,13 @@ public sealed partial class LocalAccountManagementService
         if (owner is null || owner.Role != LocalAccountRole.Owner || !owner.IsEnabled)
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, normalizedOwnerUsername);
-            throw new InvalidOperationException("主账号不存在或不可用。");
+            throw new InvalidOperationException(GenericOwnerCredentialFailureMessage);
         }
 
         if (!LocalCredentialSecurity.VerifyHash(ownerMasterPassword, owner.PasswordSalt, owner.PasswordIterations, owner.PasswordHash))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, normalizedOwnerUsername);
-            throw new InvalidOperationException("主账号主密码错误。");
+            throw new InvalidOperationException(GenericOwnerCredentialFailureMessage);
         }
 
         RecordCredentialAttemptResult(CredentialAttemptPurposeSignIn, normalizedOwnerUsername, success: true);
@@ -97,7 +101,7 @@ public sealed partial class LocalAccountManagementService
         if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposePin, owner.AccountId);
-            throw new InvalidOperationException("主账号 PIN 错误。");
+            throw new InvalidOperationException(GenericOwnerCredentialFailureMessage);
         }
 
         RecordCredentialAttemptResult(CredentialAttemptPurposePin, owner.AccountId, success: true);
@@ -370,7 +374,7 @@ public sealed partial class LocalAccountManagementService
 
         var normalizedOwnerUsername = LocalCredentialSecurity.NormalizeAccountUsername(ownerUsername);
         var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken)
-            ?? throw new InvalidOperationException("Owner 账号不存在或不可用。");
+            ?? throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
 
         var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
         byte[] ownerDataKey;
@@ -386,11 +390,11 @@ public sealed partial class LocalAccountManagementService
         }
         catch (CryptographicException)
         {
-            throw new InvalidOperationException("Owner 账号恢复密钥解包失败。");
+            throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
         }
         catch (InvalidOperationException)
         {
-            throw new InvalidOperationException("Owner 账号恢复密钥解包失败。");
+            throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
         }
 
         byte[] passwordSalt = [];
@@ -440,21 +444,21 @@ public sealed partial class LocalAccountManagementService
         var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken);
         if (owner is null || owner.Role != LocalAccountRole.Owner || !owner.IsEnabled)
         {
-            throw new InvalidOperationException("Owner 账号不存在或不可用。");
+            throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
         }
 
         ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, owner.AccountId);
         if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposePin, owner.AccountId);
-            throw new InvalidOperationException("PIN 校验失败。");
+            throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
         }
         RecordCredentialAttemptResult(CredentialAttemptPurposePin, owner.AccountId, success: true);
 
         if (!LocalCredentialSecurity.HasUsableHashParameters(owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash)
             || !LocalCredentialSecurity.HasUsableWrappedDataKey(owner.RecoveryEncryptedDataKey, owner.RecoveryDataKeyNonce, owner.RecoveryDataKeyTag))
         {
-            throw new InvalidOperationException("Owner 账号缺少可用的恢复密钥信息，无法执行恢复。");
+            throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
         }
 
         var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
@@ -462,7 +466,7 @@ public sealed partial class LocalAccountManagementService
         if (!LocalCredentialSecurity.VerifyHash(normalizedRecoveryKey, owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposeRecovery, owner.AccountId);
-            throw new InvalidOperationException("Recovery Key 校验失败。");
+            throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
         }
 
         RecordCredentialAttemptResult(CredentialAttemptPurposeRecovery, owner.AccountId, success: true);
@@ -494,14 +498,14 @@ public sealed partial class LocalAccountManagementService
         var member = await _accountRepository.GetByUsernameAsync(normalizedMemberUsername, cancellationToken);
         if (member is null || member.Role != LocalAccountRole.Member || !member.IsEnabled)
         {
-            throw new InvalidOperationException("成员账号不存在或不可用。");
+            throw new InvalidOperationException(GenericMemberRecoveryFailureMessage);
         }
 
         ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, member.AccountId);
         if (!LocalCredentialSecurity.VerifyHash(memberPin.Trim(), member.PinSalt, member.PinIterations, member.PinHash))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposePin, member.AccountId);
-            throw new InvalidOperationException("成员账号 PIN 错误。");
+            throw new InvalidOperationException(GenericMemberRecoveryFailureMessage);
         }
         RecordCredentialAttemptResult(CredentialAttemptPurposePin, member.AccountId, success: true);
 
@@ -514,7 +518,7 @@ public sealed partial class LocalAccountManagementService
         if (!string.Equals(member.AdminOwnerAccountId, owner.AccountId, StringComparison.OrdinalIgnoreCase))
         {
             CryptographicOperations.ZeroMemory(ownerDataKey);
-            throw new InvalidOperationException("该成员账号不属于当前主账号，无法重置主密码。");
+            throw new InvalidOperationException(GenericMemberRecoveryFailureMessage);
         }
 
         return (member, ownerDataKey);
