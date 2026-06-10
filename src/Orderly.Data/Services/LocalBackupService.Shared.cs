@@ -626,7 +626,7 @@ public sealed partial class LocalBackupService
             ["app"] = manifest.App,
             ["schemaVersion"] = manifest.SchemaVersion,
             ["exportedAt"] = manifest.ExportedAt.ToString("O"),
-            ["backupPath"] = backupPath,
+            ["backupPath"] = BuildBackupMetadataPath(backupPath),
             ["checksum"] = manifest.Checksum,
             ["integrityAlgorithm"] = manifest.IntegrityAlgorithm,
             ["integrityKeyScope"] = manifest.IntegrityKeyScope,
@@ -643,7 +643,7 @@ public sealed partial class LocalBackupService
         var metadata = new JsonObject
         {
             ["mode"] = BackupEntityType,
-            ["backupPath"] = backupPath,
+            ["backupPath"] = BuildBackupMetadataPath(backupPath),
             ["createdBy"] = createdBy,
             ["errorSummary"] = errorSummary
         };
@@ -695,7 +695,7 @@ public sealed partial class LocalBackupService
         var metadata = new JsonObject
         {
             ["operation"] = operation,
-            ["backupPath"] = backupPath,
+            ["backupPath"] = BuildBackupMetadataPath(backupPath),
             ["checksum"] = manifest.Checksum,
             ["integrityAlgorithm"] = manifest.IntegrityAlgorithm,
             ["integrityKeyScope"] = manifest.IntegrityKeyScope,
@@ -716,7 +716,7 @@ public sealed partial class LocalBackupService
         var metadata = new JsonObject
         {
             ["operation"] = "validate",
-            ["backupPath"] = result.BackupPath,
+            ["backupPath"] = BuildBackupMetadataPath(result.BackupPath),
             ["createdBy"] = createdBy,
             ["isValid"] = result.IsValid,
             ["actualChecksum"] = result.ActualChecksum,
@@ -757,7 +757,7 @@ public sealed partial class LocalBackupService
         var metadata = new JsonObject
         {
             ["mode"] = RestoreEntityType,
-            ["backupPath"] = backupPath,
+            ["backupPath"] = BuildBackupMetadataPath(backupPath),
             ["checksum"] = manifest.Checksum,
             ["integrityAlgorithm"] = manifest.IntegrityAlgorithm,
             ["integrityKeyScope"] = manifest.IntegrityKeyScope,
@@ -783,7 +783,7 @@ public sealed partial class LocalBackupService
         var metadata = new JsonObject
         {
             ["mode"] = RestoreEntityType,
-            ["backupPath"] = backupPath,
+            ["backupPath"] = BuildBackupMetadataPath(backupPath),
             ["createdBy"] = createdBy,
             ["errorSummary"] = errorSummary,
             ["targetState"] = targetState.ToString()
@@ -808,7 +808,7 @@ public sealed partial class LocalBackupService
         var metadata = new JsonObject
         {
             ["operation"] = "restore-started",
-            ["backupPath"] = backupPath,
+            ["backupPath"] = BuildBackupMetadataPath(backupPath),
             ["createdBy"] = createdBy,
             ["targetState"] = targetState.ToString(),
             ["restoredAt"] = restoredAt.ToString("O")
@@ -860,7 +860,7 @@ public sealed partial class LocalBackupService
         var metadata = new JsonObject
         {
             ["operation"] = operation,
-            ["backupPath"] = backupPath,
+            ["backupPath"] = BuildBackupMetadataPath(backupPath),
             ["checksum"] = manifest.Checksum,
             ["integrityAlgorithm"] = manifest.IntegrityAlgorithm,
             ["integrityKeyScope"] = manifest.IntegrityKeyScope,
@@ -874,6 +874,12 @@ public sealed partial class LocalBackupService
         };
 
         return TagQaMetadataIfNeeded(metadata.ToJsonString(), tagForQaScope, Path.GetFileName(backupPath));
+    }
+
+    private static string BuildBackupMetadataPath(string backupPath)
+    {
+        var fileName = Path.GetFileName(backupPath);
+        return string.IsNullOrWhiteSpace(fileName) ? "<backup-file>" : fileName;
     }
 
     private static string TagQaMetadataIfNeeded(string metadataJson, bool tagForQaScope, string? key)
