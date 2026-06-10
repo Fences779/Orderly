@@ -25,6 +25,9 @@ const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
 const MAX_TEMPLATE_CONTENT_LENGTH = 2000
 const MAX_TAGS = 20
+const MAX_DASHBOARD_PAGE_SIZE = 100
+const INVENTORY_DASHBOARD_SORT_FIELDS = ['materialName', 'category', 'currentStockQty', 'sold7dQty', 'sold7dRatio', 'sold30dQty', 'sold30dRatio', 'consumed7dQty', 'consumed30dQty', 'safeStockSuggestedQty', 'status', 'unitCost', 'lastRestockedAt', 'supplierName']
+const INVENTORY_DASHBOARD_STATUSES = ['all', 'fast_selling', 'low_selling', 'normal', 'low_stock', 'disabled']
 
 function now() {
   return new Date().toISOString()
@@ -52,7 +55,7 @@ function normalizeNumber(value) {
 }
 
 function normalizeText(value) {
-  return value == null ? '' : String(value).trim()
+  return value == null ? '' : String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
 }
 
 function limitText(value, maxLength) {
@@ -71,6 +74,17 @@ function normalizeBoundedNumber(value, minValue, maxValue) {
   if (number < minValue) return minValue
   if (number > maxValue) return maxValue
   return number
+}
+
+function normalizeInteger(value, fallback, minValue, maxValue) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return fallback
+  return Math.min(maxValue, Math.max(minValue, Math.floor(number)))
+}
+
+function normalizeAllowedText(value, allowedValues, fallback) {
+  const text = normalizeText(value || fallback)
+  return allowedValues.indexOf(text) >= 0 ? text : fallback
 }
 
 function pickFields(source, allowedFields) {
@@ -248,12 +262,12 @@ function compareValue(a, b, sortBy, direction) {
 
 async function inventoryManagementDashboard(event, workspaceId) {
   const request = event.payload || event
-  const page = Math.max(1, Number(request.page || 1))
-  const pageSize = Math.max(1, Number(request.pageSize || 10))
-  const keyword = normalizeText(request.keyword).toLowerCase()
-  const category = normalizeText(request.category)
-  const status = normalizeText(request.status || 'all')
-  const sortBy = normalizeText(request.sortBy || 'sold30dRatio')
+  const page = normalizeInteger(request.page, 1, 1, 100000)
+  const pageSize = normalizeInteger(request.pageSize, 10, 1, MAX_DASHBOARD_PAGE_SIZE)
+  const keyword = limitText(request.keyword, MAX_SHORT_TEXT_LENGTH).toLowerCase()
+  const category = limitText(request.category, MAX_SHORT_TEXT_LENGTH)
+  const status = normalizeAllowedText(request.status, INVENTORY_DASHBOARD_STATUSES, 'all')
+  const sortBy = normalizeAllowedText(request.sortBy, INVENTORY_DASHBOARD_SORT_FIELDS, 'sold30dRatio')
   const sortDirection = normalizeText(request.sortDirection || 'desc') === 'asc' ? 'asc' : 'desc'
   const skus = await safeList('sku_catalog', { workspaceId })
   const movements = await safeList('inventory_movements', { workspaceId })
