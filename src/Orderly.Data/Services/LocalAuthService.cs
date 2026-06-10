@@ -178,8 +178,7 @@ public sealed class LocalAuthService : ILocalAuthService
             return LocalSignInResult.Failure(GenericSignInFailureMessage);
         }
 
-        if (!DatabasePaths.IsExpectedAccountDatabasePath(account.AccountId, account.DatabasePath)
-            || LocalDataFileSecurity.IsReparsePoint(account.DatabasePath))
+        if (!IsAccountDatabasePathSafe(account))
         {
             return LocalSignInResult.Failure("账号数据路径异常，已拒绝登录。");
         }
@@ -340,9 +339,38 @@ public sealed class LocalAuthService : ILocalAuthService
 
     private static bool IsAccountUsableForCredentialCheck(LocalAccount account)
     {
-        return account.IsEnabled
-            && DatabasePaths.IsExpectedAccountDatabasePath(account.AccountId, account.DatabasePath)
-            && !LocalDataFileSecurity.IsReparsePoint(account.DatabasePath);
+        return account.IsEnabled && IsAccountDatabasePathSafe(account);
+    }
+
+    private static bool IsAccountDatabasePathSafe(LocalAccount account)
+    {
+        try
+        {
+            if (!DatabasePaths.IsExpectedAccountDatabasePath(account.AccountId, account.DatabasePath)
+                || LocalDataFileSecurity.IsReparsePoint(account.DatabasePath))
+            {
+                return false;
+            }
+
+            var directory = Path.GetDirectoryName(Path.GetFullPath(account.DatabasePath));
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return false;
+            }
+
+            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "账号数据目录");
+            return true;
+        }
+        catch (Exception ex) when (
+            ex is ArgumentException
+                or NotSupportedException
+                or PathTooLongException
+                or IOException
+                or UnauthorizedAccessException
+                or InvalidOperationException)
+        {
+            return false;
+        }
     }
 
     private bool IsCredentialAttemptBlocked(string purpose, string identifier)
