@@ -218,6 +218,37 @@ public sealed partial class LocalBackupService
         }
     }
 
+    private static async Task<string> ReadBackupJsonSafelyAsync(
+        string backupPath,
+        CancellationToken cancellationToken)
+    {
+        EnsureBackupPathIsNotLinked(backupPath);
+        await using var stream = new FileStream(
+            backupPath,
+            new FileStreamOptions
+            {
+                Mode = FileMode.Open,
+                Access = FileAccess.Read,
+                Share = FileShare.Read,
+                BufferSize = 81920,
+                Options = FileOptions.Asynchronous | FileOptions.SequentialScan
+            });
+        EnsureBackupPathIsNotLinked(backupPath);
+
+        if (stream.Length > MaxBackupFileBytes)
+        {
+            throw new InvalidOperationException($"备份文件过大，最大支持 {MaxBackupFileBytes / 1024L / 1024L} MB。");
+        }
+
+        using var reader = new StreamReader(
+            stream,
+            Utf8NoBom,
+            detectEncodingFromByteOrderMarks: true,
+            bufferSize: 81920,
+            leaveOpen: false);
+        return await reader.ReadToEndAsync(cancellationToken);
+    }
+
     private static void DeleteTemporaryBackupFile(string tempPath)
     {
         try
