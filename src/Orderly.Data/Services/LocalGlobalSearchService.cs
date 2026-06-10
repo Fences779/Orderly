@@ -8,6 +8,7 @@ public sealed partial class LocalGlobalSearchService : IGlobalSearchService
 {
     private const int DefaultLimit = 50;
     private const int MaxLimit = 200;
+    private const int MaxQueryLength = 128;
     private const int PrimaryFieldScore = 400;
     private const int ContentFieldScore = 250;
     private const int MetadataFieldScore = 100;

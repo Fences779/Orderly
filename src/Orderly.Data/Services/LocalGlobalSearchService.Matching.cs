@@ -53,9 +53,20 @@ public sealed partial class LocalGlobalSearchService
 
     private static string NormalizeQuery(string? query)
     {
-        return string.IsNullOrWhiteSpace(query)
-            ? string.Empty
-            : query.Trim();
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return string.Empty;
+        }
+
+        var normalized = query.Trim();
+        if (normalized.Any(char.IsControl))
+        {
+            normalized = new string(normalized.Where(character => !char.IsControl(character)).ToArray()).Trim();
+        }
+
+        return normalized.Length <= MaxQueryLength
+            ? normalized
+            : normalized[..MaxQueryLength];
     }
 
     private static int ClampLimit(int requestedLimit)
