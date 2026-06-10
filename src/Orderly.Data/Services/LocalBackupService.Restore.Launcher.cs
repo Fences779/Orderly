@@ -236,6 +236,14 @@ public sealed partial class LocalBackupService
 
     private static void ValidateLauncherSnapshotRow(LauncherAccountBackupRow row)
     {
+        row.AccountId = NormalizeLauncherSnapshotAccountId(row.AccountId, "AccountId");
+        row.Username = LocalCredentialSecurity.NormalizeAccountUsername(row.Username);
+        row.DisplayName = LocalCredentialSecurity.NormalizeAccountDisplayName(row.DisplayName, row.Username);
+        if (!string.IsNullOrWhiteSpace(row.AdminOwnerAccountId))
+        {
+            row.AdminOwnerAccountId = NormalizeLauncherSnapshotAccountId(row.AdminOwnerAccountId, "AdminOwnerAccountId");
+        }
+
         if (string.IsNullOrWhiteSpace(row.AccountId)
             || string.IsNullOrWhiteSpace(row.Username)
             || string.IsNullOrWhiteSpace(row.DisplayName)
@@ -250,6 +258,32 @@ public sealed partial class LocalBackupService
             || string.IsNullOrWhiteSpace(row.UpdatedAt))
         {
             throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在缺失关键字段的账号快照。");
+        }
+
+        ValidateLauncherSnapshotDate(row.CreatedAt, "CreatedAt");
+        ValidateLauncherSnapshotDate(row.UpdatedAt, "UpdatedAt");
+        if (!string.IsNullOrWhiteSpace(row.LastLoginAt))
+        {
+            ValidateLauncherSnapshotDate(row.LastLoginAt, "LastLoginAt");
+        }
+    }
+
+    private static string NormalizeLauncherSnapshotAccountId(string? accountId, string fieldName)
+    {
+        var normalized = string.IsNullOrWhiteSpace(accountId) ? string.Empty : accountId.Trim();
+        if (!Guid.TryParseExact(normalized, "N", out _))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 字段 {fieldName} 的账号标识无效。");
+        }
+
+        return normalized.ToLowerInvariant();
+    }
+
+    private static void ValidateLauncherSnapshotDate(string value, string fieldName)
+    {
+        if (!DateTimeOffset.TryParse(value, out _))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 字段 {fieldName} 的时间格式无效。");
         }
     }
 
