@@ -376,7 +376,11 @@ public sealed partial class LocalAccountManagementService
         var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken)
             ?? throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
 
-        var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
+        if (!LocalCredentialSecurity.TryNormalizeRecoveryKey(recoveryKey, out var normalizedRecoveryKey))
+        {
+            throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
+        }
+
         byte[] ownerDataKey;
         try
         {
@@ -461,7 +465,12 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
         }
 
-        var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
+        if (!LocalCredentialSecurity.TryNormalizeRecoveryKey(recoveryKey, out var normalizedRecoveryKey))
+        {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposeRecovery, owner.AccountId);
+            throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
+        }
+
         ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposeRecovery, owner.AccountId);
         if (!LocalCredentialSecurity.VerifyHash(normalizedRecoveryKey, owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash))
         {

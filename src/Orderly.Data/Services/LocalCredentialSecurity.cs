@@ -16,10 +16,11 @@ internal static class LocalCredentialSecurity
     private const int MaxSecretCharLength = 512;
     private const int MaxAccountUsernameCharLength = 64;
     private const int MaxAccountDisplayNameCharLength = 64;
+    private const int MaxRecoveryKeyCharLength = 128;
 
     internal static bool IsValidPin(string? pin)
     {
-        return pin is { Length: 6 } && pin.All(char.IsDigit);
+        return pin is { Length: 6 } && pin.All(static ch => ch is >= '0' and <= '9');
     }
 
     internal static string NormalizeAccountUsername(string? username)
@@ -99,9 +100,44 @@ internal static class LocalCredentialSecurity
         return string.Join("-", Enumerable.Range(0, raw.Length / 4).Select(index => raw.Substring(index * 4, 4)));
     }
 
-    internal static string NormalizeRecoveryKey(string recoveryKey)
+    internal static string NormalizeRecoveryKey(string? recoveryKey)
     {
-        return recoveryKey.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(recoveryKey))
+        {
+            throw new InvalidOperationException("Recovery Key 格式无效。");
+        }
+
+        var trimmed = recoveryKey.Trim();
+        if (trimmed.Length > MaxRecoveryKeyCharLength || trimmed.Any(char.IsControl))
+        {
+            throw new InvalidOperationException("Recovery Key 格式无效。");
+        }
+
+        var normalized = trimmed.ToUpperInvariant();
+        foreach (var ch in normalized)
+        {
+            var isHex = ch is >= '0' and <= '9' or >= 'A' and <= 'F';
+            if (!isHex && ch != '-')
+            {
+                throw new InvalidOperationException("Recovery Key 格式无效。");
+            }
+        }
+
+        return normalized;
+    }
+
+    internal static bool TryNormalizeRecoveryKey(string? recoveryKey, out string normalized)
+    {
+        try
+        {
+            normalized = NormalizeRecoveryKey(recoveryKey);
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            normalized = string.Empty;
+            return false;
+        }
     }
 
     internal static byte[] ComputeHash(string? value, byte[] salt, int iterations)

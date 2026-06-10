@@ -283,7 +283,12 @@ public sealed class LocalAuthService : ILocalAuthService
             return false;
         }
 
-        var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
+        if (!LocalCredentialSecurity.TryNormalizeRecoveryKey(recoveryKey, out var normalizedRecoveryKey))
+        {
+            RecordCredentialFailure("recovery", normalizedAccountId);
+            return false;
+        }
+
         var verified = LocalCredentialSecurity.VerifyHash(normalizedRecoveryKey, account.RecoveryKeySalt, account.RecoveryKeyIterations, account.RecoveryKeyHash);
         RecordCredentialResult("recovery", normalizedAccountId, verified);
         return verified;
