@@ -13,6 +13,7 @@ internal static class LocalCredentialSecurity
     private const int DataKeyByteLength = 32;
     private const int NonceByteLength = 12;
     private const int TagByteLength = 16;
+    private const int MaxSecretCharLength = 512;
 
     internal static bool IsValidPin(string pin)
     {
@@ -30,14 +31,24 @@ internal static class LocalCredentialSecurity
         return recoveryKey.Trim().ToUpperInvariant();
     }
 
-    internal static byte[] ComputeHash(string value, byte[] salt, int iterations)
+    internal static byte[] ComputeHash(string? value, byte[] salt, int iterations)
     {
+        if (string.IsNullOrEmpty(value) || value.Length > MaxSecretCharLength)
+        {
+            throw new InvalidOperationException("账号凭据长度无效。");
+        }
+
         EnsureUsableHashParameters(salt, iterations, expectedHash: null);
         return Rfc2898DeriveBytes.Pbkdf2(value, salt, iterations, HashAlgorithmName.SHA256, HashByteLength);
     }
 
-    internal static bool VerifyHash(string value, byte[] salt, int iterations, byte[] expectedHash)
+    internal static bool VerifyHash(string? value, byte[] salt, int iterations, byte[] expectedHash)
     {
+        if (string.IsNullOrEmpty(value) || value.Length > MaxSecretCharLength)
+        {
+            return false;
+        }
+
         if (!HasUsableHashParameters(salt, iterations, expectedHash))
         {
             return false;
@@ -68,7 +79,7 @@ internal static class LocalCredentialSecurity
             && tag is { Length: TagByteLength };
     }
 
-    internal static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string secret, byte[] salt, int iterations, byte[] dataKey)
+    internal static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string? secret, byte[] salt, int iterations, byte[] dataKey)
     {
         if (dataKey.Length != DataKeyByteLength)
         {
@@ -102,7 +113,7 @@ internal static class LocalCredentialSecurity
         return (ciphertext, nonce, tag);
     }
 
-    internal static byte[] UnwrapDataKey(string secret, byte[] salt, int iterations, byte[] ciphertext, byte[] nonce, byte[] tag)
+    internal static byte[] UnwrapDataKey(string? secret, byte[] salt, int iterations, byte[] ciphertext, byte[] nonce, byte[] tag)
     {
         var key = ComputeHash(secret, salt, iterations);
         try
