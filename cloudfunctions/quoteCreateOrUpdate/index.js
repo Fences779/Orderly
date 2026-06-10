@@ -11,6 +11,9 @@ const MAX_EVENT_BYTES = 65536
 const MAX_QUOTE_ITEMS = 50
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
+const MAX_MONEY_AMOUNT = 100000000
+const MAX_TOTAL_AMOUNT = 100000000
+const MAX_QUANTITY = 1000000
 const ACTIONS = ['draft', 'send', 'status']
 const QUOTE_STATUSES = ['draft', 'sent', 'accepted', 'rejected']
 const QUOTE_FIELDS = ['_id', 'dealId', 'quoteNo', 'quoteStatus', 'validUntil', 'quoteNote', 'sentAt', 'respondedAt', 'items', 'baseAmount', 'customFee', 'laborFee', 'shippingFee', 'discountAmount', 'depositRequired']
@@ -63,7 +66,8 @@ function normalizeList(value) {
 }
 
 function normalizeText(value) {
-  return value == null ? '' : String(value).trim()
+  if (value == null || typeof value === 'object') return ''
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
 }
 
 function limitText(value, maxLength) {
@@ -160,7 +164,14 @@ function quoteNo() {
 
 function money(value) {
   const num = Number(value || 0)
-  return Number.isFinite(num) && num >= 0 ? num : 0
+  if (!Number.isFinite(num) || num < 0) return 0
+  return Math.min(num, MAX_MONEY_AMOUNT)
+}
+
+function quantity(value) {
+  const num = Number(value || 0)
+  if (!Number.isFinite(num) || num < 0) return 0
+  return Math.min(num, MAX_QUANTITY)
 }
 
 function normalizeQuoteItems(value) {
@@ -169,7 +180,7 @@ function normalizeQuoteItems(value) {
     const input = pickFields(item, QUOTE_ITEM_FIELDS)
     return {
       name: limitText(input.name, MAX_SHORT_TEXT_LENGTH),
-      qty: money(input.qty || 1),
+      qty: quantity(input.qty || 1),
       price: money(input.price),
       note: limitText(input.note, MAX_NOTE_TEXT_LENGTH),
       skuId: limitText(input.skuId, MAX_SHORT_TEXT_LENGTH),
@@ -189,6 +200,13 @@ function calculate(input) {
   const shippingFee = money(input.shippingFee)
   const discountAmount = money(input.discountAmount)
   return Object.assign({}, input, {
+    _id: limitText(input._id, MAX_SHORT_TEXT_LENGTH),
+    dealId: limitText(input.dealId, MAX_SHORT_TEXT_LENGTH),
+    quoteNo: limitText(input.quoteNo, MAX_SHORT_TEXT_LENGTH),
+    validUntil: limitText(input.validUntil, 64),
+    quoteNote: limitText(input.quoteNote, MAX_NOTE_TEXT_LENGTH),
+    sentAt: limitText(input.sentAt, 64),
+    respondedAt: limitText(input.respondedAt, 64),
     items,
     baseAmount,
     customFee,
@@ -228,21 +246,25 @@ async function addLog(workspaceId, entityType, entityId, actionType, beforeData,
 }
 
 async function createQuoteTask(workspaceId, quote, deal, customer) {
-  const dedupeKey = deal._id + ':quote_no_reply:' + quote._id
+  const dealId = limitText(deal._id, MAX_SHORT_TEXT_LENGTH)
+  const quoteId = limitText(quote._id, MAX_SHORT_TEXT_LENGTH)
+  const customerId = limitText(deal.customerId, MAX_SHORT_TEXT_LENGTH)
+  if (!dealId || !quoteId) return null
+  const dedupeKey = dealId + ':quote_no_reply:' + quoteId
   const existed = await db.collection('followup_tasks').where({ workspaceId, dedupeKey }).limit(1).get()
   if (existed.data && existed.data.length) return null
   const score = 40 + (deal.urgencyLevel === 'high' ? 20 : 0) + ((customer.totalSpent || 0) > 500 ? 15 : 0)
   const task = {
     workspaceId,
-    dealId: deal._id,
-    customerId: deal.customerId,
-    customerName: customer.name || '',
+    dealId,
+    customerId,
+    customerName: limitText(customer.name, MAX_SHORT_TEXT_LENGTH),
     triggerType: 'quote_no_reply',
     triggerAt: now(),
     dueAt: addHours(24),
     priorityScore: score,
     templateId: '',
-    suggestedText: (customer.name || '您好') + '，我刚才那版报价不用急着定；如果想调整预算、材质或数量，我可以直接帮你改一版。',
+    suggestedText: limitText((customer.name || '您好') + '，我刚才那版报价不用急着定；如果想调整预算、材质或数量，我可以直接帮你改一版。', MAX_NOTE_TEXT_LENGTH),
     taskStatus: 'pending',
     completedAt: '',
     resultType: '',
@@ -289,13 +311,29 @@ async function handleRequest(event) {
   }
 
   const input = calculate(rawQuote)
+  if (rawQuote._id && !input._id) return { ok: false, code: 'invalid_quote_id', message: '非法报价 ID。' }
   if (!input.dealId) return { ok: false, message: '报价必须关联 dealId' }
   if (!input.items.length && !input.baseAmount) return { ok: false, message: '报价项或基础金额不能为空' }
+  if (input.totalAmount > MAX_TOTAL_AMOUNT) return { ok: false, code: 'invalid_quote_total', message: '报价金额超出允许范围。' }
+  if (input.depositRequired > input.totalAmount && input.totalAmount > 0) return { ok: false, code: 'invalid_deposit_amount', message: '定金不能高于报价总额。' }
 
-  const deal = (await db.collection('deals').doc(input.dealId).get()).data
+  let deal = null
+  try {
+    deal = (await db.collection('deals').doc(input.dealId).get()).data
+  } catch (err) {
+    return { ok: false, code: 'not_found', message: 'deal 不存在。' }
+  }
   if (!deal || deal.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }
-  const customerDoc = (await db.collection('customers').doc(deal.customerId).get()).data || {}
-  const customer = customerDoc.workspaceId === workspaceId ? customerDoc : {}
+  const customerId = limitText(deal.customerId, MAX_SHORT_TEXT_LENGTH)
+  let customer = {}
+  if (customerId) {
+    try {
+      const customerDoc = (await db.collection('customers').doc(customerId).get()).data || {}
+      customer = customerDoc.workspaceId === workspaceId ? customerDoc : {}
+    } catch (err) {
+      customer = {}
+    }
+  }
   const quote = Object.assign({
     workspaceId,
     quoteNo: quoteNo(),
@@ -322,15 +360,21 @@ async function handleRequest(event) {
 
   let before = {}
   if (quote._id) {
-    before = (await db.collection('quotes').doc(quote._id).get()).data || {}
-    if (before.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '报价不存在。' }
     const id = quote._id
+    try {
+      before = (await db.collection('quotes').doc(id).get()).data || {}
+    } catch (err) {
+      return { ok: false, code: 'not_found', message: '报价不存在。' }
+    }
+    if (before.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '报价不存在。' }
+    if (!quote.quoteNo) quote.quoteNo = limitText(before.quoteNo, MAX_SHORT_TEXT_LENGTH) || quoteNo()
     delete quote._id
     delete quote.createdAt
     delete quote.createdBy
     await db.collection('quotes').doc(id).update({ data: quote })
     quote._id = id
   } else {
+    if (!quote.quoteNo) quote.quoteNo = quoteNo()
     quote.createdAt = now()
     const added = await db.collection('quotes').add({ data: quote })
     quote._id = added._id
