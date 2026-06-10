@@ -1,3 +1,4 @@
+const crypto = require('crypto')
 const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -8,9 +9,12 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
+const AUTO_SCAN_SECRET_ENV_NAME = 'ORDERLY_FOLLOWUP_AUTO_SCAN_SECRET'
+const AUTO_SCAN_WORKSPACE_ID_ENV_NAME = 'ORDERLY_FOLLOWUP_AUTO_SCAN_WORKSPACE_ID'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
 const MAX_DOC_ID_LENGTH = 128
+const MAX_AUTO_SCAN_SECRET_LENGTH = 4096
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
 const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
@@ -78,6 +82,13 @@ function normalizeDocId(value) {
   if (value == null || typeof value === 'object') return ''
   const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
   return id.length <= MAX_DOC_ID_LENGTH && /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
+}
+
+function normalizeAutoScanSecret(value) {
+  if (value == null || typeof value === 'object') return ''
+  const secret = String(value).trim()
+  if (!secret || secret.length > MAX_AUTO_SCAN_SECRET_LENGTH) return ''
+  return /[\u0000-\u001f\u007f]/.test(secret) ? '' : secret
 }
 
 function hasTextValue(value) {
@@ -219,10 +230,29 @@ function isAutoScanEnabled() {
   return process.env[AUTO_SCAN_ENV_NAME] === '1'
 }
 
-function requireScanTriggerAccess() {
+function resolveAutoScanWorkspaceId() {
+  return normalizeWorkspaceId(process.env[AUTO_SCAN_WORKSPACE_ID_ENV_NAME]) || DEFAULT_WORKSPACE_ID
+}
+
+function timingSafeTextEquals(left, right) {
+  const leftBytes = Buffer.from(left, 'utf8')
+  const rightBytes = Buffer.from(right, 'utf8')
+  if (leftBytes.length !== rightBytes.length) return false
+  return crypto.timingSafeEqual(leftBytes, rightBytes)
+}
+
+function isAutoScanSecretValid(event) {
+  const configuredSecret = normalizeAutoScanSecret(process.env[AUTO_SCAN_SECRET_ENV_NAME])
+  if (!configuredSecret) return false
+  const providedSecret = normalizeAutoScanSecret(event && event.autoScanSecret)
+  return providedSecret ? timingSafeTextEquals(providedSecret, configuredSecret) : false
+}
+
+function requireScanTriggerAccess(event) {
   if (cloud.getWXContext().OPENID) return requireOperatorId()
-  if (isAutoScanEnabled()) return { ok: true, operatorId: 'system' }
-  return { ok: false, code: 'auto_scan_disabled', message: '自动跟进扫描未启用。' }
+  if (!isAutoScanEnabled()) return { ok: false, code: 'auto_scan_disabled', message: '自动跟进扫描未启用。' }
+  if (!isAutoScanSecretValid(event)) return { ok: false, code: 'forbidden', message: '无权访问。' }
+  return { ok: true, operatorId: 'system', workspaceId: resolveAutoScanWorkspaceId() }
 }
 
 function normalizeDirection(value) {
@@ -564,17 +594,19 @@ async function handleRequest(event) {
 
   const mode = normalizeText(event.mode)
   let operatorId = ''
+  let trustedWorkspaceEvent = event
   if (USER_AUTH_MODES.indexOf(mode) >= 0) {
     const auth = requireOperatorId()
     if (!auth.ok) return auth
     operatorId = auth.operatorId
   } else if (!mode) {
-    const scanAuth = requireScanTriggerAccess()
+    const scanAuth = requireScanTriggerAccess(event)
     if (!scanAuth.ok) return scanAuth
     operatorId = scanAuth.operatorId
+    if (scanAuth.workspaceId) trustedWorkspaceEvent = { workspaceId: scanAuth.workspaceId }
   }
 
-  const workspace = resolveWorkspaceId(event, operatorId)
+  const workspace = resolveWorkspaceId(trustedWorkspaceEvent, operatorId)
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
 
