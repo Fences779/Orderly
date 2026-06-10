@@ -116,13 +116,16 @@ public sealed class SensitiveFieldMigrationService
         CancellationToken cancellationToken)
     {
         ValidateBackfillSqlInputs(table, plainColumn, cipherColumn, condition);
+        var tableSql = QuoteSqlIdentifier(table);
+        var plainColumnSql = QuoteSqlIdentifier(plainColumn);
+        var cipherColumnSql = QuoteSqlIdentifier(cipherColumn);
         await using var query = connection.CreateCommand();
         query.Transaction = transaction;
         query.CommandText = $"""
-            SELECT Id, CAST({plainColumn} AS TEXT)
-            FROM {table}
+            SELECT Id, CAST({plainColumnSql} AS TEXT)
+            FROM {tableSql}
             WHERE ({condition})
-              AND (ifnull({cipherColumn}, '') = '' OR ifnull({plainColumn}, 0) <> 0);
+              AND (ifnull({cipherColumnSql}, '') = '' OR ifnull({plainColumnSql}, 0) <> 0);
             """;
 
         var rows = new List<(long Id, string Value)>();
@@ -151,8 +154,8 @@ public sealed class SensitiveFieldMigrationService
             await using var update = connection.CreateCommand();
             update.Transaction = transaction;
             update.CommandText = $"""
-                UPDATE {table}
-                SET {cipherColumn} = $cipher, {plainColumn} = 0
+                UPDATE {tableSql}
+                SET {cipherColumnSql} = $cipher, {plainColumnSql} = 0
                 WHERE Id = $id;
                 """;
             update.Parameters.AddWithValue("$cipher", cipher);
@@ -173,24 +176,27 @@ public sealed class SensitiveFieldMigrationService
         CancellationToken cancellationToken)
     {
         ValidateBackfillSqlInputs(table, plainColumn, cipherColumn, condition);
+        var tableSql = QuoteSqlIdentifier(table);
+        var plainColumnSql = QuoteSqlIdentifier(plainColumn);
+        var cipherColumnSql = QuoteSqlIdentifier(cipherColumn);
         await using var query = connection.CreateCommand();
         query.Transaction = transaction;
         if (clearValue == DBNull.Value)
         {
             query.CommandText = $"""
-                SELECT Id, CAST({plainColumn} AS TEXT)
-                FROM {table}
+                SELECT Id, CAST({plainColumnSql} AS TEXT)
+                FROM {tableSql}
                 WHERE ({condition})
-                  AND (ifnull({cipherColumn}, '') = '' OR {plainColumn} IS NOT NULL);
+                  AND (ifnull({cipherColumnSql}, '') = '' OR {plainColumnSql} IS NOT NULL);
                 """;
         }
         else
         {
             query.CommandText = $"""
-                SELECT Id, CAST({plainColumn} AS TEXT)
-                FROM {table}
+                SELECT Id, CAST({plainColumnSql} AS TEXT)
+                FROM {tableSql}
                 WHERE ({condition})
-                  AND (ifnull({cipherColumn}, '') = '' OR CAST({plainColumn} AS TEXT) <> $clear);
+                  AND (ifnull({cipherColumnSql}, '') = '' OR CAST({plainColumnSql} AS TEXT) <> $clear);
                 """;
             query.Parameters.AddWithValue("$clear", clearValue);
         }
@@ -221,8 +227,8 @@ public sealed class SensitiveFieldMigrationService
             await using var update = connection.CreateCommand();
             update.Transaction = transaction;
             update.CommandText = $"""
-                UPDATE {table}
-                SET {cipherColumn} = $cipher, {plainColumn} = $clear
+                UPDATE {tableSql}
+                SET {cipherColumnSql} = $cipher, {plainColumnSql} = $clear
                 WHERE Id = $id;
                 """;
             update.Parameters.AddWithValue("$cipher", cipher);
@@ -272,5 +278,15 @@ public sealed class SensitiveFieldMigrationService
         }
 
         return true;
+    }
+
+    private static string QuoteSqlIdentifier(string value)
+    {
+        if (!IsSqlIdentifier(value))
+        {
+            throw new InvalidOperationException("敏感字段迁移 SQL 标识符无效。");
+        }
+
+        return "\"" + value + "\"";
     }
 }
