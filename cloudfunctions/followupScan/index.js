@@ -61,7 +61,8 @@ function normalizeNumber(value) {
 }
 
 function normalizeText(value) {
-  return value == null ? '' : String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
+  if (value == null || typeof value === 'object') return ''
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
 }
 
 function limitText(value, maxLength) {
@@ -717,6 +718,8 @@ async function handleRequest(event) {
       adjustableFields: normalizeLimitedArray(mergedSku.adjustableFields),
       sortOrder: normalizeBoundedNumber(mergedSku.sortOrder || 10, 0, 1000000)
     })
+    delete sku.unit
+    delete sku.remark
     const saved = await upsertById('sku_catalog', sku, workspaceId)
     if (!saved) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
     return { ok: true, sku: saved }
@@ -759,6 +762,7 @@ async function handleRequest(event) {
       createdBy: operatorId,
       updatedBy: operatorId
     })
+    delete movement.type
     const added = await db.collection('inventory_movements').add({ data: movement })
     const _ = db.command
     const stockPatch = { updatedAt: now(), updatedBy: operatorId }
@@ -809,6 +813,12 @@ async function handleRequest(event) {
       createdBy: operatorId,
       updatedBy: operatorId
     })
+    delete entry.channel
+    delete entry.orderId
+    delete entry.orderNo
+    delete entry.quoteId
+    delete entry.skuId
+    delete entry.counterparty
     const saved = await upsertById('cashflow_entries', entry, workspaceId)
     if (!saved) return { ok: false, code: 'not_found', message: '现金流记录不存在。' }
     return { ok: true, entry: saved }
