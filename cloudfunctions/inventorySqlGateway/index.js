@@ -7,6 +7,9 @@ const DEFAULT_MAX_QUERY_ROWS = 5000
 const DEFAULT_MAX_BULK_ROWS = 500
 const DEFAULT_MAX_EVENT_BYTES = 1048576
 const DEFAULT_MIN_GATEWAY_TOKEN_LENGTH = 24
+const MAX_SHORT_TEXT_LENGTH = 128
+const MAX_NOTE_TEXT_LENGTH = 512
+const MAX_SOURCE_TEXT_LENGTH = 256
 const INVENTORY_SORT_FIELDS = [
   'materialCode',
   'materialName',
@@ -102,7 +105,16 @@ function createError(statusCode, code, message, expose = statusCode < 500) {
 }
 
 function normalizeText(value) {
-  return value == null ? '' : String(value).trim()
+  return value == null ? '' : String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
+}
+
+function limitText(value, maxLength) {
+  return normalizeText(value).slice(0, maxLength)
+}
+
+function normalizeKeyText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
+  const text = normalizeText(value)
+  return text.length <= maxLength ? text : ''
 }
 
 function normalizeNumber(value) {
@@ -334,10 +346,10 @@ function sameRow(left, right) {
 
 function normalizeInputRow(input) {
   return {
-    materialCode: normalizeText(input.materialCode),
-    materialName: normalizeText(input.materialName),
-    category: normalizeText(input.category),
-    stockUnit: normalizeText(input.stockUnit || '件'),
+    materialCode: normalizeKeyText(input.materialCode),
+    materialName: limitText(input.materialName, MAX_SHORT_TEXT_LENGTH),
+    category: limitText(input.category, MAX_SHORT_TEXT_LENGTH),
+    stockUnit: limitText(input.stockUnit || '件', MAX_SHORT_TEXT_LENGTH),
     currentStockQty: normalizeNumber(input.currentStockQty),
     safeStockQty: normalizeNumber(input.safeStockQty),
     sold7dQty: normalizeNumber(input.sold7dQty),
@@ -345,8 +357,8 @@ function normalizeInputRow(input) {
     unitCost: normalizeNumber(input.unitCost),
     braceletSalePrice: normalizeNumber(input.braceletSalePrice),
     braceletCostPrice: normalizeNumber(input.braceletCostPrice),
-    supplierName: normalizeText(input.supplierName),
-    remark: normalizeText(input.remark),
+    supplierName: limitText(input.supplierName, MAX_SHORT_TEXT_LENGTH),
+    remark: limitText(input.remark, MAX_NOTE_TEXT_LENGTH),
     enabled: normalizeBool(input.enabled, true),
     lastRestockedAt: parseDateTime(input.lastRestockedAt),
     sourceUpdatedAt: parseDateTime(input.sourceUpdatedAt)
@@ -391,8 +403,8 @@ async function inventoryDashboard(payload, workspaceId) {
   const maxPageSize = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_PAGE_SIZE', DEFAULT_MAX_PAGE_SIZE, 1000)
   const page = normalizePositiveInt(payload.page, 1, 1000000)
   const pageSize = normalizePositiveInt(payload.pageSize, DEFAULT_PAGE_SIZE, maxPageSize)
-  const keyword = normalizeText(payload.keyword).toLowerCase()
-  const category = normalizeText(payload.category)
+  const keyword = limitText(payload.keyword, MAX_SHORT_TEXT_LENGTH).toLowerCase()
+  const category = limitText(payload.category, MAX_SHORT_TEXT_LENGTH)
   const status = normalizeText(payload.status || 'all')
   const sortBy = normalizeInventorySortBy(payload.sortBy)
   const sortDirection = normalizeText(payload.sortDirection || 'desc') === 'asc' ? 'asc' : 'desc'
@@ -512,8 +524,8 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
       [
         workspaceId,
         batchNo,
-        normalizeText(payload.sourceFileName),
-        normalizeText(payload.sourceFileHash),
+        limitText(payload.sourceFileName, MAX_SOURCE_TEXT_LENGTH),
+        limitText(payload.sourceFileHash, MAX_SHORT_TEXT_LENGTH),
         operatorId,
         JSON.stringify({ mode: 'inventoryBulkUpsert' }),
         now
