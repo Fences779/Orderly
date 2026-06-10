@@ -8,6 +8,9 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_SHORT_TEXT_LENGTH = 128
+const MAX_REASON_TEXT_LENGTH = 512
+const MAX_TASK_TEXT_LENGTH = 512
 
 const TRANSITIONS = {
   new_inquiry: ['needs_clarification', 'quote_preparing', 'lost'],
@@ -72,6 +75,11 @@ function normalizeList(value) {
     .filter(Boolean)
 }
 
+function normalizeText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
+  if (value == null || typeof value === 'object') return ''
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maxLength)
+}
+
 function resolveWorkspaceId(event, operatorId) {
   const workspaceId = String((event && event.workspaceId) || '').trim() || DEFAULT_WORKSPACE_ID
   const configured = normalizeList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
@@ -134,6 +142,8 @@ function addDays(days) {
 }
 
 function canTransition(fromStage, toStage) {
+  if (!Object.prototype.hasOwnProperty.call(TRANSITIONS, toStage)) return false
+  if (!Object.prototype.hasOwnProperty.call(TRANSITIONS, fromStage)) return false
   if (fromStage === toStage) return true
   return (TRANSITIONS[fromStage] || []).indexOf(toStage) >= 0
 }
@@ -172,20 +182,23 @@ async function addLog(workspaceId, entityId, beforeData, afterData, note, operat
 }
 
 async function createTaskIfMissing(workspaceId, deal, customer, triggerType, dueAt, suggestedText) {
-  const dedupeKey = deal._id + ':' + triggerType + ':' + dueAt.slice(0, 10)
+  const dealId = normalizeText(deal._id)
+  const customerId = normalizeText(deal.customerId)
+  if (!dealId) return null
+  const dedupeKey = dealId + ':' + triggerType + ':' + dueAt.slice(0, 10)
   const existed = await db.collection('followup_tasks').where({ workspaceId, dedupeKey }).limit(1).get()
   if (existed.data && existed.data.length) return null
   const task = {
     workspaceId,
-    dealId: deal._id,
-    customerId: deal.customerId,
-    customerName: customer.name || '',
+    dealId,
+    customerId,
+    customerName: normalizeText(customer.name),
     triggerType,
     triggerAt: now(),
     dueAt,
     priorityScore: priority(triggerType, deal, customer),
     templateId: '',
-    suggestedText,
+    suggestedText: normalizeText(suggestedText, MAX_TASK_TEXT_LENGTH),
     taskStatus: 'pending',
     completedAt: '',
     resultType: '',
@@ -218,15 +231,17 @@ async function handleRequest(event) {
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
-  const { dealId, toStage } = event
+  const dealId = normalizeText(event.dealId)
+  const toStage = normalizeText(event.toStage, 32)
   if (!dealId || !toStage) return { ok: false, message: '缺少 dealId 或 toStage' }
   const deal = (await db.collection('deals').doc(dealId).get()).data
   if (!deal || deal.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }
-  if (!canTransition(deal.dealStage, toStage)) return { ok: false, message: '非法状态流转：' + deal.dealStage + ' -> ' + toStage }
+  const fromStage = normalizeText(deal.dealStage, 32)
+  if (!canTransition(fromStage, toStage)) return { ok: false, message: '非法状态流转：' + fromStage + ' -> ' + toStage }
 
-  const before = { dealStage: deal.dealStage, nextFollowupAt: deal.nextFollowupAt }
+  const before = { dealStage: fromStage, nextFollowupAt: deal.nextFollowupAt }
   const patch = { dealStage: toStage, updatedAt: now(), updatedBy: operatorId, lastInteractionAt: now() }
-  if (toStage === 'lost') patch.lossReason = event.lossReason || deal.lossReason || '未填写'
+  if (toStage === 'lost') patch.lossReason = normalizeText(event.lossReason || deal.lossReason || '未填写', MAX_REASON_TEXT_LENGTH)
   if (toStage === 'received') patch.nextFollowupAt = addDays(3)
   if (toStage === 'completed') patch.nextFollowupAt = addDays(30)
   await db.collection('deals').doc(dealId).update({ data: patch })
@@ -238,8 +253,16 @@ async function handleRequest(event) {
     }
   }
 
-  const customerDoc = (await db.collection('customers').doc(deal.customerId).get()).data || {}
-  const customer = customerDoc.workspaceId === workspaceId ? customerDoc : {}
+  const customerId = normalizeText(deal.customerId)
+  let customer = {}
+  if (customerId) {
+    try {
+      const customerDoc = (await db.collection('customers').doc(customerId).get()).data || {}
+      customer = customerDoc.workspaceId === workspaceId ? customerDoc : {}
+    } catch (err) {
+      customer = {}
+    }
+  }
   const updatedDeal = Object.assign({}, deal, patch)
   let task = null
   if (toStage === 'received') {
