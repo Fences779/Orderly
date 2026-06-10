@@ -272,6 +272,9 @@ async function handleRequest(event) {
   if (capture.confirmStatus === 'confirmed' && capture.linkedDealId) {
     return { ok: true, customerId: capture.linkedCustomerId, dealId: capture.linkedDealId, message: 'capture 已确认' }
   }
+  if (capture.createdBy !== operatorId) {
+    return { ok: false, code: 'not_found', message: 'capture 不存在。' }
+  }
 
   let customer
   if (event.customerMode === 'existing' && event.selectedCustomerId) {
