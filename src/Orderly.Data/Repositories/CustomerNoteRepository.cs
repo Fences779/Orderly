@@ -154,7 +154,7 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
         command.Parameters.AddWithValue("$orderId", ToDbInt(note.OrderId));
         command.Parameters.AddWithValue("$type", (int)note.Type);
         command.Parameters.AddWithValue("$content", string.Empty);
-        command.Parameters.AddWithValue("$contentCiphertext", fieldEncryptionService.Encrypt(note.Content));
+        command.Parameters.AddWithValue("$contentCiphertext", fieldEncryptionService.Encrypt(note.Content, "CustomerNotes.ContentCiphertext"));
         command.Parameters.AddWithValue("$isPinned", note.IsPinned ? 1 : 0);
         command.Parameters.AddWithValue("$createdAt", note.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", note.UpdatedAt.ToString("O"));

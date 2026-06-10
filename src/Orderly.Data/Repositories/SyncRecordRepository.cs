@@ -173,9 +173,9 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         command.Parameters.AddWithValue("$syncStatus", (int)record.SyncStatus);
         command.Parameters.AddWithValue("$lastSyncedAt", ToDbDate(record.LastSyncedAt));
         command.Parameters.AddWithValue("$errorMessage", string.Empty);
-        command.Parameters.AddWithValue("$errorMessageCiphertext", fieldEncryptionService.Encrypt(record.ErrorMessage));
+        command.Parameters.AddWithValue("$errorMessageCiphertext", fieldEncryptionService.Encrypt(record.ErrorMessage, "SyncRecords.ErrorMessageCiphertext"));
         command.Parameters.AddWithValue("$metadataJson", string.Empty);
-        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(record.MetadataJson));
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(record.MetadataJson, "SyncRecords.MetadataJsonCiphertext"));
         command.Parameters.AddWithValue("$createdAt", record.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", record.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(record.DeletedAt));

@@ -16,6 +16,9 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
     private const int MaxPlaintextByteLength = MaxPayloadByteLength - HeaderByteLength;
     private const int MaxEncodedPayloadLength = ((MaxPayloadByteLength + 2) / 3) * 4;
     private const int MaxCiphertextLength = PrefixLength + MaxEncodedPayloadLength;
+    private const int LegacyPayloadVersion = 1;
+    private const int AssociatedDataPayloadVersion = 2;
+    private const int MaxAssociatedDataByteLength = 256;
 
     private readonly ISessionContextService _sessionContextService;
 
@@ -26,12 +29,36 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
 
     public string Encrypt(string plaintext)
     {
+        return EncryptCore(plaintext, associatedData: string.Empty, useAssociatedData: false);
+    }
+
+    public string Encrypt(string plaintext, string associatedData)
+    {
+        return EncryptCore(plaintext, associatedData, useAssociatedData: true);
+    }
+
+    public string Decrypt(string ciphertext)
+    {
+        return DecryptCore(ciphertext, associatedData: string.Empty, allowAssociatedDataPayload: false);
+    }
+
+    public string Decrypt(string ciphertext, string associatedData)
+    {
+        return DecryptCore(ciphertext, associatedData, allowAssociatedDataPayload: true);
+    }
+
+    private string EncryptCore(string plaintext, string associatedData, bool useAssociatedData)
+    {
         plaintext ??= string.Empty;
         var key = RequireCurrentDataKey();
         var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
+        var associatedDataBytes = useAssociatedData
+            ? BuildAssociatedDataBytes(associatedData)
+            : Array.Empty<byte>();
         if (plaintextBytes.Length > MaxPlaintextByteLength)
         {
             CryptographicOperations.ZeroMemory(plaintextBytes);
+            CryptographicOperations.ZeroMemory(associatedDataBytes);
             throw new InvalidOperationException("Plaintext is too large to encrypt.");
         }
 
@@ -43,10 +70,10 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
         try
         {
             using var aes = new AesGcm(key, tag.Length);
-            aes.Encrypt(nonce, plaintextBytes, ciphertext, tag);
+            aes.Encrypt(nonce, plaintextBytes, ciphertext, tag, associatedDataBytes);
 
             payload = new byte[HeaderByteLength + ciphertext.Length];
-            payload[0] = 1;
+            payload[0] = (byte)(useAssociatedData ? AssociatedDataPayloadVersion : LegacyPayloadVersion);
             Buffer.BlockCopy(nonce, 0, payload, 1, nonce.Length);
             Buffer.BlockCopy(tag, 0, payload, 1 + nonce.Length, tag.Length);
             Buffer.BlockCopy(ciphertext, 0, payload, 1 + nonce.Length + tag.Length, ciphertext.Length);
@@ -59,10 +86,11 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
             CryptographicOperations.ZeroMemory(ciphertext);
             CryptographicOperations.ZeroMemory(tag);
             CryptographicOperations.ZeroMemory(payload);
+            CryptographicOperations.ZeroMemory(associatedDataBytes);
         }
     }
 
-    public string Decrypt(string ciphertext)
+    private string DecryptCore(string ciphertext, string associatedData, bool allowAssociatedDataPayload)
     {
         ciphertext ??= string.Empty;
         if (ciphertext.Length == 0)
@@ -98,22 +126,35 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
             throw new InvalidOperationException("Ciphertext payload is invalid.");
         }
 
-        if (payload[0] != 1)
+        var payloadVersion = payload[0];
+        var usesAssociatedData = payloadVersion == AssociatedDataPayloadVersion;
+        if (payloadVersion != LegacyPayloadVersion && payloadVersion != AssociatedDataPayloadVersion)
         {
             CryptographicOperations.ZeroMemory(payload);
             throw new InvalidOperationException("Ciphertext version is not supported.");
+        }
+
+        if (usesAssociatedData && !allowAssociatedDataPayload)
+        {
+            CryptographicOperations.ZeroMemory(payload);
+            throw new InvalidOperationException("Ciphertext requires associated data.");
         }
 
         var key = RequireCurrentDataKey();
         var nonce = payload.AsSpan(1, NonceByteLength);
         var tag = payload.AsSpan(1 + NonceByteLength, TagByteLength);
         var encryptedBytes = payload.AsSpan(HeaderByteLength);
-        var plaintextBytes = new byte[encryptedBytes.Length];
+        var associatedDataBytes = Array.Empty<byte>();
+        var plaintextBytes = Array.Empty<byte>();
 
         try
         {
+            associatedDataBytes = usesAssociatedData
+                ? BuildAssociatedDataBytes(associatedData)
+                : Array.Empty<byte>();
+            plaintextBytes = new byte[encryptedBytes.Length];
             using var aes = new AesGcm(key, tag.Length);
-            aes.Decrypt(nonce, encryptedBytes, tag, plaintextBytes);
+            aes.Decrypt(nonce, encryptedBytes, tag, plaintextBytes, associatedDataBytes);
             return Encoding.UTF8.GetString(plaintextBytes);
         }
         catch (CryptographicException)
@@ -124,6 +165,7 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
         {
             CryptographicOperations.ZeroMemory(plaintextBytes);
             CryptographicOperations.ZeroMemory(payload);
+            CryptographicOperations.ZeroMemory(associatedDataBytes);
         }
     }
 
@@ -136,5 +178,28 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
         }
 
         return dataKey;
+    }
+
+    private static byte[] BuildAssociatedDataBytes(string associatedData)
+    {
+        if (string.IsNullOrWhiteSpace(associatedData))
+        {
+            throw new InvalidOperationException("Associated data is required.");
+        }
+
+        var normalized = associatedData.Trim();
+        if (normalized.Any(char.IsControl))
+        {
+            throw new InvalidOperationException("Associated data contains invalid characters.");
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(normalized);
+        if (bytes.Length > MaxAssociatedDataByteLength)
+        {
+            CryptographicOperations.ZeroMemory(bytes);
+            throw new InvalidOperationException("Associated data is too long.");
+        }
+
+        return bytes;
     }
 }

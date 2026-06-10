@@ -91,7 +91,7 @@ internal static class EncryptedColumnReader
 
         try
         {
-            return fieldEncryptionService.Decrypt(cipher);
+            return fieldEncryptionService.Decrypt(cipher, fieldName);
         }
         catch (InvalidOperationException ex)
         {

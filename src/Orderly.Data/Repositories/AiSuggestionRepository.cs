@@ -179,14 +179,14 @@ public sealed class AiSuggestionRepository : IAiSuggestionRepository
         command.Parameters.AddWithValue("$orderId", ToDbInt(suggestion.OrderId));
         command.Parameters.AddWithValue("$messageId", ToDbInt(suggestion.MessageId));
         command.Parameters.AddWithValue("$suggestionText", string.Empty);
-        command.Parameters.AddWithValue("$suggestionTextCiphertext", fieldEncryptionService.Encrypt(suggestion.SuggestionText));
+        command.Parameters.AddWithValue("$suggestionTextCiphertext", fieldEncryptionService.Encrypt(suggestion.SuggestionText, "AiSuggestions.SuggestionTextCiphertext"));
         command.Parameters.AddWithValue("$reason", string.Empty);
-        command.Parameters.AddWithValue("$reasonCiphertext", fieldEncryptionService.Encrypt(suggestion.Reason));
+        command.Parameters.AddWithValue("$reasonCiphertext", fieldEncryptionService.Encrypt(suggestion.Reason, "AiSuggestions.ReasonCiphertext"));
         command.Parameters.AddWithValue("$confidence", DBNull.Value);
-        command.Parameters.AddWithValue("$confidenceCiphertext", fieldEncryptionService.Encrypt(suggestion.Confidence?.ToString(CultureInfo.InvariantCulture) ?? string.Empty));
+        command.Parameters.AddWithValue("$confidenceCiphertext", fieldEncryptionService.Encrypt(suggestion.Confidence?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, "AiSuggestions.ConfidenceCiphertext"));
         command.Parameters.AddWithValue("$status", (int)suggestion.Status);
         command.Parameters.AddWithValue("$metadataJson", string.Empty);
-        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(suggestion.MetadataJson));
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(suggestion.MetadataJson, "AiSuggestions.MetadataJsonCiphertext"));
         command.Parameters.AddWithValue("$createdAt", suggestion.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", suggestion.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(suggestion.DeletedAt));

@@ -163,20 +163,20 @@ public sealed class DealRepository : IDealRepository
     {
         command.Parameters.AddWithValue("$customerId", deal.CustomerId);
         command.Parameters.AddWithValue("$title", string.Empty);
-        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(deal.Title));
+        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(deal.Title, "Deals.TitleCiphertext"));
         command.Parameters.AddWithValue("$stage", (int)deal.Stage);
         command.Parameters.AddWithValue("$estimatedAmount", 0);
-        command.Parameters.AddWithValue("$estimatedAmountCiphertext", fieldEncryptionService.Encrypt(deal.EstimatedAmount.ToString(CultureInfo.InvariantCulture)));
+        command.Parameters.AddWithValue("$estimatedAmountCiphertext", fieldEncryptionService.Encrypt(deal.EstimatedAmount.ToString(CultureInfo.InvariantCulture), "Deals.EstimatedAmountCiphertext"));
         command.Parameters.AddWithValue("$requirement", string.Empty);
-        command.Parameters.AddWithValue("$requirementCiphertext", fieldEncryptionService.Encrypt(deal.Requirement));
+        command.Parameters.AddWithValue("$requirementCiphertext", fieldEncryptionService.Encrypt(deal.Requirement, "Deals.RequirementCiphertext"));
         command.Parameters.AddWithValue("$sourcePlatform", deal.SourcePlatform);
         command.Parameters.AddWithValue("$channel", deal.Channel);
         command.Parameters.AddWithValue("$expectedCloseAt", DBNull.Value);
-        command.Parameters.AddWithValue("$expectedCloseAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(deal.ExpectedCloseAt)));
+        command.Parameters.AddWithValue("$expectedCloseAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(deal.ExpectedCloseAt), "Deals.ExpectedCloseAtCiphertext"));
         command.Parameters.AddWithValue("$closedAt", DBNull.Value);
-        command.Parameters.AddWithValue("$closedAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(deal.ClosedAt)));
+        command.Parameters.AddWithValue("$closedAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(deal.ClosedAt), "Deals.ClosedAtCiphertext"));
         command.Parameters.AddWithValue("$lostReason", string.Empty);
-        command.Parameters.AddWithValue("$lostReasonCiphertext", fieldEncryptionService.Encrypt(deal.LostReason));
+        command.Parameters.AddWithValue("$lostReasonCiphertext", fieldEncryptionService.Encrypt(deal.LostReason, "Deals.LostReasonCiphertext"));
         command.Parameters.AddWithValue("$createdAt", deal.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", deal.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(deal.DeletedAt));

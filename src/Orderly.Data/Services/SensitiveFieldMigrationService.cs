@@ -150,7 +150,7 @@ public sealed class SensitiveFieldMigrationService
 
         foreach (var row in rows)
         {
-            var cipher = _fieldEncryptionService.Encrypt(row.Value);
+            var cipher = _fieldEncryptionService.Encrypt(row.Value, BuildAssociatedDataName(table, cipherColumn));
             await using var update = connection.CreateCommand();
             update.Transaction = transaction;
             update.CommandText = $"""
@@ -223,7 +223,7 @@ public sealed class SensitiveFieldMigrationService
 
         foreach (var row in rows)
         {
-            var cipher = _fieldEncryptionService.Encrypt(row.Value);
+            var cipher = _fieldEncryptionService.Encrypt(row.Value, BuildAssociatedDataName(table, cipherColumn));
             await using var update = connection.CreateCommand();
             update.Transaction = transaction;
             update.CommandText = $"""
@@ -288,5 +288,10 @@ public sealed class SensitiveFieldMigrationService
         }
 
         return "\"" + value + "\"";
+    }
+
+    private static string BuildAssociatedDataName(string table, string cipherColumn)
+    {
+        return $"{table}.{cipherColumn}";
     }
 }

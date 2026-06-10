@@ -188,23 +188,23 @@ public sealed class CustomerRepository : ICustomerRepository
     private static void AddParameters(SqliteCommand command, Customer customer, IFieldEncryptionService fieldEncryptionService)
     {
         command.Parameters.AddWithValue("$name", string.Empty);
-        command.Parameters.AddWithValue("$nameCiphertext", fieldEncryptionService.Encrypt(customer.Name));
+        command.Parameters.AddWithValue("$nameCiphertext", fieldEncryptionService.Encrypt(customer.Name, "Customers.NameCiphertext"));
         command.Parameters.AddWithValue("$status", (int)customer.Status);
         command.Parameters.AddWithValue("$priority", (int)customer.Priority);
         command.Parameters.AddWithValue("$sourcePlatform", customer.SourcePlatform);
         command.Parameters.AddWithValue("$channel", customer.Channel);
         command.Parameters.AddWithValue("$contactHandle", string.Empty);
-        command.Parameters.AddWithValue("$contactHandleCiphertext", fieldEncryptionService.Encrypt(customer.ContactHandle));
+        command.Parameters.AddWithValue("$contactHandleCiphertext", fieldEncryptionService.Encrypt(customer.ContactHandle, "Customers.ContactHandleCiphertext"));
         command.Parameters.AddWithValue("$phone", string.Empty);
-        command.Parameters.AddWithValue("$phoneCiphertext", fieldEncryptionService.Encrypt(customer.Phone));
+        command.Parameters.AddWithValue("$phoneCiphertext", fieldEncryptionService.Encrypt(customer.Phone, "Customers.PhoneCiphertext"));
         command.Parameters.AddWithValue("$remark", string.Empty);
-        command.Parameters.AddWithValue("$remarkCiphertext", fieldEncryptionService.Encrypt(customer.Remark));
+        command.Parameters.AddWithValue("$remarkCiphertext", fieldEncryptionService.Encrypt(customer.Remark, "Customers.RemarkCiphertext"));
         command.Parameters.AddWithValue("$externalId", string.Empty);
-        command.Parameters.AddWithValue("$externalIdCiphertext", fieldEncryptionService.Encrypt(customer.ExternalId));
+        command.Parameters.AddWithValue("$externalIdCiphertext", fieldEncryptionService.Encrypt(customer.ExternalId, "Customers.ExternalIdCiphertext"));
         command.Parameters.AddWithValue("$rawPayload", string.Empty);
-        command.Parameters.AddWithValue("$rawPayloadCiphertext", fieldEncryptionService.Encrypt(customer.RawPayload));
+        command.Parameters.AddWithValue("$rawPayloadCiphertext", fieldEncryptionService.Encrypt(customer.RawPayload, "Customers.RawPayloadCiphertext"));
         command.Parameters.AddWithValue("$lastContactAt", DBNull.Value);
-        command.Parameters.AddWithValue("$lastContactAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(customer.LastContactAt)));
+        command.Parameters.AddWithValue("$lastContactAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(customer.LastContactAt), "Customers.LastContactAtCiphertext"));
         command.Parameters.AddWithValue("$createdAt", customer.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", customer.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(customer.DeletedAt));

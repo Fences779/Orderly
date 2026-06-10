@@ -11,8 +11,18 @@ public sealed class PassthroughFieldEncryptionService : IFieldEncryptionService
         return plaintext ?? string.Empty;
     }
 
+    public string Encrypt(string plaintext, string associatedData)
+    {
+        return Encrypt(plaintext);
+    }
+
     public string Decrypt(string ciphertext)
     {
         return ciphertext ?? string.Empty;
+    }
+
+    public string Decrypt(string ciphertext, string associatedData)
+    {
+        return Decrypt(ciphertext);
     }
 }

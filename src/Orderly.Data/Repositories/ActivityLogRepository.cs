@@ -241,13 +241,13 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         command.Parameters.AddWithValue("$dealId", ToDbInt(activityLog.DealId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(activityLog.OrderId));
         command.Parameters.AddWithValue("$title", string.Empty);
-        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(activityLog.Title));
+        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(activityLog.Title, "ActivityLogs.TitleCiphertext"));
         command.Parameters.AddWithValue("$description", string.Empty);
-        command.Parameters.AddWithValue("$descriptionCiphertext", fieldEncryptionService.Encrypt(activityLog.Description));
+        command.Parameters.AddWithValue("$descriptionCiphertext", fieldEncryptionService.Encrypt(activityLog.Description, "ActivityLogs.DescriptionCiphertext"));
         command.Parameters.AddWithValue("$operator", string.Empty);
-        command.Parameters.AddWithValue("$operatorCiphertext", fieldEncryptionService.Encrypt(activityLog.Operator));
+        command.Parameters.AddWithValue("$operatorCiphertext", fieldEncryptionService.Encrypt(activityLog.Operator, "ActivityLogs.OperatorCiphertext"));
         command.Parameters.AddWithValue("$metadataJson", string.Empty);
-        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(activityLog.MetadataJson));
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(activityLog.MetadataJson, "ActivityLogs.MetadataJsonCiphertext"));
         command.Parameters.AddWithValue("$createdAt", activityLog.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", activityLog.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(activityLog.DeletedAt));
