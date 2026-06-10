@@ -21,7 +21,7 @@ public sealed partial class CloudInventoryWorkspaceService
             throw new InvalidOperationException($"Excel 文件超过导入上限（{MaxInventoryWorkbookBytes / 1024 / 1024}MB）。");
         }
 
-        using var workbook = new XLWorkbook(workbookPath);
+        using var workbook = new XLWorkbook(fileInfo.FullName);
         var worksheet = workbook.Worksheets.FirstOrDefault(static sheet => string.Equals(sheet.Name, "Inventory", StringComparison.OrdinalIgnoreCase))
             ?? workbook.Worksheets.FirstOrDefault()
             ?? throw new InvalidOperationException("Excel 中没有可读取的工作表。");
@@ -126,6 +126,7 @@ public sealed partial class CloudInventoryWorkspaceService
         if (!string.IsNullOrWhiteSpace(directory))
         {
             Directory.CreateDirectory(directory);
+            EnsureWorkbookDirectoryPathIsSafe(directory, "Excel 导出目录");
         }
 
         using var workbook = new XLWorkbook();
@@ -159,6 +160,11 @@ public sealed partial class CloudInventoryWorkspaceService
         }
 
         worksheet.Columns().AdjustToContents();
+        if (LocalDataFileSecurity.IsReparsePoint(safeWorkbookPath))
+        {
+            throw new InvalidOperationException("Excel 导出文件不能是链接文件。");
+        }
+
         workbook.SaveAs(safeWorkbookPath);
         LocalDataFileSecurity.HardenFile(safeWorkbookPath);
     }
@@ -183,12 +189,18 @@ public sealed partial class CloudInventoryWorkspaceService
         var fileName = Path.GetFileNameWithoutExtension(safeWorkbookPath);
         var extension = Path.GetExtension(safeWorkbookPath);
         var backupPath = Path.Combine(directory, $"{fileName}.{DateTime.Now.ToString(WorkbookBackupTimestampFormat, CultureInfo.InvariantCulture)}.bak{extension}");
+        if (File.Exists(backupPath) || LocalDataFileSecurity.IsReparsePoint(backupPath))
+        {
+            throw new InvalidOperationException("Excel 备份文件已存在或是链接文件。");
+        }
+
+        EnsureWorkbookDirectoryPathIsSafe(directory, "Excel 备份目录");
         if (LocalDataFileSecurity.IsReparsePoint(backupPath))
         {
             throw new InvalidOperationException("Excel 备份文件不能是链接文件。");
         }
 
-        File.Copy(safeWorkbookPath, backupPath, overwrite: true);
+        File.Copy(safeWorkbookPath, backupPath, overwrite: false);
         LocalDataFileSecurity.HardenFile(backupPath);
         PruneWorkbookBackups(directory, fileName, extension, backupPath);
         return backupPath;
@@ -226,6 +238,11 @@ public sealed partial class CloudInventoryWorkspaceService
             foreach (var expired in backups.Skip(WorkbookBackupRetentionCount))
             {
                 if (string.Equals(expired.FullPath, currentFullPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (LocalDataFileSecurity.IsReparsePoint(expired.FullPath))
                 {
                     continue;
                 }
