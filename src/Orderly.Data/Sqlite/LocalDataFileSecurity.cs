@@ -18,14 +18,20 @@ public static class LocalDataFileSecurity
 
     public static void EnsureDirectoryIsNotLinked(string directoryPath, string description)
     {
-        if (string.IsNullOrWhiteSpace(directoryPath) || !Directory.Exists(directoryPath))
+        if (string.IsNullOrWhiteSpace(directoryPath))
         {
             return;
         }
 
-        if (IsReparsePoint(directoryPath))
+        var current = new DirectoryInfo(Path.GetFullPath(directoryPath));
+        while (current is not null)
         {
-            throw new InvalidOperationException($"{description}不能是链接目录。");
+            if (current.Exists && IsReparsePoint(current.FullName))
+            {
+                throw new InvalidOperationException($"{description}不能是链接目录，也不能位于链接目录下。");
+            }
+
+            current = current.Parent;
         }
     }
 
