@@ -71,14 +71,18 @@ public static class LocalDataFileSecurity
         }
         catch (Exception ex) when (
             ex is FileNotFoundException
-                or DirectoryNotFoundException
-                or IOException
+                or DirectoryNotFoundException)
+        {
+            return false;
+        }
+        catch (Exception ex) when (
+            ex is IOException
                 or UnauthorizedAccessException
                 or ArgumentException
                 or NotSupportedException
                 or PathTooLongException)
         {
-            return false;
+            return true;
         }
     }
 
