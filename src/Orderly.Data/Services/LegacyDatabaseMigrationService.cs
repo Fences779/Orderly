@@ -61,6 +61,12 @@ public sealed class LegacyDatabaseMigrationService : ILegacyDatabaseMigrationSer
             throw new InvalidOperationException("Legacy database source cannot be a linked file.");
         }
 
+        var sourceDirectory = Path.GetDirectoryName(plan.LegacyDatabasePath);
+        if (!string.IsNullOrWhiteSpace(sourceDirectory))
+        {
+            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(sourceDirectory, "Legacy 迁移源目录");
+        }
+
         if (plan.State == LegacyDatabaseMigrationState.SourceAndTargetAreSameFile)
         {
             return Task.FromResult(new LegacyDatabaseMigrationResult
@@ -76,6 +82,7 @@ public sealed class LegacyDatabaseMigrationService : ILegacyDatabaseMigrationSer
         if (!string.IsNullOrWhiteSpace(targetDirectory))
         {
             Directory.CreateDirectory(targetDirectory);
+            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(targetDirectory, "Legacy 迁移目标目录");
         }
 
         var targetExists = File.Exists(plan.TargetDatabasePath);
