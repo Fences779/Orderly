@@ -8,6 +8,7 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
 {
     private const string Prefix = "v1:";
     private const int PrefixLength = 3;
+    private const int DataKeyByteLength = 32;
     private const int NonceByteLength = 12;
     private const int TagByteLength = 16;
     private const int HeaderByteLength = 1 + NonceByteLength + TagByteLength;
@@ -129,7 +130,7 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
     private byte[] RequireCurrentDataKey()
     {
         var dataKey = _sessionContextService.Current?.DataKey;
-        if (dataKey is null || dataKey.Length == 0)
+        if (dataKey is null || dataKey.Length != DataKeyByteLength)
         {
             throw new InvalidOperationException("No signed-in session data key is available.");
         }
