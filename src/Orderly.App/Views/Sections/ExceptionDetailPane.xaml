@@ -53,7 +53,7 @@
                 </Grid.RowDefinitions>
 
             <!-- 1. 头部标题 & 关闭 (双行紧凑布局以和履约一致) -->
-            <Border BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,0,0,1" Padding="0,0,0,14" Margin="0,0,0,14">
+            <Border BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,0,0,1" Padding="0,0,0,14" Margin="0,0,0,14">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -61,10 +61,10 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="异常详情" FontSize="18" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                        <TextBlock Text="异常详情" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="订单号：" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding SelectedExceptionOrderDetail.OrderNoText}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
+                            <TextBlock Text="订单号：" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding SelectedExceptionOrderDetail.OrderNoText}" Foreground="{DynamicResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
                             <Button Style="{StaticResource IconCopyButtonStyle}" Width="20" Height="20" Padding="0" Margin="6,0,0,2" VerticalAlignment="Center"
                                     Tag="{Binding SelectedExceptionOrderDetail.OrderNo}" Click="CopyText_Click" ToolTip="复制订单号">
                                 <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
@@ -88,7 +88,7 @@
             </ScrollViewer>
 
             <!-- 3. 底部确定处理按钮 -->
-            <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrushSoft}" Padding="0,16,0,0">
+            <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderBrushSoft}" Padding="0,16,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />

@@ -14,32 +14,32 @@
                                Text="{Binding Name}"
                                FontSize="15"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource HeadingBrush}"
+                               Foreground="{DynamicResource HeadingBrush}"
                                TextWrapping="Wrap" />
                     <TextBlock x:Name="CustomerLastContactText"
                                DockPanel.Dock="Right"
-                               Foreground="{StaticResource SecondaryTextBrush}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
                                Margin="12,2,0,0"
                                Text="{Binding LastContactAt, StringFormat=最近联系：{0:MM-dd HH:mm}}" />
                 </DockPanel>
 
                 <WrapPanel Margin="0,10,0,0">
                     <Border Style="{StaticResource AccentPillBorderStyle}" Margin="0,0,8,8">
-                        <TextBlock Text="{Binding Status, Converter={StaticResource EnumLabelConverter}}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                        <TextBlock Text="{Binding Status, Converter={StaticResource EnumLabelConverter}}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
                     </Border>
                     <Border Style="{StaticResource OutlinePillBorderStyle}" Margin="0,0,8,8">
-                        <TextBlock Text="{Binding Priority, Converter={StaticResource EnumLabelConverter}}" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                        <TextBlock Text="{Binding Priority, Converter={StaticResource EnumLabelConverter}}" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" FontSize="11" />
                     </Border>
                 </WrapPanel>
 
                 <TextBlock x:Name="CustomerSourceText"
                            Text="{Binding SourcePlatform, StringFormat=来源：{0}}"
-                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
                            Margin="0,0,0,4"
                            TextWrapping="Wrap" />
 
                 <TextBlock Text="{Binding ContactHandle, StringFormat=联系：{0}}"
-                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
                            TextWrapping="Wrap">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -54,7 +54,7 @@
                 </TextBlock>
 
                 <TextBlock Text="{Binding Phone, StringFormat=电话：{0}}"
-                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
                            TextWrapping="Wrap">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -72,7 +72,7 @@
                 </TextBlock>
 
                 <TextBlock Text="联系方式：待补充"
-                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
                            TextWrapping="Wrap">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -114,11 +114,11 @@
                 <DockPanel>
                     <TextBlock Text="{Binding CustomerNameDisplay}"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource AccentTextBrush}"
+                               Foreground="{DynamicResource AccentTextBrush}"
                                TextWrapping="Wrap" />
                     <TextBlock DockPanel.Dock="Right"
                                Text="{Binding AmountText}"
-                               Foreground="{StaticResource WarmTextBrush}"
+                               Foreground="{DynamicResource WarmTextBrush}"
                                FontWeight="Bold"
                                Margin="12,0,0,0" />
                 </DockPanel>
@@ -126,12 +126,12 @@
                 <TextBlock Text="{Binding TitleDisplay}"
                            FontSize="15"
                            FontWeight="SemiBold"
-                           Foreground="{StaticResource HeadingBrush}"
+                           Foreground="{DynamicResource HeadingBrush}"
                            Margin="0,6,0,0"
                            TextWrapping="Wrap" />
 
                 <TextBlock Text="{Binding RequirementSummary}"
-                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
                            TextWrapping="Wrap"
                            LineHeight="20"
                            Margin="0,8,0,0"
@@ -139,15 +139,15 @@
 
                 <WrapPanel Margin="0,10,0,0">
                     <Border Style="{StaticResource AccentPillBorderStyle}" Margin="0,0,8,8">
-                        <TextBlock Text="{Binding StatusLabel}" Foreground="{StaticResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                        <TextBlock Text="{Binding StatusLabel}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="11" />
                     </Border>
                     <Border Style="{StaticResource OutlinePillBorderStyle}" Margin="0,0,8,8">
-                        <TextBlock Text="{Binding NextFollowUpDisplay, StringFormat=跟进：{0}}" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="SemiBold" FontSize="11" />
+                        <TextBlock Text="{Binding NextFollowUpDisplay, StringFormat=跟进：{0}}" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="SemiBold" FontSize="11" />
                     </Border>
                 </WrapPanel>
 
                 <TextBlock Text="{Binding LastActivityDisplay}"
-                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
                            Margin="0,2,0,0" />
             </StackPanel>
         </Border>

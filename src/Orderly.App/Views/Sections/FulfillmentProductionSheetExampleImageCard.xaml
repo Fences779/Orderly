@@ -10,13 +10,13 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-                                                 <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,12">
+                                                 <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,12">
                                                      <StackPanel>
                                                          <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                                             <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                                             <TextBlock Text="例图" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
+                                                             <TextBlock Text="&#xEB9F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                             <TextBlock Text="例图" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
                                                          </StackPanel>
-                                                         <Border Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="10" Height="180" ClipToBounds="True" Focusable="True">
+                                                         <Border Background="#FFFFFF" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="10" Height="180" ClipToBounds="True" Focusable="True">
                                                              <Grid>
                                                                  <Image x:Name="ExampleImage" Source="{Binding StringNarrationProductionSheetExampleImageUrl}" Stretch="Uniform" Margin="8" RenderTransformOrigin="0.5,0.5">
                                                                      <Image.RenderTransform>
@@ -50,8 +50,8 @@
                                                                              </Style.Triggers>
                                                                          </Style>
                                                                      </StackPanel.Style>
-                                                                     <TextBlock Text="&#xEE71;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,8" />
-                                                                     <TextBlock Text="{Binding StringNarrationProductionSheetExampleFallbackText}" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" />
+                                                                     <TextBlock Text="&#xEE71;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{DynamicResource CaptionTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,8" />
+                                                                     <TextBlock Text="{Binding StringNarrationProductionSheetExampleFallbackText}" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" />
                                                                  </StackPanel>
                                                              </Grid>
                                                              <Border.Triggers>

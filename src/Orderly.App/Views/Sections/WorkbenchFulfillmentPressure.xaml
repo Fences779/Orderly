@@ -10,7 +10,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="20,18">
+    <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="20,18">
         <Border.Effect>
             <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
         </Border.Effect>
@@ -22,31 +22,31 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <StackPanel Grid.Row="0">
-                <TextBlock Text="今日履约压力" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                <TextBlock Text="今日履约压力" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
             </StackPanel>
 
             <!-- 履约压力卡片 -->
             <StackPanel Grid.Row="1" Margin="0,18,0,0" VerticalAlignment="Top">
                 <!-- 待制作 -->
-                <Border Background="#FBFAF6" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,14">
+                <Border Background="#FBFAF6" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,0,0,14">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource WarmSoftBrush}" VerticalAlignment="Center" Margin="0,0,12,0">
-                            <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource WarmTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{DynamicResource WarmSoftBrush}" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource WarmTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <StackPanel Grid.Column="1">
                             <Grid>
-                                <TextBlock Text="待制作" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Left" />
+                                <TextBlock Text="待制作" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Left" />
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <TextBlock Text="占未完成订单 " FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBlock Text="60%" FontSize="11" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                                    <TextBlock Text="占未完成订单 " FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="60%" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                                 </StackPanel>
                             </Grid>
-                            <TextBlock Text="18 单" FontSize="20" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,4" />
-                            <ProgressBar Value="{Binding StringNarrationWorkbenchPendingMakeCount, Mode=OneWay}" Maximum="{Binding StringNarrationWorkbenchUnfinishedOrderCount, Mode=OneWay}" Height="6" Background="#E5E7EC" Foreground="{StaticResource WarmTextBrush}" BorderThickness="0" Margin="0,4,0,0">
+                            <TextBlock Text="18 单" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,4,0,4" />
+                            <ProgressBar Value="{Binding StringNarrationWorkbenchPendingMakeCount, Mode=OneWay}" Maximum="{Binding StringNarrationWorkbenchUnfinishedOrderCount, Mode=OneWay}" Height="6" Background="#E5E7EC" Foreground="{DynamicResource WarmTextBrush}" BorderThickness="0" Margin="0,4,0,0">
                                 <ProgressBar.Template>
                                     <ControlTemplate TargetType="ProgressBar">
                                         <Grid>
@@ -61,25 +61,25 @@
                 </Border>
 
                 <!-- 待发货 -->
-                <Border Background="#FBFAF6" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="14,12">
+                <Border Background="#FBFAF6" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="14,12">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource PurpleSoftBrush}" VerticalAlignment="Center" Margin="0,0,12,0">
-                            <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource PurpleTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{DynamicResource PurpleSoftBrush}" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource PurpleTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <StackPanel Grid.Column="1">
                             <Grid>
-                                <TextBlock Text="待发货" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Left" />
+                                <TextBlock Text="待发货" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Left" />
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <TextBlock Text="占未完成订单 " FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBlock Text="30%" FontSize="11" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                                    <TextBlock Text="占未完成订单 " FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="30%" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                                 </StackPanel>
                             </Grid>
-                            <TextBlock Text="9 单" FontSize="20" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,4" />
-                            <ProgressBar Value="{Binding StringNarrationWorkbenchReadyToShipCount, Mode=OneWay}" Maximum="{Binding StringNarrationWorkbenchUnfinishedOrderCount, Mode=OneWay}" Height="6" Background="#E5E7EC" Foreground="{StaticResource PurpleTextBrush}" BorderThickness="0" Margin="0,4,0,0">
+                            <TextBlock Text="9 单" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,4,0,4" />
+                            <ProgressBar Value="{Binding StringNarrationWorkbenchReadyToShipCount, Mode=OneWay}" Maximum="{Binding StringNarrationWorkbenchUnfinishedOrderCount, Mode=OneWay}" Height="6" Background="#E5E7EC" Foreground="{DynamicResource PurpleTextBrush}" BorderThickness="0" Margin="0,4,0,0">
                                 <ProgressBar.Template>
                                     <ControlTemplate TargetType="ProgressBar">
                                         <Grid>
@@ -100,9 +100,9 @@
             <!-- 底部：当日实际总单数 -->
             <Border Grid.Row="3" BorderBrush="#F1F2F5" BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,12,0,0">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="当日实际总单数：" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
-                    <TextBlock Text="{Binding StringNarrationWorkbenchTodayOrderCount}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
-                    <TextBlock Text=" 单" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="当日实际总单数：" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding StringNarrationWorkbenchTodayOrderCount}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
+                    <TextBlock Text=" 单" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
                 </StackPanel>
             </Border>
             <Border Grid.Row="3" />

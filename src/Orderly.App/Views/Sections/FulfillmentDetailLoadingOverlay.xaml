@@ -55,7 +55,7 @@
                        FontFamily="Segoe MDL2 Assets"
                        FontSize="30"
                        FontWeight="Bold"
-                       Foreground="{StaticResource HeadingBrush}"
+                       Foreground="{DynamicResource HeadingBrush}"
                        HorizontalAlignment="Center"
                        RenderTransformOrigin="0.5,0.5"
                        Margin="0,0,0,12">
@@ -86,7 +86,7 @@
             <TextBlock Text="{Binding StringNarrationStatusMessage}"
                        FontSize="13"
                        FontWeight="Bold"
-                       Foreground="{StaticResource HeadingBrush}"
+                       Foreground="{DynamicResource HeadingBrush}"
                        HorizontalAlignment="Center" />
         </StackPanel>
     </Grid>

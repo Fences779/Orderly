@@ -32,28 +32,28 @@
                                                  <Border CornerRadius="6" Padding="6,2.5" DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right">
                                                      <Border.Style>
                                                          <Style TargetType="Border">
-                                                             <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
+                                                             <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
                                                              <Style.Triggers>
                                                                  <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="paid_pending_confirm">
-                                                                     <Setter Property="Background" Value="{StaticResource WarmSoftBrush}" />
+                                                                     <Setter Property="Background" Value="{DynamicResource WarmSoftBrush}" />
                                                                  </DataTrigger>
                                                                  <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="pending_make">
-                                                                     <Setter Property="Background" Value="{StaticResource PurpleSoftBrush}" />
+                                                                     <Setter Property="Background" Value="{DynamicResource PurpleSoftBrush}" />
                                                                  </DataTrigger>
                                                                  <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="making">
-                                                                     <Setter Property="Background" Value="{StaticResource BlueSoftBrush}" />
+                                                                     <Setter Property="Background" Value="{DynamicResource BlueSoftBrush}" />
                                                                  </DataTrigger>
                                                                  <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="ready_to_ship">
-                                                                     <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}" />
+                                                                     <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
                                                                  </DataTrigger>
                                                                  <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="shipped">
-                                                                     <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                                                                     <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
                                                                  </DataTrigger>
                                                                  <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="completed">
-                                                                     <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
+                                                                     <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
                                                                  </DataTrigger>
                                                                  <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="exception">
-                                                                     <Setter Property="Background" Value="{StaticResource DangerSoftBrush}" />
+                                                                     <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
                                                                  </DataTrigger>
                                                              </Style.Triggers>
                                                          </Style>
@@ -61,28 +61,28 @@
                                                      <TextBlock Text="{Binding StringNarrationProductionSheetStatusText}" FontSize="10" FontWeight="Bold">
                                                          <TextBlock.Style>
                                                              <Style TargetType="TextBlock">
-                                                                 <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+                                                                 <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
                                                                  <Style.Triggers>
                                                                      <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="paid_pending_confirm">
-                                                                         <Setter Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                                                         <Setter Property="Foreground" Value="{DynamicResource WarmTextBrush}" />
                                                                      </DataTrigger>
                                                                      <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="pending_make">
-                                                                         <Setter Property="Foreground" Value="{StaticResource PurpleTextBrush}" />
+                                                                         <Setter Property="Foreground" Value="{DynamicResource PurpleTextBrush}" />
                                                                      </DataTrigger>
                                                                      <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="making">
-                                                                         <Setter Property="Foreground" Value="{StaticResource BlueTextBrush}" />
+                                                                         <Setter Property="Foreground" Value="{DynamicResource BlueTextBrush}" />
                                                                      </DataTrigger>
                                                                      <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="ready_to_ship">
-                                                                         <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+                                                                         <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
                                                                      </DataTrigger>
                                                                      <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="shipped">
-                                                                         <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                                                         <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
                                                                      </DataTrigger>
                                                                      <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="completed">
-                                                                         <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+                                                                         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
                                                                      </DataTrigger>
                                                                      <DataTrigger Binding="{Binding SelectedStringNarrationProductionSheet.WorkOrderStatusColorKey}" Value="exception">
-                                                                         <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                                                         <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
                                                                      </DataTrigger>
                                                                  </Style.Triggers>
                                                              </Style>
@@ -93,22 +93,22 @@
 
                                              <StackPanel Margin="2,0,0,0">
                                                  <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                                     <TextBlock Text="&#xEC7A;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                                     <TextBlock Text="制作单" FontSize="18" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
+                                                     <TextBlock Text="&#xEC7A;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{DynamicResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                     <TextBlock Text="制作单" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
                                                  </StackPanel>
                                                  
                                                  <UniformGrid Columns="2" Margin="0,4,0,0">
                                                      <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                                         <TextBlock Text="订单号：" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                                         <TextBlock Text="{Binding StringNarrationProductionSheetOrderNoText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                                         <TextBlock Text="订单号：" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                                         <TextBlock Text="{Binding StringNarrationProductionSheetOrderNoText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" />
                                                      </StackPanel>
                                                      <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                                         <TextBlock Text="制作单号：" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                                         <TextBlock Text="{Binding StringNarrationProductionSheetProductionOrderNoText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                                         <TextBlock Text="制作单号：" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                                         <TextBlock Text="{Binding StringNarrationProductionSheetProductionOrderNoText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" />
                                                      </StackPanel>
                                                      <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                                         <TextBlock Text="工单号：" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                                         <TextBlock Text="{Binding StringNarrationProductionSheetWorkOrderNoText}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                                         <TextBlock Text="工单号：" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                                         <TextBlock Text="{Binding StringNarrationProductionSheetWorkOrderNoText}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" />
                                                      </StackPanel>
                                                  </UniformGrid>
                                              </StackPanel>

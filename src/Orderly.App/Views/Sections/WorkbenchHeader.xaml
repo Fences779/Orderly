@@ -16,24 +16,24 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <StackPanel Grid.Column="0" Margin="0,0,24,0">
-            <TextBlock Text="工作台" FontSize="30" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
-            <TextBlock Text="概览经营数据，掌握履约进度，助力高效成交与履约" FontSize="13" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="工作台" FontSize="30" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
+            <TextBlock Text="概览经营数据，掌握履约进度，助力高效成交与履约" FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
             <!-- 刷新按钮 -->
             <Button Command="{Binding LoadStringNarrationStatsCommand}" Style="{StaticResource SubtleActionButtonStyle}" Padding="12,6" Margin="0,0,16,0">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{StaticResource PrimaryBrush}" />
-                    <TextBlock Text="刷新" VerticalAlignment="Center" FontSize="13" Foreground="{StaticResource HeadingBrush}" />
+                    <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryBrush}" />
+                    <TextBlock Text="刷新" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource HeadingBrush}" />
                 </StackPanel>
             </Button>
             <!-- 同步时间 -->
-            <TextBlock Text="最后同步：" VerticalAlignment="Center" FontSize="13" Foreground="{StaticResource SecondaryTextBrush}" />
-            <TextBlock Text="{Binding StringNarrationWorkbenchLastSyncedAtFriendlyText}" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,16,0" />
+            <TextBlock Text="最后同步：" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" />
+            <TextBlock Text="{Binding StringNarrationWorkbenchLastSyncedAtFriendlyText}" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,16,0" />
             <!-- 钟铛通知 -->
             <Grid Width="36" Height="36" Cursor="Hand">
                 <Border Width="36" Height="36" CornerRadius="18" Background="#F1F2F5">
-                    <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <Border Width="16" Height="16" CornerRadius="8" Background="#DE4C4A" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-2,-2,0" BorderBrush="#FFFFFF" BorderThickness="1.5">
                     <TextBlock Text="12" FontSize="9" FontWeight="Bold" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />

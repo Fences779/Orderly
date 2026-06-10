@@ -7,7 +7,7 @@
         Height="820"
         MinWidth="1140"
         MinHeight="800"
-        Background="{StaticResource PageBackgroundBrush}">
+        Background="{DynamicResource PageBackgroundBrush}">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -57,7 +57,7 @@
                     </Style>
                 </DockPanel.Style>
                 <StackPanel DockPanel.Dock="Left">
-                    <TextBlock Text="{Binding SelectedSection}" FontSize="29" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                    <TextBlock Text="{Binding SelectedSection}" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                     <TextBlock Text="客户、订单、跟进和快捷回复集中处理" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
                 </StackPanel>
             </DockPanel>
@@ -80,7 +80,7 @@
             <!-- ==================== “我的”板块 (Me/Profile Page) ==================== -->
             <Sections:MeProfileView Grid.Row="1" />
 
-            <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Foreground="{StaticResource MutedBrush}" Margin="0,12,0,0">
+            <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Foreground="{DynamicResource MutedBrush}" Margin="0,12,0,0">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Visibility" Value="Visible" />

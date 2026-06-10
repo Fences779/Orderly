@@ -43,7 +43,7 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <!-- Header -->
-                <Border BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,0,0,1" Padding="0,0,0,14" Margin="0,0,0,14">
+                <Border BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,0,0,1" Padding="0,0,0,14" Margin="0,0,0,14">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -51,10 +51,10 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="订单详情" FontSize="18" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                            <TextBlock Text="订单详情" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <TextBlock Text="订单号：" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.OrderNoText}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="订单号：" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.OrderNoText}" Foreground="{DynamicResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
                                 <Button Style="{StaticResource IconCopyButtonStyle}" Width="20" Height="20" Padding="0" Margin="6,0,0,2" VerticalAlignment="Center"
                                         Command="{Binding CopyStringNarrationOrderFieldCommand}" CommandParameter="orderNo" ToolTip="复制订单号">
                                     <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center" />
@@ -75,53 +75,53 @@
                 <!-- Overview Grid -->
                 <Border Style="{StaticResource CardBorderStyle}" Padding="14" Margin="0,0,0,14">
                     <StackPanel>
-                        <TextBlock Text="订单概览" FontSize="14" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,10" />
+                        <TextBlock Text="订单概览" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,10" />
                         <UniformGrid Columns="3">
                             <!-- Box 1: Receiver Name -->
-                            <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,8">
+                            <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,8">
                                 <StackPanel>
-                                    <TextBlock Text="客户昵称" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.Address.ReceiverName, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="客户昵称" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.Address.ReceiverName, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </Border>
 
                             <!-- Box 2: Amount -->
-                            <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,8">
+                            <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,8">
                                 <StackPanel>
-                                    <TextBlock Text="订单金额" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.AmountText, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" />
+                                    <TextBlock Text="订单金额" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.AmountText, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" Margin="0,4,0,0" />
                                 </StackPanel>
                             </Border>
 
                             <!-- Box 3: Count -->
-                            <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8">
+                            <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,8">
                                 <StackPanel>
-                                    <TextBlock Text="商品数量" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ItemCountText, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" />
+                                    <TextBlock Text="商品数量" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ItemCountText, FallbackValue='-'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" Margin="0,4,0,0" />
                                 </StackPanel>
                             </Border>
 
                             <!-- Box 4: CreatedAt -->
-                            <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,0">
+                            <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,0">
                                 <StackPanel>
-                                    <TextBlock Text="下单时间" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.CreatedAtText, FallbackValue='-'}" FontSize="11" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="下单时间" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.CreatedAtText, FallbackValue='-'}" FontSize="11" Foreground="{DynamicResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </Border>
 
                             <!-- Box 5: PaidAt -->
-                            <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,0">
+                            <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,8,0">
                                 <StackPanel>
-                                    <TextBlock Text="支付时间" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.PaidAtText, FallbackValue='-'}" FontSize="11" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="支付时间" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.PaidAtText, FallbackValue='-'}" FontSize="11" Foreground="{DynamicResource HeadingBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
                             </Border>
 
                             <!-- Box 6: Channel -->
-                            <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,0">
+                            <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="10" Padding="10,8" Margin="0,0,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="支付通道" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                    <TextBlock Text="微信支付" FontSize="11" Foreground="{StaticResource HeadingBrush}" Margin="0,4,0,0" />
+                                    <TextBlock Text="支付通道" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                    <TextBlock Text="微信支付" FontSize="11" Foreground="{DynamicResource HeadingBrush}" Margin="0,4,0,0" />
                                 </StackPanel>
                             </Border>
                         </UniformGrid>
@@ -131,7 +131,7 @@
                 <!-- Product snap list -->
                 <Border Style="{StaticResource CardBorderStyle}" Padding="14" Margin="0,0,0,14">
                     <StackPanel>
-                        <TextBlock Text="商品快照" FontSize="14" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,10" />
+                        <TextBlock Text="商品快照" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,10" />
                         <ItemsControl ItemsSource="{Binding SelectedStringNarrationOrderDetail.ItemsSnapshot}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -140,8 +140,8 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="{StaticResource SurfaceSoftBrush}"
-                                            BorderBrush="{StaticResource BorderBrushSoft}"
+                                    <Border Background="{DynamicResource SurfaceSoftBrush}"
+                                            BorderBrush="{DynamicResource BorderBrushSoft}"
                                             BorderThickness="1"
                                             CornerRadius="8"
                                             Margin="4"
@@ -153,16 +153,16 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
 
-                                            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" ClipToBounds="True" VerticalAlignment="Center">
+                                            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="6" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" ClipToBounds="True" VerticalAlignment="Center">
                                                 <Image Source="{Binding Cover}" Stretch="UniformToFill" />
                                             </Border>
 
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
-                                                <TextBlock Text="{Binding TitleText}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" MaxHeight="32" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding DesignIdText}" FontSize="10" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0" />
+                                                <TextBlock Text="{Binding TitleText}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" MaxHeight="32" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding DesignIdText}" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,2,0,0" />
                                             </StackPanel>
 
-                                            <TextBlock Grid.Column="2" Text="{Binding CountText}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                                            <TextBlock Grid.Column="2" Text="{Binding CountText}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -187,22 +187,22 @@
                         </Border.Style>
                         <StackPanel>
                             <DockPanel Margin="0,0,0,8">
-                                <TextBlock Text="生产工单信息" FontSize="14" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
-                                <Border Background="{StaticResource PrimaryLightBrush}" CornerRadius="8" Padding="6,2" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ProductionOrder.StatusText}" FontSize="11" Foreground="{StaticResource PrimaryBrush}" FontWeight="SemiBold" />
+                                <TextBlock Text="生产工单信息" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
+                                <Border Background="{DynamicResource PrimaryLightBrush}" CornerRadius="8" Padding="6,2" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ProductionOrder.StatusText}" FontSize="11" Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold" />
                                 </Border>
                             </DockPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="工单单号：" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
-                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ProductionOrder.ProductionOrderNoText}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
+                                <TextBlock Text="工单单号：" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" />
+                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ProductionOrder.ProductionOrderNoText}" Foreground="{DynamicResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="制作来源：" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
-                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ProductionOrder.SourceText}" Foreground="{StaticResource HeadingBrush}" FontSize="12" />
+                                <TextBlock Text="制作来源：" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" />
+                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ProductionOrder.SourceText}" Foreground="{DynamicResource HeadingBrush}" FontSize="12" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="制作备注：" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
-                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ProductionOrder.RemarkText}" Foreground="{StaticResource HeadingBrush}" FontSize="12" TextWrapping="Wrap" />
+                                <TextBlock Text="制作备注：" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" />
+                                <TextBlock Text="{Binding SelectedStringNarrationOrderDetail.ProductionOrder.RemarkText}" Foreground="{DynamicResource HeadingBrush}" FontSize="12" TextWrapping="Wrap" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -223,15 +223,15 @@
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Grid>
-                                        <Rectangle x:Name="BgRect" Stroke="{StaticResource HeadingBrush}" StrokeThickness="1.5" StrokeDashArray="4 2" RadiusX="12" RadiusY="12" Fill="#FAFBFD" SnapsToDevicePixels="True" />
+                                        <Rectangle x:Name="BgRect" Stroke="{DynamicResource HeadingBrush}" StrokeThickness="1.5" StrokeDashArray="4 2" RadiusX="12" RadiusY="12" Fill="#FAFBFD" SnapsToDevicePixels="True" />
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                            <TextBlock Text="生成制作单" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Text="" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                            <TextBlock Text="生成制作单" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="BgRect" Property="Fill" Value="{StaticResource SurfaceSoftBrush}" />
+                                            <Setter TargetName="BgRect" Property="Fill" Value="{DynamicResource SurfaceSoftBrush}" />
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>

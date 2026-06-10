@@ -40,8 +40,8 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="CardChrome" Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                    <Setter TargetName="CardChrome" Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                                    <Setter TargetName="CardChrome" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                    <Setter TargetName="CardChrome" Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
                                     <Trigger.EnterActions>
                                         <BeginStoryboard>
                                             <Storyboard>
@@ -99,8 +99,8 @@
                 <Style TargetType="Button" BasedOn="{StaticResource FulfillmentStatsCardButtonStyle}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding FulfillmentStatus}" Value="paid_pending_confirm">
-                            <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
                             <Setter Property="Effect">
                                 <Setter.Value>
                                     <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
@@ -115,13 +115,13 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource BlueSoftBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,10,0">
-                    <TextBlock Text="&#xE194;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource BlueTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{DynamicResource BlueSoftBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,10,0">
+                    <TextBlock Text="&#xE194;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource BlueTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="待确认" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="待确认" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
                     <DockPanel Margin="0,2,0,0">
-                        <TextBlock Text="{Binding Stats.PaidPendingConfirmCount, FallbackValue=0}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Bottom" />
+                        <TextBlock Text="{Binding Stats.PaidPendingConfirmCount, FallbackValue=0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Bottom" />
                     </DockPanel>
                 </StackPanel>
             </Grid>
@@ -135,8 +135,8 @@
                 <Style TargetType="Button" BasedOn="{StaticResource FulfillmentStatsCardButtonStyle}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding FulfillmentStatus}" Value="pending_make">
-                            <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
                             <Setter Property="Effect">
                                 <Setter.Value>
                                     <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
@@ -151,13 +151,13 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource WarmSoftBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,10,0">
-                    <TextBlock Text="&#xE18C;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource WarmTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{DynamicResource WarmSoftBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,10,0">
+                    <TextBlock Text="&#xE18C;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource WarmTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="待制作" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="待制作" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
                     <DockPanel Margin="0,2,0,0">
-                        <TextBlock Text="{Binding Stats.PendingMakeCount, FallbackValue=0}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Bottom" />
+                        <TextBlock Text="{Binding Stats.PendingMakeCount, FallbackValue=0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Bottom" />
                     </DockPanel>
                 </StackPanel>
             </Grid>
@@ -171,8 +171,8 @@
                 <Style TargetType="Button" BasedOn="{StaticResource FulfillmentStatsCardButtonStyle}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding FulfillmentStatus}" Value="making">
-                            <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
                             <Setter Property="Effect">
                                 <Setter.Value>
                                     <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06" />
@@ -187,13 +187,13 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource PurpleSoftBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,10,0">
-                    <TextBlock Text="&#xE7A3;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource PurpleTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{DynamicResource PurpleSoftBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,10,0">
+                    <TextBlock Text="&#xE7A3;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource PurpleTextBrush}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="制作中" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="制作中" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
                     <DockPanel Margin="0,2,0,0">
-                        <TextBlock Text="{Binding Stats.MakingCount, FallbackValue=0}" FontSize="20" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Bottom" />
+                        <TextBlock Text="{Binding Stats.MakingCount, FallbackValue=0}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Bottom" />
                     </DockPanel>
                 </StackPanel>
             </Grid>

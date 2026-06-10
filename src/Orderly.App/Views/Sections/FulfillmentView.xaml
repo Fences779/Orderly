@@ -105,7 +105,7 @@
                                FontFamily="Segoe MDL2 Assets"
                                FontSize="30"
                                FontWeight="Bold"
-                               Foreground="{StaticResource HeadingBrush}"
+                               Foreground="{DynamicResource HeadingBrush}"
                                HorizontalAlignment="Center"
                                RenderTransformOrigin="0.5,0.5"
                                Margin="0,0,0,12">
@@ -136,14 +136,14 @@
                     <TextBlock Text="{Binding StringNarrationStatusMessage}"
                                FontSize="13"
                                FontWeight="Bold"
-                               Foreground="{StaticResource HeadingBrush}"
+                               Foreground="{DynamicResource HeadingBrush}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
             </Grid>
         </Grid>
 
         <!-- 首次加载数据同步初始化遮罩层 -->
-        <Grid x:Name="InitializationLoadingOverlay" Grid.Row="0" Grid.RowSpan="4" Panel.ZIndex="999" Background="{StaticResource PageBackgroundBrush}">
+        <Grid x:Name="InitializationLoadingOverlay" Grid.Row="0" Grid.RowSpan="4" Panel.ZIndex="999" Background="{DynamicResource PageBackgroundBrush}">
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Setter Property="Visibility" Value="Collapsed" />
@@ -188,7 +188,7 @@
                            FontFamily="Segoe MDL2 Assets"
                            FontSize="36"
                            FontWeight="Bold"
-                           Foreground="{StaticResource HeadingBrush}"
+                           Foreground="{DynamicResource HeadingBrush}"
                            HorizontalAlignment="Center"
                            RenderTransformOrigin="0.5,0.5"
                            Margin="0,0,0,16">
@@ -220,7 +220,7 @@
                 <TextBlock Text="正在初始化..."
                            FontSize="15"
                            FontWeight="SemiBold"
-                           Foreground="{StaticResource HeadingBrush}"
+                           Foreground="{DynamicResource HeadingBrush}"
                            HorizontalAlignment="Center" />
             </StackPanel>
         </Grid>

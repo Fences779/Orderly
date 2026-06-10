@@ -10,7 +10,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="20,18">
+    <Border Grid.Column="0" Background="#FFFFFF" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="20,18">
         <Border.Effect>
             <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
         </Border.Effect>
@@ -25,18 +25,18 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="近 7 日经营趋势" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                    <TextBlock Text="近 7 日经营趋势" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource BlueTextBrush}" VerticalAlignment="Center"/>
-                        <TextBlock Text="成交额 (元)" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Margin="6,0,16,0" VerticalAlignment="Center"/>
-                        <Ellipse Width="8" Height="8" Fill="{StaticResource PurpleTextBrush}" VerticalAlignment="Center"/>
-                        <TextBlock Text="订单数 (单)" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        <Ellipse Width="8" Height="8" Fill="{DynamicResource BlueTextBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="成交额 (元)" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="6,0,16,0" VerticalAlignment="Center"/>
+                        <Ellipse Width="8" Height="8" Fill="{DynamicResource PurpleTextBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="订单数 (单)" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="6,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </StackPanel>
                 <Border Grid.Column="1" Background="#F1F2F5" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="近 7 日" FontSize="12" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
-                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource SecondaryTextBrush}" />
+                        <TextBlock Text="近 7 日" FontSize="12" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -114,16 +114,16 @@
                             <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.08"/>
                         </Border.Effect>
                         <StackPanel>
-                            <TextBlock x:Name="Text_TooltipDate" Text="05-16" FontSize="10" Foreground="{StaticResource CaptionTextBrush}" />
+                            <TextBlock x:Name="Text_TooltipDate" Text="05-16" FontSize="10" Foreground="{DynamicResource CaptionTextBrush}" />
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <Ellipse Width="6" Height="6" Fill="{StaticResource BlueTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                <TextBlock Text="成交额" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                <TextBlock x:Name="Text_TooltipRevenue" Text=" ¥12,680.00" FontSize="11" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource BlueTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="成交额" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                <TextBlock x:Name="Text_TooltipRevenue" Text=" ¥12,680.00" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <Ellipse Width="6" Height="6" Fill="{StaticResource PurpleTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                <TextBlock Text="订单数" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
-                                <TextBlock x:Name="Text_TooltipOrders" Text=" 110" FontSize="11" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                                <Ellipse Width="6" Height="6" Fill="{DynamicResource PurpleTextBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="订单数" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                <TextBlock x:Name="Text_TooltipOrders" Text=" 110" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -138,7 +138,7 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Label}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Label}" FontSize="11" Foreground="{DynamicResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

@@ -441,11 +441,11 @@ public partial class MainViewModel
 
                 Preferences = normalized;
                 ApplySettingsInputsFromPreferences(normalized);
-                SettingsStatusMessage = $"设置已保存；{hotkeyStatus} AI/通知策略已保存，待链路接入。";
                 await RefreshSnSyncStatusAsync();
                 RefreshAiSettingsRuntimeStatus();
                 RefreshNotificationSettingsRuntimeStatus();
-            });
+            },
+            suppressBusyAndSuccessStatus: true);
     }
 
     private bool CanSaveP0Settings()
@@ -482,4 +482,36 @@ public partial class MainViewModel
             SelectedSection = targetSection;
         }
     }
+
+    partial void OnThemeModeInputChanged(string value)
+    {
+        Orderly.App.Helpers.ThemeHelper.ApplyTheme(value);
+        OnPropertyChanged(nameof(CurrentThemeLabel));
+        OnPropertyChanged(nameof(CurrentThemeIcon));
+    }
+
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        ThemeModeInput = ThemeModeInput switch
+        {
+            "浅色" => "深色",
+            "深色" => "跟随系统",
+            _ => "浅色"
+        };
+    }
+
+    public string CurrentThemeLabel => ThemeModeInput switch
+    {
+        "浅色" => "浅色模式",
+        "深色" => "深色模式",
+        _ => "跟随系统"
+    };
+
+    public string CurrentThemeIcon => ThemeModeInput switch
+    {
+        "浅色" => "\xE706",
+        "深色" => "\xE708",
+        _ => "\xE7F4"
+    };
 }

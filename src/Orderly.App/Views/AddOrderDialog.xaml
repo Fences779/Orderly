@@ -8,7 +8,7 @@
         MinHeight="480"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{StaticResource PageBackgroundBrush}"
+        Background="{DynamicResource PageBackgroundBrush}"
         AutomationProperties.AutomationId="AddOrderDialog">
     <Window.Resources>
         <ResourceDictionary>
@@ -27,12 +27,12 @@
         <!-- 标题区 -->
         <Border Grid.Row="0"
                 Background="#FFFDF8"
-                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
                 BorderThickness="0,0,0,1"
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="创建订单" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="关联客户、填写订单基本信息后保存" Foreground="{StaticResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="关联客户、填写订单基本信息后保存" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
             </StackPanel>
         </Border>
 
@@ -121,7 +121,7 @@
         <!-- 底部操作栏 -->
         <Border Grid.Row="2"
                 Background="#FFFDF8"
-                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
                 BorderThickness="0,1,0,0"
                 Padding="22,14">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

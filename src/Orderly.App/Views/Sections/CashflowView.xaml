@@ -51,7 +51,7 @@
             </Grid>
         </Grid>
 
-        <TextBlock Grid.Row="2" Grid.ColumnSpan="2" HorizontalAlignment="Center" Margin="0,24,0,0" FontSize="11" Foreground="{StaticResource CaptionTextBrush}">
+        <TextBlock Grid.Row="2" Grid.ColumnSpan="2" HorizontalAlignment="Center" Margin="0,24,0,0" FontSize="11" Foreground="{DynamicResource CaptionTextBrush}">
             <Run Text="ℹ️ 数据统计截止至 " />
             <Run Text="{Binding CashflowUpdatedAtText, Mode=OneWay, FallbackValue='2024-06-12 23:59:59'}" />
             <Run Text="，部分数据可能存在延迟，仅供参考。" />

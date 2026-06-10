@@ -134,6 +134,7 @@ public partial class App
             : new StringNarrationInventoryWorkspaceServiceAdapter(stringNarrationBusinessService);
 
         var preferences = await settingRepository.GetPreferencesAsync();
+        Orderly.App.Helpers.ThemeHelper.ApplyTheme(preferences.ThemeMode);
 
         _mainViewModel = new MainViewModel(
             customerRepository,

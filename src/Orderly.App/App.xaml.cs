@@ -57,15 +57,22 @@ public partial class App : System.Windows.Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        Orderly.App.Helpers.ThemeHelper.Initialize();
         _startupArgs = e.Args;
         QaDataMaintenanceService.TryGetRequestedCommand(_startupArgs, out _qaMaintenanceCommand);
         var isQaMode = QaDataSeeder.IsQaMode(_startupArgs);
+        var isQaSeedRequested = QaDataSeeder.IsRequested(_startupArgs);
+        var isDemoSeedRequested = DemoDataSeeder.IsRequested(_startupArgs);
         Console.WriteLine("App starting");
 
         try
         {
             await EnsureIdentityPreparedAsync();
             EnsureAuthServicesPrepared();
+            EnsurePrivilegedStartupModesAllowed(
+                isQaMode,
+                isQaSeedRequested,
+                isDemoSeedRequested);
 
             if (_qaMaintenanceCommand != QaDataMaintenanceService.QaDataMaintenanceCommand.None)
             {
@@ -82,7 +89,7 @@ public partial class App : System.Windows.Application
                 return;
             }
 
-            if (QaDataSeeder.IsRequested(_startupArgs))
+            if (isQaSeedRequested)
             {
                 await PrepareQaSeedDatabaseAsync(DatabasePaths.GetDefaultDatabasePath(allowQaOverride: true));
             }
@@ -108,6 +115,46 @@ public partial class App : System.Windows.Application
         }
 
         ShowLoginView();
+    }
+
+    private void EnsurePrivilegedStartupModesAllowed(
+        bool isQaMode,
+        bool isQaSeedRequested,
+        bool isDemoSeedRequested)
+    {
+        if (_qaMaintenanceCommand == QaDataMaintenanceService.QaDataMaintenanceCommand.None
+            && !isQaMode
+            && !isQaSeedRequested
+            && !isDemoSeedRequested)
+        {
+            return;
+        }
+
+        if (IsPrivilegedStartupModeAllowed())
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "QA / Demo 启动入口仅允许在 Development、QA、Test 或 Local 环境使用。请先设置 ORDERLY_RUNTIME_ENV 或 DOTNET_ENVIRONMENT。");
+    }
+
+    private void EnsurePrivilegedStartupModesAllowed()
+    {
+        EnsurePrivilegedStartupModesAllowed(
+            QaDataSeeder.IsQaMode(_startupArgs),
+            QaDataSeeder.IsRequested(_startupArgs),
+            DemoDataSeeder.IsRequested(_startupArgs));
+    }
+
+    private static bool IsPrivilegedStartupModeAllowed()
+    {
+        var runtime = (Environment.GetEnvironmentVariable("ORDERLY_RUNTIME_ENV")
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? string.Empty).Trim().ToLowerInvariant();
+
+        return runtime is "development" or "dev" or "qa" or "test" or "local";
     }
 
     private async Task CompleteLoginAsync(LocalSessionContext session)
@@ -227,6 +274,7 @@ public partial class App : System.Windows.Application
     private void ExitApplication()
     {
         IsExiting = true;
+        Orderly.App.Helpers.ThemeHelper.Shutdown();
         if (_sessionLockService is not null)
         {
             _sessionLockService.LockStateChanged -= OnSessionLockStateChanged;

@@ -50,16 +50,16 @@
             <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
                 <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
                     <Border Background="#34C759" Width="10" Height="10" CornerRadius="2" VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <TextBlock Text="收入" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="收入" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
                     <Border Background="#FF9F0A" Width="10" Height="10" CornerRadius="2" VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <TextBlock Text="支出" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="支出" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Border Background="#5856D6" Width="16" Height="3" CornerRadius="1.5" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <Ellipse Fill="#5856D6" Width="6" Height="6" Stroke="White" StrokeThickness="1" VerticalAlignment="Center" Margin="-17,0,11,0" />
-                    <TextBlock Text="净现金流" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="净现金流" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
                 </StackPanel>
             </StackPanel>
         </Grid>

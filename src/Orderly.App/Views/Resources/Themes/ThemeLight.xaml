@@ -1,0 +1,33 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 浅色模式画笔资源 -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#2B7A5C" />
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="#EAF2EF" />
+    <SolidColorBrush x:Key="HeadingBrush" Color="#1D1D1F" />
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="#86868B" />
+    <SolidColorBrush x:Key="CaptionTextBrush" Color="#A0A5AF" />
+    <SolidColorBrush x:Key="SurfaceSoftBrush" Color="#F7F7F9" />
+    <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#EBF4EF" />
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#1F7A5A" />
+    <SolidColorBrush x:Key="WarmSoftBrush" Color="#FFF1E6" />
+    <SolidColorBrush x:Key="WarmTextBrush" Color="#D97A26" />
+    <SolidColorBrush x:Key="BlueSoftBrush" Color="#EBF3FB" />
+    <SolidColorBrush x:Key="BlueTextBrush" Color="#2F7FE6" />
+    <SolidColorBrush x:Key="PurpleSoftBrush" Color="#F2EBFC" />
+    <SolidColorBrush x:Key="PurpleTextBrush" Color="#7A3EDB" />
+    <SolidColorBrush x:Key="DangerSoftBrush" Color="#FFEDED" />
+    <SolidColorBrush x:Key="DangerBorderBrush" Color="#FDE2E2" />
+    <SolidColorBrush x:Key="DangerTextBrush" Color="#DE4C4A" />
+    <SolidColorBrush x:Key="GreySoftBrush" Color="#F2F4F7" />
+    <SolidColorBrush x:Key="GreyTextBrush" Color="#667085" />
+    <SolidColorBrush x:Key="BorderBrushSoft" Color="#DFE3EA" />
+    <SolidColorBrush x:Key="TimelineBrush" Color="#DFE3EA" />
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F5F5F7" />
+    
+    <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="MutedBrush" Color="#86868B" />
+    <SolidColorBrush x:Key="PremiumDarkBrush" Color="#17181C" />
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#FBFAF6" />
+    <SolidColorBrush x:Key="SidebarBrandBrush" Color="#17211D" />
+</ResourceDictionary>

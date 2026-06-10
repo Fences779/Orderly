@@ -56,10 +56,10 @@
                                         </Style>
                                     </Grid.Style>
                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource SurfaceSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,16">
-                                            <TextBlock Text="&#xE90A;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <Border Width="64" Height="64" CornerRadius="32" Background="{DynamicResource SurfaceSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,16">
+                                            <TextBlock Text="&#xE90A;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{DynamicResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                        <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" Margin="0,0,0,6">
+                                        <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" Margin="0,0,0,6">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Text" Value="暂无订单数据" />
@@ -89,7 +89,7 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Text="切换分类卡片或重置筛选条件试试" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="切换分类卡片或重置筛选条件试试" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" />
                                     </StackPanel>
                                 </Grid>
 

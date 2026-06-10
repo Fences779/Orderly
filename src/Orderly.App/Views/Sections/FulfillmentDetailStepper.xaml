@@ -11,7 +11,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="12" Padding="14,12" Margin="0,0,0,14" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+    <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="12" Padding="14,12" Margin="0,0,0,14" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -36,7 +36,7 @@
             </StackPanel>
 
             <!-- Line 1-2 -->
-            <Rectangle Grid.Column="1" Height="2" Width="16" Fill="{StaticResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector1Style}" />
+            <Rectangle Grid.Column="1" Height="2" Width="16" Fill="{DynamicResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector1Style}" />
 
             <!-- Node 2: 待制作 -->
             <StackPanel Grid.Column="2" HorizontalAlignment="Center" Cursor="Hand" Tag="pending_make" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为待制作状态">
@@ -47,7 +47,7 @@
             </StackPanel>
 
             <!-- Line 2-3 -->
-            <Rectangle Grid.Column="3" Height="2" Width="16" Fill="{StaticResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector2Style}" />
+            <Rectangle Grid.Column="3" Height="2" Width="16" Fill="{DynamicResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector2Style}" />
 
             <!-- Node 3: 制作中 -->
             <StackPanel Grid.Column="4" HorizontalAlignment="Center" Cursor="Hand" Tag="making" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为制作中状态">
@@ -58,7 +58,7 @@
             </StackPanel>
 
             <!-- Line 3-4 -->
-            <Rectangle Grid.Column="5" Height="2" Width="16" Fill="{StaticResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector3Style}" />
+            <Rectangle Grid.Column="5" Height="2" Width="16" Fill="{DynamicResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector3Style}" />
 
             <!-- Node 4: 待发货 -->
             <StackPanel Grid.Column="6" HorizontalAlignment="Center" Cursor="Hand" Tag="ready_to_ship" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为待发货状态">
@@ -69,7 +69,7 @@
             </StackPanel>
 
             <!-- Line 4-5 -->
-            <Rectangle Grid.Column="7" Height="2" Width="16" Fill="{StaticResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector4Style}" />
+            <Rectangle Grid.Column="7" Height="2" Width="16" Fill="{DynamicResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector4Style}" />
 
             <!-- Node 5: 已发货 -->
             <StackPanel Grid.Column="8" HorizontalAlignment="Center" Cursor="Hand" Tag="shipped" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为已发货状态">
@@ -80,7 +80,7 @@
             </StackPanel>
 
             <!-- Line 5-6 -->
-            <Rectangle Grid.Column="9" Height="2" Width="16" Fill="{StaticResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector5Style}" />
+            <Rectangle Grid.Column="9" Height="2" Width="16" Fill="{DynamicResource BorderBrushSoft}" VerticalAlignment="Center" Margin="-4,0,-4,12" Style="{StaticResource StepperConnector5Style}" />
 
             <!-- Node 6: 已完成 -->
             <StackPanel Grid.Column="10" HorizontalAlignment="Center" Cursor="Hand" Tag="completed" MouseLeftButtonDown="StepperNode_MouseLeftButtonDown" ToolTip="点击标记为已完成状态">

@@ -24,7 +24,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Card 4: 待发货 (紫色) -->
-        <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="16,14">
+        <Border Grid.Column="6" Background="#FFFFFF" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="16,14">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
             </Border.Effect>
@@ -33,18 +33,18 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="{StaticResource PurpleSoftBrush}" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,0,12,0">
-                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource PurpleTextBrush}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="{DynamicResource PurpleSoftBrush}" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource PurpleTextBrush}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="待发货" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
-                    <TextBlock Text="{Binding StringNarrationWorkbenchReadyToShipCountText, FallbackValue=0}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                    <TextBlock Text="待发货" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding StringNarrationWorkbenchReadyToShipCountText, FallbackValue=0}" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,6,0,0" />
                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <TextBlock Text="较昨日" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
+                        <TextBlock Text="较昨日" FontSize="11" Foreground="{DynamicResource CaptionTextBrush}" />
                         <TextBlock Text="{Binding StringNarrationWorkbenchReadyToShipDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsStringNarrationWorkbenchReadyToShipDeltaPositive}" Value="True">
                                             <Setter Property="Foreground" Value="#DE4C4A" />
@@ -89,7 +89,7 @@
         </Border>
 
         <!-- Card 5: 异常订单 (红色) -->
-        <Border Grid.Column="8" Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="16,14">
+        <Border Grid.Column="8" Background="#FFFFFF" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="16,14">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.03"/>
             </Border.Effect>
@@ -98,18 +98,18 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="{StaticResource DangerSoftBrush}" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,0,12,0">
-                    <TextBlock Text="&#xE7C1;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource DangerTextBrush}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" Background="{DynamicResource DangerSoftBrush}" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="&#xE7C1;" FontFamily="Segoe MDL2 Assets" Foreground="{DynamicResource DangerTextBrush}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="异常订单" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
-                    <TextBlock Text="{Binding StringNarrationWorkbenchExceptionOrderCountText, FallbackValue=0}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,6,0,0" />
+                    <TextBlock Text="异常订单" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding StringNarrationWorkbenchExceptionOrderCountText, FallbackValue=0}" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,6,0,0" />
                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <TextBlock Text="较昨日" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
+                        <TextBlock Text="较昨日" FontSize="11" Foreground="{DynamicResource CaptionTextBrush}" />
                         <TextBlock Text="{Binding StringNarrationWorkbenchExceptionOrderDeltaText}" FontSize="11" FontWeight="SemiBold" Margin="4,0,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{StaticResource CaptionTextBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsStringNarrationWorkbenchExceptionOrderDeltaPositive}" Value="True">
                                             <Setter Property="Foreground" Value="#DE4C4A" />

@@ -2,12 +2,6 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <BitmapImage x:Key="OrderlyBrandLogoImage"
                  UriSource="pack://application:,,,/Assets/Brand/Orderly%20Logo.png" />
-    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F5F5F7" />
-    <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="MutedBrush" Color="#86868B" />
-    <SolidColorBrush x:Key="PrimaryBrush" Color="#2B7A5C" />
-    <SolidColorBrush x:Key="PremiumDarkBrush" Color="#17181C" />
-    <SolidColorBrush x:Key="BorderBrushSoft" Color="#DFE3EA" />
 
     <!-- 全局 Window 字体 -->
     <Style TargetType="Window">

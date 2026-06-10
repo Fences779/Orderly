@@ -166,7 +166,7 @@
                                     <Grid Margin="0,0,0,10">
                                         <TextBlock Text="显示字段" FontWeight="Bold" FontSize="13" Foreground="#1D1D1F" VerticalAlignment="Center" />
                                         <Button Content="重置" Command="{Binding SwitchInventoryViewCommand}" CommandParameter="精简" 
-                                                Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" 
+                                                Style="{StaticResource SubtleActionButtonStyle}" Foreground="{DynamicResource BlueTextBrush}" 
                                                 FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
                                     <Separator Background="#F1F2F5" Margin="0,0,0,10" />
@@ -192,7 +192,7 @@
 
                                     <Separator Background="#F1F2F5" Margin="0,0,0,10" />
                                     <Button Content="恢复默认" Command="{Binding SwitchInventoryViewCommand}" CommandParameter="精简" 
-                                            Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" 
+                                            Style="{StaticResource SubtleActionButtonStyle}" Foreground="{DynamicResource BlueTextBrush}" 
                                             FontSize="11" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </Border>

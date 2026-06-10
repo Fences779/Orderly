@@ -15,7 +15,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-    <Border Padding="16" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+    <Border Padding="16" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1">
         <DockPanel>
             <StackPanel DockPanel.Dock="Top">
                 <DockPanel>
@@ -23,7 +23,7 @@
                             Height="28"
                             Background="#FFFFFF"
                             CornerRadius="10"
-                            BorderBrush="{StaticResource BorderBrushSoft}"
+                            BorderBrush="{DynamicResource BorderBrushSoft}"
                             BorderThickness="1"
                             Margin="0,0,10,0">
                         <Image Source="{StaticResource OrderlyBrandLogoImage}"
@@ -53,7 +53,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap" />
             </StackPanel>
 
             <ListBox ItemsSource="{Binding Orders}" BorderThickness="0" Background="Transparent">
@@ -62,7 +62,7 @@
                         <Border Padding="8" Margin="0,0,0,8" Background="#F7F5EF" CornerRadius="6">
                             <StackPanel>
                                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding CustomerName}" Foreground="{StaticResource MutedBrush}" />
+                                <TextBlock Text="{Binding CustomerName}" Foreground="{DynamicResource MutedBrush}" />
                                 <TextBlock Text="{Binding StatusLabel}" Foreground="#1F7A5A" />
                             </StackPanel>
                         </Border>

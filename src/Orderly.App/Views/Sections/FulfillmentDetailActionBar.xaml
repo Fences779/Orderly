@@ -18,7 +18,7 @@
 
         <StackPanel Grid.Column="0" Orientation="Horizontal">
             <Button Content="联系客户" Style="{StaticResource DialogSecondaryButtonStyle}" Height="36" Padding="14,0" Margin="0,0,8,0" />
-            <Button Content="异常处理" Style="{StaticResource DialogSecondaryButtonStyle}" Height="36" Padding="14,0" Foreground="{StaticResource DangerTextBrush}" Tag="exception" Click="QuickFulfillmentUpdate_Click" />
+            <Button Content="异常处理" Style="{StaticResource DialogSecondaryButtonStyle}" Height="36" Padding="14,0" Foreground="{DynamicResource DangerTextBrush}" Tag="exception" Click="QuickFulfillmentUpdate_Click" />
         </StackPanel>
 
         <Grid Grid.Column="1">

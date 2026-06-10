@@ -19,16 +19,16 @@
         <StackPanel>
             <TextBlock Text="现金流健康" Style="{StaticResource SectionHeaderTextStyle}" FontSize="20" FontWeight="Bold" />
             <StackPanel Orientation="Horizontal" Margin="0,6,0,0" VerticalAlignment="Center">
-                <TextBlock Text="掌握资金流动，做出更好的经营决策" Style="{StaticResource CaptionTextStyle}" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource CaptionTextBrush}" Margin="6,1,0,0" VerticalAlignment="Center" ToolTip="基于近30天的收支动向评估现金流状况" />
+                <TextBlock Text="掌握资金流动，做出更好的经营决策" Style="{StaticResource CaptionTextStyle}" Foreground="{DynamicResource SecondaryTextBrush}" />
+                <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{DynamicResource CaptionTextBrush}" Margin="6,1,0,0" VerticalAlignment="Center" ToolTip="基于近30天的收支动向评估现金流状况" />
             </StackPanel>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
             <TextBlock Text="{Binding CashflowUpdatedAtText, Mode=OneWay, StringFormat=数据更新：{0}}" Style="{StaticResource CaptionTextStyle}" VerticalAlignment="Center" Margin="0,0,16,0" />
-            <Border Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="12,6" Margin="0,0,12,0">
+            <Border Background="{DynamicResource SurfaceRaisedBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="12,6" Margin="0,0,12,0">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="2024-05-14 ~ 2024-06-12" FontSize="12" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="&#xE787;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="2024-05-14 ~ 2024-06-12" FontSize="12" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
                 </StackPanel>
             </Border>
             <Button Content="刷新数据" Command="{Binding RefreshCashflowCommand}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Margin="0" Height="32" Padding="16,0" MinWidth="80" />

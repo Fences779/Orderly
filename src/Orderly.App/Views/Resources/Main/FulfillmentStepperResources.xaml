@@ -7,40 +7,40 @@
 
     <!-- Node 1: 待确认 -->
     <Style x:Key="StepperNode1BorderStyle" TargetType="Border">
-        <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-        <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="paid_pending_confirm">
-                <Setter Property="Background" Value="{StaticResource BlueSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource BlueTextBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource BlueTextBrush}" />
+                <Setter Property="Background" Value="{DynamicResource BlueSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BlueTextBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource BlueTextBrush}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="StepperNode1LabelStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="paid_pending_confirm">
-                <Setter Property="Foreground" Value="{StaticResource BlueTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BlueTextBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="pending_make"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="pending_make"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
     <!-- Line 1-2 -->
     <Style x:Key="StepperConnector1Style" TargetType="Rectangle">
         <Style.Triggers>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="pending_make"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="pending_make"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -48,56 +48,56 @@
     <Style x:Key="StepperNode2BorderStyle" TargetType="Border">
         <Setter Property="Background" Value="White" />
         <Setter Property="BorderBrush" Value="#D0D4D9" />
-        <Setter Property="TextElement.Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="pending_make">
-                <Setter Property="Background" Value="{StaticResource WarmSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource WarmTextBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource WarmTextBrush}" />
+                <Setter Property="Background" Value="{DynamicResource WarmSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource WarmTextBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource WarmTextBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="StepperNode2LabelStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="pending_make">
-                <Setter Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource WarmTextBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
     <!-- Line 2-3 -->
     <Style x:Key="StepperConnector2Style" TargetType="Rectangle">
         <Style.Triggers>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -105,49 +105,49 @@
     <Style x:Key="StepperNode3BorderStyle" TargetType="Border">
         <Setter Property="Background" Value="White" />
         <Setter Property="BorderBrush" Value="#D0D4D9" />
-        <Setter Property="TextElement.Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making">
-                <Setter Property="Background" Value="{StaticResource PurpleSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource PurpleTextBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource PurpleTextBrush}" />
+                <Setter Property="Background" Value="{DynamicResource PurpleSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource PurpleTextBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource PurpleTextBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="StepperNode3LabelStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="making">
-                <Setter Property="Foreground" Value="{StaticResource PurpleTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource PurpleTextBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
     <!-- Line 3-4 -->
     <Style x:Key="StepperConnector3Style" TargetType="Rectangle">
         <Style.Triggers>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -155,42 +155,42 @@
     <Style x:Key="StepperNode4BorderStyle" TargetType="Border">
         <Setter Property="Background" Value="White" />
         <Setter Property="BorderBrush" Value="#D0D4D9" />
-        <Setter Property="TextElement.Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship">
-                <Setter Property="Background" Value="{StaticResource BlueSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource BlueTextBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource BlueTextBrush}" />
+                <Setter Property="Background" Value="{DynamicResource BlueSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BlueTextBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource BlueTextBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="StepperNode4LabelStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="ready_to_ship">
-                <Setter Property="Foreground" Value="{StaticResource BlueTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BlueTextBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
     <!-- Line 4-5 -->
     <Style x:Key="StepperConnector4Style" TargetType="Rectangle">
         <Style.Triggers>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -198,35 +198,35 @@
     <Style x:Key="StepperNode5BorderStyle" TargetType="Border">
         <Setter Property="Background" Value="White" />
         <Setter Property="BorderBrush" Value="#D0D4D9" />
-        <Setter Property="TextElement.Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped">
-                <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource PrimaryBrush}" />
+                <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource PrimaryBrush}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource HeadingBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource HeadingBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource HeadingBrush}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="StepperNode5LabelStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="shipped">
-                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
     <!-- Line 5-6 -->
     <Style x:Key="StepperConnector5Style" TargetType="Rectangle">
         <Style.Triggers>
-            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{StaticResource HeadingBrush}" /></DataTrigger>
+            <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed"><Setter Property="Fill" Value="{DynamicResource HeadingBrush}" /></DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -234,20 +234,20 @@
     <Style x:Key="StepperNode6BorderStyle" TargetType="Border">
         <Setter Property="Background" Value="White" />
         <Setter Property="BorderBrush" Value="#D0D4D9" />
-        <Setter Property="TextElement.Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed">
-                <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
-                <Setter Property="BorderBrush" Value="{StaticResource AccentTextBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{StaticResource AccentTextBrush}" />
+                <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentTextBrush}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
     <Style x:Key="StepperNode6LabelStyle" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding SelectedStringNarrationOrderDetail.FulfillmentStatus}" Value="completed">
-                <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </DataTrigger>
         </Style.Triggers>

@@ -10,21 +10,20 @@ namespace Orderly.Data.Services;
 public sealed class LocalAuthService : ILocalAuthService
 {
     private const string GenericSignInFailureMessage = "账号不存在或主密码错误。";
-    private const int MaxCredentialFailuresBeforeCooldown = 5;
-    private static readonly TimeSpan CredentialFailureCooldown = TimeSpan.FromMinutes(5);
 
     private readonly ILocalAccountRepository _accountRepository;
+    private readonly CredentialAttemptTracker _credentialAttemptTracker;
     private readonly ILegacyDatabaseMigrationService _legacyMigrationService;
     private readonly ISessionContextService _sessionContextService;
-    private readonly object _credentialAttemptsLock = new();
-    private readonly Dictionary<string, CredentialAttemptState> _credentialAttempts = new(StringComparer.Ordinal);
 
     public LocalAuthService(
         ILocalAccountRepository accountRepository,
         ILegacyDatabaseMigrationService legacyMigrationService,
-        ISessionContextService sessionContextService)
+        ISessionContextService sessionContextService,
+        CredentialAttemptTracker? credentialAttemptTracker = null)
     {
         _accountRepository = accountRepository;
+        _credentialAttemptTracker = credentialAttemptTracker ?? new CredentialAttemptTracker();
         _legacyMigrationService = legacyMigrationService;
         _sessionContextService = sessionContextService;
     }
@@ -375,84 +374,21 @@ public sealed class LocalAuthService : ILocalAuthService
 
     private bool IsCredentialAttemptBlocked(string purpose, string identifier)
     {
-        var key = BuildCredentialAttemptKey(purpose, identifier);
-        var now = DateTimeOffset.UtcNow;
-        lock (_credentialAttemptsLock)
-        {
-            if (!_credentialAttempts.TryGetValue(key, out var state))
-            {
-                return false;
-            }
-
-            if (state.LockedUntil > now)
-            {
-                return true;
-            }
-
-            if (state.LockedUntil != default)
-            {
-                _credentialAttempts.Remove(key);
-            }
-
-            return false;
-        }
+        return _credentialAttemptTracker.IsBlocked(purpose, identifier);
     }
 
     private void RecordCredentialResult(string purpose, string identifier, bool success)
     {
-        if (success)
-        {
-            ClearCredentialFailures(purpose, identifier);
-            return;
-        }
-
-        RecordCredentialFailure(purpose, identifier);
+        _credentialAttemptTracker.RecordResult(purpose, identifier, success);
     }
 
     private void RecordCredentialFailure(string purpose, string identifier)
     {
-        var key = BuildCredentialAttemptKey(purpose, identifier);
-        var now = DateTimeOffset.UtcNow;
-        lock (_credentialAttemptsLock)
-        {
-            if (_credentialAttempts.TryGetValue(key, out var state) && state.LockedUntil > now)
-            {
-                return;
-            }
-
-            if (state is null || state.LockedUntil != default)
-            {
-                state = new CredentialAttemptState();
-                _credentialAttempts[key] = state;
-            }
-
-            state.FailedCount++;
-            if (state.FailedCount >= MaxCredentialFailuresBeforeCooldown)
-            {
-                state.FailedCount = 0;
-                state.LockedUntil = now.Add(CredentialFailureCooldown);
-            }
-        }
+        _credentialAttemptTracker.RecordFailure(purpose, identifier);
     }
 
     private void ClearCredentialFailures(string purpose, string identifier)
     {
-        var key = BuildCredentialAttemptKey(purpose, identifier);
-        lock (_credentialAttemptsLock)
-        {
-            _credentialAttempts.Remove(key);
-        }
-    }
-
-    private static string BuildCredentialAttemptKey(string purpose, string identifier)
-    {
-        return purpose + ":" + identifier.Trim().ToLowerInvariant();
-    }
-
-    private sealed class CredentialAttemptState
-    {
-        public int FailedCount { get; set; }
-
-        public DateTimeOffset LockedUntil { get; set; }
+        _credentialAttemptTracker.ClearFailures(purpose, identifier);
     }
 }

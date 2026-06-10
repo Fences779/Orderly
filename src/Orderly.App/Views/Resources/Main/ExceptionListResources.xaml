@@ -13,7 +13,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
                     <Grid Margin="6">
-                        <Border x:Name="CardBorder" Background="{StaticResource SurfaceRaisedBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="14" RenderTransformOrigin="0.5,0.5">
+                        <Border x:Name="CardBorder" Background="{DynamicResource SurfaceRaisedBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="12" Padding="14" RenderTransformOrigin="0.5,0.5">
                             <Border.RenderTransform>
                                 <TranslateTransform x:Name="CardTransform" Y="0" />
                             </Border.RenderTransform>
@@ -88,8 +88,8 @@
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.ExitActions>
-                            <Setter TargetName="CardBorder" Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                            <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+                            <Setter TargetName="CardBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                            <Setter TargetName="CardBorder" Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
                             <Setter TargetName="ActiveIndicator" Property="Visibility" Value="Visible" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -108,23 +108,23 @@
             </Grid.ColumnDefinitions>
 
             <!-- 警告图标 -->
-            <Border x:Name="IconBorder" Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{StaticResource GreySoftBrush}" VerticalAlignment="Center">
-                <TextBlock x:Name="IconText" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource GreyTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Border x:Name="IconBorder" Grid.Column="0" Width="36" Height="36" CornerRadius="18" Background="{DynamicResource GreySoftBrush}" VerticalAlignment="Center">
+                <TextBlock x:Name="IconText" Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{DynamicResource GreyTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
 
             <!-- 主要信息 -->
             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                    <TextBlock Text="{Binding Exception.ExceptionCategoryLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
-                    <Border x:Name="PriorityTag" Margin="8,0,0,0" Padding="6,1.5" CornerRadius="4" Background="{StaticResource GreySoftBrush}" VerticalAlignment="Center">
-                        <TextBlock x:Name="PriorityTagText" Text="{Binding Exception.LevelText}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource GreyTextBrush}" />
+                    <TextBlock Text="{Binding Exception.ExceptionCategoryLabel}" FontSize="13.5" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
+                    <Border x:Name="PriorityTag" Margin="8,0,0,0" Padding="6,1.5" CornerRadius="4" Background="{DynamicResource GreySoftBrush}" VerticalAlignment="Center">
+                        <TextBlock x:Name="PriorityTagText" Text="{Binding Exception.LevelText}" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource GreyTextBrush}" />
                     </Border>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding OrderNoText}" FontSize="11.5" Foreground="{StaticResource SecondaryTextBrush}" FontWeight="Medium" />
-                    <TextBlock Text="|" Foreground="{StaticResource BorderBrushSoft}" Margin="6,0" />
-                    <TextBlock Text="{Binding ReceiverSummaryText}" FontSize="11.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding OrderNoText}" FontSize="11.5" Foreground="{DynamicResource SecondaryTextBrush}" FontWeight="Medium" />
+                    <TextBlock Text="|" Foreground="{DynamicResource BorderBrushSoft}" Margin="6,0" />
+                    <TextBlock Text="{Binding ReceiverSummaryText}" FontSize="11.5" Foreground="{DynamicResource SecondaryTextBrush}" />
                 </StackPanel>
             </StackPanel>
 
@@ -132,10 +132,10 @@
         <DataTemplate.Triggers>
             <!-- 根据严重程度改变颜色 -->
             <DataTrigger Binding="{Binding Exception.SeverityCategory}" Value="Money">
-                <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource DangerSoftBrush}" />
-                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource DangerTextBrush}" />
-                <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource DangerSoftBrush}" />
-                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                <Setter TargetName="IconBorder" Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+                <Setter TargetName="IconText" Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                <Setter TargetName="PriorityTag" Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
                 <DataTrigger.EnterActions>
                     <BeginStoryboard>
                         <Storyboard>
@@ -146,10 +146,10 @@
                 </DataTrigger.EnterActions>
             </DataTrigger>
             <DataTrigger Binding="{Binding Exception.SeverityCategory}" Value="Warning">
-                <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource WarmSoftBrush}" />
-                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
-                <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource WarmSoftBrush}" />
-                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                <Setter TargetName="IconBorder" Property="Background" Value="{DynamicResource WarmSoftBrush}" />
+                <Setter TargetName="IconText" Property="Foreground" Value="{DynamicResource WarmTextBrush}" />
+                <Setter TargetName="PriorityTag" Property="Background" Value="{DynamicResource WarmSoftBrush}" />
+                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{DynamicResource WarmTextBrush}" />
                 <DataTrigger.EnterActions>
                     <BeginStoryboard>
                         <Storyboard>
@@ -161,11 +161,11 @@
             </DataTrigger>
             <!-- 已解决，淡化 -->
             <DataTrigger Binding="{Binding Exception.IsResolved}" Value="True">
-                <Setter TargetName="IconBorder" Property="Background" Value="{StaticResource AccentSoftBrush}" />
-                <Setter TargetName="IconText" Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                <Setter TargetName="IconBorder" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                <Setter TargetName="IconText" Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
                 <Setter TargetName="IconText" Property="Text" Value="&#xE73E;" />
-                <Setter TargetName="PriorityTag" Property="Background" Value="{StaticResource AccentSoftBrush}" />
-                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                <Setter TargetName="PriorityTag" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                <Setter TargetName="PriorityTagText" Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
                 <Setter TargetName="PriorityTagText" Property="Text" Value="已解决" />
                 <DataTrigger.EnterActions>
                     <BeginStoryboard>

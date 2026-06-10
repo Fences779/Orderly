@@ -45,7 +45,8 @@ public partial class MainViewModel
         string successMessage,
         string errorTitle,
         string errorStatusPrefix,
-        Func<Task> action)
+        Func<Task> action,
+        bool suppressBusyAndSuccessStatus = false)
     {
         if (IsBusy)
         {
@@ -55,9 +56,16 @@ public partial class MainViewModel
         try
         {
             IsSaving = true;
-            StatusMessage = busyMessage;
+            if (!suppressBusyAndSuccessStatus)
+            {
+                StatusMessage = busyMessage;
+            }
+
             await action();
-            StatusMessage = successMessage;
+            if (!suppressBusyAndSuccessStatus)
+            {
+                StatusMessage = successMessage;
+            }
         }
         catch (Exception ex)
         {

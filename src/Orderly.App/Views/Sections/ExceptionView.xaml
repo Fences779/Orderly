@@ -25,7 +25,7 @@
                 <!-- 搜索框 -->
                 <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="36" Padding="32,0,10,0"
                          Text="{Binding ExceptionKeyword, UpdateSourceTrigger=PropertyChanged}" />
-                <TextBlock Text="🔍 搜索订单号/客户昵称/异常原因..." Foreground="{StaticResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="32,0,0,0" IsHitTestVisible="False">
+                <TextBlock Text="🔍 搜索订单号/客户昵称/异常原因..." Foreground="{DynamicResource CaptionTextBrush}" FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="32,0,0,0" IsHitTestVisible="False">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -109,7 +109,7 @@
                                FontFamily="Segoe MDL2 Assets"
                                FontSize="30"
                                FontWeight="Bold"
-                               Foreground="{StaticResource HeadingBrush}"
+                               Foreground="{DynamicResource HeadingBrush}"
                                HorizontalAlignment="Center"
                                RenderTransformOrigin="0.5,0.5"
                                Margin="0,0,0,12">
@@ -140,7 +140,7 @@
                     <TextBlock Text="{Binding ExceptionStatusMessage}"
                                FontSize="13"
                                FontWeight="Bold"
-                               Foreground="{StaticResource HeadingBrush}"
+                               Foreground="{DynamicResource HeadingBrush}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
             </Grid>

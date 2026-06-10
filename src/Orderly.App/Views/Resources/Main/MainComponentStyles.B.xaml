@@ -7,7 +7,7 @@
     </ResourceDictionary.MergedDictionaries>
     <Style x:Key="ExceptionActionCardButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="#F5F5F7" />
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="4" />
         <Setter Property="Cursor" Value="Hand" />
@@ -86,7 +86,7 @@
 
     <Style x:Key="ExceptionCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Cursor" Value="Hand" />
@@ -149,17 +149,17 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
-                <Setter Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
 
     <Style x:Key="PageSizeMenuButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Height" Value="30" />
@@ -175,8 +175,8 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="BgBorder" Property="Background" Value="{StaticResource SurfaceSoftBrush}" />
-                            <Setter Property="Foreground" Value="{StaticResource HeadingBrush}" />
+                            <Setter TargetName="BgBorder" Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -201,7 +201,7 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+                <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Opacity" Value="0.3" />

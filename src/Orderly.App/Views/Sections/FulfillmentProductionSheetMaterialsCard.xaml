@@ -10,11 +10,11 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-                                                 <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,12">
+                                                 <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="12" Padding="14" Margin="0,0,0,12">
                                                      <StackPanel>
                                                          <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                                             <TextBlock Text="&#xE814;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                                                             <TextBlock Text="原料清单" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" VerticalAlignment="Center" />
+                                                             <TextBlock Text="&#xE814;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                             <TextBlock Text="原料清单" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
                                                          </StackPanel>
                                                          <ItemsControl ItemsSource="{Binding StringNarrationProductionSheetMaterials}">
                                                              <ItemsControl.Style>
@@ -29,24 +29,24 @@
                                                              </ItemsControl.Style>
                                                              <ItemsControl.ItemTemplate>
                                                                  <DataTemplate>
-                                                                     <Border Background="#FFFFFF" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,6">
+                                                                     <Border Background="#FFFFFF" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,6">
                                                                          <Grid>
                                                                              <Grid.ColumnDefinitions>
                                                                                  <ColumnDefinition Width="Auto" />
                                                                                  <ColumnDefinition Width="*" />
                                                                                  <ColumnDefinition Width="Auto" />
                                                                              </Grid.ColumnDefinitions>
-                                                                             <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{StaticResource PrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                                                             <TextBlock Grid.Column="1" Text="{Binding MaterialNameText}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" Margin="0,0,12,0" VerticalAlignment="Center" />
-                                                                             <Border Grid.Column="2" Background="{StaticResource AccentSoftBrush}" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                                                                                 <TextBlock Text="{Binding QuantityDisplayText}" FontSize="11" Foreground="{StaticResource AccentTextBrush}" FontWeight="Bold" />
+                                                                             <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{DynamicResource PrimaryBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                                             <TextBlock Grid.Column="1" Text="{Binding MaterialNameText}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" TextWrapping="Wrap" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                                                             <Border Grid.Column="2" Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                                                                 <TextBlock Text="{Binding QuantityDisplayText}" FontSize="11" Foreground="{DynamicResource AccentTextBrush}" FontWeight="Bold" />
                                                                              </Border>
                                                                          </Grid>
                                                                      </Border>
                                                                  </DataTemplate>
                                                              </ItemsControl.ItemTemplate>
                                                          </ItemsControl>
-                                                         <TextBlock Text="未提供原料清单" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}">
+                                                         <TextBlock Text="未提供原料清单" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}">
                                                              <TextBlock.Style>
                                                                  <Style TargetType="TextBlock">
                                                                      <Setter Property="Visibility" Value="Collapsed" />

@@ -48,13 +48,14 @@ public partial class App
 
         var launcherConnectionFactory = _launcherConnectionFactory ?? throw new InvalidOperationException("Launcher connection factory is not initialized.");
         var accountRepository = new LocalAccountRepository(launcherConnectionFactory);
+        var credentialAttemptTracker = new CredentialAttemptTracker();
         var legacyMigrationService = new LegacyDatabaseMigrationService();
 
         _sessionContextService = new SessionContextService();
         _sessionLockService = new SessionLockService();
         _fieldEncryptionService = new FieldEncryptionService(_sessionContextService);
-        _localAuthService = new LocalAuthService(accountRepository, legacyMigrationService, _sessionContextService);
-        _localAccountManagementService = new LocalAccountManagementService(accountRepository, _sessionContextService);
+        _localAuthService = new LocalAuthService(accountRepository, legacyMigrationService, _sessionContextService, credentialAttemptTracker);
+        _localAccountManagementService = new LocalAccountManagementService(accountRepository, _sessionContextService, credentialAttemptTracker);
 
         _sessionLockService.LockStateChanged += OnSessionLockStateChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -262,6 +263,7 @@ public partial class App
 
         if (DemoDataSeeder.IsRequested(_startupArgs))
         {
+            EnsurePrivilegedStartupModesAllowed();
             var demoDataSeeder = new DemoDataSeeder(_connectionFactory);
             await demoDataSeeder.SeedIfNeededAsync();
             Console.WriteLine("Demo data seeding checked");
@@ -269,6 +271,7 @@ public partial class App
 
         if (QaDataSeeder.IsRequested(_startupArgs))
         {
+            EnsurePrivilegedStartupModesAllowed();
             var qaDataSeeder = new QaDataSeeder(_connectionFactory);
             var qaSeedResult = await qaDataSeeder.SeedIfNeededAsync();
             Console.WriteLine($"QA data seeding checked: {qaSeedResult}");

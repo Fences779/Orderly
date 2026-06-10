@@ -8,7 +8,7 @@
         MinHeight="200"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{StaticResource PageBackgroundBrush}"
+        Background="{DynamicResource PageBackgroundBrush}"
         AutomationProperties.AutomationId="SnoozeFollowUpDialog">
     <Window.Resources>
         <ResourceDictionary>
@@ -27,12 +27,12 @@
         <!-- 标题区 -->
         <Border Grid.Row="0"
                 Background="#FFFDF8"
-                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
                 BorderThickness="0,0,0,1"
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="延期跟进" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="重新安排这次跟进的时间" Foreground="{StaticResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="重新安排这次跟进的时间" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
             </StackPanel>
         </Border>
 
@@ -45,7 +45,7 @@
 
             <TextBlock Grid.Row="0" Style="{StaticResource DialogFieldLabelStyle}">
                 <Run Text="新的跟进时间" />
-                <Run Text="（格式：2026-04-28 14:30）" Foreground="{StaticResource MutedBrush}" FontWeight="Normal" />
+                <Run Text="（格式：2026-04-28 14:30）" Foreground="{DynamicResource MutedBrush}" FontWeight="Normal" />
             </TextBlock>
             <TextBox x:Name="ScheduledAtTextBox"
                      Grid.Row="1"
@@ -55,7 +55,7 @@
         <!-- 底部操作栏 -->
         <Border Grid.Row="2"
                 Background="#FFFDF8"
-                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
                 BorderThickness="0,1,0,0"
                 Padding="22,14">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

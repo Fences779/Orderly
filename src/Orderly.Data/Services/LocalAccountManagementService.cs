@@ -10,13 +10,16 @@ namespace Orderly.Data.Services;
 public sealed partial class LocalAccountManagementService : ILocalAccountManagementService
 {
     private readonly ILocalAccountRepository _accountRepository;
+    private readonly CredentialAttemptTracker _credentialAttemptTracker;
     private readonly ISessionContextService _sessionContextService;
 
     public LocalAccountManagementService(
         ILocalAccountRepository accountRepository,
-        ISessionContextService sessionContextService)
+        ISessionContextService sessionContextService,
+        CredentialAttemptTracker? credentialAttemptTracker = null)
     {
         _accountRepository = accountRepository;
+        _credentialAttemptTracker = credentialAttemptTracker ?? new CredentialAttemptTracker();
         _sessionContextService = sessionContextService;
     }
 
@@ -167,35 +170,16 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
         string targetAccountId,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(ownerUsername)
-            || string.IsNullOrWhiteSpace(ownerMasterPassword)
-            || string.IsNullOrWhiteSpace(ownerPin)
-            || string.IsNullOrWhiteSpace(targetAccountId))
+        if (string.IsNullOrWhiteSpace(targetAccountId))
         {
             throw new InvalidOperationException("删除账号所需的主账号验证信息不完整。");
         }
 
-        if (!LocalCredentialSecurity.IsValidPin(ownerPin.Trim()))
-        {
-            throw new InvalidOperationException("PIN 必须为 6 位数字。");
-        }
-
-        var normalizedOwnerUsername = LocalCredentialSecurity.NormalizeAccountUsername(ownerUsername);
-        var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken);
-        if (owner is null || owner.Role != LocalAccountRole.Owner || !owner.IsEnabled)
-        {
-            throw new InvalidOperationException("主账号不存在或不可用。");
-        }
-
-        if (!LocalCredentialSecurity.VerifyHash(ownerMasterPassword, owner.PasswordSalt, owner.PasswordIterations, owner.PasswordHash))
-        {
-            throw new InvalidOperationException("主账号主密码错误。");
-        }
-
-        if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
-        {
-            throw new InvalidOperationException("主账号 PIN 错误。");
-        }
+        var owner = await VerifyOwnerIdentityInternalAsync(
+            ownerUsername,
+            ownerMasterPassword,
+            ownerPin,
+            cancellationToken);
 
         var target = await GetAccountRequiredAsync(targetAccountId, cancellationToken);
         if (target.Role == LocalAccountRole.Owner)

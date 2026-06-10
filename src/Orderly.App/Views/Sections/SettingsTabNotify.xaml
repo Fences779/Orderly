@@ -223,23 +223,6 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- 保存配置按钮 -->
-                            <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0" Margin="0,16,0,0">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                        <TextBlock Text="保存提醒配置" Style="{StaticResource SettingsItemTitleStyle}" />
-                                        <TextBlock Text="保存当前设定的各项事件预警提醒阈值" Style="{StaticResource SettingsItemDescStyle}" />
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Content="保存并应用" 
-                                            Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="36" Padding="16,0" VerticalAlignment="Center"
-                                            Command="{Binding SaveP0SettingsCommand}"
-                                            AutomationProperties.AutomationId="Btn_SavePreferences_Notifications" />
-                                </Grid>
-                            </Border>
                         </StackPanel>
                     </Grid>
                 </ScrollViewer>

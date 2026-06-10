@@ -16,7 +16,7 @@
         <Grid>
             <DockPanel>
             <!-- 分页 -->
-            <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
+            <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,10,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -24,20 +24,20 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="共 " Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
-                        <TextBlock Text="{Binding ExceptionTotalCount, FallbackValue=0}" Foreground="{StaticResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
-                        <TextBlock Text=" 条数据" Foreground="{StaticResource SecondaryTextBrush}" FontSize="12" />
+                        <TextBlock Text="共 " Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" />
+                        <TextBlock Text="{Binding ExceptionTotalCount, FallbackValue=0}" Foreground="{DynamicResource HeadingBrush}" FontWeight="SemiBold" FontSize="12" />
+                        <TextBlock Text=" 条数据" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" />
                     </StackPanel>
-                    <Border Grid.Column="1" Background="{StaticResource SurfaceSoftBrush}" BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="15" Height="30" Padding="1,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border Grid.Column="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="15" Height="30" Padding="1,0" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateExceptionPrevPageCommand}" ToolTip="上一页">
-                                <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                <TextBlock Text="&#xE76B;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
                             </Button>
                             <Border Padding="10,0" Background="Transparent" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding ExceptionPageLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" />
+                                <TextBlock Text="{Binding ExceptionPageLabel}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" />
                             </Border>
                             <Button Style="{StaticResource CapsulePageButtonStyle}" Command="{Binding NavigateExceptionNextPageCommand}" ToolTip="下一页">
-                                <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" />
+                                <TextBlock Text="&#xE76C;" FontFamily="Segoe MDL2 Assets" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
                             </Button>
                         </StackPanel>
                     </Border>
@@ -47,11 +47,11 @@
                                       IsChecked="{Binding IsExceptionPageSizePopupOpen2, Mode=TwoWay}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding ExceptionPageSize, StringFormat={}{0} 条/页}"
-                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
                                            FontSize="12"
                                            VerticalAlignment="Center"/>
                                 <TextBlock Text=" ▾"
-                                           Foreground="{StaticResource SecondaryTextBrush}"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
                                            FontSize="10"
                                            VerticalAlignment="Center"
                                            Margin="2,0,0,0"/>
@@ -63,8 +63,8 @@
                                IsOpen="{Binding IsExceptionPageSizePopupOpen2, Mode=TwoWay}"
                                StaysOpen="False"
                                AllowsTransparency="True">
-                            <Border Background="{StaticResource SurfaceRaisedBrush}"
-                                    BorderBrush="{StaticResource BorderBrushSoft}"
+                            <Border Background="{DynamicResource SurfaceRaisedBrush}"
+                                    BorderBrush="{DynamicResource BorderBrushSoft}"
                                     BorderThickness="1"
                                     CornerRadius="8"
                                     Padding="4"
@@ -110,10 +110,10 @@
                         </Style>
                     </Grid.Style>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource SurfaceSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,16">
-                            <TextBlock Text="&#xE90A;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{StaticResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border Width="64" Height="64" CornerRadius="32" Background="{DynamicResource SurfaceSoftBrush}" HorizontalAlignment="Center" Margin="0,0,0,16">
+                            <TextBlock Text="&#xE90A;" FontFamily="Segoe MDL2 Assets" FontSize="28" Foreground="{DynamicResource CaptionTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <TextBlock Text="{Binding ExceptionOrdersEmptyStateText}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                        <TextBlock Text="{Binding ExceptionOrdersEmptyStateText}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" Margin="0,0,0,6" />
                     </StackPanel>
                 </Grid>
 
@@ -194,7 +194,7 @@
                            FontFamily="Segoe MDL2 Assets"
                            FontSize="30"
                            FontWeight="Bold"
-                           Foreground="{StaticResource HeadingBrush}"
+                           Foreground="{DynamicResource HeadingBrush}"
                            HorizontalAlignment="Center"
                            RenderTransformOrigin="0.5,0.5"
                            Margin="0,0,0,12">
@@ -225,7 +225,7 @@
                 <TextBlock Text="{Binding ExceptionStatusMessage}"
                            FontSize="13"
                            FontWeight="Bold"
-                           Foreground="{StaticResource HeadingBrush}"
+                           Foreground="{DynamicResource HeadingBrush}"
                            HorizontalAlignment="Center" />
             </StackPanel>
         </Grid>

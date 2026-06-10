@@ -13,8 +13,8 @@
     </UserControl.Resources>
     <StackPanel>
         <!-- 异常详情 -->
-        <TextBlock Text="异常参数" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
-        <Border BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}" CornerRadius="10" Margin="0,0,0,16" Background="#FFFFFF">
+        <TextBlock Text="异常参数" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,8" />
+        <Border BorderThickness="1" BorderBrush="{DynamicResource BorderBrushSoft}" CornerRadius="10" Margin="0,0,0,16" Background="#FFFFFF">
             <Grid Margin="12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -30,39 +30,39 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="异常类型" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="异常类型" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="12.5" Foreground="{DynamicResource HeadingBrush}" />
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="严重程度" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="严重程度" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" />
                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="12.5" FontWeight="SemiBold">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{StaticResource GreyTextBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Money">
-                                    <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Warning">
-                                    <Setter Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource WarmTextBrush}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.IsResolved}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
 
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="当前状态" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ResolutionStatusLabel}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="当前状态" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.ResolutionStatusLabel}" FontSize="12.5" Foreground="{DynamicResource HeadingBrush}" />
 
-                <TextBlock Grid.Row="6" Grid.Column="0" Text="异常描述" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.EffectiveReason}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="异常描述" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.Exception.EffectiveReason}" FontSize="12.5" Foreground="{DynamicResource HeadingBrush}" TextWrapping="Wrap" />
             </Grid>
         </Border>
 
         <!-- 推荐处理动作 -->
-        <TextBlock Text="推荐处理动作" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
+        <TextBlock Text="推荐处理动作" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,8" />
         <Grid Margin="0,0,0,16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1*" />
@@ -77,8 +77,8 @@
             <!-- 补充地址 -->
             <Button Grid.Column="0" Height="68" Style="{StaticResource ExceptionActionCardButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource PrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                    <TextBlock Text="去补充地址" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                    <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{DynamicResource PrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                    <TextBlock Text="去补充地址" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" />
                 </StackPanel>
             </Button>
 
@@ -86,29 +86,29 @@
             <Button Grid.Column="2" Height="68" Style="{StaticResource ExceptionActionCardButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="ContactCustomer_Click">
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="&#xE717;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#2B7A5C" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                    <TextBlock Text="联系客户" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                    <TextBlock Text="联系客户" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" />
                 </StackPanel>
             </Button>
 
             <!-- 跳转订单 -->
             <Button Grid.Column="4" Height="68" Style="{StaticResource ExceptionActionCardButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Click="JumpToOrderFulfillment_Click">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource WarmTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                    <TextBlock Text="跳转订单" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{DynamicResource WarmTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                    <TextBlock Text="跳转订单" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" />
                 </StackPanel>
             </Button>
 
             <!-- 标记已处理 -->
             <Button Grid.Column="6" Height="68" Style="{StaticResource ExceptionActionCardButtonStyle}" Padding="4" Margin="0" Cursor="Hand" Command="{Binding ResolveSelectedExceptionCommand}">
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{StaticResource SecondaryTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                    <TextBlock Text="标记已处理" FontSize="10.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" HorizontalAlignment="Center" />
+                    <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                    <TextBlock Text="标记已处理" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" />
                 </StackPanel>
             </Button>
         </Grid>
 
         <!-- 操作日志 -->
-        <TextBlock Text="操作日志" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
+        <TextBlock Text="操作日志" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,8" />
         <ItemsControl ItemsSource="{Binding ExceptionAuditLogs}" Margin="4,0,0,16">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -120,12 +120,12 @@
                         </Grid.ColumnDefinitions>
 
                         <Grid Grid.Column="0" VerticalAlignment="Stretch">
-                            <Rectangle Width="1.5" Fill="{StaticResource BorderBrushSoft}" HorizontalAlignment="Center" Margin="0,14,0,-14" />
-                            <Ellipse Width="8" Height="8" Fill="{StaticResource PrimaryBrush}" VerticalAlignment="Top" Margin="0,5,0,0" />
+                            <Rectangle Width="1.5" Fill="{DynamicResource BorderBrushSoft}" HorizontalAlignment="Center" Margin="0,14,0,-14" />
+                            <Ellipse Width="8" Height="8" Fill="{DynamicResource PrimaryBrush}" VerticalAlignment="Top" Margin="0,5,0,0" />
                         </Grid>
 
                         <StackPanel Grid.Column="2">
-                            <TextBlock x:Name="ActionText" Text="{Binding Action}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}">
+                            <TextBlock x:Name="ActionText" Text="{Binding Action}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Style.Triggers>
@@ -151,7 +151,7 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-                            <TextBlock Text="{Binding Remark}" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,2,0,0">
+                            <TextBlock Text="{Binding Remark}" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,2,0,0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible" />
@@ -167,9 +167,9 @@
                                 </TextBlock.Style>
                             </TextBlock>
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                <TextBlock Text="{Binding OperatorText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
-                                <TextBlock Text="•" Foreground="{StaticResource CaptionTextBrush}" Margin="6,0" />
-                                <TextBlock Text="{Binding AtText}" FontSize="11" Foreground="{StaticResource CaptionTextBrush}" />
+                                <TextBlock Text="{Binding OperatorText}" FontSize="11" Foreground="{DynamicResource CaptionTextBrush}" />
+                                <TextBlock Text="•" Foreground="{DynamicResource CaptionTextBrush}" Margin="6,0" />
+                                <TextBlock Text="{Binding AtText}" FontSize="11" Foreground="{DynamicResource CaptionTextBrush}" />
                             </StackPanel>
                         </StackPanel>
                     </Grid>

@@ -5,6 +5,11 @@ namespace Orderly.Data.Services;
 
 public sealed partial class LocalAccountManagementService
 {
+    private const string CredentialAttemptPurposeSignIn = "signin";
+    private const string CredentialAttemptPurposePin = "pin";
+    private const string CredentialAttemptPurposeRecovery = "recovery";
+    private const string CredentialAttemptBlockedMessage = "认证尝试过于频繁，请稍后再试。";
+
     private LocalSessionContext RequireCurrentSession()
     {
         return _sessionContextService.Current ?? throw new InvalidOperationException("当前没有已登录会话。");
@@ -189,5 +194,23 @@ public sealed partial class LocalAccountManagementService
     private static byte[] UnwrapDataKeyWithKey(byte[] key, byte[] ciphertext, byte[] nonce, byte[] tag)
     {
         return LocalCredentialSecurity.UnwrapDataKeyWithKey(key, ciphertext, nonce, tag);
+    }
+
+    private void ThrowIfCredentialAttemptBlocked(string purpose, string identifier)
+    {
+        if (_credentialAttemptTracker.IsBlocked(purpose, identifier))
+        {
+            throw new InvalidOperationException(CredentialAttemptBlockedMessage);
+        }
+    }
+
+    private void RecordCredentialAttemptResult(string purpose, string identifier, bool success)
+    {
+        _credentialAttemptTracker.RecordResult(purpose, identifier, success);
+    }
+
+    private void RecordCredentialAttemptFailure(string purpose, string identifier)
+    {
+        _credentialAttemptTracker.RecordFailure(purpose, identifier);
     }
 }

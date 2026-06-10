@@ -17,16 +17,16 @@
             <Border.Style>
                 <Style TargetType="Border">
                     <!-- 默认一般问题（灰色） -->
-                    <Setter Property="Background" Value="{StaticResource GreySoftBrush}" />
+                    <Setter Property="Background" Value="{DynamicResource GreySoftBrush}" />
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Money">
-                            <Setter Property="Background" Value="{StaticResource DangerSoftBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Warning">
-                            <Setter Property="Background" Value="{StaticResource WarmSoftBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource WarmSoftBrush}" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.IsResolved}" Value="True">
-                            <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
@@ -42,17 +42,17 @@
                         <Style TargetType="TextBlock">
                             <!-- 默认一般问题（灰色） -->
                             <Setter Property="Text" Value="&#xE7BA;" />
-                            <Setter Property="Foreground" Value="{StaticResource GreyTextBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Money">
-                                    <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Warning">
-                                    <Setter Property="Foreground" Value="{StaticResource WarmTextBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource WarmTextBrush}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.IsResolved}" Value="True">
                                     <Setter Property="Text" Value="&#xE73E;" />
-                                    <Setter Property="Foreground" Value="{StaticResource AccentTextBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -60,21 +60,21 @@
                 </TextBlock>
                 <StackPanel Grid.Column="2">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" />
+                        <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.ExceptionCategoryLabel}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                         <Border Margin="8,0,0,0" Padding="6,2" CornerRadius="4">
                             <Border.Style>
                                 <Style TargetType="Border">
                                     <!-- 默认一般问题（灰色） -->
-                                    <Setter Property="Background" Value="{StaticResource GreyTextBrush}" />
+                                    <Setter Property="Background" Value="{DynamicResource GreyTextBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Money">
-                                            <Setter Property="Background" Value="{StaticResource DangerTextBrush}" />
+                                            <Setter Property="Background" Value="{DynamicResource DangerTextBrush}" />
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.SeverityCategory}" Value="Warning">
-                                            <Setter Property="Background" Value="{StaticResource WarmTextBrush}" />
+                                            <Setter Property="Background" Value="{DynamicResource WarmTextBrush}" />
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding SelectedExceptionOrderDetail.Exception.IsResolved}" Value="True">
-                                            <Setter Property="Background" Value="{StaticResource AccentTextBrush}" />
+                                            <Setter Property="Background" Value="{DynamicResource AccentTextBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -82,26 +82,26 @@
                             <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.LevelText}" FontSize="10.5" FontWeight="Bold" Foreground="#FFFFFF" />
                         </Border>
                     </StackPanel>
-                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.DetectedAtText, StringFormat=发现时间：{0}}" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" />
+                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.DetectedAtText, StringFormat=发现时间：{0}}" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- 异常原因 -->
-        <TextBlock Text="异常原因" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,6" />
-        <Border Background="{StaticResource SurfaceSoftBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,14" BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}">
-            <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.EffectiveReason}" FontSize="13" Foreground="{StaticResource HeadingBrush}" TextWrapping="Wrap" LineHeight="18" />
+        <TextBlock Text="异常原因" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,6" />
+        <Border Background="{DynamicResource SurfaceSoftBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,14" BorderThickness="1" BorderBrush="{DynamicResource BorderBrushSoft}">
+            <TextBlock Text="{Binding SelectedExceptionOrderDetail.Exception.EffectiveReason}" FontSize="13" Foreground="{DynamicResource HeadingBrush}" TextWrapping="Wrap" LineHeight="18" />
         </Border>
 
         <!-- 影响范围 -->
-        <TextBlock Text="影响范围" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,6" />
-        <Border Background="{StaticResource WarmSoftBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderThickness="1" BorderBrush="{StaticResource DangerBorderBrush}">
-            <TextBlock Text="将阻断订单履约流程，如果不处理可能导致发货延迟，影响微信发货同步或用户投诉。" FontSize="13" Foreground="{StaticResource WarmTextBrush}" TextWrapping="Wrap" LineHeight="18" />
+        <TextBlock Text="影响范围" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,6" />
+        <Border Background="{DynamicResource WarmSoftBrush}" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderThickness="1" BorderBrush="{DynamicResource DangerBorderBrush}">
+            <TextBlock Text="将阻断订单履约流程，如果不处理可能导致发货延迟，影响微信发货同步或用户投诉。" FontSize="13" Foreground="{DynamicResource WarmTextBrush}" TextWrapping="Wrap" LineHeight="18" />
         </Border>
 
         <!-- 关联订单表格 -->
-        <TextBlock Text="关联订单" FontSize="13" FontWeight="Bold" Foreground="{StaticResource HeadingBrush}" Margin="0,0,0,8" />
-        <Border BorderThickness="1" BorderBrush="{StaticResource BorderBrushSoft}" CornerRadius="10" Margin="0,0,0,16" Background="#FFFFFF">
+        <TextBlock Text="关联订单" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,8" />
+        <Border BorderThickness="1" BorderBrush="{DynamicResource BorderBrushSoft}" CornerRadius="10" Margin="0,0,0,16" Background="#FFFFFF">
             <Grid Margin="12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -122,38 +122,38 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Row 0: 订单号 -->
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="订单号" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="订单号" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
                 <DockPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
                     <Button DockPanel.Dock="Right" Style="{StaticResource ExceptionTableCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.OrderNo}" Click="CopyText_Click" ToolTip="复制订单号">
                         <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
                     </Button>
-                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.OrderNoText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{StaticResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.OrderNoText}" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
                 </DockPanel>
 
                 <!-- Row 2: 下单时间 -->
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="下单时间" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.CreatedAtText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="下单时间" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.CreatedAtText}" FontSize="12.5" Foreground="{DynamicResource HeadingBrush}" />
 
                 <!-- Row 4: 支付订单号 -->
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="支付订单号" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="支付订单号" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
                 <DockPanel Grid.Row="4" Grid.Column="1" VerticalAlignment="Center">
                     <Button DockPanel.Dock="Right" Style="{StaticResource ExceptionTableCopyButtonStyle}" Width="16" Height="16" Padding="0" Margin="6,0,0,0" Tag="{Binding SelectedExceptionOrderDetail.WxOutTradeNo}" Click="CopyText_Click" ToolTip="复制支付单号">
                         <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="11" />
                     </Button>
-                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.WxOutTradeNoText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding SelectedExceptionOrderDetail.WxOutTradeNoText}" FontSize="12.5" Foreground="{DynamicResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
                 </DockPanel>
 
                 <!-- Row 6: 支付时间 -->
-                <TextBlock Grid.Row="6" Grid.Column="0" Text="支付时间" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.PaidAtText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="支付时间" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+                <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.PaidAtText}" FontSize="12.5" Foreground="{DynamicResource HeadingBrush}" />
 
                 <!-- Row 8: 客户昵称 -->
-                <TextBlock Grid.Row="8" Grid.Column="0" Text="客户昵称" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.ReceiverSummaryText}" FontSize="12.5" Foreground="{StaticResource HeadingBrush}" />
+                <TextBlock Grid.Row="8" Grid.Column="0" Text="客户昵称" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+                <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.ReceiverSummaryText}" FontSize="12.5" Foreground="{DynamicResource HeadingBrush}" />
 
                 <!-- Row 10: 订单金额 -->
-                <TextBlock Grid.Row="10" Grid.Column="0" Text="订单金额" FontSize="12.5" Foreground="{StaticResource SecondaryTextBrush}" />
-                <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.AmountText}" FontSize="12.5" FontWeight="Bold" Foreground="{StaticResource WarmTextBrush}" />
+                <TextBlock Grid.Row="10" Grid.Column="0" Text="订单金额" FontSize="12.5" Foreground="{DynamicResource SecondaryTextBrush}" />
+                <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding SelectedExceptionOrderDetail.AmountText}" FontSize="12.5" FontWeight="Bold" Foreground="{DynamicResource WarmTextBrush}" />
             </Grid>
         </Border>
 

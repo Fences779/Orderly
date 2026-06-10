@@ -5,6 +5,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Themes/ThemeLight.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/App/AppBaseResources.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/App/AppInputStyles.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/App/AppButtonStyles.xaml" />

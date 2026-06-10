@@ -10,7 +10,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid Background="{StaticResource PageBackgroundBrush}">
+    <Grid Background="{DynamicResource PageBackgroundBrush}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" /> <!-- 0: 顶部标题栏 -->
                     <RowDefinition Height="Auto" /> <!-- 1: 5个大卡片 -->
@@ -32,9 +32,9 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="数据更新：" Foreground="#868E96" FontSize="12" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding InventoryUpdatedAtText}" Foreground="#868E96" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0" />
-                        <Button Content="导入 Excel" Command="{Binding ImportInventoryWorkbookCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="导出 Excel" Command="{Binding ExportInventoryWorkbookCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" Margin="0,0,8,0" />
-                        <Button Content="刷新库存" Command="{Binding RefreshInventoryCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{StaticResource BlueTextBrush}" Padding="12,6" />
+                        <Button Content="导入 Excel" Command="{Binding ImportInventoryWorkbookCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{DynamicResource BlueTextBrush}" Padding="12,6" Margin="0,0,8,0" />
+                        <Button Content="导出 Excel" Command="{Binding ExportInventoryWorkbookCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{DynamicResource BlueTextBrush}" Padding="12,6" Margin="0,0,8,0" />
+                        <Button Content="刷新库存" Command="{Binding RefreshInventoryCommand}" Style="{StaticResource SubtleActionButtonStyle}" Foreground="{DynamicResource BlueTextBrush}" Padding="12,6" />
                     </StackPanel>
                 </Grid>
 

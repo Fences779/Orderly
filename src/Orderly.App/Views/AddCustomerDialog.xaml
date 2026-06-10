@@ -8,7 +8,7 @@
         MinHeight="400"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{StaticResource PageBackgroundBrush}"
+        Background="{DynamicResource PageBackgroundBrush}"
         AutomationProperties.AutomationId="AddCustomerDialog">
     <Window.Resources>
         <ResourceDictionary>
@@ -28,12 +28,12 @@
         <!-- 标题区 -->
         <Border Grid.Row="0"
                 Background="#FFFDF8"
-                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
                 BorderThickness="0,0,0,1"
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="新增客户" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="填写客户基本信息，保存后可在客户列表中查看" Foreground="{StaticResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="填写客户基本信息，保存后可在客户列表中查看" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
             </StackPanel>
         </Border>
 
@@ -115,7 +115,7 @@
         <!-- 底部操作栏 -->
         <Border Grid.Row="2"
                 Background="#FFFDF8"
-                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
                 BorderThickness="0,1,0,0"
                 Padding="22,14">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">

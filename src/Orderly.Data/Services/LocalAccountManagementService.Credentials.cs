@@ -27,34 +27,11 @@ public sealed partial class LocalAccountManagementService
         string ownerPin,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(ownerUsername)
-            || string.IsNullOrWhiteSpace(ownerMasterPassword)
-            || string.IsNullOrWhiteSpace(ownerPin))
-        {
-            throw new InvalidOperationException("管理员验证信息不完整。");
-        }
-
-        if (!LocalCredentialSecurity.IsValidPin(ownerPin.Trim()))
-        {
-            throw new InvalidOperationException("PIN 必须为 6 位数字。");
-        }
-
-        var normalizedOwnerUsername = LocalCredentialSecurity.NormalizeAccountUsername(ownerUsername);
-        var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken);
-        if (owner is null || owner.Role != LocalAccountRole.Owner || !owner.IsEnabled)
-        {
-            throw new InvalidOperationException("主账号不存在或不可用。");
-        }
-
-        if (!LocalCredentialSecurity.VerifyHash(ownerMasterPassword, owner.PasswordSalt, owner.PasswordIterations, owner.PasswordHash))
-        {
-            throw new InvalidOperationException("主账号主密码错误。");
-        }
-
-        if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
-        {
-            throw new InvalidOperationException("主账号 PIN 错误。");
-        }
+        var owner = await VerifyOwnerIdentityInternalAsync(
+            ownerUsername,
+            ownerMasterPassword,
+            ownerPin,
+            cancellationToken);
 
         try
         {
@@ -70,12 +47,61 @@ public sealed partial class LocalAccountManagementService
         }
         catch (CryptographicException)
         {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, owner.Username);
             throw new InvalidOperationException("主账号密钥解包失败。");
         }
         catch (InvalidOperationException)
         {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, owner.Username);
             throw new InvalidOperationException("主账号密钥解包失败。");
         }
+    }
+
+    private async Task<LocalAccount> VerifyOwnerIdentityInternalAsync(
+        string ownerUsername,
+        string ownerMasterPassword,
+        string ownerPin,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(ownerUsername)
+            || string.IsNullOrWhiteSpace(ownerMasterPassword)
+            || string.IsNullOrWhiteSpace(ownerPin))
+        {
+            throw new InvalidOperationException("管理员验证信息不完整。");
+        }
+
+        if (!LocalCredentialSecurity.IsValidPin(ownerPin.Trim()))
+        {
+            throw new InvalidOperationException("PIN 必须为 6 位数字。");
+        }
+
+        var normalizedOwnerUsername = LocalCredentialSecurity.NormalizeAccountUsername(ownerUsername);
+        ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposeSignIn, normalizedOwnerUsername);
+
+        var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken);
+        if (owner is null || owner.Role != LocalAccountRole.Owner || !owner.IsEnabled)
+        {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, normalizedOwnerUsername);
+            throw new InvalidOperationException("主账号不存在或不可用。");
+        }
+
+        if (!LocalCredentialSecurity.VerifyHash(ownerMasterPassword, owner.PasswordSalt, owner.PasswordIterations, owner.PasswordHash))
+        {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, normalizedOwnerUsername);
+            throw new InvalidOperationException("主账号主密码错误。");
+        }
+
+        RecordCredentialAttemptResult(CredentialAttemptPurposeSignIn, normalizedOwnerUsername, success: true);
+        ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, owner.AccountId);
+
+        if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
+        {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposePin, owner.AccountId);
+            throw new InvalidOperationException("主账号 PIN 错误。");
+        }
+
+        RecordCredentialAttemptResult(CredentialAttemptPurposePin, owner.AccountId, success: true);
+        return owner;
     }
 
     public async Task ChangeCurrentMasterPasswordAsync(string currentMasterPassword, string newMasterPassword, CancellationToken cancellationToken = default)
@@ -417,10 +443,13 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("Owner 账号不存在或不可用。");
         }
 
+        ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, owner.AccountId);
         if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
         {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposePin, owner.AccountId);
             throw new InvalidOperationException("PIN 校验失败。");
         }
+        RecordCredentialAttemptResult(CredentialAttemptPurposePin, owner.AccountId, success: true);
 
         if (!LocalCredentialSecurity.HasUsableHashParameters(owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash)
             || !LocalCredentialSecurity.HasUsableWrappedDataKey(owner.RecoveryEncryptedDataKey, owner.RecoveryDataKeyNonce, owner.RecoveryDataKeyTag))
@@ -429,10 +458,14 @@ public sealed partial class LocalAccountManagementService
         }
 
         var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
+        ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposeRecovery, owner.AccountId);
         if (!LocalCredentialSecurity.VerifyHash(normalizedRecoveryKey, owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash))
         {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposeRecovery, owner.AccountId);
             throw new InvalidOperationException("Recovery Key 校验失败。");
         }
+
+        RecordCredentialAttemptResult(CredentialAttemptPurposeRecovery, owner.AccountId, success: true);
     }
 
     private async Task<(LocalAccount Member, byte[] OwnerDataKey)> VerifyMemberPasswordResetInternalAsync(
@@ -464,10 +497,13 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("成员账号不存在或不可用。");
         }
 
+        ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, member.AccountId);
         if (!LocalCredentialSecurity.VerifyHash(memberPin.Trim(), member.PinSalt, member.PinIterations, member.PinHash))
         {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposePin, member.AccountId);
             throw new InvalidOperationException("成员账号 PIN 错误。");
         }
+        RecordCredentialAttemptResult(CredentialAttemptPurposePin, member.AccountId, success: true);
 
         var (owner, ownerDataKey) = await VerifyOwnerCredentialsInternalAsync(
             ownerUsername,

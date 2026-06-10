@@ -8,7 +8,7 @@
         MinHeight="360"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{StaticResource PageBackgroundBrush}"
+        Background="{DynamicResource PageBackgroundBrush}"
         AutomationProperties.AutomationId="AddPriceAdjustmentDialog">
     <Window.Resources>
         <ResourceDictionary>
@@ -27,12 +27,12 @@
         <!-- 标题区 -->
         <Border Grid.Row="0"
                 Background="#FFFDF8"
-                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
                 BorderThickness="0,0,0,1"
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="新增改价" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="记录本次价格调整和调整原因" Foreground="{StaticResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="记录本次价格调整和调整原因" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
             </StackPanel>
         </Border>
 
@@ -87,7 +87,7 @@
         <!-- 底部操作栏 -->
         <Border Grid.Row="2"
                 Background="#FFFDF8"
-                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
                 BorderThickness="0,1,0,0"
                 Padding="22,14">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
