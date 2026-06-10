@@ -39,8 +39,7 @@ public sealed partial class LocalBackupService
             StampIntegrityTag(manifest);
 
             var json = JsonSerializer.Serialize(manifest, SerializerOptions);
-            await File.WriteAllTextAsync(safeOutputPath, json, Utf8NoBom, cancellationToken);
-            LocalDataFileSecurity.HardenFile(safeOutputPath);
+            await WriteBackupJsonAtomicallyAsync(safeOutputPath, json, cancellationToken);
 
             var syncMetadata = BuildExportMetadataJson(safeOutputPath, manifest, createdBy, tagForQaScope);
             var syncRecord = await _syncService.MarkSyncedAsync(

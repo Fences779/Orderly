@@ -169,6 +169,72 @@ public sealed partial class LocalBackupService
         }
     }
 
+    private static async Task WriteBackupJsonAtomicallyAsync(
+        string backupPath,
+        string json,
+        CancellationToken cancellationToken)
+    {
+        var directory = Path.GetDirectoryName(backupPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = Directory.GetCurrentDirectory();
+        }
+
+        EnsureBackupDirectoryPathIsNotLinked(directory);
+        Directory.CreateDirectory(directory);
+        EnsureBackupDirectoryPathIsNotLinked(directory);
+
+        var tempPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(backupPath)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            EnsureBackupPathIsNotLinked(tempPath);
+            var bytes = Utf8NoBom.GetBytes(json);
+            await using (var stream = new FileStream(
+                tempPath,
+                new FileStreamOptions
+                {
+                    Mode = FileMode.CreateNew,
+                    Access = FileAccess.Write,
+                    Share = FileShare.None,
+                    Options = FileOptions.Asynchronous | FileOptions.WriteThrough
+                }))
+            {
+                await stream.WriteAsync(bytes, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+
+            EnsureBackupPathIsNotLinked(backupPath);
+            File.Move(tempPath, backupPath, overwrite: true);
+            EnsureBackupPathIsNotLinked(backupPath);
+            LocalDataFileSecurity.HardenFile(backupPath);
+        }
+        catch
+        {
+            DeleteTemporaryBackupFile(tempPath);
+            throw;
+        }
+    }
+
+    private static void DeleteTemporaryBackupFile(string tempPath)
+    {
+        try
+        {
+            if (File.Exists(tempPath) && !LocalDataFileSecurity.IsReparsePoint(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
     private static bool IsBackupDirectoryPathLinked(string? directoryPath)
     {
         if (string.IsNullOrWhiteSpace(directoryPath))
