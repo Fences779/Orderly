@@ -14,11 +14,25 @@ public sealed class InventoryGatewayOptions
 
     public InventoryGatewayOptions(string endpoint, string token, int timeoutSeconds, string workspaceId, string operatorId)
     {
-        Endpoint = endpoint.Trim();
-        Token = token.Trim();
+        Endpoint = GatewayConfigurationSafety.NormalizeOptionalValue(
+            EndpointEnvironmentVariableName,
+            endpoint,
+            GatewayConfigurationSafety.MaxEndpointCharacters);
+        Token = GatewayConfigurationSafety.NormalizeOptionalValue(
+            TokenEnvironmentVariableName,
+            token,
+            GatewayConfigurationSafety.MaxTokenCharacters);
         TimeoutSeconds = NormalizeTimeout(timeoutSeconds);
-        WorkspaceId = string.IsNullOrWhiteSpace(workspaceId) ? "default" : workspaceId.Trim();
-        OperatorId = string.IsNullOrWhiteSpace(operatorId) ? Environment.UserName : operatorId.Trim();
+        WorkspaceId = GatewayConfigurationSafety.NormalizeValueOrFallback(
+            WorkspaceIdEnvironmentVariableName,
+            workspaceId,
+            "default",
+            GatewayConfigurationSafety.MaxIdentifierCharacters);
+        OperatorId = GatewayConfigurationSafety.NormalizeValueOrFallback(
+            OperatorIdEnvironmentVariableName,
+            operatorId,
+            Environment.UserName,
+            GatewayConfigurationSafety.MaxIdentifierCharacters);
     }
 
     public string Endpoint { get; }

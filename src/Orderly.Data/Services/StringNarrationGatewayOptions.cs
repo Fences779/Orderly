@@ -13,8 +13,14 @@ public sealed class StringNarrationGatewayOptions
 
     public StringNarrationGatewayOptions(string endpoint, string token, int timeoutSeconds, bool sendTokenInBody = false)
     {
-        Endpoint = endpoint.Trim();
-        Token = token.Trim();
+        Endpoint = GatewayConfigurationSafety.NormalizeOptionalValue(
+            EndpointEnvironmentVariableName,
+            endpoint,
+            GatewayConfigurationSafety.MaxEndpointCharacters);
+        Token = GatewayConfigurationSafety.NormalizeOptionalValue(
+            TokenEnvironmentVariableName,
+            token,
+            GatewayConfigurationSafety.MaxTokenCharacters);
         TimeoutSeconds = NormalizeTimeout(timeoutSeconds);
         SendTokenInBody = sendTokenInBody;
     }
