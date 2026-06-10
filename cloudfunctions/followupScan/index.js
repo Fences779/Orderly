@@ -604,6 +604,8 @@ async function handleRequest(event) {
     if (!scanAuth.ok) return scanAuth
     operatorId = scanAuth.operatorId
     if (scanAuth.workspaceId) trustedWorkspaceEvent = { workspaceId: scanAuth.workspaceId }
+  } else {
+    return { ok: false, code: 'unsupported_mode', message: '不支持的 mode。' }
   }
 
   const workspace = resolveWorkspaceId(trustedWorkspaceEvent, operatorId)
@@ -811,8 +813,6 @@ async function handleRequest(event) {
     if (!saved) return { ok: false, code: 'not_found', message: '现金流记录不存在。' }
     return { ok: true, entry: saved }
   }
-
-  if (mode) return { ok: false, code: 'unsupported_mode', message: '不支持的 mode。' }
 
   const deals = (await db.collection('deals').where({ workspaceId }).limit(1000).get()).data || []
   const customers = (await db.collection('customers').where({ workspaceId }).limit(1000).get()).data || []
