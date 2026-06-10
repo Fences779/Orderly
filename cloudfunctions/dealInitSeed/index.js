@@ -137,16 +137,23 @@ async function ensureCollections() {
 async function upsertDoc(collection, row) {
   const data = Object.assign({}, row)
   const id = data._id
+  let existing = null
   try {
-    await db.collection(collection).doc(id).get()
+    existing = (await db.collection(collection).doc(id).get()).data || null
+  } catch (err) {
+    existing = null
+  }
+
+  if (existing) {
+    if (existing.workspaceId !== row.workspaceId) return 'workspace_conflict'
     delete data._id
     await db.collection(collection).doc(id).update({ data })
     return 'updated'
-  } catch (err) {
-    delete data._id
-    await db.collection(collection).doc(id).set({ data })
-    return 'created'
   }
+
+  delete data._id
+  await db.collection(collection).doc(id).set({ data })
+  return 'created'
 }
 
 function logInternalError(scope, err) {
@@ -174,6 +181,9 @@ async function handleRequest(event) {
     counts[collection] = { created: 0, updated: 0 }
     for (const row of seed[collection]) {
       const result = await upsertDoc(collection, row)
+      if (result === 'workspace_conflict') {
+        return { ok: false, code: 'seed_workspace_conflict', message: '演示数据 ID 已属于其他工作区，已拒绝覆盖。' }
+      }
       counts[collection][result] += 1
     }
   }
