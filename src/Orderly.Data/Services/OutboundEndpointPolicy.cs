@@ -38,6 +38,11 @@ internal static class OutboundEndpointPolicy
         {
             throw new InvalidOperationException($"{configurationName} 不允许包含 URL fragment。");
         }
+
+        if (!string.IsNullOrWhiteSpace(endpoint.Query))
+        {
+            throw new InvalidOperationException($"{configurationName} 不允许包含 URL query。");
+        }
     }
 
     private static bool IsRestrictedLocalEndpoint(Uri endpoint)
