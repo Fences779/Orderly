@@ -7,6 +7,10 @@ namespace Orderly.Data.Services;
 internal static class ChatCompletionSuggestionSupport
 {
     private const int MaxProviderJsonDepth = 32;
+    private const int MaxPromptCharacters = 8000;
+    private const int MaxRecentMessages = 5;
+    private const int MaxShortFieldCharacters = 128;
+    private const int MaxLongFieldCharacters = 512;
     private const string SystemPrompt = "你是一个中文私域成交助手。根据客户信息、订单信息和最近沟通记录，生成一条自然、克制、不油腻、可直接编辑的回复建议。不要发送，只生成建议文本。不要夸大，不要承诺无法保证的内容。";
 
     private static readonly JsonDocumentOptions ProviderJsonDocumentOptions = new()
@@ -120,15 +124,15 @@ internal static class ChatCompletionSuggestionSupport
         }
         else
         {
-            foreach (var message in request.RecentMessages)
+            foreach (var message in request.RecentMessages.Take(MaxRecentMessages))
             {
-                builder.AppendLine($"{message.RoleLabel}：{message.Content}");
+                builder.AppendLine($"{LimitPromptText(message.RoleLabel, MaxShortFieldCharacters)}：{LimitPromptText(message.Content, MaxLongFieldCharacters)}");
             }
         }
 
         builder.AppendLine();
         builder.Append("只输出一条可直接编辑的中文回复建议，不要解释，不要 JSON，不要假装已经发送。");
-        return builder.ToString();
+        return LimitPromptText(builder.ToString(), MaxPromptCharacters);
     }
 
     private static string ExtractContentArray(JsonElement contentArray)
@@ -157,10 +161,28 @@ internal static class ChatCompletionSuggestionSupport
     {
         var normalized = values
             .Where(static value => !string.IsNullOrWhiteSpace(value))
-            .Select(static value => value!.Trim())
+            .Select(static value => LimitPromptText(value, MaxLongFieldCharacters))
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
             .ToArray();
 
         return normalized.Length == 0 ? "暂无" : string.Join(" / ", normalized);
+    }
+
+    private static string LimitPromptText(string? value, int maxCharacters)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = new string(value
+            .Select(static ch => char.IsControl(ch) && ch != '\r' && ch != '\n' && ch != '\t' ? ' ' : ch)
+            .ToArray())
+            .Trim();
+
+        return normalized.Length <= maxCharacters
+            ? normalized
+            : normalized[..maxCharacters];
     }
 
     private static string BuildAuthHeaderName()
