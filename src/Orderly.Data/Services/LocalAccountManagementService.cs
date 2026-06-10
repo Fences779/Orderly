@@ -37,7 +37,7 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
     public async Task<IReadOnlyList<LocalAccountSummary>> ListAccountDirectoryAsync(CancellationToken cancellationToken = default)
     {
         var accounts = await _accountRepository.ListAsync(cancellationToken);
-        return MapSummaries(accounts);
+        return MapUnauthenticatedDirectorySummaries(accounts);
     }
 
     public async Task<LocalAccountSummary> CreateMemberAsync(CreateMemberAccountRequest request, CancellationToken cancellationToken = default)

@@ -73,6 +73,24 @@ public sealed partial class LocalAccountManagementService
             .ToList();
     }
 
+    private static IReadOnlyList<LocalAccountSummary> MapUnauthenticatedDirectorySummaries(IEnumerable<LocalAccount> accounts)
+    {
+        return accounts
+            .OrderBy(account => account.CreatedAt)
+            .Select(account => new LocalAccountSummary
+            {
+                AccountId = account.AccountId,
+                Username = account.Username,
+                DisplayName = account.DisplayName,
+                Role = account.Role,
+                IsEnabled = account.IsEnabled,
+                CreatedAt = DateTime.MinValue,
+                LastLoginAt = null,
+                IsMostRecentlyLoggedIn = false
+            })
+            .ToList();
+    }
+
     private static string? ResolveDeletableAccountWorkspaceDirectory(string accountId, string databasePath)
     {
         if (string.IsNullOrWhiteSpace(databasePath))
