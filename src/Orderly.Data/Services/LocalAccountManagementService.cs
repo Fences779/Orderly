@@ -74,11 +74,6 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
         CreateMemberAccountRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Username))
-        {
-            throw new InvalidOperationException("用户名不能为空。");
-        }
-
         if (!MasterPasswordPolicy.TryValidate(request.MasterPassword, out var passwordValidationError))
         {
             throw new InvalidOperationException(passwordValidationError);
@@ -89,7 +84,8 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
 
-        var username = request.Username.Trim();
+        var username = LocalCredentialSecurity.NormalizeAccountUsername(request.Username);
+        var displayName = LocalCredentialSecurity.NormalizeAccountDisplayName(request.DisplayName, username);
         if (await _accountRepository.GetByUsernameAsync(username, cancellationToken) is not null)
         {
             throw new InvalidOperationException("用户名已存在。");
@@ -114,7 +110,7 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
             {
                 AccountId = accountId,
                 Username = username,
-                DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? username : request.DisplayName.Trim(),
+                DisplayName = displayName,
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
                 PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations,
@@ -184,7 +180,8 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
 
-        var owner = await _accountRepository.GetByUsernameAsync(ownerUsername.Trim(), cancellationToken);
+        var normalizedOwnerUsername = LocalCredentialSecurity.NormalizeAccountUsername(ownerUsername);
+        var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken);
         if (owner is null || owner.Role != LocalAccountRole.Owner || !owner.IsEnabled)
         {
             throw new InvalidOperationException("主账号不存在或不可用。");

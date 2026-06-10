@@ -39,7 +39,8 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
 
-        var owner = await _accountRepository.GetByUsernameAsync(ownerUsername.Trim(), cancellationToken);
+        var normalizedOwnerUsername = LocalCredentialSecurity.NormalizeAccountUsername(ownerUsername);
+        var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken);
         if (owner is null || owner.Role != LocalAccountRole.Owner || !owner.IsEnabled)
         {
             throw new InvalidOperationException("主账号不存在或不可用。");
@@ -341,7 +342,8 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException(newPasswordValidationError);
         }
 
-        var owner = await _accountRepository.GetByUsernameAsync(ownerUsername.Trim(), cancellationToken)
+        var normalizedOwnerUsername = LocalCredentialSecurity.NormalizeAccountUsername(ownerUsername);
+        var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken)
             ?? throw new InvalidOperationException("Owner 账号不存在或不可用。");
 
         var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
@@ -408,7 +410,8 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
 
-        var owner = await _accountRepository.GetByUsernameAsync(ownerUsername.Trim(), cancellationToken);
+        var normalizedOwnerUsername = LocalCredentialSecurity.NormalizeAccountUsername(ownerUsername);
+        var owner = await _accountRepository.GetByUsernameAsync(normalizedOwnerUsername, cancellationToken);
         if (owner is null || owner.Role != LocalAccountRole.Owner || !owner.IsEnabled)
         {
             throw new InvalidOperationException("Owner 账号不存在或不可用。");
@@ -454,7 +457,8 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
         }
 
-        var member = await _accountRepository.GetByUsernameAsync(memberUsername.Trim(), cancellationToken);
+        var normalizedMemberUsername = LocalCredentialSecurity.NormalizeAccountUsername(memberUsername);
+        var member = await _accountRepository.GetByUsernameAsync(normalizedMemberUsername, cancellationToken);
         if (member is null || member.Role != LocalAccountRole.Member || !member.IsEnabled)
         {
             throw new InvalidOperationException("成员账号不存在或不可用。");

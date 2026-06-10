@@ -49,7 +49,8 @@ public sealed class LocalAuthService : ILocalAuthService
             throw new InvalidOperationException("本地账号已存在，不能重复执行首次 Owner 创建。");
         }
 
-        var username = request.Username.Trim();
+        var username = LocalCredentialSecurity.NormalizeAccountUsername(request.Username);
+        var displayName = LocalCredentialSecurity.NormalizeAccountDisplayName(request.DisplayName, username);
         var existing = await _accountRepository.GetByUsernameAsync(username, cancellationToken);
         if (existing is not null)
         {
@@ -83,7 +84,7 @@ public sealed class LocalAuthService : ILocalAuthService
             {
                 AccountId = accountId,
                 Username = username,
-                DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? username : request.DisplayName.Trim(),
+                DisplayName = displayName,
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
                 PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations,
@@ -147,12 +148,12 @@ public sealed class LocalAuthService : ILocalAuthService
 
     public async Task<LocalSignInResult> SignInAsync(string username, string masterPassword, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(masterPassword))
+        if (!LocalCredentialSecurity.TryNormalizeAccountUsername(username, out var normalizedUsername)
+            || string.IsNullOrWhiteSpace(masterPassword))
         {
             return LocalSignInResult.Failure("用户名和主密码不能为空。");
         }
 
-        var normalizedUsername = username.Trim();
         if (IsCredentialAttemptBlocked("signin", normalizedUsername))
         {
             return LocalSignInResult.Failure("认证尝试过于频繁，请稍后再试。");
@@ -294,10 +295,8 @@ public sealed class LocalAuthService : ILocalAuthService
 
     private static void ValidateOwnerRequest(CreateFirstOwnerRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Username))
-        {
-            throw new InvalidOperationException("用户名不能为空。");
-        }
+        var normalizedUsername = LocalCredentialSecurity.NormalizeAccountUsername(request.Username);
+        _ = LocalCredentialSecurity.NormalizeAccountDisplayName(request.DisplayName, normalizedUsername);
 
         if (!MasterPasswordPolicy.TryValidate(request.MasterPassword, out var passwordValidationError))
         {

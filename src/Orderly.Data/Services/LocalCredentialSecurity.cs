@@ -14,10 +14,58 @@ internal static class LocalCredentialSecurity
     private const int NonceByteLength = 12;
     private const int TagByteLength = 16;
     private const int MaxSecretCharLength = 512;
+    private const int MaxAccountUsernameCharLength = 64;
+    private const int MaxAccountDisplayNameCharLength = 64;
 
-    internal static bool IsValidPin(string pin)
+    internal static bool IsValidPin(string? pin)
     {
-        return pin.Length == 6 && pin.All(char.IsDigit);
+        return pin is { Length: 6 } && pin.All(char.IsDigit);
+    }
+
+    internal static string NormalizeAccountUsername(string? username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new InvalidOperationException("用户名不能为空。");
+        }
+
+        var normalized = username.Trim();
+        if (normalized.Length > MaxAccountUsernameCharLength || normalized.Any(char.IsControl))
+        {
+            throw new InvalidOperationException($"用户名不能超过 {MaxAccountUsernameCharLength} 个字符，且不能包含控制字符。");
+        }
+
+        return normalized;
+    }
+
+    internal static bool TryNormalizeAccountUsername(string? username, out string normalized)
+    {
+        try
+        {
+            normalized = NormalizeAccountUsername(username);
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            normalized = string.Empty;
+            return false;
+        }
+    }
+
+    internal static string NormalizeAccountDisplayName(string? displayName, string fallbackUsername)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return fallbackUsername;
+        }
+
+        var normalized = displayName.Trim();
+        if (normalized.Length > MaxAccountDisplayNameCharLength || normalized.Any(char.IsControl))
+        {
+            throw new InvalidOperationException($"显示名不能超过 {MaxAccountDisplayNameCharLength} 个字符，且不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     internal static string GenerateRecoveryKey()
