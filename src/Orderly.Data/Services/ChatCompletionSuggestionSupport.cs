@@ -7,6 +7,7 @@ namespace Orderly.Data.Services;
 internal static class ChatCompletionSuggestionSupport
 {
     private const int MaxProviderJsonDepth = 32;
+    private const int MaxAssistantContentCharacters = 4000;
     private const int MaxPromptCharacters = 8000;
     private const int MaxRecentMessages = 5;
     private const int MaxShortFieldCharacters = 128;
@@ -71,27 +72,34 @@ internal static class ChatCompletionSuggestionSupport
 
     public static string ExtractAssistantContent(string body, string providerDisplayName)
     {
-        using var document = JsonDocument.Parse(body, ProviderJsonDocumentOptions);
-        if (!document.RootElement.TryGetProperty("choices", out var choices)
-            || choices.ValueKind != JsonValueKind.Array
-            || choices.GetArrayLength() == 0)
+        try
         {
-            throw new InvalidOperationException($"{providerDisplayName} response did not contain choices.");
-        }
+            using var document = JsonDocument.Parse(body, ProviderJsonDocumentOptions);
+            if (!document.RootElement.TryGetProperty("choices", out var choices)
+                || choices.ValueKind != JsonValueKind.Array
+                || choices.GetArrayLength() == 0)
+            {
+                throw new InvalidOperationException($"{providerDisplayName} response did not contain choices.");
+            }
 
-        var firstChoice = choices[0];
-        if (!firstChoice.TryGetProperty("message", out var message)
-            || !message.TryGetProperty("content", out var content))
-        {
-            throw new InvalidOperationException($"{providerDisplayName} response did not contain message content.");
-        }
+            var firstChoice = choices[0];
+            if (!firstChoice.TryGetProperty("message", out var message)
+                || !message.TryGetProperty("content", out var content))
+            {
+                throw new InvalidOperationException($"{providerDisplayName} response did not contain message content.");
+            }
 
-        return content.ValueKind switch
+            return content.ValueKind switch
+            {
+                JsonValueKind.String => LimitAssistantContent(content.GetString()),
+                JsonValueKind.Array => ExtractContentArray(content),
+                _ => string.Empty
+            };
+        }
+        catch (JsonException ex)
         {
-            JsonValueKind.String => content.GetString()?.Trim() ?? string.Empty,
-            JsonValueKind.Array => ExtractContentArray(content),
-            _ => string.Empty
-        };
+            throw new InvalidOperationException($"{providerDisplayName} response was not valid JSON.", ex);
+        }
     }
 
     public static void ApplyBearerToken(HttpRequestMessage request, string apiKey)
@@ -140,9 +148,14 @@ internal static class ChatCompletionSuggestionSupport
         var builder = new StringBuilder();
         foreach (var part in contentArray.EnumerateArray())
         {
+            if (builder.Length >= MaxAssistantContentCharacters)
+            {
+                break;
+            }
+
             if (part.ValueKind == JsonValueKind.String)
             {
-                builder.Append(part.GetString());
+                AppendAssistantContent(builder, part.GetString());
                 continue;
             }
 
@@ -150,11 +163,48 @@ internal static class ChatCompletionSuggestionSupport
                 && part.TryGetProperty("text", out var textElement)
                 && textElement.ValueKind == JsonValueKind.String)
             {
-                builder.Append(textElement.GetString());
+                AppendAssistantContent(builder, textElement.GetString());
             }
         }
 
         return builder.ToString().Trim();
+    }
+
+    private static void AppendAssistantContent(StringBuilder builder, string? value)
+    {
+        if (string.IsNullOrEmpty(value) || builder.Length >= MaxAssistantContentCharacters)
+        {
+            return;
+        }
+
+        var normalized = NormalizeAssistantContent(value);
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return;
+        }
+
+        var remaining = MaxAssistantContentCharacters - builder.Length;
+        builder.Append(normalized.Length <= remaining ? normalized : normalized[..remaining]);
+    }
+
+    private static string LimitAssistantContent(string? value)
+    {
+        var normalized = NormalizeAssistantContent(value).Trim();
+        return normalized.Length <= MaxAssistantContentCharacters
+            ? normalized
+            : normalized[..MaxAssistantContentCharacters].Trim();
+    }
+
+    private static string NormalizeAssistantContent(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return new string(value
+            .Select(static ch => char.IsControl(ch) && ch != '\r' && ch != '\n' && ch != '\t' ? ' ' : ch)
+            .ToArray());
     }
 
     private static string BuildValue(params string?[] values)
