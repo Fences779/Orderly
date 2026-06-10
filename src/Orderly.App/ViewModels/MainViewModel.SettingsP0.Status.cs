@@ -207,11 +207,15 @@ public partial class MainViewModel
 
     private string BuildDiagnosticSummary()
     {
+        var diagnosticDatabasePath = BuildDiagnosticDatabasePath(DatabasePath);
+        var diagnosticRuntimeEnvironmentText = string.IsNullOrWhiteSpace(DatabasePath)
+            ? RuntimeEnvironmentText
+            : RuntimeEnvironmentText.Replace(DatabasePath, diagnosticDatabasePath, StringComparison.OrdinalIgnoreCase);
         var lines = new List<string>
         {
             $"应用版本: {AppVersionText}",
             $"构建时间: {AppBuildTimeText}",
-            $"数据库路径: {DatabasePath}",
+            $"数据库文件: {diagnosticDatabasePath}",
             $"数据库大小: {DatabaseSizeText}",
             $"数据库健康: {DatabaseHealthStatusText}",
             $"数据库详情: {DatabaseHealthDetailText}",
@@ -222,12 +226,18 @@ public partial class MainViewModel
             $"SN 最近同步: {SnLastSyncTimeText}",
             $"SN 同步结果: {SnLastSyncResultText}",
             $"本机访问保护: {LocalAccessProtectionStatusText}",
-            $"运行时环境: {RuntimeEnvironmentText.Replace(Environment.NewLine, " | ", StringComparison.Ordinal)}",
+            $"运行时环境: {diagnosticRuntimeEnvironmentText.Replace(Environment.NewLine, " | ", StringComparison.Ordinal)}",
             $"当前账号: {CurrentAccountDisplayName}",
             $"当前角色: {(IsCurrentUserOwner ? "Owner" : "Member/Unknown")}"
         };
 
         return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string BuildDiagnosticDatabasePath(string databasePath)
+    {
+        var fileName = Path.GetFileName(databasePath);
+        return string.IsNullOrWhiteSpace(fileName) ? "<local-database>" : fileName;
     }
 
     private static string FormatFileSize(long bytes)
@@ -319,7 +329,7 @@ public partial class MainViewModel
     private static string GetLogDirectoryPath()
     {
         var logDirectory = Path.Combine(DatabasePaths.GetAppRootPath(), "logs");
-        Directory.CreateDirectory(logDirectory);
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(logDirectory, "日志目录");
         return logDirectory;
     }
 }

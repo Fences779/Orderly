@@ -220,8 +220,7 @@ public partial class MainViewModel
             WriteIndented = true
         });
 
-        await File.WriteAllTextAsync(dialog.FileName, json);
-        LocalDataFileSecurity.HardenFile(dialog.FileName);
+        await WriteJsonExportFileAtomicallyAsync(dialog.FileName, json);
         SettingsStatusMessage = $"失败类日志已导出：{dialog.FileName}";
     }
 
@@ -463,11 +462,11 @@ public partial class MainViewModel
             })
         };
 
-        await File.WriteAllTextAsync(dialog.FileName, JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
         {
             WriteIndented = true
-        }));
-        LocalDataFileSecurity.HardenFile(dialog.FileName);
+        });
+        await WriteJsonExportFileAtomicallyAsync(dialog.FileName, json);
 
         SettingsStatusMessage = $"SN 同步日志已导出：{dialog.FileName}";
     }
@@ -485,6 +484,60 @@ public partial class MainViewModel
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
             BackupDirectoryInput = dialog.SelectedPath;
+        }
+    }
+
+    private static async Task WriteJsonExportFileAtomicallyAsync(string outputPath, string json)
+    {
+        var fullPath = Path.GetFullPath(outputPath);
+        if (!string.Equals(Path.GetExtension(fullPath), ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("日志导出文件必须是 .json 文件。");
+        }
+
+        var directory = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = Directory.GetCurrentDirectory();
+        }
+
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "日志导出目录");
+        var tempPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            LocalDataFileSecurity.EnsureFileIsNotLinked(tempPath, "日志临时导出文件");
+            await File.WriteAllTextAsync(tempPath, json);
+            LocalDataFileSecurity.HardenFile(tempPath);
+
+            LocalDataFileSecurity.EnsureFileIsNotLinked(fullPath, "日志导出文件");
+            File.Move(tempPath, fullPath, overwrite: true);
+            LocalDataFileSecurity.EnsureFileIsNotLinked(fullPath, "日志导出文件");
+            LocalDataFileSecurity.HardenFile(fullPath);
+        }
+        catch
+        {
+            DeleteTemporaryExportFile(tempPath);
+            throw;
+        }
+    }
+
+    private static void DeleteTemporaryExportFile(string tempPath)
+    {
+        try
+        {
+            if (File.Exists(tempPath) && !LocalDataFileSecurity.IsReparsePoint(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 
