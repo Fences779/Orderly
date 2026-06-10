@@ -14,6 +14,7 @@ const MAX_SUMMARY_TEXT_LENGTH = 512
 const MAX_TAGS = 20
 const URGENCY_LEVELS = ['low', 'medium', 'high']
 const SUGGESTED_STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing']
+const CUSTOMER_MATCH_FIELDS = ['_id', 'name', 'platform', 'contactHandle']
 
 const STYLE_WORDS = ['简约', '高级', '复古', '甜酷', '清冷', '温柔', '国风', '通勤', '可爱', '低调', '显白']
 const MATERIAL_WORDS = ['珍珠', '水晶', '玛瑙', '银', '14k', '18k', '朱砂', '檀木', '贝母', '琉璃', '天然石']
@@ -81,6 +82,15 @@ function normalizeList(value) {
 
 function normalizeText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
   return value == null ? '' : String(value).trim().slice(0, maxLength)
+}
+
+function pickFields(source, allowedFields) {
+  const result = {}
+  const input = source || {}
+  allowedFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(input, field)) result[field] = input[field]
+  })
+  return result
 }
 
 function normalizeWorkspaceId(value) {
@@ -323,7 +333,7 @@ async function matchCustomers(workspaceId, parserResult) {
     if (hints.name && customer.name === hints.name) return true
     if (hints.platformHint && hints.name && customer.platform === hints.platformHint && customer.name.indexOf(hints.name) >= 0) return true
     return false
-  }).slice(0, 5)
+  }).slice(0, 5).map((customer) => pickFields(customer, CUSTOMER_MATCH_FIELDS))
 }
 
 function logInternalError(scope, err) {
