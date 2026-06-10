@@ -87,6 +87,11 @@ internal static class OutboundEndpointPolicy
 
     private static bool IsRestrictedAddress(IPAddress address)
     {
+        if (address.IsIPv4MappedToIPv6)
+        {
+            return IsRestrictedAddress(address.MapToIPv4());
+        }
+
         if (IPAddress.IsLoopback(address))
         {
             return true;
