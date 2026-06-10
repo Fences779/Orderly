@@ -146,9 +146,11 @@ public sealed partial class LocalBackupService
         string tableName,
         CancellationToken cancellationToken)
     {
+        var safeTableName = RequireKnownBackupSqlTableName(tableName);
+
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = $"SELECT * FROM {tableName} WHERE {BuildExportPredicate(tableName)} ORDER BY Id ASC;";
+        command.CommandText = $"SELECT * FROM {QuoteSqlIdentifier(safeTableName)} WHERE {BuildExportPredicate(safeTableName)} ORDER BY Id ASC;";
 
         var rows = new List<Dictionary<string, object?>>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -158,7 +160,7 @@ public sealed partial class LocalBackupService
             for (var index = 0; index < reader.FieldCount; index++)
             {
                 var columnName = reader.GetName(index);
-                row[columnName] = SanitizeValue(tableName, columnName, reader.GetValue(index));
+                row[columnName] = SanitizeValue(safeTableName, columnName, reader.GetValue(index));
             }
 
             rows.Add(row);

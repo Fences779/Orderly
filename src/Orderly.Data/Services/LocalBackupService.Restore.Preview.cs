@@ -60,9 +60,11 @@ public sealed partial class LocalBackupService
         bool qaOnly,
         CancellationToken cancellationToken)
     {
+        var safeTableName = RequireKnownBackupSqlTableName(tableName);
+
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = $"SELECT COUNT(1) FROM {tableName} WHERE {BuildTargetAssessmentPredicate(tableName, qaOnly)};";
+        command.CommandText = $"SELECT COUNT(1) FROM {QuoteSqlIdentifier(safeTableName)} WHERE {BuildTargetAssessmentPredicate(safeTableName, qaOnly)};";
         QaDataScope.AddScopeParameters(command);
 
         var result = await command.ExecuteScalarAsync(cancellationToken);

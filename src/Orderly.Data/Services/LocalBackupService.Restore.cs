@@ -207,33 +207,34 @@ public sealed partial class LocalBackupService
         JsonElement tableElement,
         CancellationToken cancellationToken)
     {
-        var allowedColumns = GetRestoreColumns(tableName);
+        var safeTableName = RequireKnownBackupSqlTableName(tableName);
+        var allowedColumns = GetRestoreColumns(safeTableName);
         if (tableElement.ValueKind != JsonValueKind.Array)
         {
-            throw new InvalidOperationException($"表 {tableName} 的备份结构无效。");
+            throw new InvalidOperationException($"表 {safeTableName} 的备份结构无效。");
         }
 
         foreach (var row in tableElement.EnumerateArray())
         {
             if (row.ValueKind != JsonValueKind.Object)
             {
-                throw new InvalidOperationException($"表 {tableName} 存在非对象行。");
+                throw new InvalidOperationException($"表 {safeTableName} 存在非对象行。");
             }
 
             var properties = row.EnumerateObject().ToArray();
-            ValidateRestoreColumns(tableName, properties, allowedColumns);
+            ValidateRestoreColumns(safeTableName, properties, allowedColumns);
             var columnNames = string.Join(", ", properties.Select(static property => QuoteSqlIdentifier(property.Name)));
             var parameterNames = string.Join(", ", properties.Select((_, index) => $"$p{index}"));
 
             await using var command = connection.CreateCommand();
             command.Transaction = transaction;
-            command.CommandText = $"INSERT INTO {tableName} ({columnNames}) VALUES ({parameterNames});";
+            command.CommandText = $"INSERT INTO {QuoteSqlIdentifier(safeTableName)} ({columnNames}) VALUES ({parameterNames});";
 
             for (var index = 0; index < properties.Length; index++)
             {
                 command.Parameters.AddWithValue(
                     $"$p{index}",
-                    ConvertRestoreJsonValue(tableName, properties[index].Name, properties[index].Value));
+                    ConvertRestoreJsonValue(safeTableName, properties[index].Name, properties[index].Value));
             }
 
             await command.ExecuteNonQueryAsync(cancellationToken);

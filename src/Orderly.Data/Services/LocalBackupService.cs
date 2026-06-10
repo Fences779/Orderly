@@ -69,6 +69,12 @@ public sealed partial class LocalBackupService : IBackupService
         "SyncRecords"
     ];
 
+    private static readonly HashSet<string> KnownBackupSqlTableNames = new(
+        IncludedTableNames
+            .Concat(RestoreOrderedTableNames)
+            .Concat(TargetInspectionTableNames),
+        StringComparer.Ordinal);
+
     private static readonly IReadOnlyDictionary<string, HashSet<string>> RestoreTableColumns =
         new Dictionary<string, HashSet<string>>(StringComparer.Ordinal)
         {
@@ -227,6 +233,13 @@ public sealed partial class LocalBackupService : IBackupService
     private static HashSet<string> BuildColumnSet(params string[] columns)
     {
         return new HashSet<string>(columns, StringComparer.Ordinal);
+    }
+
+    private static string RequireKnownBackupSqlTableName(string tableName)
+    {
+        return KnownBackupSqlTableNames.Contains(tableName)
+            ? tableName
+            : throw new InvalidOperationException($"表 {tableName} 不允许用于备份 SQL。");
     }
 
     private static IReadOnlyDictionary<string, object> BuildDefaultMap(params (string Column, object DefaultValue)[] columns)
