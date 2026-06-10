@@ -130,7 +130,10 @@ function hasUnsafeObjectKey(value, depth) {
 }
 
 function resolveWorkspaceId(event, operatorId) {
-  const workspaceId = normalizeWorkspaceId(event && event.workspaceId) || DEFAULT_WORKSPACE_ID
+  const rawWorkspaceId = event && event.workspaceId
+  const requestedWorkspaceId = rawWorkspaceId == null ? '' : String(rawWorkspaceId).trim()
+  const workspaceId = requestedWorkspaceId ? normalizeWorkspaceId(rawWorkspaceId) : DEFAULT_WORKSPACE_ID
+  if (!workspaceId) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
   const configured = normalizeWorkspaceList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
   const allowed = Array.from(new Set(configured.length ? configured : [DEFAULT_WORKSPACE_ID]))
   if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }

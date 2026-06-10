@@ -8,6 +8,7 @@ const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
+const MAX_WORKSPACE_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
 const MAX_TAGS = 20
@@ -64,6 +65,16 @@ function normalizeText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
   return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maxLength)
 }
 
+function normalizeWorkspaceId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_WORKSPACE_ID_LENGTH && /^[A-Za-z0-9_.:-]+$/.test(id) ? id : ''
+}
+
+function normalizeWorkspaceArray(value) {
+  return normalizeArray(value).map(normalizeWorkspaceId).filter(Boolean)
+}
+
 function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
   const source = Array.isArray(value)
     ? value
@@ -90,8 +101,11 @@ function pickFields(source, allowedFields) {
 }
 
 function resolveWorkspaceId(event, operatorId) {
-  const workspaceId = String((event && event.workspaceId) || '').trim() || DEFAULT_WORKSPACE_ID
-  const configured = normalizeArray(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
+  const rawWorkspaceId = event && event.workspaceId
+  const requestedWorkspaceId = rawWorkspaceId == null ? '' : String(rawWorkspaceId).trim()
+  const workspaceId = requestedWorkspaceId ? normalizeWorkspaceId(rawWorkspaceId) : DEFAULT_WORKSPACE_ID
+  if (!workspaceId) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  const configured = normalizeWorkspaceArray(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
   const allowed = Array.from(new Set(configured.length ? configured : [DEFAULT_WORKSPACE_ID]))
   if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
   const binding = validateWorkspaceBinding(operatorId, workspaceId, allowed)
@@ -140,8 +154,12 @@ function resolveOperatorWorkspaceIds(operatorId) {
 
 function normalizeWorkspaceBindingValue(value) {
   if (!value) return []
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean)
-  return String(value).split(/[,\s，、|/]+/).map((item) => item.trim()).filter(Boolean)
+  const values = Array.isArray(value)
+    ? value.map((item) => String(item).trim())
+    : String(value).split(/[,\s，、|/]+/).map((item) => item.trim())
+  return values
+    .map((item) => (item === '*' ? '*' : normalizeWorkspaceId(item)))
+    .filter(Boolean)
 }
 
 const REDACTED_LOG_VALUE = '[redacted]'

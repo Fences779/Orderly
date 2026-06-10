@@ -11,12 +11,23 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const ENABLE_SEED_ENV_NAME = 'ORDERLY_ENABLE_DEAL_INIT_SEED'
 const SEED_ADMIN_OPENIDS_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_OPENIDS'
 const MAX_EVENT_BYTES = 65536
+const MAX_WORKSPACE_ID_LENGTH = 128
 
 function normalizeList(value) {
   return String(value || '')
     .split(/[,\s，、;；]+/)
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+function normalizeWorkspaceId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_WORKSPACE_ID_LENGTH && /^[A-Za-z0-9_.:-]+$/.test(id) ? id : ''
+}
+
+function normalizeWorkspaceList(value) {
+  return normalizeList(value).map(normalizeWorkspaceId).filter(Boolean)
 }
 
 function requireSeedAuthorization() {
@@ -52,8 +63,11 @@ function hasUnsafeObjectKey(value, depth) {
 }
 
 function resolveWorkspaceId(event, operatorId) {
-  const workspaceId = String((event && event.workspaceId) || '').trim() || DEFAULT_WORKSPACE_ID
-  const configured = normalizeList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
+  const rawWorkspaceId = event && event.workspaceId
+  const requestedWorkspaceId = rawWorkspaceId == null ? '' : String(rawWorkspaceId).trim()
+  const workspaceId = requestedWorkspaceId ? normalizeWorkspaceId(rawWorkspaceId) : DEFAULT_WORKSPACE_ID
+  if (!workspaceId) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  const configured = normalizeWorkspaceList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
   const allowed = Array.from(new Set(configured.length ? configured : [DEFAULT_WORKSPACE_ID]))
   if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
   const binding = validateWorkspaceBinding(operatorId, workspaceId, allowed)
@@ -102,8 +116,12 @@ function resolveOperatorWorkspaceIds(operatorId) {
 
 function normalizeWorkspaceBindingValue(value) {
   if (!value) return []
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean)
-  return String(value).split(/[,\s，、|/]+/).map((item) => item.trim()).filter(Boolean)
+  const values = Array.isArray(value)
+    ? value.map((item) => String(item).trim())
+    : String(value).split(/[,\s，、|/]+/).map((item) => item.trim())
+  return values
+    .map((item) => (item === '*' ? '*' : normalizeWorkspaceId(item)))
+    .filter(Boolean)
 }
 
 async function ensureCollections() {

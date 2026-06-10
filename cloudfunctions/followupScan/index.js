@@ -9,6 +9,7 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
 const MAX_EVENT_BYTES = 65536
+const MAX_WORKSPACE_ID_LENGTH = 128
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
 const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
@@ -60,6 +61,16 @@ function normalizeText(value) {
 
 function limitText(value, maxLength) {
   return normalizeText(value).slice(0, maxLength)
+}
+
+function normalizeWorkspaceId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_WORKSPACE_ID_LENGTH && /^[A-Za-z0-9_.:-]+$/.test(id) ? id : ''
+}
+
+function normalizeWorkspaceArray(value) {
+  return normalizeArray(value).map(normalizeWorkspaceId).filter(Boolean)
 }
 
 function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
@@ -132,8 +143,11 @@ function hasUnsafeObjectKey(value, depth) {
 }
 
 function resolveWorkspaceId(event, operatorId) {
-  const workspaceId = normalizeText(event && event.workspaceId) || DEFAULT_WORKSPACE_ID
-  const configured = normalizeArray(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
+  const rawWorkspaceId = event && event.workspaceId
+  const requestedWorkspaceId = rawWorkspaceId == null ? '' : String(rawWorkspaceId).trim()
+  const workspaceId = requestedWorkspaceId ? normalizeWorkspaceId(rawWorkspaceId) : DEFAULT_WORKSPACE_ID
+  if (!workspaceId) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  const configured = normalizeWorkspaceArray(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
   const allowed = Array.from(new Set(configured.length ? configured : [DEFAULT_WORKSPACE_ID]))
   if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
   const binding = validateWorkspaceBinding(operatorId, workspaceId, allowed)
@@ -182,8 +196,12 @@ function resolveOperatorWorkspaceIds(operatorId) {
 
 function normalizeWorkspaceBindingValue(value) {
   if (!value) return []
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean)
-  return String(value).split(/[,\s，、|/]+/).map((item) => item.trim()).filter(Boolean)
+  const values = Array.isArray(value)
+    ? value.map((item) => String(item).trim())
+    : String(value).split(/[,\s，、|/]+/).map((item) => item.trim())
+  return values
+    .map((item) => (item === '*' ? '*' : normalizeWorkspaceId(item)))
+    .filter(Boolean)
 }
 
 function isAutoScanEnabled() {
