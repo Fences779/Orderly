@@ -7,6 +7,8 @@ const DEFAULT_MAX_QUERY_ROWS = 5000
 const DEFAULT_MAX_BULK_ROWS = 500
 const DEFAULT_MAX_EVENT_BYTES = 1048576
 const DEFAULT_MIN_GATEWAY_TOKEN_LENGTH = 24
+const MAX_GATEWAY_TOKEN_LENGTH = 4096
+const MAX_GATEWAY_AUTH_HEADER_LENGTH = MAX_GATEWAY_TOKEN_LENGTH + 16
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
 const MAX_SOURCE_TEXT_LENGTH = 256
@@ -106,6 +108,14 @@ function createError(statusCode, code, message, expose = statusCode < 500) {
 
 function normalizeText(value) {
   return value == null ? '' : String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
+}
+
+function normalizeSecretText(value, maxLength = MAX_GATEWAY_TOKEN_LENGTH) {
+  if (value == null || typeof value === 'object') return ''
+  const raw = String(value)
+  if (/[\u0000-\u001f\u007f]/.test(raw)) return ''
+  const text = raw.trim()
+  return text.length <= maxLength ? text : ''
 }
 
 function limitText(value, maxLength) {
@@ -241,7 +251,9 @@ function validateToken(request) {
   }
   validateGatewayTokenStrength(expected)
 
-  const authHeader = normalizeText((request.headers && (request.headers.authorization || request.headers.Authorization)) || '')
+  const authHeader = normalizeSecretText(
+    (request.headers && (request.headers.authorization || request.headers.Authorization)) || '',
+    MAX_GATEWAY_AUTH_HEADER_LENGTH)
   const bearer = authHeader.toLowerCase().startsWith('bearer ')
     ? authHeader.slice(7).trim()
     : ''
@@ -252,16 +264,16 @@ function validateToken(request) {
 
 function validateGatewayTokenStrength(expected) {
   const minLength = getPositiveIntEnv('ORDERLY_INVENTORY_GATEWAY_MIN_TOKEN_LENGTH', DEFAULT_MIN_GATEWAY_TOKEN_LENGTH, 128)
-  const normalized = normalizeText(expected)
+  const normalized = normalizeSecretText(expected)
   const lowered = normalized.toLowerCase()
-  if (normalized.length < minLength || ['replace-me', 'changeme', 'change-me', 'test', 'token', 'password'].includes(lowered)) {
+  if (!normalized || normalized.length < minLength || ['replace-me', 'changeme', 'change-me', 'test', 'token', 'password'].includes(lowered)) {
     throw createError(500, 'gateway_token_weak', '库存云端网关 token 强度不足。', false)
   }
 }
 
 function tokensMatch(supplied, expected) {
-  const suppliedToken = normalizeText(supplied)
-  const expectedToken = normalizeText(expected)
+  const suppliedToken = normalizeSecretText(supplied)
+  const expectedToken = normalizeSecretText(expected)
   if (!suppliedToken || !expectedToken) return false
 
   const suppliedBuffer = Buffer.from(suppliedToken, 'utf8')
