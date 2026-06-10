@@ -6,6 +6,10 @@ const DEFAULT_MAX_PAGE_SIZE = 100
 const DEFAULT_MAX_QUERY_ROWS = 5000
 const DEFAULT_MAX_BULK_ROWS = 500
 const DEFAULT_MAX_EVENT_BYTES = 1048576
+const HARD_MAX_PAGE_SIZE = 200
+const HARD_MAX_QUERY_ROWS = 5000
+const HARD_MAX_BULK_ROWS = 5000
+const HARD_MAX_EVENT_BYTES = 5 * 1024 * 1024
 const DEFAULT_MIN_GATEWAY_TOKEN_LENGTH = 24
 const MAX_GATEWAY_TOKEN_LENGTH = 4096
 const MAX_GATEWAY_AUTH_HEADER_LENGTH = MAX_GATEWAY_TOKEN_LENGTH + 16
@@ -142,8 +146,13 @@ function getPositiveIntEnv(name, fallback, max) {
   return normalizePositiveInt(getEnv(name), fallback, max)
 }
 
+function getInventoryQueryRowLimit(actionName) {
+  const sharedLimit = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_QUERY_ROWS', DEFAULT_MAX_QUERY_ROWS, HARD_MAX_QUERY_ROWS)
+  return getPositiveIntEnv(`ORDERLY_INVENTORY_MAX_${actionName}_ROWS`, sharedLimit, HARD_MAX_QUERY_ROWS)
+}
+
 function rejectOversizedEvent(event) {
-  const maxBytes = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_EVENT_BYTES', DEFAULT_MAX_EVENT_BYTES, 5 * 1024 * 1024)
+  const maxBytes = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_EVENT_BYTES', DEFAULT_MAX_EVENT_BYTES, HARD_MAX_EVENT_BYTES)
   const bytes = event && typeof event.body === 'string'
     ? Buffer.byteLength(event.body, 'utf8')
     : Buffer.byteLength(JSON.stringify(event || {}), 'utf8')
@@ -377,8 +386,7 @@ function normalizeInputRow(input) {
   }
 }
 
-async function queryInventoryRows(workspaceId) {
-  const maxRows = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_QUERY_ROWS', DEFAULT_MAX_QUERY_ROWS, 50000)
+async function queryInventoryRows(workspaceId, maxRows) {
   const [rows] = await getPool().execute(
     `SELECT
         material_code,
@@ -412,7 +420,7 @@ async function queryInventoryRows(workspaceId) {
 }
 
 async function inventoryDashboard(payload, workspaceId) {
-  const maxPageSize = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_PAGE_SIZE', DEFAULT_MAX_PAGE_SIZE, 1000)
+  const maxPageSize = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_PAGE_SIZE', DEFAULT_MAX_PAGE_SIZE, HARD_MAX_PAGE_SIZE)
   const page = normalizePositiveInt(payload.page, 1, 1000000)
   const pageSize = normalizePositiveInt(payload.pageSize, DEFAULT_PAGE_SIZE, maxPageSize)
   const keyword = limitText(payload.keyword, MAX_SHORT_TEXT_LENGTH).toLowerCase()
@@ -421,7 +429,7 @@ async function inventoryDashboard(payload, workspaceId) {
   const sortBy = normalizeInventorySortBy(payload.sortBy)
   const sortDirection = normalizeText(payload.sortDirection || 'desc') === 'asc' ? 'asc' : 'desc'
 
-  const rows = await queryInventoryRows(workspaceId)
+  const rows = await queryInventoryRows(workspaceId, getInventoryQueryRowLimit('DASHBOARD'))
   let items = rows.filter((item) => {
     if (keyword && (item.materialCode + item.materialName + item.category + item.supplierName).toLowerCase().indexOf(keyword) < 0) return false
     if (category && item.category !== category) return false
@@ -482,7 +490,7 @@ async function inventoryDashboard(payload, workspaceId) {
 }
 
 async function inventoryExportRows(workspaceId) {
-  const rows = await queryInventoryRows(workspaceId)
+  const rows = await queryInventoryRows(workspaceId, getInventoryQueryRowLimit('EXPORT'))
   return {
     ok: true,
     items: rows.map((item) => ({
@@ -512,7 +520,7 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
     throw createError(400, 'empty_rows', '库存导入数据不能为空。')
   }
 
-  const maxBulkRows = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_BULK_ROWS', DEFAULT_MAX_BULK_ROWS, 5000)
+  const maxBulkRows = getPositiveIntEnv('ORDERLY_INVENTORY_MAX_BULK_ROWS', DEFAULT_MAX_BULK_ROWS, HARD_MAX_BULK_ROWS)
   if (inputRows.length > maxBulkRows) {
     throw createError(413, 'too_many_import_rows', `库存导入行数超过单次上限（${maxBulkRows}）。`)
   }
