@@ -742,6 +742,9 @@ async function handleRequest(event) {
 
     const sku = await getWorkspaceDoc('sku_catalog', skuId, workspaceId)
     if (!sku) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
+    if (relatedOrderId && !(await getWorkspaceDoc('deals', relatedOrderId, workspaceId))) {
+      return { ok: false, code: 'not_found', message: '关联订单不存在。' }
+    }
 
     const signedQuantity = movementType === 'out' || movementType === 'reserve' ? -Math.abs(quantity) : quantity
     const movement = Object.assign({}, movementInput, {
@@ -795,6 +798,15 @@ async function handleRequest(event) {
     if (hasTextValue(rawRelatedOrderId) && !relatedOrderId) return { ok: false, code: 'invalid_related_order_id', message: '非法关联订单 ID。' }
     if (hasTextValue(rawRelatedQuoteId) && !relatedQuoteId) return { ok: false, code: 'invalid_related_quote_id', message: '非法关联报价 ID。' }
     if (hasTextValue(rawRelatedSkuId) && !relatedSkuId) return { ok: false, code: 'invalid_related_sku_id', message: '非法关联 SKU ID。' }
+    if (relatedOrderId && !(await getWorkspaceDoc('deals', relatedOrderId, workspaceId))) {
+      return { ok: false, code: 'not_found', message: '关联订单不存在。' }
+    }
+    if (relatedQuoteId && !(await getWorkspaceDoc('quotes', relatedQuoteId, workspaceId))) {
+      return { ok: false, code: 'not_found', message: '关联报价不存在。' }
+    }
+    if (relatedSkuId && !(await getWorkspaceDoc('sku_catalog', relatedSkuId, workspaceId))) {
+      return { ok: false, code: 'not_found', message: '关联 SKU 不存在。' }
+    }
     const entry = Object.assign({}, input, {
       workspaceId,
       direction,

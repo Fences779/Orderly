@@ -67,6 +67,10 @@ function normalizeList(value) {
     .filter(Boolean)
 }
 
+function hasTextValue(value) {
+  return value != null && typeof value !== 'object' && String(value).trim() !== ''
+}
+
 function normalizeText(value) {
   if (value == null || typeof value === 'object') return ''
   return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim()
@@ -208,11 +212,32 @@ function normalizeQuoteItems(value) {
       qty: quantity(input.qty || 1),
       price: money(input.price),
       note: limitText(input.note, MAX_NOTE_TEXT_LENGTH),
-      skuId: limitText(input.skuId, MAX_SHORT_TEXT_LENGTH),
+      skuId: normalizeDocId(input.skuId),
       materialCode: limitText(input.materialCode, MAX_SHORT_TEXT_LENGTH),
       unit: limitText(input.unit, 32)
     }
   }).filter((item) => item.name || item.price > 0)
+}
+
+async function hasWorkspaceDoc(collection, id, workspaceId) {
+  const docId = normalizeDocId(id)
+  if (!docId) return false
+  try {
+    const doc = (await db.collection(collection).doc(docId).get()).data
+    return !!doc && doc.workspaceId === workspaceId
+  } catch (err) {
+    return false
+  }
+}
+
+async function validateQuoteItemSkuIds(workspaceId, items) {
+  const seen = Object.create(null)
+  for (const item of items || []) {
+    if (!item.skuId || seen[item.skuId]) continue
+    seen[item.skuId] = true
+    if (!(await hasWorkspaceDoc('sku_catalog', item.skuId, workspaceId))) return false
+  }
+  return true
 }
 
 function calculate(input) {
@@ -334,6 +359,9 @@ async function handleRequest(event) {
   if (rawQuoteStatus && !normalizeQuoteStatus(rawQuoteStatus)) {
     return { ok: false, code: 'invalid_quote_status', message: '非法报价状态。' }
   }
+  const rawItems = Array.isArray(rawQuote.items) ? rawQuote.items : []
+  const invalidRawSku = rawItems.some((item) => hasTextValue(item && item.skuId) && !normalizeDocId(item.skuId))
+  if (invalidRawSku) return { ok: false, code: 'invalid_sku_id', message: '非法报价项 SKU ID。' }
 
   const input = calculate(rawQuote)
   if (rawQuote._id && !input._id) return { ok: false, code: 'invalid_quote_id', message: '非法报价 ID。' }
@@ -350,6 +378,9 @@ async function handleRequest(event) {
     return { ok: false, code: 'not_found', message: 'deal 不存在。' }
   }
   if (!deal || deal.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }
+  if (!(await validateQuoteItemSkuIds(workspaceId, input.items))) {
+    return { ok: false, code: 'not_found', message: '报价项 SKU 不存在。' }
+  }
   const customerId = normalizeDocId(deal.customerId)
   let customer = {}
   if (customerId) {
