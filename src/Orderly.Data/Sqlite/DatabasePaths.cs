@@ -45,6 +45,7 @@ public static class DatabasePaths
             LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "QA 数据库目录");
         }
 
+        LocalDataFileSecurity.EnsureFileIsNotLinked(fullPath, "QA 数据库文件");
         databasePath = fullPath;
         return true;
     }

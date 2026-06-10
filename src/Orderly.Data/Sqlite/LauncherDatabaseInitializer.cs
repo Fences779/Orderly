@@ -19,8 +19,10 @@ public sealed class LauncherDatabaseInitializer
             LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "启动器数据库目录");
         }
 
+        LocalDataFileSecurity.EnsureFileIsNotLinked(_connectionFactory.DatabasePath, "启动器数据库文件");
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        LocalDataFileSecurity.EnsureFileIsNotLinked(_connectionFactory.DatabasePath, "启动器数据库文件");
         LocalDataFileSecurity.HardenSqliteDatabaseFiles(_connectionFactory.DatabasePath);
 
         await ExecuteAsync(connection, """

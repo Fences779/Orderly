@@ -20,8 +20,10 @@ public sealed partial class DatabaseInitializer
             LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "数据库目录");
         }
 
+        LocalDataFileSecurity.EnsureFileIsNotLinked(_connectionFactory.DatabasePath, "数据库文件");
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        LocalDataFileSecurity.EnsureFileIsNotLinked(_connectionFactory.DatabasePath, "数据库文件");
         LocalDataFileSecurity.HardenSqliteDatabaseFiles(_connectionFactory.DatabasePath);
 
         await ExecuteAsync(connection, """
