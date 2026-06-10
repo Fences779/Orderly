@@ -2,6 +2,11 @@ namespace Orderly.Data.Services;
 
 public sealed class AiProviderOptions
 {
+    private const int MaxProviderNameCharacters = 64;
+    private const int MaxBaseUrlCharacters = 2048;
+    private const int MaxApiKeyCharacters = 4096;
+    private const int MaxModelCharacters = 256;
+
     public const string LocalProviderName = "local";
     public const string OpenAiCompatibleProviderName = "openai-compatible";
     public const string DeepSeekProviderName = "deepseek";
@@ -21,9 +26,9 @@ public sealed class AiProviderOptions
         int timeoutSeconds)
     {
         RequestedProvider = NormalizeProvider(requestedProvider);
-        BaseUrl = baseUrl?.Trim() ?? string.Empty;
-        ApiKey = apiKey?.Trim() ?? string.Empty;
-        Model = model?.Trim() ?? string.Empty;
+        BaseUrl = NormalizeConfigurationValue("ORDERLY_AI_BASE_URL", baseUrl, MaxBaseUrlCharacters);
+        ApiKey = NormalizeConfigurationValue("AI provider API key", apiKey, MaxApiKeyCharacters);
+        Model = NormalizeConfigurationValue("ORDERLY_AI_MODEL", model, MaxModelCharacters);
         TimeoutSeconds = NormalizeTimeout(timeoutSeconds);
     }
 
@@ -68,17 +73,18 @@ public sealed class AiProviderOptions
 
     public static string NormalizeProvider(string? provider)
     {
-        if (string.IsNullOrWhiteSpace(provider))
+        var normalized = NormalizeConfigurationValue("ORDERLY_AI_PROVIDER", provider, MaxProviderNameCharacters);
+        if (string.IsNullOrWhiteSpace(normalized))
         {
             return "local";
         }
 
-        return provider.Trim().ToLowerInvariant() switch
+        return normalized.ToLowerInvariant() switch
         {
             LocalProviderName => LocalProviderName,
             OpenAiCompatibleProviderName => OpenAiCompatibleProviderName,
             DeepSeekProviderName => DeepSeekProviderName,
-            _ => provider.Trim().ToLowerInvariant()
+            _ => normalized.ToLowerInvariant()
         };
     }
 
@@ -90,5 +96,26 @@ public sealed class AiProviderOptions
         }
 
         return Math.Clamp(timeoutSeconds, MinTimeoutSeconds, MaxTimeoutSeconds);
+    }
+
+    private static string NormalizeConfigurationValue(string configurationName, string? value, int maxCharacters)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{configurationName} is too long.");
+        }
+
+        if (normalized.Any(char.IsControl))
+        {
+            throw new InvalidOperationException($"{configurationName} contains invalid control characters.");
+        }
+
+        return normalized;
     }
 }
