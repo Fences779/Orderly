@@ -9,6 +9,8 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_LIMIT = 200
 const MAX_EVENT_BYTES = 65536
+const MAX_DOC_ID_LENGTH = 128
+const MAX_QUERY_TEXT_LENGTH = 256
 const COLLECTIONS = {
   customers: 'customers',
   deals: 'deals',
@@ -63,6 +65,16 @@ const QUOTE_ITEM_RESPONSE_FIELDS = ['name', 'qty', 'price', 'note', 'skuId', 'ma
 
 function normalizeText(value) {
   return value == null ? '' : String(value).trim()
+}
+
+function normalizeSafeText(value, maxLength) {
+  const text = normalizeText(value).replace(/[\u0000-\u001f\u007f]/g, '')
+  return text.length <= maxLength ? text : ''
+}
+
+function normalizeDocId(value) {
+  const id = normalizeSafeText(value, MAX_DOC_ID_LENGTH)
+  return /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
 }
 
 function normalizeList(value) {
@@ -176,7 +188,10 @@ function isAllowedField(collection, field, map) {
 }
 
 function isSafeQueryValue(value) {
-  return value == null || ['string', 'number', 'boolean'].indexOf(typeof value) >= 0
+  if (value == null) return true
+  if (typeof value === 'string') return normalizeSafeText(value, MAX_QUERY_TEXT_LENGTH) === value.trim()
+  if (typeof value === 'number') return Number.isFinite(value)
+  return typeof value === 'boolean'
 }
 
 function sanitizeQuery(collection, query) {
@@ -225,7 +240,7 @@ function sanitizeLimit(value) {
 }
 
 async function getById(collection, id, workspaceId, operatorId) {
-  const docId = normalizeText(id)
+  const docId = normalizeDocId(id)
   if (!docId) return null
   try {
     const row = (await db.collection(collection).doc(docId).get()).data
