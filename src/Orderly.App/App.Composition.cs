@@ -134,9 +134,71 @@ public partial class App
         }
 
         var key = RandomNumberGenerator.GetBytes(QaSessionDataKeyLength);
-        File.WriteAllBytes(keyPath, key);
-        HardenQaSessionDataKeyFile(keyPath);
+        WriteQaSessionDataKeyFile(keyPath, key);
         return key;
+    }
+
+    private static void WriteQaSessionDataKeyFile(string keyPath, byte[] key)
+    {
+        if (key.Length != QaSessionDataKeyLength)
+        {
+            throw new InvalidOperationException("QA session data key length is invalid.");
+        }
+
+        var directory = Path.GetDirectoryName(keyPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            throw new InvalidOperationException("QA session data key directory is invalid.");
+        }
+
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "QA session data key directory");
+        var tempPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(keyPath)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            LocalDataFileSecurity.EnsureFileIsNotLinked(tempPath, "QA session temporary data key file");
+            using (var stream = new FileStream(
+                tempPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: QaSessionDataKeyLength,
+                FileOptions.WriteThrough))
+            {
+                stream.Write(key);
+                stream.Flush(flushToDisk: true);
+            }
+
+            HardenQaSessionDataKeyFile(tempPath);
+            LocalDataFileSecurity.EnsureFileIsNotLinked(keyPath, "QA session data key file");
+            File.Move(tempPath, keyPath, overwrite: true);
+            LocalDataFileSecurity.EnsureFileIsNotLinked(keyPath, "QA session data key file");
+            HardenQaSessionDataKeyFile(keyPath);
+        }
+        catch
+        {
+            DeleteTemporaryQaSessionDataKeyFile(tempPath);
+            throw;
+        }
+    }
+
+    private static void DeleteTemporaryQaSessionDataKeyFile(string tempPath)
+    {
+        try
+        {
+            if (File.Exists(tempPath) && !LocalDataFileSecurity.IsReparsePoint(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private static string GetQaSessionDataKeyPath(string databasePath)
