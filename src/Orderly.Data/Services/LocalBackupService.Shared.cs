@@ -385,6 +385,7 @@ public sealed partial class LocalBackupService
     private static byte[] GetMachineBackupIntegrityKey()
     {
         var keyPath = Path.Combine(DatabasePaths.GetIdentityDirectoryPath(), BackupIntegrityKeyFileName);
+        EnsureMachineBackupIntegrityKeyDirectory(keyPath);
         if (LocalDataFileSecurity.IsReparsePoint(keyPath))
         {
             throw new InvalidOperationException("备份完整性 key 文件不能是链接文件。");
@@ -392,24 +393,78 @@ public sealed partial class LocalBackupService
 
         if (File.Exists(keyPath))
         {
-            var keyInfo = new FileInfo(keyPath);
-            if (keyInfo.Length == BackupIntegrityKeyByteLength)
-            {
-                var existingKey = File.ReadAllBytes(keyPath);
-                if (existingKey.Length == BackupIntegrityKeyByteLength)
-                {
-                    HardenMachineBackupIntegrityKeyFile(keyPath);
-                    return existingKey;
-                }
-
-                CryptographicOperations.ZeroMemory(existingKey);
-            }
+            HardenMachineBackupIntegrityKeyFile(keyPath);
+            return ReadMachineBackupIntegrityKeyFile(keyPath);
         }
 
         var key = RandomNumberGenerator.GetBytes(BackupIntegrityKeyByteLength);
-        File.WriteAllBytes(keyPath, key);
-        HardenMachineBackupIntegrityKeyFile(keyPath);
+        WriteMachineBackupIntegrityKeyFile(keyPath, key);
         return key;
+    }
+
+    private static void EnsureMachineBackupIntegrityKeyDirectory(string keyPath)
+    {
+        var directory = Path.GetDirectoryName(keyPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            throw new InvalidOperationException("备份完整性 key 目录无效。");
+        }
+
+        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "备份完整性 key 目录");
+        Directory.CreateDirectory(directory);
+        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "备份完整性 key 目录");
+        LocalDataFileSecurity.HardenDirectory(directory);
+    }
+
+    private static byte[] ReadMachineBackupIntegrityKeyFile(string keyPath)
+    {
+        using var stream = new FileStream(
+            keyPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: BackupIntegrityKeyByteLength,
+            FileOptions.SequentialScan);
+        if (LocalDataFileSecurity.IsReparsePoint(keyPath))
+        {
+            throw new InvalidOperationException("备份完整性 key 文件不能是链接文件。");
+        }
+
+        if (stream.Length != BackupIntegrityKeyByteLength)
+        {
+            throw new InvalidOperationException("备份完整性 key 文件长度无效。");
+        }
+
+        var key = new byte[BackupIntegrityKeyByteLength];
+        stream.ReadExactly(key);
+        return key;
+    }
+
+    private static void WriteMachineBackupIntegrityKeyFile(string keyPath, byte[] key)
+    {
+        if (key.Length != BackupIntegrityKeyByteLength)
+        {
+            throw new InvalidOperationException("备份完整性 key 长度无效。");
+        }
+
+        if (LocalDataFileSecurity.IsReparsePoint(keyPath))
+        {
+            throw new InvalidOperationException("备份完整性 key 文件不能是链接文件。");
+        }
+
+        using (var stream = new FileStream(
+            keyPath,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None,
+            bufferSize: BackupIntegrityKeyByteLength,
+            FileOptions.WriteThrough))
+        {
+            stream.Write(key);
+            stream.Flush(flushToDisk: true);
+        }
+
+        HardenMachineBackupIntegrityKeyFile(keyPath);
     }
 
     private static void HardenMachineBackupIntegrityKeyFile(string keyPath)
@@ -435,7 +490,7 @@ public sealed partial class LocalBackupService
             var currentUser = WindowsIdentity.GetCurrent().User;
             if (currentUser is null)
             {
-                return;
+                throw new InvalidOperationException("无法识别当前用户，不能加固备份完整性 key。");
             }
 
             var fileInfo = new FileInfo(keyPath);
@@ -453,14 +508,12 @@ public sealed partial class LocalBackupService
                 AccessControlType.Allow));
             fileInfo.SetAccessControl(security);
         }
-        catch (IOException)
+        catch (Exception ex) when (
+            ex is IOException
+                or UnauthorizedAccessException
+                or SystemException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-        catch (SystemException)
-        {
+            throw new InvalidOperationException("备份完整性 key 文件权限加固失败。", ex);
         }
     }
 
