@@ -54,8 +54,8 @@ const RESPONSE_FIELDS = {
   cashflow_entries: ['_id', 'direction', 'amount', 'category', 'paymentMethod', 'status', 'relatedOrderId', 'relatedOrderNo', 'relatedQuoteId', 'relatedSkuId', 'occurredAt', 'createdAt', 'updatedAt'],
   followup_tasks: ['_id', 'dealId', 'customerId', 'customerName', 'triggerType', 'triggerAt', 'dueAt', 'priorityScore', 'templateId', 'suggestedText', 'taskStatus', 'completedAt', 'resultType', 'createdAt', 'updatedAt'],
   message_templates: ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder', 'useCount', 'createdAt', 'updatedAt'],
-  captures: ['_id', 'confidenceScore', 'confirmStatus', 'linkedCustomerId', 'linkedDealId', 'createdAt', 'updatedAt', 'createdBy'],
-  activity_logs: ['_id', 'entityType', 'entityId', 'actionType', 'note', 'operatorId', 'createdAt']
+  captures: ['_id', 'confidenceScore', 'confirmStatus', 'linkedCustomerId', 'linkedDealId', 'createdAt', 'updatedAt'],
+  activity_logs: ['_id', 'entityType', 'entityId', 'actionType', 'note', 'createdAt']
 }
 const CAPTURE_DETAIL_FIELDS = RESPONSE_FIELDS.captures
 const CAPTURE_SENSITIVE_DETAIL_FIELDS = ['parserResult', 'rawText', 'ocrText']
