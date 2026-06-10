@@ -91,13 +91,16 @@ public sealed class LauncherDatabaseInitializer
             return;
         }
 
-        await ExecuteAsync(connection, $"ALTER TABLE {table} ADD COLUMN {column} {definition};", cancellationToken);
+        var safeTable = QuoteSqlIdentifier(table);
+        var safeColumn = QuoteSqlIdentifier(column);
+        await ExecuteAsync(connection, $"ALTER TABLE {safeTable} ADD COLUMN {safeColumn} {definition};", cancellationToken);
     }
 
     private static async Task<bool> ColumnExistsAsync(SqliteConnection connection, string table, string column, CancellationToken cancellationToken)
     {
+        var safeTable = QuoteSqlIdentifier(table);
         await using var command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA table_info({table});";
+        command.CommandText = $"PRAGMA table_info({safeTable});";
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
@@ -109,5 +112,43 @@ public sealed class LauncherDatabaseInitializer
         }
 
         return false;
+    }
+
+    private static string QuoteSqlIdentifier(string identifier)
+    {
+        if (!IsSafeSqlIdentifier(identifier))
+        {
+            throw new InvalidOperationException("SQLite identifier is invalid.");
+        }
+
+        return "\"" + identifier + "\"";
+    }
+
+    private static bool IsSafeSqlIdentifier(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier))
+        {
+            return false;
+        }
+
+        for (var index = 0; index < identifier.Length; index++)
+        {
+            var character = identifier[index];
+            var isAsciiLetter = character is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
+            var isDigit = character is >= '0' and <= '9';
+            if (index == 0)
+            {
+                if (!isAsciiLetter && character != '_')
+                {
+                    return false;
+                }
+            }
+            else if (!isAsciiLetter && !isDigit && character != '_')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
