@@ -11,6 +11,7 @@ const MAX_LIMIT = 200
 const MAX_EVENT_BYTES = 65536
 const MAX_DOC_ID_LENGTH = 128
 const MAX_QUERY_TEXT_LENGTH = 256
+const MAX_WORKSPACE_ID_LENGTH = 128
 const COLLECTIONS = {
   customers: 'customers',
   deals: 'deals',
@@ -77,11 +78,20 @@ function normalizeDocId(value) {
   return /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
 }
 
+function normalizeWorkspaceId(value) {
+  const id = normalizeSafeText(value, MAX_WORKSPACE_ID_LENGTH)
+  return /^[A-Za-z0-9_.:-]+$/.test(id) ? id : ''
+}
+
 function normalizeList(value) {
   return String(value || '')
     .split(/[,\s，、;；]+/)
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+function normalizeWorkspaceList(value) {
+  return normalizeList(value).map(normalizeWorkspaceId).filter(Boolean)
 }
 
 function requireOperatorId() {
@@ -120,8 +130,8 @@ function hasUnsafeObjectKey(value, depth) {
 }
 
 function resolveWorkspaceId(event, operatorId) {
-  const workspaceId = normalizeText(event && event.workspaceId) || DEFAULT_WORKSPACE_ID
-  const configured = normalizeList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
+  const workspaceId = normalizeWorkspaceId(event && event.workspaceId) || DEFAULT_WORKSPACE_ID
+  const configured = normalizeWorkspaceList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
   const allowed = Array.from(new Set(configured.length ? configured : [DEFAULT_WORKSPACE_ID]))
   if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
   const binding = validateWorkspaceBinding(operatorId, workspaceId, allowed)
@@ -170,8 +180,12 @@ function resolveOperatorWorkspaceIds(operatorId) {
 
 function normalizeWorkspaceBindingValue(value) {
   if (!value) return []
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean)
-  return String(value).split(/[,\s，、|/]+/).map((item) => item.trim()).filter(Boolean)
+  const values = Array.isArray(value)
+    ? value.map((item) => String(item).trim())
+    : String(value).split(/[,\s，、|/]+/).map((item) => item.trim())
+  return values
+    .map((item) => (item === '*' ? '*' : normalizeWorkspaceId(item)))
+    .filter(Boolean)
 }
 
 function resolveCollection(value) {
