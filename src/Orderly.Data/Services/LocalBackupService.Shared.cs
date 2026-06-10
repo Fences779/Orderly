@@ -308,7 +308,7 @@ public sealed partial class LocalBackupService
     private byte[] GetSessionBackupIntegrityKey()
     {
         var dataKey = _sessionContextService?.Current?.DataKey;
-        if (dataKey is not { Length: > 0 })
+        if (dataKey is not { Length: BackupIntegrityKeyByteLength })
         {
             throw new InvalidOperationException("当前会话缺少备份完整性校验所需的数据密钥。");
         }
@@ -326,17 +326,21 @@ public sealed partial class LocalBackupService
 
         if (File.Exists(keyPath))
         {
-            var existingKey = File.ReadAllBytes(keyPath);
-            if (existingKey.Length >= 32)
+            var keyInfo = new FileInfo(keyPath);
+            if (keyInfo.Length == BackupIntegrityKeyByteLength)
             {
-                HardenMachineBackupIntegrityKeyFile(keyPath);
-                return existingKey;
-            }
+                var existingKey = File.ReadAllBytes(keyPath);
+                if (existingKey.Length == BackupIntegrityKeyByteLength)
+                {
+                    HardenMachineBackupIntegrityKeyFile(keyPath);
+                    return existingKey;
+                }
 
-            CryptographicOperations.ZeroMemory(existingKey);
+                CryptographicOperations.ZeroMemory(existingKey);
+            }
         }
 
-        var key = RandomNumberGenerator.GetBytes(32);
+        var key = RandomNumberGenerator.GetBytes(BackupIntegrityKeyByteLength);
         File.WriteAllBytes(keyPath, key);
         HardenMachineBackupIntegrityKeyFile(keyPath);
         return key;
