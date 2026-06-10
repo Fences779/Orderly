@@ -11,6 +11,9 @@ const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_SUMMARY_TEXT_LENGTH = 512
+const MAX_CAPTURE_TEXT_LENGTH = 20000
+const MAX_IMAGE_URL_LENGTH = 1024
+const MAX_SOURCE_TYPE_LENGTH = 32
 const MAX_TAGS = 20
 const URGENCY_LEVELS = ['low', 'medium', 'high']
 const SUGGESTED_STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing']
@@ -81,7 +84,16 @@ function normalizeList(value) {
 }
 
 function normalizeText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
-  return value == null ? '' : String(value).trim().slice(0, maxLength)
+  if (value == null || typeof value === 'object') return ''
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, maxLength)
+}
+
+function normalizeCaptureText(value, maxLength = MAX_CAPTURE_TEXT_LENGTH) {
+  if (value == null || typeof value === 'object') return ''
+  return String(value)
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, ' ')
+    .trim()
+    .slice(0, maxLength)
 }
 
 function pickFields(source, allowedFields) {
@@ -355,18 +367,22 @@ async function handleRequest(event) {
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
-  const parserResult = normalizeParserResult(event.parserResult || parseText(event.rawText || event.ocrText || ''))
+  const rawText = normalizeCaptureText(event.rawText)
+  const ocrText = normalizeCaptureText(event.ocrText)
+  const rawImageUrl = normalizeText(event.rawImageUrl, MAX_IMAGE_URL_LENGTH)
+  const sourceType = normalizeText(event.sourceType || 'clipboard', MAX_SOURCE_TYPE_LENGTH) || 'clipboard'
+  const parserResult = normalizeParserResult(event.parserResult || parseText(rawText || ocrText))
   const customerMatches = await matchCustomers(workspaceId, parserResult)
   if (event.mode === 'matchOnly') {
     return { ok: true, parserResult, customerMatches }
   }
-  if (!event.rawText && !event.ocrText) return { ok: false, message: '缺少可解析文本' }
+  if (!rawText && !ocrText) return { ok: false, message: '缺少可解析文本' }
   const capture = {
     workspaceId,
-    sourceType: event.sourceType || 'clipboard',
-    rawText: event.rawText || '',
-    rawImageUrl: event.rawImageUrl || '',
-    ocrText: event.ocrText || '',
+    sourceType,
+    rawText,
+    rawImageUrl,
+    ocrText,
     parserResult,
     confidenceScore: parserResult.confidenceScore,
     confirmStatus: 'draft',
