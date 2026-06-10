@@ -9,6 +9,7 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
+const MAX_DOC_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_REASON_TEXT_LENGTH = 512
 const MAX_TASK_TEXT_LENGTH = 512
@@ -89,6 +90,12 @@ function normalizeWorkspaceId(value) {
 
 function normalizeWorkspaceList(value) {
   return normalizeList(value).map(normalizeWorkspaceId).filter(Boolean)
+}
+
+function normalizeDocId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_DOC_ID_LENGTH && /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
 }
 
 function resolveWorkspaceId(event, operatorId) {
@@ -200,8 +207,8 @@ async function addLog(workspaceId, entityId, beforeData, afterData, note, operat
 }
 
 async function createTaskIfMissing(workspaceId, deal, customer, triggerType, dueAt, suggestedText) {
-  const dealId = normalizeText(deal._id)
-  const customerId = normalizeText(deal.customerId)
+  const dealId = normalizeDocId(deal._id)
+  const customerId = normalizeDocId(deal.customerId)
   if (!dealId) return null
   const dedupeKey = dealId + ':' + triggerType + ':' + dueAt.slice(0, 10)
   const existed = await db.collection('followup_tasks').where({ workspaceId, dedupeKey }).limit(1).get()
@@ -249,7 +256,7 @@ async function handleRequest(event) {
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
-  const dealId = normalizeText(event.dealId)
+  const dealId = normalizeDocId(event.dealId)
   const toStage = normalizeText(event.toStage, 32)
   if (!dealId || !toStage) return { ok: false, message: '缺少 dealId 或 toStage' }
   const deal = (await db.collection('deals').doc(dealId).get()).data
@@ -271,7 +278,7 @@ async function handleRequest(event) {
     }
   }
 
-  const customerId = normalizeText(deal.customerId)
+  const customerId = normalizeDocId(deal.customerId)
   let customer = {}
   if (customerId) {
     try {

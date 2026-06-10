@@ -9,6 +9,7 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
+const MAX_DOC_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
 const MAX_TAGS = 20
@@ -73,6 +74,12 @@ function normalizeWorkspaceId(value) {
 
 function normalizeWorkspaceArray(value) {
   return normalizeArray(value).map(normalizeWorkspaceId).filter(Boolean)
+}
+
+function normalizeDocId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_DOC_ID_LENGTH && /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
 }
 
 function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
@@ -247,7 +254,7 @@ async function handleRequest(event) {
 
   let existing = null
   if (input._id) {
-    const customerId = normalizeText(input._id)
+    const customerId = normalizeDocId(input._id)
     if (!customerId) return { ok: false, code: 'invalid_customer_id', message: '非法客户 ID。' }
     try {
       existing = (await db.collection('customers').doc(customerId).get()).data

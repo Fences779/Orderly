@@ -9,6 +9,7 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
+const MAX_DOC_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_SUMMARY_TEXT_LENGTH = 512
 const MAX_MONEY_AMOUNT = 100000000
@@ -78,6 +79,12 @@ function normalizeWorkspaceId(value) {
 
 function normalizeWorkspaceArray(value) {
   return normalizeArray(value).map(normalizeWorkspaceId).filter(Boolean)
+}
+
+function normalizeDocId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_DOC_ID_LENGTH && /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
 }
 
 function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
@@ -219,7 +226,7 @@ async function handleRequest(event) {
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
   const input = pickFields(event.deal, DEAL_FIELDS)
-  const customerId = normalizeText(input.customerId)
+  const customerId = normalizeDocId(input.customerId)
   const title = normalizeText(input.title || input.demandSummary)
   const demandSummary = normalizeText(input.demandSummary, MAX_SUMMARY_TEXT_LENGTH)
   if (!customerId) return { ok: false, message: 'deal 必须关联 customerId' }
@@ -284,7 +291,7 @@ async function handleRequest(event) {
   })
 
   if (input._id) {
-    const dealId = normalizeText(input._id)
+    const dealId = normalizeDocId(input._id)
     if (!dealId) return { ok: false, code: 'invalid_deal_id', message: '非法 dealId。' }
     const before = (await db.collection('deals').doc(dealId).get()).data
     if (!before || before.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }

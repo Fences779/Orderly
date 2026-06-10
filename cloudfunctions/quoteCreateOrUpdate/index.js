@@ -9,6 +9,7 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
+const MAX_DOC_ID_LENGTH = 128
 const MAX_QUOTE_ITEMS = 50
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
@@ -83,6 +84,12 @@ function normalizeWorkspaceId(value) {
 
 function normalizeWorkspaceList(value) {
   return normalizeList(value).map(normalizeWorkspaceId).filter(Boolean)
+}
+
+function normalizeDocId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_DOC_ID_LENGTH && /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
 }
 
 function normalizeAction(value) {
@@ -218,8 +225,8 @@ function calculate(input) {
   const shippingFee = money(input.shippingFee)
   const discountAmount = money(input.discountAmount)
   return Object.assign({}, input, {
-    _id: limitText(input._id, MAX_SHORT_TEXT_LENGTH),
-    dealId: limitText(input.dealId, MAX_SHORT_TEXT_LENGTH),
+    _id: normalizeDocId(input._id),
+    dealId: normalizeDocId(input.dealId),
     quoteNo: limitText(input.quoteNo, MAX_SHORT_TEXT_LENGTH),
     validUntil: limitText(input.validUntil, 64),
     quoteNote: limitText(input.quoteNote, MAX_NOTE_TEXT_LENGTH),
@@ -264,9 +271,9 @@ async function addLog(workspaceId, entityType, entityId, actionType, beforeData,
 }
 
 async function createQuoteTask(workspaceId, quote, deal, customer) {
-  const dealId = limitText(deal._id, MAX_SHORT_TEXT_LENGTH)
-  const quoteId = limitText(quote._id, MAX_SHORT_TEXT_LENGTH)
-  const customerId = limitText(deal.customerId, MAX_SHORT_TEXT_LENGTH)
+  const dealId = normalizeDocId(deal._id)
+  const quoteId = normalizeDocId(quote._id)
+  const customerId = normalizeDocId(deal.customerId)
   if (!dealId || !quoteId) return null
   const dedupeKey = dealId + ':quote_no_reply:' + quoteId
   const existed = await db.collection('followup_tasks').where({ workspaceId, dedupeKey }).limit(1).get()
@@ -330,6 +337,7 @@ async function handleRequest(event) {
 
   const input = calculate(rawQuote)
   if (rawQuote._id && !input._id) return { ok: false, code: 'invalid_quote_id', message: '非法报价 ID。' }
+  if (rawQuote.dealId && !input.dealId) return { ok: false, code: 'invalid_deal_id', message: '非法 dealId。' }
   if (!input.dealId) return { ok: false, message: '报价必须关联 dealId' }
   if (!input.items.length && !input.baseAmount) return { ok: false, message: '报价项或基础金额不能为空' }
   if (input.totalAmount > MAX_TOTAL_AMOUNT) return { ok: false, code: 'invalid_quote_total', message: '报价金额超出允许范围。' }
@@ -342,7 +350,7 @@ async function handleRequest(event) {
     return { ok: false, code: 'not_found', message: 'deal 不存在。' }
   }
   if (!deal || deal.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'deal 不存在。' }
-  const customerId = limitText(deal.customerId, MAX_SHORT_TEXT_LENGTH)
+  const customerId = normalizeDocId(deal.customerId)
   let customer = {}
   if (customerId) {
     try {

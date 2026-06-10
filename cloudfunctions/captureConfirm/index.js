@@ -9,6 +9,7 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
+const MAX_DOC_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_SUMMARY_TEXT_LENGTH = 512
 const MAX_MONEY_AMOUNT = 100000000
@@ -79,6 +80,12 @@ function normalizeWorkspaceId(value) {
 
 function normalizeWorkspaceArray(value) {
   return normalizeArray(value).map(normalizeWorkspaceId).filter(Boolean)
+}
+
+function normalizeDocId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_DOC_ID_LENGTH && /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
 }
 
 function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
@@ -248,7 +255,7 @@ async function handleRequest(event) {
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
   const form = event.form || {}
-  const captureId = normalizeText(event.captureId)
+  const captureId = normalizeDocId(event.captureId)
   if (!captureId) return { ok: false, message: '缺少 captureId' }
   const customerName = normalizeText(form.customerName)
   const demandSummary = normalizeTextWithLimit(form.demandSummary, MAX_SUMMARY_TEXT_LENGTH)
@@ -268,7 +275,7 @@ async function handleRequest(event) {
 
   let customer
   if (event.customerMode === 'existing' && event.selectedCustomerId) {
-    const selectedCustomerId = normalizeText(event.selectedCustomerId)
+    const selectedCustomerId = normalizeDocId(event.selectedCustomerId)
     if (!selectedCustomerId) return { ok: false, code: 'invalid_customer_id', message: '非法客户 ID。' }
     customer = (await db.collection('customers').doc(selectedCustomerId).get()).data
     if (!customer || customer.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
