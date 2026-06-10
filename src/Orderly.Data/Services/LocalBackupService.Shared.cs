@@ -180,9 +180,7 @@ public sealed partial class LocalBackupService
             directory = Directory.GetCurrentDirectory();
         }
 
-        EnsureBackupDirectoryPathIsNotLinked(directory);
-        Directory.CreateDirectory(directory);
-        EnsureBackupDirectoryPathIsNotLinked(directory);
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "备份输出目录");
 
         var tempPath = Path.Combine(
             directory,
@@ -441,10 +439,7 @@ public sealed partial class LocalBackupService
             throw new InvalidOperationException("备份完整性 key 目录无效。");
         }
 
-        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "备份完整性 key 目录");
-        Directory.CreateDirectory(directory);
-        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "备份完整性 key 目录");
-        LocalDataFileSecurity.HardenDirectory(directory);
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "备份完整性 key 目录");
     }
 
     private static byte[] ReadMachineBackupIntegrityKeyFile(string keyPath)

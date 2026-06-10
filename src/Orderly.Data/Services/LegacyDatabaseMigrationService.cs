@@ -81,8 +81,7 @@ public sealed class LegacyDatabaseMigrationService : ILegacyDatabaseMigrationSer
         var targetDirectory = Path.GetDirectoryName(plan.TargetDatabasePath);
         if (!string.IsNullOrWhiteSpace(targetDirectory))
         {
-            Directory.CreateDirectory(targetDirectory);
-            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(targetDirectory, "Legacy 迁移目标目录");
+            LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(targetDirectory, "Legacy 迁移目标目录");
         }
 
         var targetExists = File.Exists(plan.TargetDatabasePath);

@@ -35,6 +35,19 @@ public static class LocalDataFileSecurity
         }
     }
 
+    public static void EnsureDirectoryExistsAndIsNotLinked(string directoryPath, string description)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            return;
+        }
+
+        EnsureDirectoryIsNotLinked(directoryPath, description);
+        Directory.CreateDirectory(directoryPath);
+        EnsureDirectoryIsNotLinked(directoryPath, description);
+        HardenDirectory(directoryPath);
+    }
+
     public static void HardenSqliteDatabaseFiles(string databasePath)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(databasePath))

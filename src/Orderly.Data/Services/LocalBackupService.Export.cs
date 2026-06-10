@@ -29,9 +29,7 @@ public sealed partial class LocalBackupService
             var directory = Path.GetDirectoryName(safeOutputPath);
             if (!string.IsNullOrWhiteSpace(directory))
             {
-                EnsureBackupDirectoryPathIsNotLinked(directory);
-                Directory.CreateDirectory(directory);
-                EnsureBackupDirectoryPathIsNotLinked(directory);
+                LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "备份输出目录");
             }
 
             var manifest = await BuildManifestAsync(cancellationToken);

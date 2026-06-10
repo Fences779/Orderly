@@ -8,9 +8,7 @@ public static class DatabasePaths
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Orderly-SN");
 
-        Directory.CreateDirectory(root);
-        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(root, "应用数据目录");
-        LocalDataFileSecurity.HardenDirectory(root);
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(root, "应用数据目录");
         return root;
     }
 
@@ -44,9 +42,7 @@ public static class DatabasePaths
         var directory = Path.GetDirectoryName(fullPath);
         if (!string.IsNullOrWhiteSpace(directory))
         {
-            Directory.CreateDirectory(directory);
-            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "QA 数据库目录");
-            LocalDataFileSecurity.HardenDirectory(directory);
+            LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "QA 数据库目录");
         }
 
         databasePath = fullPath;
@@ -56,9 +52,7 @@ public static class DatabasePaths
     public static string GetIdentityDirectoryPath()
     {
         var identityPath = Path.Combine(GetAppRootPath(), "identity");
-        Directory.CreateDirectory(identityPath);
-        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(identityPath, "身份数据目录");
-        LocalDataFileSecurity.HardenDirectory(identityPath);
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(identityPath, "身份数据目录");
         return identityPath;
     }
 
@@ -70,18 +64,14 @@ public static class DatabasePaths
     public static string GetAccountsDirectoryPath()
     {
         var accountsPath = Path.Combine(GetAppRootPath(), "accounts");
-        Directory.CreateDirectory(accountsPath);
-        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(accountsPath, "账号数据目录");
-        LocalDataFileSecurity.HardenDirectory(accountsPath);
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(accountsPath, "账号数据目录");
         return accountsPath;
     }
 
     public static string GetAccountDirectoryPath(string accountId)
     {
         var accountPath = GetExpectedAccountDirectoryPath(accountId);
-        Directory.CreateDirectory(accountPath);
-        LocalDataFileSecurity.EnsureDirectoryIsNotLinked(accountPath, "账号工作区目录");
-        LocalDataFileSecurity.HardenDirectory(accountPath);
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(accountPath, "账号工作区目录");
         return accountPath;
     }
 

@@ -16,9 +16,7 @@ public sealed class LauncherDatabaseInitializer
         var directory = Path.GetDirectoryName(_connectionFactory.DatabasePath);
         if (!string.IsNullOrWhiteSpace(directory))
         {
-            Directory.CreateDirectory(directory);
-            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "启动器数据库目录");
-            LocalDataFileSecurity.HardenDirectory(directory);
+            LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "启动器数据库目录");
         }
 
         await using var connection = _connectionFactory.CreateConnection();

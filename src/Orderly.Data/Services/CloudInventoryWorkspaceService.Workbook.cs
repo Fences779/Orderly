@@ -125,6 +125,7 @@ public sealed partial class CloudInventoryWorkspaceService
         var directory = Path.GetDirectoryName(safeWorkbookPath);
         if (!string.IsNullOrWhiteSpace(directory))
         {
+            EnsureWorkbookDirectoryPathIsSafe(directory, "Excel 导出目录");
             Directory.CreateDirectory(directory);
             EnsureWorkbookDirectoryPathIsSafe(directory, "Excel 导出目录");
         }
