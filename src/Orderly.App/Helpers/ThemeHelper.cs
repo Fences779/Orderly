@@ -49,8 +49,8 @@ public static class ThemeHelper
         // 1. 检查当前层的合并字典
         var existingTheme = mergedDicts.FirstOrDefault(d => 
             d.Source != null && 
-            (d.Source.OriginalString.Contains("/Themes/ThemeLight.xaml") || 
-             d.Source.OriginalString.Contains("/Themes/ThemeDark.xaml")));
+            (d.Source.OriginalString.IndexOf("/Themes/ThemeLight.xaml", StringComparison.OrdinalIgnoreCase) >= 0 || 
+             d.Source.OriginalString.IndexOf("/Themes/ThemeDark.xaml", StringComparison.OrdinalIgnoreCase) >= 0));
 
         if (existingTheme != null)
         {

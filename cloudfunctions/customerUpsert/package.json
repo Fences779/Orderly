@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
-    "wx-server-sdk": "3.0.4"
+    "wx-server-sdk": "3.0.4",
+    "lodash.set": "file:../_vendor/orderly-safe-lodash-set",
+    "lodash.unset": "file:../_vendor/orderly-safe-lodash-unset"
   },
   "overrides": {
     "@cloudbase/node-sdk": "3.18.1",
-    "axios": "1.17.0"
+    "axios": "1.17.0",
+    "lodash.set": "$lodash.set",
+    "lodash.unset": "$lodash.unset"
   }
 }
