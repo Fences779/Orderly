@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using Orderly.Data.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -44,7 +45,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
 
     public async Task<LocalAccount?> GetByUsernameAsync(string username, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(username))
+        if (!LocalCredentialSecurity.TryNormalizeAccountUsername(username, out var normalizedUsername))
         {
             return null;
         }
@@ -53,7 +54,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = $"{SelectColumns} WHERE Username = $username LIMIT 1;";
-        command.Parameters.AddWithValue("$username", username.Trim());
+        command.Parameters.AddWithValue("$username", normalizedUsername);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
@@ -61,7 +62,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
 
     public async Task<LocalAccount?> GetByAccountIdAsync(string accountId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(accountId))
+        if (!LocalCredentialSecurity.TryNormalizeAccountId(accountId, out var normalizedAccountId))
         {
             return null;
         }
@@ -70,7 +71,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = $"{SelectColumns} WHERE AccountId = $accountId LIMIT 1;";
-        command.Parameters.AddWithValue("$accountId", accountId.Trim());
+        command.Parameters.AddWithValue("$accountId", normalizedAccountId);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? Map(reader) : null;
@@ -200,10 +201,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
 
     public async Task DeleteAsync(string accountId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(accountId))
-        {
-            throw new ArgumentException("Account id cannot be empty.", nameof(accountId));
-        }
+        var normalizedAccountId = LocalCredentialSecurity.NormalizeAccountId(accountId);
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
@@ -212,7 +210,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
             DELETE FROM LocalAccounts
             WHERE AccountId = $accountId;
             """;
-        command.Parameters.AddWithValue("$accountId", accountId.Trim());
+        command.Parameters.AddWithValue("$accountId", normalizedAccountId);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -286,9 +284,16 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
 
     private static void AddParameters(SqliteCommand command, LocalAccount account)
     {
-        command.Parameters.AddWithValue("$accountId", account.AccountId);
-        command.Parameters.AddWithValue("$username", account.Username);
-        command.Parameters.AddWithValue("$displayName", account.DisplayName);
+        var accountId = LocalCredentialSecurity.NormalizeAccountId(account.AccountId);
+        var username = LocalCredentialSecurity.NormalizeAccountUsername(account.Username);
+        var displayName = LocalCredentialSecurity.NormalizeAccountDisplayName(account.DisplayName, username);
+        var adminOwnerAccountId = string.IsNullOrWhiteSpace(account.AdminOwnerAccountId)
+            ? string.Empty
+            : LocalCredentialSecurity.NormalizeAccountId(account.AdminOwnerAccountId);
+
+        command.Parameters.AddWithValue("$accountId", accountId);
+        command.Parameters.AddWithValue("$username", username);
+        command.Parameters.AddWithValue("$displayName", displayName);
         command.Parameters.AddWithValue("$passwordHash", account.PasswordHash);
         command.Parameters.AddWithValue("$passwordSalt", account.PasswordSalt);
         command.Parameters.AddWithValue("$passwordIterations", account.PasswordIterations);
@@ -304,7 +309,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         command.Parameters.AddWithValue("$encryptedDataKey", account.EncryptedDataKey);
         command.Parameters.AddWithValue("$dataKeyNonce", account.DataKeyNonce);
         command.Parameters.AddWithValue("$dataKeyTag", account.DataKeyTag);
-        command.Parameters.AddWithValue("$adminOwnerAccountId", ToDbText(account.AdminOwnerAccountId));
+        command.Parameters.AddWithValue("$adminOwnerAccountId", ToDbText(adminOwnerAccountId));
         command.Parameters.AddWithValue("$adminEncryptedDataKey", ToDbBlob(account.AdminEncryptedDataKey));
         command.Parameters.AddWithValue("$adminDataKeyNonce", ToDbBlob(account.AdminDataKeyNonce));
         command.Parameters.AddWithValue("$adminDataKeyTag", ToDbBlob(account.AdminDataKeyTag));

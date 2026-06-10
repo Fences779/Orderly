@@ -23,12 +23,8 @@ public sealed partial class LocalAccountManagementService
 
     private async Task<LocalAccount> GetAccountRequiredAsync(string accountId, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(accountId))
-        {
-            throw new InvalidOperationException("账号标识不能为空。");
-        }
-
-        var account = await _accountRepository.GetByAccountIdAsync(accountId.Trim(), cancellationToken);
+        var normalizedAccountId = LocalCredentialSecurity.NormalizeAccountId(accountId);
+        var account = await _accountRepository.GetByAccountIdAsync(normalizedAccountId, cancellationToken);
         return account ?? throw new InvalidOperationException("目标账号不存在。");
     }
 

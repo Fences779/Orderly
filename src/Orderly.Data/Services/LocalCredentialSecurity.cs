@@ -38,6 +38,31 @@ internal static class LocalCredentialSecurity
         return normalized;
     }
 
+    internal static string NormalizeAccountId(string? accountId)
+    {
+        var normalized = string.IsNullOrWhiteSpace(accountId) ? string.Empty : accountId.Trim();
+        if (!Guid.TryParseExact(normalized, "N", out _))
+        {
+            throw new InvalidOperationException("账号标识无效。");
+        }
+
+        return normalized.ToLowerInvariant();
+    }
+
+    internal static bool TryNormalizeAccountId(string? accountId, out string normalized)
+    {
+        try
+        {
+            normalized = NormalizeAccountId(accountId);
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            normalized = string.Empty;
+            return false;
+        }
+    }
+
     internal static bool TryNormalizeAccountUsername(string? username, out string normalized)
     {
         try

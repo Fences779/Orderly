@@ -236,12 +236,12 @@ public sealed partial class LocalBackupService
 
     private static void ValidateLauncherSnapshotRow(LauncherAccountBackupRow row)
     {
-        row.AccountId = NormalizeLauncherSnapshotAccountId(row.AccountId, "AccountId");
+        row.AccountId = LocalCredentialSecurity.NormalizeAccountId(row.AccountId);
         row.Username = LocalCredentialSecurity.NormalizeAccountUsername(row.Username);
         row.DisplayName = LocalCredentialSecurity.NormalizeAccountDisplayName(row.DisplayName, row.Username);
         if (!string.IsNullOrWhiteSpace(row.AdminOwnerAccountId))
         {
-            row.AdminOwnerAccountId = NormalizeLauncherSnapshotAccountId(row.AdminOwnerAccountId, "AdminOwnerAccountId");
+            row.AdminOwnerAccountId = LocalCredentialSecurity.NormalizeAccountId(row.AdminOwnerAccountId);
         }
 
         if (string.IsNullOrWhiteSpace(row.AccountId)
@@ -266,17 +266,6 @@ public sealed partial class LocalBackupService
         {
             ValidateLauncherSnapshotDate(row.LastLoginAt, "LastLoginAt");
         }
-    }
-
-    private static string NormalizeLauncherSnapshotAccountId(string? accountId, string fieldName)
-    {
-        var normalized = string.IsNullOrWhiteSpace(accountId) ? string.Empty : accountId.Trim();
-        if (!Guid.TryParseExact(normalized, "N", out _))
-        {
-            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 字段 {fieldName} 的账号标识无效。");
-        }
-
-        return normalized.ToLowerInvariant();
     }
 
     private static void ValidateLauncherSnapshotDate(string value, string fieldName)

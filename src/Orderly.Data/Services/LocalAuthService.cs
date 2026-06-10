@@ -225,12 +225,11 @@ public sealed class LocalAuthService : ILocalAuthService
 
     public async Task<bool> VerifyPinAsync(string accountId, string pin, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(accountId))
+        if (!LocalCredentialSecurity.TryNormalizeAccountId(accountId, out var normalizedAccountId))
         {
             return false;
         }
 
-        var normalizedAccountId = accountId.Trim();
         if (IsCredentialAttemptBlocked("pin", normalizedAccountId))
         {
             return false;
@@ -256,12 +255,11 @@ public sealed class LocalAuthService : ILocalAuthService
 
     public async Task<bool> VerifyRecoveryKeyAsync(string accountId, string recoveryKey, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(accountId))
+        if (!LocalCredentialSecurity.TryNormalizeAccountId(accountId, out var normalizedAccountId))
         {
             return false;
         }
 
-        var normalizedAccountId = accountId.Trim();
         if (IsCredentialAttemptBlocked("recovery", normalizedAccountId))
         {
             return false;
