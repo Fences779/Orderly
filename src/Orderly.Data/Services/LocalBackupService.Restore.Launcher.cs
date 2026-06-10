@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using System.Text.Json;
 
@@ -56,7 +57,9 @@ public sealed partial class LocalBackupService
 
         await using var connection = _launcherConnectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO LocalAccounts (
                 AccountId,
@@ -212,6 +215,7 @@ public sealed partial class LocalBackupService
             command.Parameters.AddWithValue("$lastLoginAt", string.IsNullOrWhiteSpace(row.LastLoginAt) ? DBNull.Value : row.LastLoginAt);
 
             await command.ExecuteNonQueryAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
         finally
         {
