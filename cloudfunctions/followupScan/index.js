@@ -10,6 +10,7 @@ const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
+const MAX_DOC_ID_LENGTH = 128
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
 const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
@@ -71,6 +72,16 @@ function normalizeWorkspaceId(value) {
 
 function normalizeWorkspaceArray(value) {
   return normalizeArray(value).map(normalizeWorkspaceId).filter(Boolean)
+}
+
+function normalizeDocId(value) {
+  if (value == null || typeof value === 'object') return ''
+  const id = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return id.length <= MAX_DOC_ID_LENGTH && /^[A-Za-z0-9_-]+$/.test(id) ? id : ''
+}
+
+function hasTextValue(value) {
+  return value != null && String(value).trim() !== ''
 }
 
 function normalizeLimitedArray(value, maxItems = MAX_TAGS) {
@@ -486,7 +497,7 @@ async function log(workspaceId, entityType, entityId, actionType, note, operator
 }
 
 async function getWorkspaceDoc(collection, id, workspaceId) {
-  const docId = normalizeText(id)
+  const docId = normalizeDocId(id)
   if (!docId) return null
   try {
     const data = (await db.collection(collection).doc(docId).get()).data
@@ -498,7 +509,7 @@ async function getWorkspaceDoc(collection, id, workspaceId) {
 
 async function upsertById(collection, data, workspaceId) {
   if (data._id) {
-    const id = normalizeText(data._id)
+    const id = normalizeDocId(data._id)
     if (!id) return null
     const existing = await getWorkspaceDoc(collection, id, workspaceId)
     if (!existing) return null
@@ -521,7 +532,7 @@ async function createTaskIfMissing(workspaceId, task) {
 }
 
 async function taskAction(event, operatorId, workspaceId) {
-  const taskId = normalizeText(event.taskId)
+  const taskId = normalizeDocId(event.taskId)
   const action = normalizeText(event.action)
   if (TASK_ACTIONS.indexOf(action) < 0) return { ok: false, code: 'invalid_action', message: '非法跟进任务动作。' }
 
@@ -572,8 +583,12 @@ async function handleRequest(event) {
   if (mode === 'taskAction') return taskAction(event, operatorId, workspaceId)
   if (mode === 'manualCreate') {
     const input = pickFields(event.task, MANUAL_TASK_FIELDS)
-    const dealId = limitText(input.dealId, MAX_SHORT_TEXT_LENGTH)
-    const customerId = limitText(input.customerId, MAX_SHORT_TEXT_LENGTH)
+    const dealId = normalizeDocId(input.dealId)
+    const customerId = normalizeDocId(input.customerId)
+    const templateId = normalizeDocId(input.templateId)
+    if (hasTextValue(input.dealId) && !dealId) return { ok: false, code: 'invalid_deal_id', message: '非法 dealId。' }
+    if (hasTextValue(input.customerId) && !customerId) return { ok: false, code: 'invalid_customer_id', message: '非法客户 ID。' }
+    if (hasTextValue(input.templateId) && !templateId) return { ok: false, code: 'invalid_template_id', message: '非法模板 ID。' }
     if (dealId && !(await getWorkspaceDoc('deals', dealId, workspaceId))) {
       return { ok: false, code: 'not_found', message: 'deal 不存在。' }
     }
@@ -600,7 +615,7 @@ async function handleRequest(event) {
       customerName: limitText(input.customerName, MAX_SHORT_TEXT_LENGTH),
       dueAt: normalizeIsoDate(input.dueAt, addDaysFrom(new Date(), 1)),
       priorityScore: normalizeBoundedNumber(input.priorityScore || 28, 0, 100),
-      templateId: limitText(input.templateId, MAX_SHORT_TEXT_LENGTH),
+      templateId,
       suggestedText: limitText(input.suggestedText, MAX_NOTE_TEXT_LENGTH),
       dedupeKey: 'manual:' + Date.now() + ':' + Math.random().toString(36).slice(2),
       createdAt: now(),
@@ -629,7 +644,7 @@ async function handleRequest(event) {
     return { ok: true, template: saved }
   }
   if (mode === 'templateUse') {
-    const templateId = normalizeText(event.templateId)
+    const templateId = normalizeDocId(event.templateId)
     if (!templateId) return { ok: false, message: '缺少 templateId' }
     const template = await getWorkspaceDoc('message_templates', templateId, workspaceId)
     if (!template) return { ok: false, code: 'not_found', message: '模板不存在。' }
@@ -639,9 +654,11 @@ async function handleRequest(event) {
   }
   if (mode === 'skuSave') {
     const rawSku = pickFields(event.sku, SKU_FIELDS)
+    const rawSkuId = normalizeDocId(rawSku._id)
     let baseSku = {}
     if (rawSku._id) {
-      baseSku = await getWorkspaceDoc('sku_catalog', rawSku._id, workspaceId)
+      if (!rawSkuId) return { ok: false, code: 'invalid_sku_id', message: '非法 SKU ID。' }
+      baseSku = await getWorkspaceDoc('sku_catalog', rawSkuId, workspaceId)
       if (!baseSku) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
     }
     const mergedSku = Object.assign({}, baseSku, rawSku)
@@ -675,7 +692,7 @@ async function handleRequest(event) {
     const movementType = normalizeMovementType(movementInput.movementType || movementInput.type)
     const quantity = normalizeNumber(movementInput.quantity)
     const unitCost = normalizeNumber(movementInput.unitCost)
-    const skuId = normalizeText(movementInput.skuId)
+    const skuId = normalizeDocId(movementInput.skuId)
     if (!skuId) return { ok: false, message: '缺少 skuId' }
     if (!movementType) return { ok: false, code: 'invalid_movement_type', message: '非法库存流水类型。' }
     if (!quantity) return { ok: false, message: '库存流水数量不能为空' }
@@ -683,6 +700,8 @@ async function handleRequest(event) {
     if (unitCost < 0 || unitCost > MAX_CASHFLOW_AMOUNT) return { ok: false, code: 'invalid_inventory_unit_cost', message: '库存流水单价超出允许范围。' }
     const totalCost = normalizeNumber(movementInput.totalCost) || Math.abs(quantity) * unitCost
     if (totalCost < 0 || totalCost > MAX_CASHFLOW_AMOUNT) return { ok: false, code: 'invalid_inventory_total_cost', message: '库存流水总价超出允许范围。' }
+    const relatedOrderId = normalizeDocId(movementInput.relatedOrderId)
+    if (hasTextValue(movementInput.relatedOrderId) && !relatedOrderId) return { ok: false, code: 'invalid_related_order_id', message: '非法关联订单 ID。' }
 
     const sku = await getWorkspaceDoc('sku_catalog', skuId, workspaceId)
     if (!sku) return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
@@ -696,7 +715,7 @@ async function handleRequest(event) {
       quantity,
       unitCost,
       totalCost,
-      relatedOrderId: limitText(movementInput.relatedOrderId, MAX_SHORT_TEXT_LENGTH),
+      relatedOrderId,
       relatedOrderNo: limitText(movementInput.relatedOrderNo, MAX_SHORT_TEXT_LENGTH),
       operatorId,
       note: limitText(movementInput.note, MAX_NOTE_TEXT_LENGTH),
@@ -729,6 +748,15 @@ async function handleRequest(event) {
     if (amount < 0 || amount > MAX_CASHFLOW_AMOUNT) return { ok: false, code: 'invalid_cashflow_amount', message: '现金流金额超出允许范围。' }
     if (!direction) return { ok: false, code: 'invalid_cashflow_direction', message: '非法现金流方向。' }
     if (!status) return { ok: false, code: 'invalid_cashflow_status', message: '非法现金流状态。' }
+    const rawRelatedOrderId = hasTextValue(input.relatedOrderId) ? input.relatedOrderId : input.orderId
+    const rawRelatedQuoteId = hasTextValue(input.relatedQuoteId) ? input.relatedQuoteId : input.quoteId
+    const rawRelatedSkuId = hasTextValue(input.relatedSkuId) ? input.relatedSkuId : input.skuId
+    const relatedOrderId = normalizeDocId(rawRelatedOrderId)
+    const relatedQuoteId = normalizeDocId(rawRelatedQuoteId)
+    const relatedSkuId = normalizeDocId(rawRelatedSkuId)
+    if (hasTextValue(rawRelatedOrderId) && !relatedOrderId) return { ok: false, code: 'invalid_related_order_id', message: '非法关联订单 ID。' }
+    if (hasTextValue(rawRelatedQuoteId) && !relatedQuoteId) return { ok: false, code: 'invalid_related_quote_id', message: '非法关联报价 ID。' }
+    if (hasTextValue(rawRelatedSkuId) && !relatedSkuId) return { ok: false, code: 'invalid_related_sku_id', message: '非法关联 SKU ID。' }
     const entry = Object.assign({}, input, {
       workspaceId,
       direction,
@@ -736,10 +764,10 @@ async function handleRequest(event) {
       category: limitText(input.category, MAX_SHORT_TEXT_LENGTH),
       paymentMethod: limitText(input.paymentMethod || input.channel, MAX_SHORT_TEXT_LENGTH),
       status,
-      relatedOrderId: limitText(input.relatedOrderId || input.orderId, MAX_SHORT_TEXT_LENGTH),
+      relatedOrderId,
       relatedOrderNo: limitText(input.relatedOrderNo || input.orderNo, MAX_SHORT_TEXT_LENGTH),
-      relatedQuoteId: limitText(input.relatedQuoteId || input.quoteId, MAX_SHORT_TEXT_LENGTH),
-      relatedSkuId: limitText(input.relatedSkuId || input.skuId, MAX_SHORT_TEXT_LENGTH),
+      relatedQuoteId,
+      relatedSkuId,
       counterpartyName: limitText(input.counterpartyName || input.counterparty, MAX_SHORT_TEXT_LENGTH),
       operatorId,
       note: limitText(input.note, MAX_NOTE_TEXT_LENGTH),
