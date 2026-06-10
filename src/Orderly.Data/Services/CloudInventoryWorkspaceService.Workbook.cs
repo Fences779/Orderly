@@ -161,13 +161,7 @@ public sealed partial class CloudInventoryWorkspaceService
         }
 
         worksheet.Columns().AdjustToContents();
-        if (LocalDataFileSecurity.IsReparsePoint(safeWorkbookPath))
-        {
-            throw new InvalidOperationException("Excel 导出文件不能是链接文件。");
-        }
-
-        workbook.SaveAs(safeWorkbookPath);
-        LocalDataFileSecurity.HardenFile(safeWorkbookPath);
+        SaveWorkbookAtomically(workbook, safeWorkbookPath);
     }
 
     private static string SafeExcelText(string? value)
@@ -175,6 +169,67 @@ public sealed partial class CloudInventoryWorkspaceService
         var text = value ?? string.Empty;
         var firstContent = text.FirstOrDefault(static ch => !char.IsWhiteSpace(ch));
         return firstContent is '=' or '+' or '-' or '@' ? "'" + text : text;
+    }
+
+    private static void SaveWorkbookAtomically(XLWorkbook workbook, string workbookPath)
+    {
+        var directory = Path.GetDirectoryName(workbookPath);
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            directory = Directory.GetCurrentDirectory();
+        }
+
+        EnsureWorkbookDirectoryPathIsSafe(directory, "Excel 导出目录");
+        var tempPath = Path.Combine(
+            directory,
+            $".{Path.GetFileNameWithoutExtension(workbookPath)}.{Guid.NewGuid():N}.tmp.xlsx");
+
+        try
+        {
+            if (LocalDataFileSecurity.IsReparsePoint(tempPath))
+            {
+                throw new InvalidOperationException("Excel 临时导出文件不能是链接文件。");
+            }
+
+            workbook.SaveAs(tempPath);
+            LocalDataFileSecurity.HardenFile(tempPath);
+
+            if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
+            {
+                throw new InvalidOperationException("Excel 导出文件不能是链接文件。");
+            }
+
+            File.Move(tempPath, workbookPath, overwrite: true);
+
+            if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
+            {
+                throw new InvalidOperationException("Excel 导出文件不能是链接文件。");
+            }
+
+            LocalDataFileSecurity.HardenFile(workbookPath);
+        }
+        catch
+        {
+            DeleteTemporaryWorkbookFile(tempPath);
+            throw;
+        }
+    }
+
+    private static void DeleteTemporaryWorkbookFile(string tempPath)
+    {
+        try
+        {
+            if (File.Exists(tempPath) && !LocalDataFileSecurity.IsReparsePoint(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private static string CreateWorkbookBackup(string workbookPath)
