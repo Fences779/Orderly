@@ -8,7 +8,7 @@
     <!-- ===== Segmented Control (for Theme Mode) ===== -->
     <Style x:Key="SettingsSegmentedControlStyle" TargetType="ListBox">
         <Setter Property="helpers:SegmentedControlHelper.IsEnabled" Value="True"/>
-        <Setter Property="Background" Value="#F0F1F3"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Height" Value="36"/>
         <Setter Property="Padding" Value="3"/>
@@ -27,7 +27,7 @@
                         <Grid>
                             <!-- Animated Slider Background -->
                             <Border x:Name="PART_Slider" 
-                                    Background="#FFFFFF" 
+                                    Background="{DynamicResource SurfaceRaisedBrush}" 
                                     CornerRadius="8" 
                                     Height="28" 
                                     HorizontalAlignment="Left"
@@ -50,7 +50,7 @@
 
     <Style x:Key="SettingsSegmentedItemStyle" TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="#6B7280"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
         <Setter Property="FontSize" Value="12.5"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Padding" Value="14,0"/>
@@ -70,7 +70,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="SegBorder" Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="#1D1D1F"/>
+                            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                         </Trigger>
                         <MultiTrigger>
@@ -78,7 +78,7 @@
                                 <Condition Property="IsMouseOver" Value="True"/>
                                 <Condition Property="IsSelected" Value="False"/>
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="SegBorder" Property="Background" Value="#E8E9EB"/>
+                            <Setter TargetName="SegBorder" Property="Background" Value="{DynamicResource BorderBrushSoft}"/>
                         </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -147,7 +147,7 @@
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderBrush" Value="#D1D5DB"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -159,16 +159,16 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1.5">
                             <TextBlock Text="&#xE790;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
-                                       Foreground="#6B7280" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
-                            <Setter TargetName="ButtonBorder" Property="Background" Value="#F3F4F6"/>
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource SurfaceSoftBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="ButtonBorder" Property="Background" Value="#E5E7EB"/>
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource BorderBrushSoft}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -180,7 +180,7 @@
     <Style x:Key="SettingsRowIconTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Foreground" Value="#6B7280"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>

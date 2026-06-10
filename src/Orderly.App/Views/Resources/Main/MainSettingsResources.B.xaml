@@ -6,8 +6,8 @@
         <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainComponentStyles.A.xaml" />
     </ResourceDictionary.MergedDictionaries>
     <Style x:Key="SettingsMetricBadgeStyle" TargetType="Border">
-        <Setter Property="Background" Value="#FFFFFF"/>
-        <Setter Property="BorderBrush" Value="#E6EAF0"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Padding" Value="12,8"/>
@@ -25,7 +25,7 @@
 
     <!-- Group card: white rounded card wrapping a group of setting rows -->
     <Style x:Key="SettingsGroupCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="#FFFFFF"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
         <Setter Property="CornerRadius" Value="16"/>
         <Setter Property="Padding" Value="24,12"/>
         <Setter Property="Margin" Value="0,0,0,20"/>
@@ -40,7 +40,7 @@
     <Style x:Key="SettingsPageTitleStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="24"/>
         <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Foreground" Value="#1D1D1F"/>
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
     </Style>
 
     <!-- Page description -->
@@ -54,20 +54,20 @@
     <Style x:Key="SettingsGroupTitleStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="15"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Foreground" Value="#1D1D1F"/>
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
         <Setter Property="Margin" Value="0,12,0,4"/>
     </Style>
 
     <!-- Single setting row: bottom border separator -->
     <Style x:Key="SettingsRowItemBorder" TargetType="Border">
-        <Setter Property="BorderBrush" Value="#F0F0F3"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
         <Setter Property="Padding" Value="12,18"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="#F8F9FA"/>
+                <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -76,13 +76,13 @@
     <Style x:Key="SettingsItemTitleStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="13.5"/>
         <Setter Property="FontWeight" Value="Medium"/>
-        <Setter Property="Foreground" Value="#1D1D1F"/>
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
     </Style>
 
     <!-- Setting item description -->
     <Style x:Key="SettingsItemDescStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12"/>
-        <Setter Property="Foreground" Value="#9CA3AF"/>
+        <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="Margin" Value="0,3,0,0"/>
     </Style>
@@ -92,7 +92,7 @@
         <Setter Property="Width" Value="34"/>
         <Setter Property="Height" Value="34"/>
         <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="Background" Value="#F5F5F7"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}"/>
         <Setter Property="Margin" Value="0,0,14,0"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -125,7 +125,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
                     <Grid x:Name="SwitchContainer" Background="Transparent">
-                        <Border x:Name="SwitchTrack" Width="42" Height="22" CornerRadius="11" Background="#E5E7EB" SnapsToDevicePixels="True"/>
+                        <Border x:Name="SwitchTrack" Width="42" Height="22" CornerRadius="11" Background="{DynamicResource BorderBrushSoft}" SnapsToDevicePixels="True"/>
                         <Border x:Name="SwitchTrackBlue" Width="42" Height="22" CornerRadius="11" Background="#2563EB" Opacity="0" SnapsToDevicePixels="True"/>
                         <Border x:Name="SwitchThumb" Width="16" Height="16" CornerRadius="8" Background="#FFFFFF" HorizontalAlignment="Left" Margin="3,0,3,0" SnapsToDevicePixels="True">
                             <Border.RenderTransform>
@@ -180,8 +180,8 @@
                             <Setter TargetName="SwitchContainer" Property="Opacity" Value="0.88"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="SwitchTrack" Property="Background" Value="#F3F4F6"/>
-                            <Setter TargetName="SwitchThumb" Property="Background" Value="#D1D5DB"/>
+                            <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource SurfaceSoftBrush}"/>
+                            <Setter TargetName="SwitchThumb" Property="Background" Value="{DynamicResource CaptionTextBrush}"/>
                             <Setter TargetName="SwitchTrackBlue" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="SwitchContainer" Property="Opacity" Value="0.75"/>
                         </Trigger>
@@ -194,7 +194,7 @@
     <!-- Status / read-only text in settings -->
     <Style x:Key="SettingsStatusTextStyle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12"/>
-        <Setter Property="Foreground" Value="#6B7280"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="LineHeight" Value="18"/>
     </Style>

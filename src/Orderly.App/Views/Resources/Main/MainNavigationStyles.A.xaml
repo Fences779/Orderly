@@ -5,7 +5,7 @@
     <!-- Main Navigation Button Style (Left sidebar) -->
     <Style x:Key="MainMenuButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="#55555C"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="FontSize" Value="13.5"/>
         <Setter Property="Padding" Value="14,12"/>
@@ -66,8 +66,8 @@
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsMouseOver" Value="True"/>
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="TabBorder" Property="Background" Value="#EAEAEA"/>
-                            <Setter Property="Foreground" Value="#1D1D1F"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceSoftBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
                         </MultiTrigger>
 
                         <!-- Hover Animation: Icon scales up slightly -->
