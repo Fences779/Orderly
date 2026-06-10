@@ -10,6 +10,8 @@ namespace Orderly.Data.Repositories;
 
 public sealed class ActivityLogRepository : IActivityLogRepository
 {
+    private const int MaxRecentActivityCount = 500;
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -73,7 +75,7 @@ public sealed class ActivityLogRepository : IActivityLogRepository
     {
         return QueryAsync("WHERE DeletedAt IS NULL ORDER BY CreatedAt DESC LIMIT $count", cancellationToken, command =>
         {
-            command.Parameters.AddWithValue("$count", Math.Max(1, count));
+            command.Parameters.AddWithValue("$count", Math.Clamp(count, 1, MaxRecentActivityCount));
         });
     }
 
