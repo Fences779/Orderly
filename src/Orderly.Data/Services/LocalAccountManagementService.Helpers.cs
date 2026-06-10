@@ -105,6 +105,11 @@ public sealed partial class LocalAccountManagementService
             return;
         }
 
+        if (ContainsReparsePoint(targetDirectory))
+        {
+            throw new InvalidOperationException("账号工作区包含链接文件，已拒绝删除。");
+        }
+
         Directory.Delete(targetDirectory, recursive: true);
     }
 
@@ -148,6 +153,14 @@ public sealed partial class LocalAccountManagementService
             return true;
         }
         catch (UnauthorizedAccessException)
+        {
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return true;
+        }
+        catch (NotSupportedException)
         {
             return true;
         }
