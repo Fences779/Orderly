@@ -121,8 +121,8 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static void WriteWorkbook(string workbookPath, IReadOnlyList<InventoryWorkbookRow> rows)
     {
-        EnsureWorkbookWriteTargetIsSafe(workbookPath);
-        var directory = Path.GetDirectoryName(workbookPath);
+        var safeWorkbookPath = EnsureWorkbookWriteTargetIsSafe(workbookPath);
+        var directory = Path.GetDirectoryName(safeWorkbookPath);
         if (!string.IsNullOrWhiteSpace(directory))
         {
             Directory.CreateDirectory(directory);
@@ -159,8 +159,8 @@ public sealed partial class CloudInventoryWorkspaceService
         }
 
         worksheet.Columns().AdjustToContents();
-        workbook.SaveAs(workbookPath);
-        LocalDataFileSecurity.HardenFile(workbookPath);
+        workbook.SaveAs(safeWorkbookPath);
+        LocalDataFileSecurity.HardenFile(safeWorkbookPath);
     }
 
     private static string SafeExcelText(string? value)
@@ -172,26 +172,23 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static string CreateWorkbookBackup(string workbookPath)
     {
-        if (!File.Exists(workbookPath))
+        if (string.IsNullOrWhiteSpace(workbookPath) || !File.Exists(workbookPath))
         {
             return string.Empty;
         }
 
-        if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
-        {
-            throw new InvalidOperationException("Excel 文件不能是链接文件。");
-        }
-
-        var directory = Path.GetDirectoryName(workbookPath) ?? string.Empty;
-        var fileName = Path.GetFileNameWithoutExtension(workbookPath);
-        var extension = Path.GetExtension(workbookPath);
+        var sourceFile = GetSafeExistingWorkbookFileInfo(workbookPath);
+        var safeWorkbookPath = sourceFile.FullName;
+        var directory = sourceFile.DirectoryName ?? string.Empty;
+        var fileName = Path.GetFileNameWithoutExtension(safeWorkbookPath);
+        var extension = Path.GetExtension(safeWorkbookPath);
         var backupPath = Path.Combine(directory, $"{fileName}.{DateTime.Now.ToString(WorkbookBackupTimestampFormat, CultureInfo.InvariantCulture)}.bak{extension}");
         if (LocalDataFileSecurity.IsReparsePoint(backupPath))
         {
             throw new InvalidOperationException("Excel 备份文件不能是链接文件。");
         }
 
-        File.Copy(workbookPath, backupPath, overwrite: true);
+        File.Copy(safeWorkbookPath, backupPath, overwrite: true);
         LocalDataFileSecurity.HardenFile(backupPath);
         PruneWorkbookBackups(directory, fileName, extension, backupPath);
         return backupPath;
@@ -450,12 +447,8 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static string ComputeFileHash(string path)
     {
-        if (LocalDataFileSecurity.IsReparsePoint(path))
-        {
-            throw new InvalidOperationException("Excel 文件不能是链接文件。");
-        }
-
-        using var stream = File.OpenRead(path);
+        var fileInfo = GetSafeExistingWorkbookFileInfo(path);
+        using var stream = File.OpenRead(fileInfo.FullName);
         var hash = SHA256.HashData(stream);
         return Convert.ToHexString(hash);
     }
@@ -463,25 +456,50 @@ public sealed partial class CloudInventoryWorkspaceService
     private static FileInfo GetSafeExistingWorkbookFileInfo(string workbookPath)
     {
         EnsureWorkbookExtensionIsSafe(workbookPath);
-        if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
+        var fullPath = Path.GetFullPath(workbookPath);
+        EnsureWorkbookDirectoryPathIsSafe(Path.GetDirectoryName(fullPath), "Excel 文件目录");
+        if (LocalDataFileSecurity.IsReparsePoint(fullPath))
         {
             throw new InvalidOperationException("Excel 文件不能是链接文件。");
         }
 
-        if (!File.Exists(workbookPath))
+        if (!File.Exists(fullPath))
         {
-            throw new FileNotFoundException("未找到要导入的 Excel 文件。", workbookPath);
+            throw new FileNotFoundException("未找到要导入的 Excel 文件。", fullPath);
         }
 
-        return new FileInfo(workbookPath);
+        return new FileInfo(fullPath);
     }
 
-    private static void EnsureWorkbookWriteTargetIsSafe(string workbookPath)
+    private static string EnsureWorkbookWriteTargetIsSafe(string workbookPath)
     {
         EnsureWorkbookExtensionIsSafe(workbookPath);
-        if (LocalDataFileSecurity.IsReparsePoint(workbookPath))
+        var fullPath = Path.GetFullPath(workbookPath);
+        EnsureWorkbookDirectoryPathIsSafe(Path.GetDirectoryName(fullPath), "Excel 导出目录");
+        if (LocalDataFileSecurity.IsReparsePoint(fullPath))
         {
             throw new InvalidOperationException("Excel 导出文件不能是链接文件。");
+        }
+
+        return fullPath;
+    }
+
+    private static void EnsureWorkbookDirectoryPathIsSafe(string? directoryPath, string description)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            return;
+        }
+
+        var current = new DirectoryInfo(Path.GetFullPath(directoryPath));
+        while (current is not null)
+        {
+            if (current.Exists && LocalDataFileSecurity.IsReparsePoint(current.FullName))
+            {
+                throw new InvalidOperationException($"{description}不能位于链接目录。");
+            }
+
+            current = current.Parent;
         }
     }
 
