@@ -136,7 +136,8 @@ public sealed partial class LocalBackupService
 
     private static bool IsLinkedBackupPath(string backupPath)
     {
-        return LocalDataFileSecurity.IsReparsePoint(backupPath);
+        return LocalDataFileSecurity.IsReparsePoint(backupPath)
+            || IsBackupDirectoryPathLinked(Path.GetDirectoryName(backupPath));
     }
 
     private static bool IsBackupFileExtensionSafe(string backupPath)
@@ -156,8 +157,37 @@ public sealed partial class LocalBackupService
     {
         if (IsLinkedBackupPath(backupPath))
         {
-            throw new InvalidOperationException("备份文件不能是链接文件。");
+            throw new InvalidOperationException("备份文件不能是链接文件或位于链接目录。");
         }
+    }
+
+    private static void EnsureBackupDirectoryPathIsNotLinked(string? directoryPath)
+    {
+        if (IsBackupDirectoryPathLinked(directoryPath))
+        {
+            throw new InvalidOperationException("备份输出目录不能是链接目录，也不能位于链接目录下。");
+        }
+    }
+
+    private static bool IsBackupDirectoryPathLinked(string? directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+        {
+            return false;
+        }
+
+        var current = new DirectoryInfo(Path.GetFullPath(directoryPath));
+        while (current is not null)
+        {
+            if (current.Exists && LocalDataFileSecurity.IsReparsePoint(current.FullName))
+            {
+                return true;
+            }
+
+            current = current.Parent;
+        }
+
+        return false;
     }
 
     private static bool IsQaTaggedBackup(BackupManifest? manifest)

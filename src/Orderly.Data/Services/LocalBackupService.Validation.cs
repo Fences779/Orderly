@@ -37,45 +37,60 @@ public sealed partial class LocalBackupService
             };
         }
 
-        if (!IsBackupFileExtensionSafe(backupPath))
+        var safeBackupPath = string.Empty;
+        try
+        {
+            safeBackupPath = Path.GetFullPath(backupPath);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            errors.Add($"备份文件路径无效：{SanitizeBackupErrorSummary(ex.Message, backupPath)}");
+            return new BackupValidationResult
+            {
+                BackupPath = backupPath,
+                Errors = errors
+            };
+        }
+
+        if (!IsBackupFileExtensionSafe(safeBackupPath))
         {
             errors.Add("备份文件必须是 .json 文件。");
             return new BackupValidationResult
             {
-                BackupPath = backupPath,
+                BackupPath = safeBackupPath,
                 Errors = errors
             };
         }
 
-        if (IsLinkedBackupPath(backupPath))
+        if (IsLinkedBackupPath(safeBackupPath))
         {
-            errors.Add("备份文件不能是链接文件。");
+            errors.Add("备份文件不能是链接文件或位于链接目录。");
             return new BackupValidationResult
             {
-                BackupPath = backupPath,
+                BackupPath = safeBackupPath,
                 Errors = errors
             };
         }
 
-        if (!File.Exists(backupPath))
+        if (!File.Exists(safeBackupPath))
         {
             errors.Add("备份文件不存在。");
             return new BackupValidationResult
             {
-                BackupPath = backupPath,
+                BackupPath = safeBackupPath,
                 Errors = errors
             };
         }
 
         try
         {
-            var fileLength = new FileInfo(backupPath).Length;
+            var fileLength = new FileInfo(safeBackupPath).Length;
             if (fileLength > MaxBackupFileBytes)
             {
                 errors.Add($"备份文件过大，最大支持 {MaxBackupFileBytes / 1024L / 1024L} MB。");
                 return new BackupValidationResult
                 {
-                    BackupPath = backupPath,
+                    BackupPath = safeBackupPath,
                     Errors = errors
                 };
             }
@@ -85,7 +100,7 @@ public sealed partial class LocalBackupService
             errors.Add($"读取备份文件信息失败：{SanitizeBackupErrorSummary(ex.Message, backupPath)}");
             return new BackupValidationResult
             {
-                BackupPath = backupPath,
+                BackupPath = safeBackupPath,
                 Errors = errors
             };
         }
@@ -93,14 +108,14 @@ public sealed partial class LocalBackupService
         string json;
         try
         {
-            json = await File.ReadAllTextAsync(backupPath, cancellationToken);
+            json = await File.ReadAllTextAsync(safeBackupPath, cancellationToken);
         }
         catch (Exception ex)
         {
             errors.Add($"读取备份文件失败：{SanitizeBackupErrorSummary(ex.Message, backupPath)}");
             return new BackupValidationResult
             {
-                BackupPath = backupPath,
+                BackupPath = safeBackupPath,
                 Errors = errors
             };
         }
@@ -115,7 +130,7 @@ public sealed partial class LocalBackupService
             errors.Add($"JSON 解析失败：{SanitizeBackupErrorSummary(ex.Message, backupPath)}");
             return new BackupValidationResult
             {
-                BackupPath = backupPath,
+                BackupPath = safeBackupPath,
                 Errors = errors
             };
         }
@@ -218,7 +233,7 @@ public sealed partial class LocalBackupService
 
         return new BackupValidationResult
         {
-            BackupPath = backupPath,
+            BackupPath = safeBackupPath,
             IsValid = errors.Count == 0,
             Manifest = manifest,
             ActualChecksum = actualChecksum,

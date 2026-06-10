@@ -19,17 +19,19 @@ public sealed partial class LocalBackupService
             throw new ArgumentException("备份文件路径不能为空。", nameof(outputPath));
         }
 
-        EnsureBackupFileExtensionIsSafe(outputPath);
-        EnsureBackupPathIsNotLinked(outputPath);
+        var safeOutputPath = Path.GetFullPath(outputPath);
+        EnsureBackupFileExtensionIsSafe(safeOutputPath);
+        EnsureBackupPathIsNotLinked(safeOutputPath);
         var entityId = GenerateBackupEntityId();
 
         try
         {
-            var directory = Path.GetDirectoryName(outputPath);
+            var directory = Path.GetDirectoryName(safeOutputPath);
             if (!string.IsNullOrWhiteSpace(directory))
             {
+                EnsureBackupDirectoryPathIsNotLinked(directory);
                 Directory.CreateDirectory(directory);
-                LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "备份输出目录");
+                EnsureBackupDirectoryPathIsNotLinked(directory);
             }
 
             var manifest = await BuildManifestAsync(cancellationToken);
@@ -37,10 +39,10 @@ public sealed partial class LocalBackupService
             StampIntegrityTag(manifest);
 
             var json = JsonSerializer.Serialize(manifest, SerializerOptions);
-            await File.WriteAllTextAsync(outputPath, json, Utf8NoBom, cancellationToken);
-            LocalDataFileSecurity.HardenFile(outputPath);
+            await File.WriteAllTextAsync(safeOutputPath, json, Utf8NoBom, cancellationToken);
+            LocalDataFileSecurity.HardenFile(safeOutputPath);
 
-            var syncMetadata = BuildExportMetadataJson(outputPath, manifest, createdBy, tagForQaScope);
+            var syncMetadata = BuildExportMetadataJson(safeOutputPath, manifest, createdBy, tagForQaScope);
             var syncRecord = await _syncService.MarkSyncedAsync(
                 BackupEntityType,
                 entityId,
@@ -51,10 +53,10 @@ public sealed partial class LocalBackupService
             {
                 Type = ActivityType.BackupExported,
                 Title = "导出本地备份",
-                Description = $"已导出 {Path.GetFileName(outputPath)}",
+                Description = $"已导出 {Path.GetFileName(safeOutputPath)}",
                 Operator = "local-backup",
                 MetadataJson = BuildActivityMetadataJson(
-                    outputPath,
+                    safeOutputPath,
                     manifest,
                     createdBy,
                     tagForQaScope,
@@ -65,7 +67,7 @@ public sealed partial class LocalBackupService
             {
                 SyncRecordId = syncRecord.Id,
                 SyncStatus = syncRecord.SyncStatus,
-                BackupPath = outputPath,
+                BackupPath = safeOutputPath,
                 Manifest = manifest
             };
         }
