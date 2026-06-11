@@ -243,7 +243,8 @@ async function handleRequest(event) {
   })
 
   let existing = null
-  if (input._id) {
+  const hasExplicitTarget = !!input._id
+  if (hasExplicitTarget) {
     const customerId = normalizeDocId(input._id)
     if (!customerId) return { ok: false, code: 'invalid_customer_id', message: '非法客户 ID。' }
     try {
@@ -251,13 +252,19 @@ async function handleRequest(event) {
     } catch (err) {}
     if (!existing || existing.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
   }
-  if (!existing && platform && externalUid) {
+  if (!hasExplicitTarget && platform && externalUid) {
     const matched = await db.collection('customers').where({ workspaceId, platform, externalUid }).limit(1).get()
-    existing = matched.data && matched.data[0]
+    const duplicate = matched.data && matched.data[0]
+    if (duplicate) {
+      return { ok: false, code: 'duplicate_customer_requires_explicit_id', message: '客户已存在，请明确选择目标客户后再更新。', customerId: duplicate._id }
+    }
   }
-  if (!existing && contactHandle) {
+  if (!hasExplicitTarget && contactHandle) {
     const matched = await db.collection('customers').where({ workspaceId, contactHandle }).limit(1).get()
-    existing = matched.data && matched.data[0]
+    const duplicate = matched.data && matched.data[0]
+    if (duplicate) {
+      return { ok: false, code: 'duplicate_customer_requires_explicit_id', message: '客户已存在，请明确选择目标客户后再更新。', customerId: duplicate._id }
+    }
   }
 
   if (existing) {
