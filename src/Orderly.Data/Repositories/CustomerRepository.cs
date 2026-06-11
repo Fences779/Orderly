@@ -10,6 +10,18 @@ namespace Orderly.Data.Repositories;
 
 public sealed class CustomerRepository : ICustomerRepository
 {
+    private const int MaxNameCharacters = 80;
+    private const int MaxShortFieldCharacters = 80;
+    private const int MaxContactHandleCharacters = 120;
+    private const int MaxPhoneCharacters = 40;
+    private const int MaxRemarkCharacters = 1000;
+    private const int MaxExternalIdCharacters = 160;
+    private const int MaxRawPayloadCharacters = 4096;
+    private const int MaxRemoteIdCharacters = 160;
+
+    private static readonly DateTime MinCustomerDate = new(2000, 1, 1);
+    private static readonly DateTime MaxCustomerDate = new(2100, 1, 1);
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -61,6 +73,9 @@ public sealed class CustomerRepository : ICustomerRepository
 
     public async Task<Customer> CreateAsync(Customer customer, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(customer);
+
+        NormalizeCustomer(customer);
         var now = DateTime.Now;
         if (customer.CreatedAt == default)
         {
@@ -93,6 +108,9 @@ public sealed class CustomerRepository : ICustomerRepository
 
     public async Task UpdateAsync(Customer customer, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(customer);
+
+        NormalizeCustomer(customer);
         customer.UpdatedAt = DateTime.Now;
         customer.IsSynced = false;
         customer.Version = Math.Max(1, customer.Version + 1);
@@ -150,6 +168,62 @@ public sealed class CustomerRepository : ICustomerRepository
         command.Parameters.AddWithValue("$deletedAt", now);
         command.Parameters.AddWithValue("$updatedAt", now);
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static void NormalizeCustomer(Customer customer)
+    {
+        if (!Enum.IsDefined(customer.Status))
+        {
+            throw new InvalidOperationException("客户状态无效。");
+        }
+
+        if (!Enum.IsDefined(customer.Priority))
+        {
+            throw new InvalidOperationException("客户优先级无效。");
+        }
+
+        if (customer.LastContactAt is DateTime lastContactAt
+            && (lastContactAt < MinCustomerDate || lastContactAt > MaxCustomerDate))
+        {
+            throw new InvalidOperationException("客户最近联系时间超出允许范围。");
+        }
+
+        customer.Name = NormalizeRequiredText(customer.Name, MaxNameCharacters, "客户名称", allowLineBreaks: false);
+        customer.SourcePlatform = NormalizeOptionalText(customer.SourcePlatform, MaxShortFieldCharacters, "客户来源平台", allowLineBreaks: false);
+        customer.Channel = NormalizeOptionalText(customer.Channel, MaxShortFieldCharacters, "客户渠道", allowLineBreaks: false);
+        customer.ContactHandle = NormalizeOptionalText(customer.ContactHandle, MaxContactHandleCharacters, "客户联系方式", allowLineBreaks: false);
+        customer.Phone = NormalizeOptionalText(customer.Phone, MaxPhoneCharacters, "客户手机号", allowLineBreaks: false);
+        customer.Remark = NormalizeOptionalText(customer.Remark, MaxRemarkCharacters, "客户备注", allowLineBreaks: true);
+        customer.ExternalId = NormalizeOptionalText(customer.ExternalId, MaxExternalIdCharacters, "客户外部标识", allowLineBreaks: false);
+        customer.RawPayload = NormalizeOptionalText(customer.RawPayload, MaxRawPayloadCharacters, "客户原始载荷", allowLineBreaks: true);
+        customer.RemoteId = NormalizeOptionalText(customer.RemoteId, MaxRemoteIdCharacters, "客户远端标识", allowLineBreaks: false);
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     internal static Customer Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService, int offset = 0)
