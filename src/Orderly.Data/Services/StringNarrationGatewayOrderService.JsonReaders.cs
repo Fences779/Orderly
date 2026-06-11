@@ -191,7 +191,7 @@ public sealed partial class StringNarrationGatewayOrderService
             return property.ValueKind switch
             {
                 JsonValueKind.String => NormalizeGatewayString(property.GetString()),
-                JsonValueKind.Number => property.GetRawText(),
+                JsonValueKind.Number => NormalizeGatewayString(property.GetRawText()),
                 JsonValueKind.True => "true",
                 JsonValueKind.False => "false",
                 _ => string.Empty
@@ -474,7 +474,7 @@ public sealed partial class StringNarrationGatewayOrderService
         return element.ValueKind switch
         {
             JsonValueKind.String => NormalizeGatewayString(element.GetString()),
-            JsonValueKind.Number => element.GetRawText(),
+            JsonValueKind.Number => NormalizeGatewayString(element.GetRawText()),
             JsonValueKind.True => "true",
             JsonValueKind.False => "false",
             _ => string.Empty
