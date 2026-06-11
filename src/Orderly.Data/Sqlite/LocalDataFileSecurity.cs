@@ -119,13 +119,13 @@ public static class LocalDataFileSecurity
         {
             if (HasReparsePoint(directoryPath))
             {
-                return;
+                throw new InvalidOperationException("本地数据目录不能是链接目录。");
             }
 
             var currentUser = WindowsIdentity.GetCurrent().User;
             if (currentUser is null)
             {
-                return;
+                throw new InvalidOperationException("无法确定当前 Windows 用户，不能加固本地数据目录。");
             }
 
             var directoryInfo = new DirectoryInfo(directoryPath);
@@ -142,14 +142,12 @@ public static class LocalDataFileSecurity
                 new SecurityIdentifier(WellKnownSidType.LocalSystemSid, domainSid: null));
             directoryInfo.SetAccessControl(security);
         }
-        catch (IOException)
+        catch (Exception ex) when (
+            ex is IOException
+                or UnauthorizedAccessException
+                or SystemException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-        catch (SystemException)
-        {
+            throw new InvalidOperationException("无法加固本地数据目录权限。", ex);
         }
     }
 
@@ -165,13 +163,13 @@ public static class LocalDataFileSecurity
         {
             if (HasReparsePoint(filePath))
             {
-                return;
+                throw new InvalidOperationException("本地数据文件不能是链接文件。");
             }
 
             var currentUser = WindowsIdentity.GetCurrent().User;
             if (currentUser is null)
             {
-                return;
+                throw new InvalidOperationException("无法确定当前 Windows 用户，不能加固本地数据文件。");
             }
 
             var fileInfo = new FileInfo(filePath);
@@ -189,14 +187,12 @@ public static class LocalDataFileSecurity
                 AccessControlType.Allow));
             fileInfo.SetAccessControl(security);
         }
-        catch (IOException)
+        catch (Exception ex) when (
+            ex is IOException
+                or UnauthorizedAccessException
+                or SystemException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-        catch (SystemException)
-        {
+            throw new InvalidOperationException("无法加固本地数据文件权限。", ex);
         }
     }
 

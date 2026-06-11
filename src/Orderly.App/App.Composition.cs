@@ -1,8 +1,6 @@
 using System.IO;
 using System.Net.Http;
-using System.Security.AccessControl;
 using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using Microsoft.Win32;
@@ -251,45 +249,15 @@ public partial class App
         {
             File.SetAttributes(path, File.GetAttributes(path) | FileAttributes.Hidden);
         }
-        catch (IOException)
+        catch (Exception ex) when (
+            ex is IOException
+                or UnauthorizedAccessException
+                or SystemException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
+            throw new InvalidOperationException("无法加固 QA session data key file。", ex);
         }
 
-        try
-        {
-            var currentUser = WindowsIdentity.GetCurrent().User;
-            if (currentUser is null)
-            {
-                return;
-            }
-
-            var fileInfo = new FileInfo(path);
-            var security = fileInfo.GetAccessControl();
-            foreach (FileSystemAccessRule rule in security.GetAccessRules(includeExplicit: true, includeInherited: true, targetType: typeof(SecurityIdentifier)))
-            {
-                security.RemoveAccessRuleAll(rule);
-            }
-
-            security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-            security.AddAccessRule(new FileSystemAccessRule(currentUser, FileSystemRights.FullControl, AccessControlType.Allow));
-            security.AddAccessRule(new FileSystemAccessRule(
-                new SecurityIdentifier(WellKnownSidType.LocalSystemSid, domainSid: null),
-                FileSystemRights.FullControl,
-                AccessControlType.Allow));
-            fileInfo.SetAccessControl(security);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-        catch (SystemException)
-        {
-        }
+        LocalDataFileSecurity.HardenFile(path);
     }
 
     private async Task RunQaMaintenanceCommandAsync()
