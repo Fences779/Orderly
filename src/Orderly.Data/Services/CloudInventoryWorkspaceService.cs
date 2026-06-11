@@ -12,6 +12,10 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
     private const int MaxInventoryExportRows = 5000;
     private const int MaxInventoryDashboardItems = 1000;
     private const int MaxInventoryStatusOptions = 50;
+    private const int MaxGatewayStringCharacters = 4096;
+    private const int MaxGatewayStringArrayItems = 50;
+    private const long MinUnixMilliseconds = -62_135_596_800_000;
+    private const long MaxUnixMilliseconds = 253_402_300_799_999;
 
     private static readonly string[] ExportHeaders =
     [
@@ -362,8 +366,8 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
 
         return property.ValueKind switch
         {
-            JsonValueKind.String => property.GetString()?.Trim() ?? string.Empty,
-            JsonValueKind.Number => property.GetRawText(),
+            JsonValueKind.String => NormalizeGatewayString(property.GetString()),
+            JsonValueKind.Number => NormalizeGatewayString(property.GetRawText()),
             JsonValueKind.True => "true",
             JsonValueKind.False => "false",
             _ => string.Empty
@@ -382,7 +386,9 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             JsonValueKind.Number => property.TryGetInt32(out var intValue) ? intValue != 0 : defaultValue,
-            JsonValueKind.String => !string.IsNullOrWhiteSpace(property.GetString()) && property.GetString()!.Trim() is not ("0" or "false" or "False"),
+            JsonValueKind.String => TryReadBoundedString(property, out var stringValue)
+                ? stringValue is not "0" && !stringValue.Equals("false", StringComparison.OrdinalIgnoreCase)
+                : defaultValue,
             _ => defaultValue
         };
     }
@@ -397,7 +403,10 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
         return property.ValueKind switch
         {
             JsonValueKind.Number => property.TryGetInt32(out var value) ? value : 0,
-            JsonValueKind.String => int.TryParse(property.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : 0,
+            JsonValueKind.String => TryReadBoundedString(property, out var stringValue)
+                && int.TryParse(stringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
+                    ? value
+                    : 0,
             _ => 0
         };
     }
@@ -412,7 +421,10 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
         return property.ValueKind switch
         {
             JsonValueKind.Number => property.TryGetInt64(out var value) ? value : 0,
-            JsonValueKind.String => long.TryParse(property.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : 0,
+            JsonValueKind.String => TryReadBoundedString(property, out var stringValue)
+                && long.TryParse(stringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
+                    ? value
+                    : 0,
             _ => 0
         };
     }
@@ -427,7 +439,10 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
         return property.ValueKind switch
         {
             JsonValueKind.Number => property.TryGetDecimal(out var value) ? value : 0,
-            JsonValueKind.String => decimal.TryParse(property.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : 0,
+            JsonValueKind.String => TryReadBoundedString(property, out var stringValue)
+                && decimal.TryParse(stringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
+                    ? value
+                    : 0,
             _ => 0
         };
     }
@@ -443,7 +458,10 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
         {
             JsonValueKind.Null => null,
             JsonValueKind.Number => property.TryGetDecimal(out var value) ? value : null,
-            JsonValueKind.String => decimal.TryParse(property.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var value) ? value : null,
+            JsonValueKind.String => TryReadBoundedString(property, out var stringValue)
+                && decimal.TryParse(stringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
+                    ? value
+                    : null,
             _ => null
         };
     }
@@ -457,11 +475,13 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
 
         return property.ValueKind switch
         {
-            JsonValueKind.String => DateTime.TryParse(property.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed)
+            JsonValueKind.String => TryReadBoundedString(property, out var stringValue)
+                && DateTime.TryParse(stringValue, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed)
                 ? parsed
                 : null,
             JsonValueKind.Number => property.TryGetInt64(out var value)
-                ? DateTimeOffset.FromUnixTimeMilliseconds(value).LocalDateTime
+                && TryReadUnixMilliseconds(value, out var parsedTimestamp)
+                ? parsedTimestamp.LocalDateTime
                 : null,
             _ => null
         };
@@ -476,11 +496,61 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
             return [];
         }
 
+        if (property.GetArrayLength() > MaxGatewayStringArrayItems)
+        {
+            throw new InvalidOperationException($"网关返回字符串数组 {name} 超过客户端处理上限。");
+        }
+
         return property.EnumerateArray()
-            .Select(static item => item.ValueKind == JsonValueKind.String ? item.GetString()?.Trim() ?? string.Empty : string.Empty)
+            .Select(static item => item.ValueKind == JsonValueKind.String ? NormalizeGatewayString(item.GetString()) : string.Empty)
             .Where(static item => !string.IsNullOrWhiteSpace(item))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .ToArray();
+    }
+
+    private static bool TryReadBoundedString(JsonElement element, out string value)
+    {
+        value = string.Empty;
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = NormalizeGatewayString(element.GetString());
+        return !string.IsNullOrWhiteSpace(value);
+    }
+
+    private static string NormalizeGatewayString(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > MaxGatewayStringCharacters)
+        {
+            throw new InvalidOperationException("网关返回字符串超过客户端处理上限。");
+        }
+
+        if (normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            throw new InvalidOperationException("网关返回字符串包含不允许的控制字符。");
+        }
+
+        return normalized;
+    }
+
+    private static bool TryReadUnixMilliseconds(long value, out DateTimeOffset timestamp)
+    {
+        timestamp = default;
+        if (value is < MinUnixMilliseconds or > MaxUnixMilliseconds)
+        {
+            return false;
+        }
+
+        timestamp = DateTimeOffset.FromUnixTimeMilliseconds(value);
+        return true;
     }
 
     private static long ToUnixMilliseconds(DateTime? value)
