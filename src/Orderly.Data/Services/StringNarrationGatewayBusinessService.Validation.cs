@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Orderly.Core.Models;
 
@@ -5,6 +6,9 @@ namespace Orderly.Data.Services;
 
 public sealed partial class StringNarrationGatewayBusinessService
 {
+    private const int MaxGatewayStringCharacters = 4096;
+    private const int MaxGatewayStringArrayItems = 50;
+
     private static JsonElement GetPayloadRoot(JsonElement root)
     {
         if (TryGet(root, "data", out var data) && data.ValueKind == JsonValueKind.Object)
@@ -263,17 +267,10 @@ public sealed partial class StringNarrationGatewayBusinessService
                 continue;
             }
 
-            var value = property.ValueKind switch
-            {
-                JsonValueKind.String => property.GetString(),
-                JsonValueKind.Number => property.GetRawText(),
-                JsonValueKind.True => "true",
-                JsonValueKind.False => "false",
-                _ => string.Empty
-            };
+            var value = ReadStringValue(property);
             if (!string.IsNullOrWhiteSpace(value))
             {
-                return value.Trim();
+                return value;
             }
         }
 
@@ -294,7 +291,8 @@ public sealed partial class StringNarrationGatewayBusinessService
                 return number;
             }
 
-            if (property.ValueKind == JsonValueKind.String && decimal.TryParse(property.GetString(), out var parsed))
+            if (TryReadBoundedString(property, out var stringValue)
+                && decimal.TryParse(stringValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
             {
                 return parsed;
             }
@@ -317,7 +315,8 @@ public sealed partial class StringNarrationGatewayBusinessService
                 return number;
             }
 
-            if (property.ValueKind == JsonValueKind.String && int.TryParse(property.GetString(), out var parsed))
+            if (TryReadBoundedString(property, out var stringValue)
+                && int.TryParse(stringValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
             {
                 return parsed;
             }
@@ -342,13 +341,17 @@ public sealed partial class StringNarrationGatewayBusinessService
 
             if (property.ValueKind == JsonValueKind.String)
             {
-                var value = property.GetString();
-                if (long.TryParse(value, out var parsedLong))
+                if (!TryReadBoundedString(property, out var value))
+                {
+                    continue;
+                }
+
+                if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedLong))
                 {
                     return NormalizeTimestamp(parsedLong);
                 }
 
-                if (DateTimeOffset.TryParse(value, out var parsedDate))
+                if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedDate))
                 {
                     return parsedDate.ToUnixTimeMilliseconds();
                 }
@@ -366,7 +369,9 @@ public sealed partial class StringNarrationGatewayBusinessService
             {
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
-                JsonValueKind.String => bool.TryParse(element.GetString(), out var parsed) && parsed,
+                JsonValueKind.String => TryReadBoundedString(element, out var stringValue)
+                    && bool.TryParse(stringValue, out var parsed)
+                    && parsed,
                 JsonValueKind.Number => element.TryGetInt32(out var number) && number != 0,
                 _ => false
             };
@@ -397,7 +402,8 @@ public sealed partial class StringNarrationGatewayBusinessService
                 return number;
             }
 
-            if (property.ValueKind == JsonValueKind.String && decimal.TryParse(property.GetString(), out var parsed))
+            if (TryReadBoundedString(property, out var stringValue)
+                && decimal.TryParse(stringValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
             {
                 return parsed;
             }
@@ -420,7 +426,8 @@ public sealed partial class StringNarrationGatewayBusinessService
                 return number;
             }
 
-            if (property.ValueKind == JsonValueKind.String && int.TryParse(property.GetString(), out var parsed))
+            if (TryReadBoundedString(property, out var stringValue)
+                && int.TryParse(stringValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
             {
                 return parsed;
             }
@@ -438,28 +445,78 @@ public sealed partial class StringNarrationGatewayBusinessService
 
         if (property.ValueKind == JsonValueKind.Array)
         {
+            if (property.GetArrayLength() > MaxGatewayStringArrayItems)
+            {
+                throw new InvalidOperationException($"网关返回字符串数组 {name} 超过客户端处理上限。");
+            }
+
             return property.EnumerateArray()
                 .Select(item => ReadStringValue(item))
                 .Where(item => !string.IsNullOrWhiteSpace(item))
-                .ToList();
+                .ToArray();
         }
 
         var raw = ReadStringValue(property);
-        return string.IsNullOrWhiteSpace(raw)
-            ? []
-            : raw.Split([',', '，', '/', '、', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        var values = raw.Split([',', '，', '/', '、', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (values.Length > MaxGatewayStringArrayItems)
+        {
+            throw new InvalidOperationException($"网关返回字符串数组 {name} 超过客户端处理上限。");
+        }
+
+        return values
+            .Select(NormalizeGatewayString)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToArray();
     }
 
     private static string ReadStringValue(JsonElement element)
     {
         return element.ValueKind switch
         {
-            JsonValueKind.String => element.GetString()?.Trim() ?? string.Empty,
-            JsonValueKind.Number => element.GetRawText(),
+            JsonValueKind.String => NormalizeGatewayString(element.GetString()),
+            JsonValueKind.Number => NormalizeGatewayString(element.GetRawText()),
             JsonValueKind.True => "true",
             JsonValueKind.False => "false",
             _ => string.Empty
         };
+    }
+
+    private static bool TryReadBoundedString(JsonElement element, out string value)
+    {
+        value = string.Empty;
+        if (element.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = NormalizeGatewayString(element.GetString());
+        return !string.IsNullOrWhiteSpace(value);
+    }
+
+    private static string NormalizeGatewayString(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > MaxGatewayStringCharacters)
+        {
+            throw new InvalidOperationException("网关返回字符串超过客户端处理上限。");
+        }
+
+        if (normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            throw new InvalidOperationException("网关返回字符串包含不允许的控制字符。");
+        }
+
+        return normalized;
     }
 
     private static long NormalizeTimestamp(long timestamp)
