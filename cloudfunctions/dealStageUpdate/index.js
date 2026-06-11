@@ -6,12 +6,14 @@ const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
+const OPERATOR_PERMISSIONS_ENV_NAME = 'ORDERLY_OPERATOR_PERMISSIONS'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
 const MAX_DOC_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_REASON_TEXT_LENGTH = 512
 const MAX_TASK_TEXT_LENGTH = 512
+const DEAL_STAGE_PERMISSION = 'deals:stage'
 
 const TRANSITIONS = {
   new_inquiry: ['needs_clarification', 'quote_preparing', 'lost'],
@@ -150,6 +152,50 @@ function normalizeWorkspaceBindingValue(value) {
     .filter(Boolean)
 }
 
+function requireOperatorPermission(operatorId, permission) {
+  const permissions = resolveOperatorPermissions(operatorId)
+  if (permissions.length === 0) return { ok: false, code: 'permission_binding_required', message: '操作权限未配置。' }
+  if (permissions.indexOf('*') >= 0 || permissions.indexOf(permission) >= 0) return { ok: true }
+  const namespacePermission = permission.split(':')[0] + ':*'
+  if (permissions.indexOf(namespacePermission) >= 0) return { ok: true }
+  return { ok: false, code: 'permission_forbidden', message: '无权执行该操作。' }
+}
+
+function resolveOperatorPermissions(operatorId) {
+  if (!operatorId) return []
+  const raw = String(process.env[OPERATOR_PERMISSIONS_ENV_NAME] || '').trim()
+  if (!raw) return []
+
+  if (raw[0] === '{') {
+    try {
+      const parsed = JSON.parse(raw)
+      return normalizePermissionBindingValue(parsed && parsed[operatorId])
+    } catch (err) {
+      return []
+    }
+  }
+
+  const entries = raw.split(/[;；\r\n]+/).map((item) => item.trim()).filter(Boolean)
+  for (const entry of entries) {
+    const separatorIndex = entry.indexOf('=') >= 0 ? entry.indexOf('=') : entry.indexOf(':')
+    if (separatorIndex <= 0) continue
+    const key = entry.slice(0, separatorIndex).trim()
+    if (key === operatorId) return normalizePermissionBindingValue(entry.slice(separatorIndex + 1))
+  }
+
+  return []
+}
+
+function normalizePermissionBindingValue(value) {
+  if (!value) return []
+  const values = Array.isArray(value)
+    ? value.map((item) => String(item).trim())
+    : String(value).split(/[,\s，、|/]+/).map((item) => item.trim())
+  return values
+    .map((item) => (item === '*' ? '*' : item.toLowerCase()))
+    .filter((item) => item === '*' || /^[a-z][a-z0-9_-]*(?::[a-z0-9_*.-]+)?$/.test(item))
+}
+
 function addDays(days) {
   const date = new Date()
   date.setDate(date.getDate() + days)
@@ -244,6 +290,9 @@ async function handleRequest(event) {
 
   const workspace = resolveWorkspaceId(event, auth.operatorId)
   if (!workspace.ok) return workspace
+  const permission = requireOperatorPermission(auth.operatorId, DEAL_STAGE_PERMISSION)
+  if (!permission.ok) return permission
+
   const workspaceId = workspace.workspaceId
   const operatorId = auth.operatorId
   const dealId = normalizeDocId(event.dealId)
