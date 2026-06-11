@@ -10,11 +10,17 @@ const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
 const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
 const AUTO_SCAN_SECRET_ENV_NAME = 'ORDERLY_FOLLOWUP_AUTO_SCAN_SECRET'
 const AUTO_SCAN_WORKSPACE_ID_ENV_NAME = 'ORDERLY_FOLLOWUP_AUTO_SCAN_WORKSPACE_ID'
+const AUTO_SCAN_MIN_INTERVAL_SECONDS_ENV_NAME = 'ORDERLY_FOLLOWUP_AUTO_SCAN_MIN_INTERVAL_SECONDS'
+const AUTO_SCAN_NONCE_COLLECTION = 'security_nonces'
+const AUTO_SCAN_RATE_LIMIT_COLLECTION = 'security_rate_limits'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
 const MAX_DOC_ID_LENGTH = 128
 const MIN_AUTO_SCAN_SECRET_LENGTH = 24
 const MAX_AUTO_SCAN_SECRET_LENGTH = 4096
+const MAX_AUTO_SCAN_NONCE_LENGTH = 128
+const AUTO_SCAN_TIMESTAMP_WINDOW_MS = 5 * 60 * 1000
+const DEFAULT_AUTO_SCAN_MIN_INTERVAL_MS = 60 * 1000
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
 const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
@@ -90,6 +96,25 @@ function normalizeAutoScanSecret(value) {
   const secret = String(value).trim()
   if (!secret || secret.length > MAX_AUTO_SCAN_SECRET_LENGTH) return ''
   return /[\u0000-\u001f\u007f]/.test(secret) ? '' : secret
+}
+
+function normalizeAutoScanNonce(value) {
+  if (value == null || typeof value === 'object') return ''
+  const nonce = String(value).trim()
+  return nonce.length > 0 && nonce.length <= MAX_AUTO_SCAN_NONCE_LENGTH && /^[A-Za-z0-9._:-]+$/.test(nonce) ? nonce : ''
+}
+
+function normalizeAutoScanSignature(value) {
+  if (value == null || typeof value === 'object') return ''
+  const signature = String(value).trim().toLowerCase()
+  return /^[a-f0-9]{64}$/.test(signature) ? signature : ''
+}
+
+function normalizeAutoScanTimestamp(value) {
+  if (value == null || typeof value === 'object') return 0
+  const timestampMs = Number(value)
+  if (!Number.isFinite(timestampMs) || timestampMs <= 0) return 0
+  return timestampMs < 1000000000000 ? Math.floor(timestampMs * 1000) : Math.floor(timestampMs)
 }
 
 function isStrongAutoScanSecret(secret) {
@@ -243,18 +268,86 @@ function timingSafeTextEquals(left, right) {
   return crypto.timingSafeEqual(leftBytes, rightBytes)
 }
 
-function isAutoScanSecretValid(event) {
-  const configuredSecret = normalizeAutoScanSecret(process.env[AUTO_SCAN_SECRET_ENV_NAME])
-  if (!configuredSecret || !isStrongAutoScanSecret(configuredSecret)) return false
-  const providedSecret = normalizeAutoScanSecret(event && event.autoScanSecret)
-  return providedSecret ? timingSafeTextEquals(providedSecret, configuredSecret) : false
+function getAutoScanMinIntervalMs() {
+  const seconds = Number(process.env[AUTO_SCAN_MIN_INTERVAL_SECONDS_ENV_NAME] || '')
+  if (!Number.isFinite(seconds) || seconds <= 0) return DEFAULT_AUTO_SCAN_MIN_INTERVAL_MS
+  return Math.min(Math.max(Math.floor(seconds), 1), 3600) * 1000
 }
 
-function requireScanTriggerAccess(event) {
+function createAutoScanSignature(secret, timestampMs, nonce, workspaceId) {
+  const message = ['followupScan', String(timestampMs), nonce, workspaceId].join('\n')
+  return crypto.createHmac('sha256', secret).update(message, 'utf8').digest('hex')
+}
+
+function validateAutoScanSignature(event, workspaceId) {
+  const configuredSecret = normalizeAutoScanSecret(process.env[AUTO_SCAN_SECRET_ENV_NAME])
+  if (!configuredSecret || !isStrongAutoScanSecret(configuredSecret)) return false
+  const timestampMs = normalizeAutoScanTimestamp(event && event.autoScanTimestamp)
+  const nonce = normalizeAutoScanNonce(event && event.autoScanNonce)
+  const signature = normalizeAutoScanSignature(event && event.autoScanSignature)
+  if (!timestampMs || !nonce || !signature) return false
+  if (Math.abs(Date.now() - timestampMs) > AUTO_SCAN_TIMESTAMP_WINDOW_MS) return false
+  const expectedSignature = createAutoScanSignature(configuredSecret, timestampMs, nonce, workspaceId)
+  return timingSafeTextEquals(signature, expectedSignature)
+}
+
+async function reserveAutoScanNonce(event) {
+  const timestampMs = normalizeAutoScanTimestamp(event && event.autoScanTimestamp)
+  const nonce = normalizeAutoScanNonce(event && event.autoScanNonce)
+  if (!timestampMs || !nonce) return false
+  const nonceId = crypto.createHash('sha256').update(['followupScan', String(timestampMs), nonce].join('\n'), 'utf8').digest('hex')
+  try {
+    await db.collection(AUTO_SCAN_NONCE_COLLECTION).add({
+      data: {
+        _id: nonceId,
+        scope: 'followupScan:autoScan',
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(timestampMs + AUTO_SCAN_TIMESTAMP_WINDOW_MS).toISOString()
+      }
+    })
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+async function enforceAutoScanRateLimit(workspaceId) {
+  const rateLimitId = crypto.createHash('sha256').update('followupScan:autoScan:' + workspaceId, 'utf8').digest('hex')
+  const nowMs = Date.now()
+  const nextAllowedAt = new Date(nowMs + getAutoScanMinIntervalMs()).toISOString()
+  try {
+    const existing = (await db.collection(AUTO_SCAN_RATE_LIMIT_COLLECTION).doc(rateLimitId).get()).data
+    if (existing && Date.parse(existing.nextAllowedAt || '') > nowMs) return false
+    await db.collection(AUTO_SCAN_RATE_LIMIT_COLLECTION).doc(rateLimitId).update({
+      data: { workspaceId, updatedAt: new Date(nowMs).toISOString(), nextAllowedAt }
+    })
+    return true
+  } catch (err) {
+    try {
+      await db.collection(AUTO_SCAN_RATE_LIMIT_COLLECTION).add({
+        data: {
+          _id: rateLimitId,
+          workspaceId,
+          createdAt: new Date(nowMs).toISOString(),
+          updatedAt: new Date(nowMs).toISOString(),
+          nextAllowedAt
+        }
+      })
+      return true
+    } catch (addErr) {
+      return false
+    }
+  }
+}
+
+async function requireScanTriggerAccess(event) {
   if (cloud.getWXContext().OPENID) return requireOperatorId()
   if (!isAutoScanEnabled()) return { ok: false, code: 'auto_scan_disabled', message: '自动跟进扫描未启用。' }
-  if (!isAutoScanSecretValid(event)) return { ok: false, code: 'forbidden', message: '无权访问。' }
-  return { ok: true, operatorId: 'system', workspaceId: resolveAutoScanWorkspaceId() }
+  const workspaceId = resolveAutoScanWorkspaceId()
+  if (!validateAutoScanSignature(event, workspaceId)) return { ok: false, code: 'forbidden', message: '无权访问。' }
+  if (!(await reserveAutoScanNonce(event))) return { ok: false, code: 'replay_rejected', message: '请求已失效。' }
+  if (!(await enforceAutoScanRateLimit(workspaceId))) return { ok: false, code: 'rate_limited', message: '调用过于频繁。' }
+  return { ok: true, operatorId: 'system', workspaceId }
 }
 
 function normalizeDirection(value) {
@@ -602,7 +695,7 @@ async function handleRequest(event) {
     if (!auth.ok) return auth
     operatorId = auth.operatorId
   } else if (!mode) {
-    const scanAuth = requireScanTriggerAccess(event)
+    const scanAuth = await requireScanTriggerAccess(event)
     if (!scanAuth.ok) return scanAuth
     operatorId = scanAuth.operatorId
     if (scanAuth.workspaceId) trustedWorkspaceEvent = { workspaceId: scanAuth.workspaceId }
