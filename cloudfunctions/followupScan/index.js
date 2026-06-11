@@ -14,6 +14,7 @@ const AUTO_SCAN_WORKSPACE_ID_ENV_NAME = 'ORDERLY_FOLLOWUP_AUTO_SCAN_WORKSPACE_ID
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
 const MAX_DOC_ID_LENGTH = 128
+const MIN_AUTO_SCAN_SECRET_LENGTH = 24
 const MAX_AUTO_SCAN_SECRET_LENGTH = 4096
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
@@ -90,6 +91,12 @@ function normalizeAutoScanSecret(value) {
   const secret = String(value).trim()
   if (!secret || secret.length > MAX_AUTO_SCAN_SECRET_LENGTH) return ''
   return /[\u0000-\u001f\u007f]/.test(secret) ? '' : secret
+}
+
+function isStrongAutoScanSecret(secret) {
+  const lowered = secret.toLowerCase()
+  return secret.length >= MIN_AUTO_SCAN_SECRET_LENGTH &&
+    ['replace-me', 'changeme', 'change-me', 'test', 'token', 'password', 'secret'].indexOf(lowered) < 0
 }
 
 function hasTextValue(value) {
@@ -244,7 +251,7 @@ function timingSafeTextEquals(left, right) {
 
 function isAutoScanSecretValid(event) {
   const configuredSecret = normalizeAutoScanSecret(process.env[AUTO_SCAN_SECRET_ENV_NAME])
-  if (!configuredSecret) return false
+  if (!configuredSecret || !isStrongAutoScanSecret(configuredSecret)) return false
   const providedSecret = normalizeAutoScanSecret(event && event.autoScanSecret)
   return providedSecret ? timingSafeTextEquals(providedSecret, configuredSecret) : false
 }
