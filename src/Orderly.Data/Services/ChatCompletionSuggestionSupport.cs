@@ -42,7 +42,8 @@ internal static class ChatCompletionSuggestionSupport
         string baseUrl,
         string invalidBaseUrlMessage = "AI provider base URL is not a valid absolute URL.",
         string insecureBaseUrlMessage = "AI provider base URL must use HTTPS unless it targets a loopback address.",
-        string? allowedHostsEnvironmentVariableName = null)
+        string? allowedHostsEnvironmentVariableName = null,
+        bool requireAllowedHost = false)
     {
         if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
         {
@@ -54,7 +55,11 @@ internal static class ChatCompletionSuggestionSupport
             throw new InvalidOperationException(insecureBaseUrlMessage);
         }
 
-        OutboundEndpointPolicy.Validate(baseUri, "AI provider base URL", allowedHostsEnvironmentVariableName);
+        OutboundEndpointPolicy.Validate(
+            baseUri,
+            "AI provider base URL",
+            allowedHostsEnvironmentVariableName,
+            requireAllowedHost);
         var path = baseUri.AbsolutePath.TrimEnd('/');
         if (path.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
         {

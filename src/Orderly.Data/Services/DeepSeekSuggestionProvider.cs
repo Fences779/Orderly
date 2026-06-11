@@ -26,7 +26,8 @@ public sealed class DeepSeekSuggestionProvider : IAiSuggestionProvider
 
         var endpoint = ChatCompletionSuggestionSupport.BuildChatCompletionsEndpoint(
             _options.BaseUrl,
-            allowedHostsEnvironmentVariableName: AiProviderOptions.AllowedHostsEnvironmentVariableName);
+            allowedHostsEnvironmentVariableName: AiProviderOptions.AllowedHostsEnvironmentVariableName,
+            requireAllowedHost: true);
         var payload = new
         {
             model = _options.Model,

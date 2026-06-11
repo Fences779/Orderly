@@ -223,13 +223,8 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         }
 
         var preferences = await _settingRepository.GetPreferencesAsync(cancellationToken);
-        var providerRequest = ApplyRemoteContextPolicy(request, preferences, out var reducedContext);
-        if (!ShouldRedactProviderRequest(preferences))
-        {
-            return new ProviderRequest(providerRequest, reducedContext);
-        }
-
-        return new ProviderRequest(RedactRequest(providerRequest, preferences), true);
+        var providerRequest = ApplyRemoteContextPolicy(request, preferences, out _);
+        return new ProviderRequest(RedactRequest(providerRequest, BuildMandatoryRemoteRedactionPreferences()), true);
     }
 
     private async Task<AiSuggestion> UpdateAsync(AiSuggestion suggestion, CancellationToken cancellationToken)
@@ -327,14 +322,6 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         return normalized.Length <= limit ? normalized : $"{normalized[..limit]}...";
     }
 
-    private static bool ShouldRedactProviderRequest(AppPreferences preferences)
-    {
-        return preferences.AiAutoRedactBeforeSend
-            || preferences.AiBlockPhone
-            || preferences.AiBlockFullAddress
-            || preferences.AiBlockPaymentTransactionId;
-    }
-
     private static AiSuggestionRequest ApplyRemoteContextPolicy(
         AiSuggestionRequest request,
         AppPreferences preferences,
@@ -363,6 +350,17 @@ public sealed class LocalAiAssistantService : IAiAssistantService
             OrderRemark = allowOrderContext ? request.OrderRemark : string.Empty,
             FocusMessage = allowCustomerContext ? request.FocusMessage : string.Empty,
             RecentMessages = allowCustomerContext ? request.RecentMessages : Array.Empty<AiSuggestionContextMessage>()
+        };
+    }
+
+    private static AppPreferences BuildMandatoryRemoteRedactionPreferences()
+    {
+        return new AppPreferences
+        {
+            AiAutoRedactBeforeSend = true,
+            AiBlockPhone = true,
+            AiBlockFullAddress = true,
+            AiBlockPaymentTransactionId = true
         };
     }
 

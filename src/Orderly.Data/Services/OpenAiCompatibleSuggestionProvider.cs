@@ -28,7 +28,8 @@ public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
             _options.BaseUrl,
             "ORDERLY_AI_BASE_URL is not a valid absolute URL.",
             "ORDERLY_AI_BASE_URL must use HTTPS unless it targets a loopback address.",
-            AiProviderOptions.AllowedHostsEnvironmentVariableName);
+            AiProviderOptions.AllowedHostsEnvironmentVariableName,
+            requireAllowedHost: true);
         var payload = new
         {
             model = _options.Model,

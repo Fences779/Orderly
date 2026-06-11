@@ -7,7 +7,11 @@ internal static class OutboundEndpointPolicy
     private const string AllowLocalEndpointsEnvironmentVariableName = "ORDERLY_ALLOW_LOCAL_ENDPOINTS";
     private const string AllowedOutboundHostsEnvironmentVariableName = "ORDERLY_ALLOWED_OUTBOUND_HOSTS";
 
-    public static void Validate(Uri endpoint, string configurationName, string? allowedHostsEnvironmentVariableName = null)
+    public static void Validate(
+        Uri endpoint,
+        string configurationName,
+        string? allowedHostsEnvironmentVariableName = null,
+        bool requireAllowedHost = false)
     {
         ArgumentNullException.ThrowIfNull(endpoint);
 
@@ -19,6 +23,14 @@ internal static class OutboundEndpointPolicy
         }
 
         var allowedHosts = ReadAllowedHosts(allowedHostsEnvironmentVariableName);
+        if (requireAllowedHost && allowedHosts.Count == 0)
+        {
+            var configuration = string.IsNullOrWhiteSpace(allowedHostsEnvironmentVariableName)
+                ? AllowedOutboundHostsEnvironmentVariableName
+                : $"{AllowedOutboundHostsEnvironmentVariableName} or {allowedHostsEnvironmentVariableName}";
+            throw new InvalidOperationException($"{configurationName} 必须配置允许的出站主机列表：{configuration}。");
+        }
+
         if (allowedHosts.Count > 0 && !IsHostAllowed(endpoint.Host, allowedHosts))
         {
             throw new InvalidOperationException($"{configurationName} 的主机不在允许的出站主机列表内。");
