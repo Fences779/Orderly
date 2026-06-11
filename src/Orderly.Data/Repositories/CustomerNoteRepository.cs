@@ -40,7 +40,9 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO CustomerNotes (
                 CustomerId, DealId, OrderId, Type, Content, ContentCiphertext, IsPinned, CreatedAt, UpdatedAt, DeletedAt, RemoteId, IsSynced, Version
@@ -52,6 +54,8 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
             """;
         AddParameters(command, note, _fieldEncryptionService);
         note.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, note, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return note;
     }
 
@@ -216,7 +220,7 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
         command.Parameters.AddWithValue("$orderId", ToDbInt(note.OrderId));
         command.Parameters.AddWithValue("$type", (int)note.Type);
         command.Parameters.AddWithValue("$content", string.Empty);
-        command.Parameters.AddWithValue("$contentCiphertext", fieldEncryptionService.Encrypt(note.Content, "CustomerNotes.ContentCiphertext"));
+        command.Parameters.AddWithValue("$contentCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, note.Content, "CustomerNotes.ContentCiphertext", note.Id));
         command.Parameters.AddWithValue("$isPinned", note.IsPinned ? 1 : 0);
         command.Parameters.AddWithValue("$createdAt", note.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", note.UpdatedAt.ToString("O"));
@@ -224,6 +228,25 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
         command.Parameters.AddWithValue("$remoteId", note.RemoteId);
         command.Parameters.AddWithValue("$isSynced", note.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", note.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CustomerNote note,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE CustomerNotes
+            SET ContentCiphertext = $contentCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, note, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", note.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static CustomerNote Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

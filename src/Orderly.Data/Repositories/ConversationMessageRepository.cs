@@ -46,7 +46,9 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO ConversationMessages (
                 CustomerId, OrderId, DealId, Direction, Channel,
@@ -70,6 +72,8 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
             """;
         AddParameters(command, message, _fieldEncryptionService);
         message.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, message, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetByIdAsync(message.Id, cancellationToken) ?? message;
     }
 
@@ -308,21 +312,44 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         command.Parameters.AddWithValue("$direction", (int)message.Direction);
         command.Parameters.AddWithValue("$channel", (int)message.Channel);
         command.Parameters.AddWithValue("$senderName", string.Empty);
-        command.Parameters.AddWithValue("$senderNameCiphertext", fieldEncryptionService.Encrypt(message.SenderName, "ConversationMessages.SenderNameCiphertext"));
+        command.Parameters.AddWithValue("$senderNameCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, message.SenderName, "ConversationMessages.SenderNameCiphertext", message.Id));
         command.Parameters.AddWithValue("$content", string.Empty);
-        command.Parameters.AddWithValue("$contentCiphertext", fieldEncryptionService.Encrypt(message.Content, "ConversationMessages.ContentCiphertext"));
+        command.Parameters.AddWithValue("$contentCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, message.Content, "ConversationMessages.ContentCiphertext", message.Id));
         command.Parameters.AddWithValue("$messageTime", string.Empty);
-        command.Parameters.AddWithValue("$messageTimeCiphertext", fieldEncryptionService.Encrypt(message.MessageTime.ToString("O"), "ConversationMessages.MessageTimeCiphertext"));
+        command.Parameters.AddWithValue("$messageTimeCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, message.MessageTime.ToString("O"), "ConversationMessages.MessageTimeCiphertext", message.Id));
         command.Parameters.AddWithValue("$sourceMessageId", string.Empty);
-        command.Parameters.AddWithValue("$sourceMessageIdCiphertext", fieldEncryptionService.Encrypt(message.SourceMessageId, "ConversationMessages.SourceMessageIdCiphertext"));
+        command.Parameters.AddWithValue("$sourceMessageIdCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, message.SourceMessageId, "ConversationMessages.SourceMessageIdCiphertext", message.Id));
         command.Parameters.AddWithValue("$metadataJson", string.Empty);
-        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(message.MetadataJson, "ConversationMessages.MetadataJsonCiphertext"));
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, message.MetadataJson, "ConversationMessages.MetadataJsonCiphertext", message.Id));
         command.Parameters.AddWithValue("$createdAt", message.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", message.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(message.DeletedAt));
         command.Parameters.AddWithValue("$remoteId", message.RemoteId);
         command.Parameters.AddWithValue("$isSynced", message.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", message.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        ConversationMessage message,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE ConversationMessages
+            SET SenderNameCiphertext = $senderNameCiphertext,
+                ContentCiphertext = $contentCiphertext,
+                MessageTimeCiphertext = $messageTimeCiphertext,
+                SourceMessageIdCiphertext = $sourceMessageIdCiphertext,
+                MetadataJsonCiphertext = $metadataJsonCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, message, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", message.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static ConversationMessage Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

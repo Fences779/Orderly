@@ -42,7 +42,9 @@ public sealed class AiSuggestionRepository : IAiSuggestionRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO AiSuggestions (
                 CustomerId, OrderId, MessageId,
@@ -66,6 +68,8 @@ public sealed class AiSuggestionRepository : IAiSuggestionRepository
             """;
         AddParameters(command, suggestion, _fieldEncryptionService);
         suggestion.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, suggestion, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetByIdAsync(suggestion.Id, cancellationToken) ?? suggestion;
     }
 
@@ -251,20 +255,42 @@ public sealed class AiSuggestionRepository : IAiSuggestionRepository
         command.Parameters.AddWithValue("$orderId", ToDbInt(suggestion.OrderId));
         command.Parameters.AddWithValue("$messageId", ToDbInt(suggestion.MessageId));
         command.Parameters.AddWithValue("$suggestionText", string.Empty);
-        command.Parameters.AddWithValue("$suggestionTextCiphertext", fieldEncryptionService.Encrypt(suggestion.SuggestionText, "AiSuggestions.SuggestionTextCiphertext"));
+        command.Parameters.AddWithValue("$suggestionTextCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, suggestion.SuggestionText, "AiSuggestions.SuggestionTextCiphertext", suggestion.Id));
         command.Parameters.AddWithValue("$reason", string.Empty);
-        command.Parameters.AddWithValue("$reasonCiphertext", fieldEncryptionService.Encrypt(suggestion.Reason, "AiSuggestions.ReasonCiphertext"));
+        command.Parameters.AddWithValue("$reasonCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, suggestion.Reason, "AiSuggestions.ReasonCiphertext", suggestion.Id));
         command.Parameters.AddWithValue("$confidence", DBNull.Value);
-        command.Parameters.AddWithValue("$confidenceCiphertext", fieldEncryptionService.Encrypt(suggestion.Confidence?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, "AiSuggestions.ConfidenceCiphertext"));
+        command.Parameters.AddWithValue("$confidenceCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, suggestion.Confidence?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, "AiSuggestions.ConfidenceCiphertext", suggestion.Id));
         command.Parameters.AddWithValue("$status", (int)suggestion.Status);
         command.Parameters.AddWithValue("$metadataJson", string.Empty);
-        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(suggestion.MetadataJson, "AiSuggestions.MetadataJsonCiphertext"));
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, suggestion.MetadataJson, "AiSuggestions.MetadataJsonCiphertext", suggestion.Id));
         command.Parameters.AddWithValue("$createdAt", suggestion.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", suggestion.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(suggestion.DeletedAt));
         command.Parameters.AddWithValue("$remoteId", suggestion.RemoteId);
         command.Parameters.AddWithValue("$isSynced", suggestion.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", suggestion.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        AiSuggestion suggestion,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE AiSuggestions
+            SET SuggestionTextCiphertext = $suggestionTextCiphertext,
+                ReasonCiphertext = $reasonCiphertext,
+                ConfidenceCiphertext = $confidenceCiphertext,
+                MetadataJsonCiphertext = $metadataJsonCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, suggestion, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", suggestion.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static AiSuggestion Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

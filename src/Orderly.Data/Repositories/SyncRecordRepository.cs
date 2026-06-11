@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
 using Orderly.Core.Services;
+using Orderly.Data.Services;
 using Orderly.Data.Sqlite;
 using System.Globalization;
 
@@ -41,7 +42,9 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO SyncRecords (
                 EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, ErrorMessageCiphertext, MetadataJson, MetadataJsonCiphertext,
@@ -55,6 +58,8 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
             """;
         AddParameters(command, record, _fieldEncryptionService);
         record.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, record, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetByIdAsync(record.Id, cancellationToken) ?? record;
     }
 
@@ -239,14 +244,34 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         command.Parameters.AddWithValue("$syncStatus", (int)record.SyncStatus);
         command.Parameters.AddWithValue("$lastSyncedAt", ToDbDate(record.LastSyncedAt));
         command.Parameters.AddWithValue("$errorMessage", string.Empty);
-        command.Parameters.AddWithValue("$errorMessageCiphertext", fieldEncryptionService.Encrypt(record.ErrorMessage, "SyncRecords.ErrorMessageCiphertext"));
+        command.Parameters.AddWithValue("$errorMessageCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, record.ErrorMessage, "SyncRecords.ErrorMessageCiphertext", record.Id));
         command.Parameters.AddWithValue("$metadataJson", string.Empty);
-        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(record.MetadataJson, "SyncRecords.MetadataJsonCiphertext"));
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, record.MetadataJson, "SyncRecords.MetadataJsonCiphertext", record.Id));
         command.Parameters.AddWithValue("$createdAt", record.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", record.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(record.DeletedAt));
         command.Parameters.AddWithValue("$isSynced", record.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", record.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        SyncRecord record,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE SyncRecords
+            SET ErrorMessageCiphertext = $errorMessageCiphertext,
+                MetadataJsonCiphertext = $metadataJsonCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, record, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", record.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static SyncRecord Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

@@ -44,7 +44,9 @@ public sealed class OcrResultRepository : IOcrResultRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO OcrResults (
                 CustomerId, OrderId,
@@ -70,6 +72,8 @@ public sealed class OcrResultRepository : IOcrResultRepository
             """;
         AddParameters(command, result, _fieldEncryptionService);
         result.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, result, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetByIdAsync(result.Id, cancellationToken) ?? result;
     }
 
@@ -240,22 +244,45 @@ public sealed class OcrResultRepository : IOcrResultRepository
         command.Parameters.AddWithValue("$customerId", ToDbInt(result.CustomerId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(result.OrderId));
         command.Parameters.AddWithValue("$sourcePath", string.Empty);
-        command.Parameters.AddWithValue("$sourcePathCiphertext", fieldEncryptionService.Encrypt(result.SourcePath, "OcrResults.SourcePathCiphertext"));
+        command.Parameters.AddWithValue("$sourcePathCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, result.SourcePath, "OcrResults.SourcePathCiphertext", result.Id));
         command.Parameters.AddWithValue("$sourceName", string.Empty);
-        command.Parameters.AddWithValue("$sourceNameCiphertext", fieldEncryptionService.Encrypt(result.SourceName, "OcrResults.SourceNameCiphertext"));
+        command.Parameters.AddWithValue("$sourceNameCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, result.SourceName, "OcrResults.SourceNameCiphertext", result.Id));
         command.Parameters.AddWithValue("$extractedText", string.Empty);
-        command.Parameters.AddWithValue("$extractedTextCiphertext", fieldEncryptionService.Encrypt(result.ExtractedText, "OcrResults.ExtractedTextCiphertext"));
+        command.Parameters.AddWithValue("$extractedTextCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, result.ExtractedText, "OcrResults.ExtractedTextCiphertext", result.Id));
         command.Parameters.AddWithValue("$status", (int)result.Status);
         command.Parameters.AddWithValue("$errorMessage", string.Empty);
-        command.Parameters.AddWithValue("$errorMessageCiphertext", fieldEncryptionService.Encrypt(result.ErrorMessage, "OcrResults.ErrorMessageCiphertext"));
+        command.Parameters.AddWithValue("$errorMessageCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, result.ErrorMessage, "OcrResults.ErrorMessageCiphertext", result.Id));
         command.Parameters.AddWithValue("$metadataJson", string.Empty);
-        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(result.MetadataJson, "OcrResults.MetadataJsonCiphertext"));
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, result.MetadataJson, "OcrResults.MetadataJsonCiphertext", result.Id));
         command.Parameters.AddWithValue("$createdAt", result.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", result.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(result.DeletedAt));
         command.Parameters.AddWithValue("$remoteId", result.RemoteId);
         command.Parameters.AddWithValue("$isSynced", result.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", result.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        OcrResult result,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE OcrResults
+            SET SourcePathCiphertext = $sourcePathCiphertext,
+                SourceNameCiphertext = $sourceNameCiphertext,
+                ExtractedTextCiphertext = $extractedTextCiphertext,
+                ErrorMessageCiphertext = $errorMessageCiphertext,
+                MetadataJsonCiphertext = $metadataJsonCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, result, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", result.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static OcrResult Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

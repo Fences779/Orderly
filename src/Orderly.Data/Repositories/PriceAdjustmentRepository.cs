@@ -45,7 +45,9 @@ public sealed class PriceAdjustmentRepository : IPriceAdjustmentRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO PriceAdjustments (
                 CustomerId, DealId, OrderId,
@@ -73,6 +75,8 @@ public sealed class PriceAdjustmentRepository : IPriceAdjustmentRepository
             """;
         AddParameters(command, adjustment, _fieldEncryptionService);
         adjustment.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, adjustment, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return adjustment;
     }
 
@@ -293,24 +297,48 @@ public sealed class PriceAdjustmentRepository : IPriceAdjustmentRepository
         command.Parameters.AddWithValue("$dealId", ToDbInt(adjustment.DealId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(adjustment.OrderId));
         command.Parameters.AddWithValue("$originalAmount", 0);
-        command.Parameters.AddWithValue("$originalAmountCiphertext", fieldEncryptionService.Encrypt(adjustment.OriginalAmount.ToString(CultureInfo.InvariantCulture), "PriceAdjustments.OriginalAmountCiphertext"));
+        command.Parameters.AddWithValue("$originalAmountCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, adjustment.OriginalAmount.ToString(CultureInfo.InvariantCulture), "PriceAdjustments.OriginalAmountCiphertext", adjustment.Id));
         command.Parameters.AddWithValue("$adjustedAmount", 0);
-        command.Parameters.AddWithValue("$adjustedAmountCiphertext", fieldEncryptionService.Encrypt(adjustment.AdjustedAmount.ToString(CultureInfo.InvariantCulture), "PriceAdjustments.AdjustedAmountCiphertext"));
+        command.Parameters.AddWithValue("$adjustedAmountCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, adjustment.AdjustedAmount.ToString(CultureInfo.InvariantCulture), "PriceAdjustments.AdjustedAmountCiphertext", adjustment.Id));
         command.Parameters.AddWithValue("$reason", string.Empty);
-        command.Parameters.AddWithValue("$reasonCiphertext", fieldEncryptionService.Encrypt(adjustment.Reason, "PriceAdjustments.ReasonCiphertext"));
+        command.Parameters.AddWithValue("$reasonCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, adjustment.Reason, "PriceAdjustments.ReasonCiphertext", adjustment.Id));
         command.Parameters.AddWithValue("$status", (int)adjustment.Status);
         command.Parameters.AddWithValue("$requestedBy", string.Empty);
-        command.Parameters.AddWithValue("$requestedByCiphertext", fieldEncryptionService.Encrypt(adjustment.RequestedBy, "PriceAdjustments.RequestedByCiphertext"));
+        command.Parameters.AddWithValue("$requestedByCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, adjustment.RequestedBy, "PriceAdjustments.RequestedByCiphertext", adjustment.Id));
         command.Parameters.AddWithValue("$approvedBy", string.Empty);
-        command.Parameters.AddWithValue("$approvedByCiphertext", fieldEncryptionService.Encrypt(adjustment.ApprovedBy, "PriceAdjustments.ApprovedByCiphertext"));
+        command.Parameters.AddWithValue("$approvedByCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, adjustment.ApprovedBy, "PriceAdjustments.ApprovedByCiphertext", adjustment.Id));
         command.Parameters.AddWithValue("$approvedAt", DBNull.Value);
-        command.Parameters.AddWithValue("$approvedAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(adjustment.ApprovedAt), "PriceAdjustments.ApprovedAtCiphertext"));
+        command.Parameters.AddWithValue("$approvedAtCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, ToCipherDate(adjustment.ApprovedAt), "PriceAdjustments.ApprovedAtCiphertext", adjustment.Id));
         command.Parameters.AddWithValue("$createdAt", adjustment.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", adjustment.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(adjustment.DeletedAt));
         command.Parameters.AddWithValue("$remoteId", adjustment.RemoteId);
         command.Parameters.AddWithValue("$isSynced", adjustment.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", adjustment.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        PriceAdjustment adjustment,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE PriceAdjustments
+            SET OriginalAmountCiphertext = $originalAmountCiphertext,
+                AdjustedAmountCiphertext = $adjustedAmountCiphertext,
+                ReasonCiphertext = $reasonCiphertext,
+                RequestedByCiphertext = $requestedByCiphertext,
+                ApprovedByCiphertext = $approvedByCiphertext,
+                ApprovedAtCiphertext = $approvedAtCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, adjustment, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", adjustment.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static PriceAdjustment Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

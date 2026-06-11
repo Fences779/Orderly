@@ -46,7 +46,9 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         await connection.OpenAsync(cancellationToken);
         activityLog.MetadataJson = await EnsureQaMetadataAsync(connection, activityLog, cancellationToken);
         activityLog.MetadataJson = NormalizeOptionalText(activityLog.MetadataJson, MaxMetadataJsonCharacters, "活动日志元数据");
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO ActivityLogs (
                 Type, CustomerId, DealId, OrderId, Title, TitleCiphertext, Description, DescriptionCiphertext, Operator, OperatorCiphertext, MetadataJson, MetadataJsonCiphertext,
@@ -60,6 +62,8 @@ public sealed class ActivityLogRepository : IActivityLogRepository
             """;
         AddParameters(command, activityLog, _fieldEncryptionService);
         activityLog.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, activityLog, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return activityLog;
     }
 
@@ -310,19 +314,41 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         command.Parameters.AddWithValue("$dealId", ToDbInt(activityLog.DealId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(activityLog.OrderId));
         command.Parameters.AddWithValue("$title", string.Empty);
-        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(activityLog.Title, "ActivityLogs.TitleCiphertext"));
+        command.Parameters.AddWithValue("$titleCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, activityLog.Title, "ActivityLogs.TitleCiphertext", activityLog.Id));
         command.Parameters.AddWithValue("$description", string.Empty);
-        command.Parameters.AddWithValue("$descriptionCiphertext", fieldEncryptionService.Encrypt(activityLog.Description, "ActivityLogs.DescriptionCiphertext"));
+        command.Parameters.AddWithValue("$descriptionCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, activityLog.Description, "ActivityLogs.DescriptionCiphertext", activityLog.Id));
         command.Parameters.AddWithValue("$operator", string.Empty);
-        command.Parameters.AddWithValue("$operatorCiphertext", fieldEncryptionService.Encrypt(activityLog.Operator, "ActivityLogs.OperatorCiphertext"));
+        command.Parameters.AddWithValue("$operatorCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, activityLog.Operator, "ActivityLogs.OperatorCiphertext", activityLog.Id));
         command.Parameters.AddWithValue("$metadataJson", string.Empty);
-        command.Parameters.AddWithValue("$metadataJsonCiphertext", fieldEncryptionService.Encrypt(activityLog.MetadataJson, "ActivityLogs.MetadataJsonCiphertext"));
+        command.Parameters.AddWithValue("$metadataJsonCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, activityLog.MetadataJson, "ActivityLogs.MetadataJsonCiphertext", activityLog.Id));
         command.Parameters.AddWithValue("$createdAt", activityLog.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", activityLog.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(activityLog.DeletedAt));
         command.Parameters.AddWithValue("$remoteId", activityLog.RemoteId);
         command.Parameters.AddWithValue("$isSynced", activityLog.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", activityLog.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        ActivityLog activityLog,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE ActivityLogs
+            SET TitleCiphertext = $titleCiphertext,
+                DescriptionCiphertext = $descriptionCiphertext,
+                OperatorCiphertext = $operatorCiphertext,
+                MetadataJsonCiphertext = $metadataJsonCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, activityLog, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", activityLog.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static ActivityLog Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

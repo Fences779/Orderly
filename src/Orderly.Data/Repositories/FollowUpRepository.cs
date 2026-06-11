@@ -44,7 +44,9 @@ public sealed class FollowUpRepository : IFollowUpRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO FollowUps (
                 CustomerId, DealId, OrderId, Title, TitleCiphertext, Content, ContentCiphertext, Status, ScheduledAt, ScheduledAtCiphertext, CompletedAt, CompletedAtCiphertext, ReminderAt, ReminderAtCiphertext,
@@ -58,6 +60,8 @@ public sealed class FollowUpRepository : IFollowUpRepository
             """;
         AddParameters(command, followUp, _fieldEncryptionService);
         followUp.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, followUp, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return followUp;
     }
 
@@ -255,22 +259,45 @@ public sealed class FollowUpRepository : IFollowUpRepository
         command.Parameters.AddWithValue("$dealId", ToDbInt(followUp.DealId));
         command.Parameters.AddWithValue("$orderId", ToDbInt(followUp.OrderId));
         command.Parameters.AddWithValue("$title", string.Empty);
-        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(followUp.Title, "FollowUps.TitleCiphertext"));
+        command.Parameters.AddWithValue("$titleCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, followUp.Title, "FollowUps.TitleCiphertext", followUp.Id));
         command.Parameters.AddWithValue("$content", string.Empty);
-        command.Parameters.AddWithValue("$contentCiphertext", fieldEncryptionService.Encrypt(followUp.Content, "FollowUps.ContentCiphertext"));
+        command.Parameters.AddWithValue("$contentCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, followUp.Content, "FollowUps.ContentCiphertext", followUp.Id));
         command.Parameters.AddWithValue("$status", (int)followUp.Status);
         command.Parameters.AddWithValue("$scheduledAt", string.Empty);
-        command.Parameters.AddWithValue("$scheduledAtCiphertext", fieldEncryptionService.Encrypt(followUp.ScheduledAt.ToString("O"), "FollowUps.ScheduledAtCiphertext"));
+        command.Parameters.AddWithValue("$scheduledAtCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, followUp.ScheduledAt.ToString("O"), "FollowUps.ScheduledAtCiphertext", followUp.Id));
         command.Parameters.AddWithValue("$completedAt", DBNull.Value);
-        command.Parameters.AddWithValue("$completedAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(followUp.CompletedAt), "FollowUps.CompletedAtCiphertext"));
+        command.Parameters.AddWithValue("$completedAtCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, ToCipherDate(followUp.CompletedAt), "FollowUps.CompletedAtCiphertext", followUp.Id));
         command.Parameters.AddWithValue("$reminderAt", DBNull.Value);
-        command.Parameters.AddWithValue("$reminderAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(followUp.ReminderAt), "FollowUps.ReminderAtCiphertext"));
+        command.Parameters.AddWithValue("$reminderAtCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, ToCipherDate(followUp.ReminderAt), "FollowUps.ReminderAtCiphertext", followUp.Id));
         command.Parameters.AddWithValue("$createdAt", followUp.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", followUp.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(followUp.DeletedAt));
         command.Parameters.AddWithValue("$remoteId", followUp.RemoteId);
         command.Parameters.AddWithValue("$isSynced", followUp.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", followUp.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        FollowUp followUp,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE FollowUps
+            SET TitleCiphertext = $titleCiphertext,
+                ContentCiphertext = $contentCiphertext,
+                ScheduledAtCiphertext = $scheduledAtCiphertext,
+                CompletedAtCiphertext = $completedAtCiphertext,
+                ReminderAtCiphertext = $reminderAtCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, followUp, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", followUp.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static FollowUp Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

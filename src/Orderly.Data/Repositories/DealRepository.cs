@@ -47,7 +47,9 @@ public sealed class DealRepository : IDealRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO Deals (
                 CustomerId, Title, TitleCiphertext, Stage, EstimatedAmount, EstimatedAmountCiphertext, Requirement, RequirementCiphertext, SourcePlatform, Channel,
@@ -61,6 +63,8 @@ public sealed class DealRepository : IDealRepository
             """;
         AddParameters(command, deal, _fieldEncryptionService);
         deal.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, deal, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return deal;
     }
 
@@ -247,26 +251,50 @@ public sealed class DealRepository : IDealRepository
     {
         command.Parameters.AddWithValue("$customerId", deal.CustomerId);
         command.Parameters.AddWithValue("$title", string.Empty);
-        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(deal.Title, "Deals.TitleCiphertext"));
+        command.Parameters.AddWithValue("$titleCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, deal.Title, "Deals.TitleCiphertext", deal.Id));
         command.Parameters.AddWithValue("$stage", (int)deal.Stage);
         command.Parameters.AddWithValue("$estimatedAmount", 0);
-        command.Parameters.AddWithValue("$estimatedAmountCiphertext", fieldEncryptionService.Encrypt(deal.EstimatedAmount.ToString(CultureInfo.InvariantCulture), "Deals.EstimatedAmountCiphertext"));
+        command.Parameters.AddWithValue("$estimatedAmountCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, deal.EstimatedAmount.ToString(CultureInfo.InvariantCulture), "Deals.EstimatedAmountCiphertext", deal.Id));
         command.Parameters.AddWithValue("$requirement", string.Empty);
-        command.Parameters.AddWithValue("$requirementCiphertext", fieldEncryptionService.Encrypt(deal.Requirement, "Deals.RequirementCiphertext"));
+        command.Parameters.AddWithValue("$requirementCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, deal.Requirement, "Deals.RequirementCiphertext", deal.Id));
         command.Parameters.AddWithValue("$sourcePlatform", deal.SourcePlatform);
         command.Parameters.AddWithValue("$channel", deal.Channel);
         command.Parameters.AddWithValue("$expectedCloseAt", DBNull.Value);
-        command.Parameters.AddWithValue("$expectedCloseAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(deal.ExpectedCloseAt), "Deals.ExpectedCloseAtCiphertext"));
+        command.Parameters.AddWithValue("$expectedCloseAtCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, ToCipherDate(deal.ExpectedCloseAt), "Deals.ExpectedCloseAtCiphertext", deal.Id));
         command.Parameters.AddWithValue("$closedAt", DBNull.Value);
-        command.Parameters.AddWithValue("$closedAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(deal.ClosedAt), "Deals.ClosedAtCiphertext"));
+        command.Parameters.AddWithValue("$closedAtCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, ToCipherDate(deal.ClosedAt), "Deals.ClosedAtCiphertext", deal.Id));
         command.Parameters.AddWithValue("$lostReason", string.Empty);
-        command.Parameters.AddWithValue("$lostReasonCiphertext", fieldEncryptionService.Encrypt(deal.LostReason, "Deals.LostReasonCiphertext"));
+        command.Parameters.AddWithValue("$lostReasonCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, deal.LostReason, "Deals.LostReasonCiphertext", deal.Id));
         command.Parameters.AddWithValue("$createdAt", deal.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", deal.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(deal.DeletedAt));
         command.Parameters.AddWithValue("$remoteId", deal.RemoteId);
         command.Parameters.AddWithValue("$isSynced", deal.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", deal.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        Deal deal,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE Deals
+            SET TitleCiphertext = $titleCiphertext,
+                EstimatedAmountCiphertext = $estimatedAmountCiphertext,
+                RequirementCiphertext = $requirementCiphertext,
+                ExpectedCloseAtCiphertext = $expectedCloseAtCiphertext,
+                ClosedAtCiphertext = $closedAtCiphertext,
+                LostReasonCiphertext = $lostReasonCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, deal, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", deal.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static Deal Map(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)

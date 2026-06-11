@@ -79,7 +79,9 @@ public sealed class OrderRepository : IOrderRepository
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO Orders (
                 CustomerId, DealId, Title, TitleCiphertext, Status, Amount, AmountCiphertext, Requirement, RequirementCiphertext, SourcePlatform, Channel,
@@ -93,6 +95,8 @@ public sealed class OrderRepository : IOrderRepository
             """;
         AddParameters(command, order, _fieldEncryptionService);
         order.Id = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+        await UpdateEncryptedColumnsAsync(connection, transaction, order, _fieldEncryptionService, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return await GetByIdAsync(order.Id, cancellationToken) ?? order;
     }
 
@@ -282,26 +286,50 @@ public sealed class OrderRepository : IOrderRepository
         command.Parameters.AddWithValue("$customerId", order.CustomerId);
         command.Parameters.AddWithValue("$dealId", ToDbInt(order.DealId));
         command.Parameters.AddWithValue("$title", string.Empty);
-        command.Parameters.AddWithValue("$titleCiphertext", fieldEncryptionService.Encrypt(order.Title, "Orders.TitleCiphertext"));
+        command.Parameters.AddWithValue("$titleCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, order.Title, "Orders.TitleCiphertext", order.Id));
         command.Parameters.AddWithValue("$status", (int)order.Status);
         command.Parameters.AddWithValue("$amount", 0);
-        command.Parameters.AddWithValue("$amountCiphertext", fieldEncryptionService.Encrypt(order.Amount.ToString(CultureInfo.InvariantCulture), "Orders.AmountCiphertext"));
+        command.Parameters.AddWithValue("$amountCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, order.Amount.ToString(CultureInfo.InvariantCulture), "Orders.AmountCiphertext", order.Id));
         command.Parameters.AddWithValue("$requirement", string.Empty);
-        command.Parameters.AddWithValue("$requirementCiphertext", fieldEncryptionService.Encrypt(order.Requirement, "Orders.RequirementCiphertext"));
+        command.Parameters.AddWithValue("$requirementCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, order.Requirement, "Orders.RequirementCiphertext", order.Id));
         command.Parameters.AddWithValue("$sourcePlatform", order.SourcePlatform);
         command.Parameters.AddWithValue("$channel", order.Channel);
         command.Parameters.AddWithValue("$externalId", string.Empty);
-        command.Parameters.AddWithValue("$externalIdCiphertext", fieldEncryptionService.Encrypt(order.ExternalId, "Orders.ExternalIdCiphertext"));
+        command.Parameters.AddWithValue("$externalIdCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, order.ExternalId, "Orders.ExternalIdCiphertext", order.Id));
         command.Parameters.AddWithValue("$rawPayload", string.Empty);
-        command.Parameters.AddWithValue("$rawPayloadCiphertext", fieldEncryptionService.Encrypt(order.RawPayload, "Orders.RawPayloadCiphertext"));
+        command.Parameters.AddWithValue("$rawPayloadCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, order.RawPayload, "Orders.RawPayloadCiphertext", order.Id));
         command.Parameters.AddWithValue("$nextFollowUpAt", DBNull.Value);
-        command.Parameters.AddWithValue("$nextFollowUpAtCiphertext", fieldEncryptionService.Encrypt(ToCipherDate(order.NextFollowUpAt), "Orders.NextFollowUpAtCiphertext"));
+        command.Parameters.AddWithValue("$nextFollowUpAtCiphertext", EncryptedFieldScope.EncryptOrEmpty(fieldEncryptionService, ToCipherDate(order.NextFollowUpAt), "Orders.NextFollowUpAtCiphertext", order.Id));
         command.Parameters.AddWithValue("$createdAt", order.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", order.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$deletedAt", ToDbDate(order.DeletedAt));
         command.Parameters.AddWithValue("$remoteId", order.RemoteId);
         command.Parameters.AddWithValue("$isSynced", order.IsSynced ? 1 : 0);
         command.Parameters.AddWithValue("$version", order.Version);
+    }
+
+    private static async Task UpdateEncryptedColumnsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        MerchantOrder order,
+        IFieldEncryptionService fieldEncryptionService,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE Orders
+            SET TitleCiphertext = $titleCiphertext,
+                AmountCiphertext = $amountCiphertext,
+                RequirementCiphertext = $requirementCiphertext,
+                ExternalIdCiphertext = $externalIdCiphertext,
+                RawPayloadCiphertext = $rawPayloadCiphertext,
+                NextFollowUpAtCiphertext = $nextFollowUpAtCiphertext
+            WHERE Id = $id;
+            """;
+        AddParameters(command, order, fieldEncryptionService);
+        command.Parameters.AddWithValue("$id", order.Id);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static object ToDbInt(int? value)

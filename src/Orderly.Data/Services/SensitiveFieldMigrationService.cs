@@ -122,35 +122,52 @@ public sealed class SensitiveFieldMigrationService
         await using var query = connection.CreateCommand();
         query.Transaction = transaction;
         query.CommandText = $"""
-            SELECT Id, CAST({plainColumnSql} AS TEXT)
+            SELECT Id, CAST({plainColumnSql} AS TEXT), {cipherColumnSql}
             FROM {tableSql}
-            WHERE ({condition})
-              AND (ifnull({cipherColumnSql}, '') = '' OR ifnull({plainColumnSql}, 0) <> 0);
+            WHERE ({condition});
             """;
 
-        var rows = new List<(long Id, string Value)>();
+        var rows = new List<(long Id, string Value, bool ShouldUpdate)>();
         await using (var reader = await query.ExecuteReaderAsync(cancellationToken))
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                if (reader.IsDBNull(1))
+                var id = reader.GetInt64(0);
+                var plain = reader.IsDBNull(1) ? null : reader.GetString(1);
+                var cipher = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
+                if (string.IsNullOrWhiteSpace(cipher))
                 {
-                    if (!treatDbNullAsEmpty)
+                    if (plain is not null)
                     {
-                        continue;
+                        rows.Add((id, plain, ShouldUpdate: true));
+                    }
+                    else if (treatDbNullAsEmpty)
+                    {
+                        rows.Add((id, string.Empty, ShouldUpdate: true));
                     }
 
-                    rows.Add((reader.GetInt64(0), string.Empty));
                     continue;
                 }
 
-                rows.Add((reader.GetInt64(0), reader.GetString(1)));
+                if (plain is not null
+                    && decimal.TryParse(plain, NumberStyles.Number, CultureInfo.InvariantCulture, out var plainValue)
+                    && plainValue != 0)
+                {
+                    rows.Add((id, plain, ShouldUpdate: true));
+                    continue;
+                }
+
+                var rewrap = TryDecryptForRewrap(cipher, table, cipherColumn, id, out var decrypted);
+                if (rewrap)
+                {
+                    rows.Add((id, decrypted, ShouldUpdate: true));
+                }
             }
         }
 
-        foreach (var row in rows)
+        foreach (var row in rows.Where(static row => row.ShouldUpdate))
         {
-            var cipher = _fieldEncryptionService.Encrypt(row.Value, BuildAssociatedDataName(table, cipherColumn));
+            var cipher = _fieldEncryptionService.Encrypt(row.Value, BuildAssociatedDataName(table, cipherColumn, row.Id));
             await using var update = connection.CreateCommand();
             update.Transaction = transaction;
             update.CommandText = $"""
@@ -181,49 +198,57 @@ public sealed class SensitiveFieldMigrationService
         var cipherColumnSql = QuoteSqlIdentifier(cipherColumn);
         await using var query = connection.CreateCommand();
         query.Transaction = transaction;
-        if (clearValue == DBNull.Value)
-        {
-            query.CommandText = $"""
-                SELECT Id, CAST({plainColumnSql} AS TEXT)
-                FROM {tableSql}
-                WHERE ({condition})
-                  AND (ifnull({cipherColumnSql}, '') = '' OR {plainColumnSql} IS NOT NULL);
-                """;
-        }
-        else
-        {
-            query.CommandText = $"""
-                SELECT Id, CAST({plainColumnSql} AS TEXT)
-                FROM {tableSql}
-                WHERE ({condition})
-                  AND (ifnull({cipherColumnSql}, '') = '' OR CAST({plainColumnSql} AS TEXT) <> $clear);
-                """;
-            query.Parameters.AddWithValue("$clear", clearValue);
-        }
+        query.CommandText = $"""
+            SELECT Id, CAST({plainColumnSql} AS TEXT), {cipherColumnSql}
+            FROM {tableSql}
+            WHERE ({condition});
+            """;
 
-        var rows = new List<(long Id, string Value)>();
+        var rows = new List<(long Id, string Value, bool ShouldUpdate)>();
         await using (var reader = await query.ExecuteReaderAsync(cancellationToken))
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                if (reader.IsDBNull(1))
+                var id = reader.GetInt64(0);
+                var plain = reader.IsDBNull(1) ? null : reader.GetString(1);
+                var cipher = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
+                if (string.IsNullOrWhiteSpace(cipher))
                 {
-                    if (!treatDbNullAsEmpty)
+                    if (plain is not null)
                     {
-                        continue;
+                        rows.Add((id, plain, ShouldUpdate: true));
+                    }
+                    else if (treatDbNullAsEmpty)
+                    {
+                        rows.Add((id, string.Empty, ShouldUpdate: true));
                     }
 
-                    rows.Add((reader.GetInt64(0), string.Empty));
                     continue;
                 }
 
-                rows.Add((reader.GetInt64(0), reader.GetString(1)));
+                if (plain is not null)
+                {
+                    var isClearValue = clearValue == DBNull.Value
+                        ? string.IsNullOrEmpty(plain)
+                        : string.Equals(plain, Convert.ToString(clearValue, CultureInfo.InvariantCulture), StringComparison.Ordinal);
+                    if (!isClearValue)
+                    {
+                        rows.Add((id, plain, ShouldUpdate: true));
+                        continue;
+                    }
+                }
+
+                var rewrap = TryDecryptForRewrap(cipher, table, cipherColumn, id, out var decrypted);
+                if (rewrap)
+                {
+                    rows.Add((id, decrypted, ShouldUpdate: true));
+                }
             }
         }
 
-        foreach (var row in rows)
+        foreach (var row in rows.Where(static row => row.ShouldUpdate))
         {
-            var cipher = _fieldEncryptionService.Encrypt(row.Value, BuildAssociatedDataName(table, cipherColumn));
+            var cipher = _fieldEncryptionService.Encrypt(row.Value, BuildAssociatedDataName(table, cipherColumn, row.Id));
             await using var update = connection.CreateCommand();
             update.Transaction = transaction;
             update.CommandText = $"""
@@ -290,8 +315,30 @@ public sealed class SensitiveFieldMigrationService
         return "\"" + value + "\"";
     }
 
-    private static string BuildAssociatedDataName(string table, string cipherColumn)
+    private bool TryDecryptForRewrap(string cipher, string table, string cipherColumn, long rowId, out string value)
     {
-        return $"{table}.{cipherColumn}";
+        var scopedAssociatedData = BuildAssociatedDataName(table, cipherColumn, rowId);
+        try
+        {
+            _fieldEncryptionService.Decrypt(cipher, scopedAssociatedData);
+            value = string.Empty;
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+        }
+
+        value = _fieldEncryptionService.Decrypt(cipher, BuildLegacyAssociatedDataName(table, cipherColumn));
+        return true;
+    }
+
+    private static string BuildAssociatedDataName(string table, string cipherColumn, long rowId)
+    {
+        return EncryptedFieldScope.Build(table, cipherColumn, rowId);
+    }
+
+    private static string BuildLegacyAssociatedDataName(string table, string cipherColumn)
+    {
+        return EncryptedFieldScope.BuildLegacyName(table, cipherColumn);
     }
 }
