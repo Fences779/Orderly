@@ -2,6 +2,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
+using System.IO;
 using Microsoft.Win32;
 using Orderly.Core.Models;
 using Orderly.App.ViewModels;
@@ -26,6 +27,8 @@ public partial class App : System.Windows.Application
     private const string QaSessionDisplayName = "QA Local User";
     private const int QaSessionDataKeyLength = 32;
     private const string QaSessionKeyFilePrefix = "qa-session-data-key-";
+    private const string PrivilegedQaStartupEnvName = "ORDERLY_ENABLE_PRIVILEGED_QA_STARTUP";
+    private const string QaDataRootEnvName = "ORDERLY_QA_DATA_ROOT";
 
     private TrayIconService? _trayIconService;
     private GlobalHotkeyService? _hotkeyService;
@@ -132,6 +135,18 @@ public partial class App : System.Windows.Application
 
         if (IsPrivilegedStartupModeAllowed())
         {
+            if (!IsPrivilegedQaStartupExplicitlyEnabled())
+            {
+                throw new InvalidOperationException($"{PrivilegedQaStartupEnvName}=1 未设置，已拒绝 QA / Demo 启动旁路。");
+            }
+
+            if (_qaMaintenanceCommand != QaDataMaintenanceService.QaDataMaintenanceCommand.None
+                || isQaMode
+                || isQaSeedRequested)
+            {
+                EnsureQaDatabasePathIsIsolated();
+            }
+
             return;
         }
 
@@ -155,6 +170,58 @@ public partial class App : System.Windows.Application
             ?? string.Empty).Trim().ToLowerInvariant();
 
         return runtime is "development" or "dev" or "qa" or "test" or "local";
+    }
+
+    private static bool IsPrivilegedQaStartupExplicitlyEnabled()
+    {
+        var value = Environment.GetEnvironmentVariable(PrivilegedQaStartupEnvName);
+        return string.Equals(value?.Trim(), "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value?.Trim(), "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value?.Trim(), "yes", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void EnsureQaDatabasePathIsIsolated()
+    {
+        var rawQaDatabasePath = Environment.GetEnvironmentVariable("ORDERLY_QA_DB_PATH");
+        if (string.IsNullOrWhiteSpace(rawQaDatabasePath))
+        {
+            throw new InvalidOperationException("QA 启动旁路必须显式设置 ORDERLY_QA_DB_PATH，不能使用默认真实数据库。");
+        }
+
+        var qaDatabasePath = Path.GetFullPath(rawQaDatabasePath);
+        var qaRootPath = ResolveQaDataRootPath();
+        if (!IsPathUnderDirectory(qaDatabasePath, qaRootPath))
+        {
+            throw new InvalidOperationException($"ORDERLY_QA_DB_PATH 必须位于 {QaDataRootEnvName} 指定的测试数据目录下。");
+        }
+
+        LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(qaRootPath, "QA 测试数据目录");
+        var qaDirectory = Path.GetDirectoryName(qaDatabasePath);
+        if (!string.IsNullOrWhiteSpace(qaDirectory))
+        {
+            LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(qaDirectory, "QA 数据库目录");
+        }
+
+        LocalDataFileSecurity.EnsureFileIsNotLinked(qaDatabasePath, "QA 数据库文件");
+    }
+
+    private static string ResolveQaDataRootPath()
+    {
+        var configuredRoot = Environment.GetEnvironmentVariable(QaDataRootEnvName);
+        var root = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(DatabasePaths.GetAppRootPath(), "qa")
+            : configuredRoot;
+        return Path.GetFullPath(root);
+    }
+
+    private static bool IsPathUnderDirectory(string path, string directory)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullDirectory = Path.GetFullPath(directory);
+        var prefix = fullDirectory.EndsWith(Path.DirectorySeparatorChar)
+            ? fullDirectory
+            : fullDirectory + Path.DirectorySeparatorChar;
+        return fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task CompleteLoginAsync(LocalSessionContext session)
