@@ -10,6 +10,13 @@ namespace Orderly.Data.Repositories;
 
 public sealed class OcrResultRepository : IOcrResultRepository
 {
+    private const int MaxSourcePathCharacters = 1024;
+    private const int MaxSourceNameCharacters = 160;
+    private const int MaxExtractedTextCharacters = 10000;
+    private const int MaxErrorMessageCharacters = 512;
+    private const int MaxMetadataJsonCharacters = 4096;
+    private const int MaxRemoteIdCharacters = 160;
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -21,6 +28,9 @@ public sealed class OcrResultRepository : IOcrResultRepository
 
     public async Task<OcrResult> CreateAsync(OcrResult result, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
+        NormalizeResult(result);
         var now = DateTime.Now;
         if (result.CreatedAt == default)
         {
@@ -65,6 +75,9 @@ public sealed class OcrResultRepository : IOcrResultRepository
 
     public async Task UpdateAsync(OcrResult result, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
+        NormalizeResult(result);
         result.UpdatedAt = DateTime.Now;
         result.IsSynced = false;
         result.Version = Math.Max(1, result.Version + 1);
@@ -168,6 +181,58 @@ public sealed class OcrResultRepository : IOcrResultRepository
         }
 
         return rows;
+    }
+
+    private static void NormalizeResult(OcrResult result)
+    {
+        if (result.CustomerId is <= 0)
+        {
+            throw new InvalidOperationException("OCR 客户标识无效。");
+        }
+
+        if (result.OrderId is <= 0)
+        {
+            throw new InvalidOperationException("OCR 订单标识无效。");
+        }
+
+        if (!Enum.IsDefined(result.Status))
+        {
+            throw new InvalidOperationException("OCR 状态无效。");
+        }
+
+        result.SourcePath = NormalizeRequiredText(result.SourcePath, MaxSourcePathCharacters, "OCR 图片路径", allowLineBreaks: false);
+        result.SourceName = NormalizeRequiredText(result.SourceName, MaxSourceNameCharacters, "OCR 图片文件名", allowLineBreaks: false);
+        result.ExtractedText = NormalizeOptionalText(result.ExtractedText, MaxExtractedTextCharacters, "OCR 文本", allowLineBreaks: true);
+        result.ErrorMessage = NormalizeOptionalText(result.ErrorMessage, MaxErrorMessageCharacters, "OCR 错误信息", allowLineBreaks: true);
+        result.MetadataJson = NormalizeOptionalText(result.MetadataJson, MaxMetadataJsonCharacters, "OCR 元数据", allowLineBreaks: false);
+        result.RemoteId = NormalizeOptionalText(result.RemoteId, MaxRemoteIdCharacters, "OCR 远端标识", allowLineBreaks: false);
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private static void AddParameters(SqliteCommand command, OcrResult result, IFieldEncryptionService fieldEncryptionService)
