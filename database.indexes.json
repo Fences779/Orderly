@@ -1,25 +1,58 @@
 {
   "customers": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_platform_externalUid", "keys": { "workspaceId": 1, "platform": 1, "externalUid": 1 } },
+    { "name": "idx_workspace_contactHandle", "keys": { "workspaceId": 1, "contactHandle": 1 } },
+    { "name": "idx_workspace_updatedAt", "keys": { "workspaceId": 1, "updatedAt": -1 } },
     { "name": "idx_platform_externalUid", "keys": { "platform": 1, "externalUid": 1 } },
     { "name": "idx_contactHandle", "keys": { "contactHandle": 1 } },
     { "name": "idx_updatedAt", "keys": { "updatedAt": -1 } }
   ],
   "deals": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_customer_createdAt", "keys": { "workspaceId": 1, "customerId": 1, "createdAt": -1 } },
+    { "name": "idx_workspace_stage_updatedAt", "keys": { "workspaceId": 1, "dealStage": 1, "updatedAt": -1 } },
+    { "name": "idx_workspace_createdAt", "keys": { "workspaceId": 1, "createdAt": -1 } },
     { "name": "idx_customer_createdAt", "keys": { "customerId": 1, "createdAt": -1 } },
     { "name": "idx_stage_updatedAt", "keys": { "dealStage": 1, "updatedAt": -1 } },
     { "name": "idx_createdAt", "keys": { "createdAt": -1 } }
   ],
   "quotes": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_deal_createdAt", "keys": { "workspaceId": 1, "dealId": 1, "createdAt": -1 } },
     { "name": "idx_deal_createdAt", "keys": { "dealId": 1, "createdAt": -1 } }
   ],
   "followup_tasks": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_status_dueAt", "keys": { "workspaceId": 1, "taskStatus": 1, "dueAt": 1 } },
+    { "name": "idx_workspace_dedupeKey", "keys": { "workspaceId": 1, "dedupeKey": 1 } },
     { "name": "idx_status_dueAt", "keys": { "taskStatus": 1, "dueAt": 1 } },
     { "name": "idx_dedupeKey", "keys": { "dedupeKey": 1 } }
   ],
+  "message_templates": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } }
+  ],
+  "sku_catalog": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_enabled_sortOrder", "keys": { "workspaceId": 1, "enabled": 1, "sortOrder": 1 } }
+  ],
+  "inventory_movements": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_sku_occurredAt", "keys": { "workspaceId": 1, "skuId": 1, "occurredAt": -1 } }
+  ],
+  "cashflow_entries": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_direction_occurredAt", "keys": { "workspaceId": 1, "direction": 1, "occurredAt": -1 } },
+    { "name": "idx_workspace_status_occurredAt", "keys": { "workspaceId": 1, "status": 1, "occurredAt": -1 } }
+  ],
   "captures": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_status_createdAt", "keys": { "workspaceId": 1, "confirmStatus": 1, "createdAt": -1 } },
     { "name": "idx_status_createdAt", "keys": { "confirmStatus": 1, "createdAt": -1 } }
   ],
   "activity_logs": [
+    { "name": "idx_workspace", "keys": { "workspaceId": 1 } },
+    { "name": "idx_workspace_entity_createdAt", "keys": { "workspaceId": 1, "entityType": 1, "entityId": 1, "createdAt": -1 } },
     { "name": "idx_entity_createdAt", "keys": { "entityType": 1, "entityId": 1, "createdAt": -1 } }
   ]
 }
