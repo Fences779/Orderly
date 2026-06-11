@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Xml;
 using ClosedXML.Excel;
 using Orderly.Core.Models;
 using Orderly.Data.Sqlite;
@@ -9,6 +11,14 @@ namespace Orderly.Data.Services;
 public sealed partial class CloudInventoryWorkspaceService
 {
     private const long MaxInventoryWorkbookBytes = 10 * 1024 * 1024;
+    private const long MaxInventoryWorkbookExpandedBytes = 32 * 1024 * 1024;
+    private const long MaxInventoryWorkbookEntryBytes = 12 * 1024 * 1024;
+    private const long MaxInventoryWorkbookWorksheetXmlBytes = 8 * 1024 * 1024;
+    private const long MaxInventoryWorkbookSharedStringsBytes = 8 * 1024 * 1024;
+    private const long MaxInventoryWorkbookStylesBytes = 2 * 1024 * 1024;
+    private const int MaxInventoryWorkbookZipEntries = 256;
+    private const int MaxInventoryWorkbookWorksheetCount = 8;
+    private const int MaxInventoryWorkbookCompressionRatio = 100;
     private const int MaxInventoryWorkbookDataRows = 500;
     private const int MaxInventoryWorkbookHeaderCharacters = 128;
     private const int MaxInventoryWorkbookCellCharacters = 1024;
@@ -18,6 +28,7 @@ public sealed partial class CloudInventoryWorkspaceService
     private static List<InventoryWorkbookRow> LoadWorkbookRows(string workbookPath, out List<InventoryImportRowError> errors)
     {
         using var workbookStream = OpenSafeWorkbookReadStream(workbookPath);
+        EnsureWorkbookPackageIsSafe(workbookStream);
         using var workbook = new XLWorkbook(workbookStream);
         var worksheet = workbook.Worksheets.FirstOrDefault(static sheet => string.Equals(sheet.Name, "Inventory", StringComparison.OrdinalIgnoreCase))
             ?? workbook.Worksheets.FirstOrDefault()
@@ -577,6 +588,167 @@ public sealed partial class CloudInventoryWorkspaceService
         {
             stream.Dispose();
             throw;
+        }
+    }
+
+    private static void EnsureWorkbookPackageIsSafe(Stream workbookStream)
+    {
+        if (!workbookStream.CanSeek)
+        {
+            throw new InvalidOperationException("Excel 文件无法进行安全预检。");
+        }
+
+        var originalPosition = workbookStream.Position;
+        try
+        {
+            workbookStream.Position = 0;
+            using var archive = new ZipArchive(workbookStream, ZipArchiveMode.Read, leaveOpen: true);
+            if (archive.Entries.Count == 0)
+            {
+                throw new InvalidOperationException("Excel 文件结构无效或已损坏。");
+            }
+
+            if (archive.Entries.Count > MaxInventoryWorkbookZipEntries)
+            {
+                throw new InvalidOperationException("Excel 文件内部结构过于复杂，已拒绝导入。");
+            }
+
+            var hasContentTypes = false;
+            var hasWorkbook = false;
+            var worksheetCount = 0;
+            long totalExpandedBytes = 0;
+
+            foreach (var entry in archive.Entries)
+            {
+                var normalizedName = NormalizeWorkbookPackageEntryName(entry.FullName);
+                if (string.IsNullOrWhiteSpace(normalizedName))
+                {
+                    continue;
+                }
+
+                if (normalizedName == "[content_types].xml")
+                {
+                    hasContentTypes = true;
+                }
+                else if (normalizedName == "xl/workbook.xml")
+                {
+                    hasWorkbook = true;
+                }
+
+                if (entry.Length > MaxInventoryWorkbookEntryBytes)
+                {
+                    throw new InvalidOperationException("Excel 文件内部条目超过导入处理上限。");
+                }
+
+                totalExpandedBytes += entry.Length;
+                if (totalExpandedBytes > MaxInventoryWorkbookExpandedBytes)
+                {
+                    throw new InvalidOperationException("Excel 文件解压后超过导入处理上限。");
+                }
+
+                EnsureWorkbookEntryCompressionIsSafe(entry);
+
+                if (normalizedName.StartsWith("xl/worksheets/", StringComparison.Ordinal)
+                    && normalizedName.EndsWith(".xml", StringComparison.Ordinal))
+                {
+                    worksheetCount++;
+                    if (worksheetCount > MaxInventoryWorkbookWorksheetCount)
+                    {
+                        throw new InvalidOperationException("Excel 工作表数量超过导入处理上限。");
+                    }
+
+                    if (entry.Length > MaxInventoryWorkbookWorksheetXmlBytes)
+                    {
+                        throw new InvalidOperationException("Excel 工作表内容超过导入处理上限。");
+                    }
+
+                    EnsureWorksheetRowCountIsSafe(entry);
+                    continue;
+                }
+
+                if (normalizedName == "xl/sharedstrings.xml" && entry.Length > MaxInventoryWorkbookSharedStringsBytes)
+                {
+                    throw new InvalidOperationException("Excel 共享字符串内容超过导入处理上限。");
+                }
+
+                if (normalizedName == "xl/styles.xml" && entry.Length > MaxInventoryWorkbookStylesBytes)
+                {
+                    throw new InvalidOperationException("Excel 样式内容超过导入处理上限。");
+                }
+            }
+
+            if (!hasContentTypes || !hasWorkbook || worksheetCount == 0)
+            {
+                throw new InvalidOperationException("Excel 文件结构无效或已损坏。");
+            }
+        }
+        catch (InvalidDataException ex)
+        {
+            throw new InvalidOperationException("Excel 文件结构无效或已损坏。", ex);
+        }
+        finally
+        {
+            workbookStream.Position = originalPosition;
+        }
+    }
+
+    private static string NormalizeWorkbookPackageEntryName(string entryName)
+    {
+        var normalized = (entryName ?? string.Empty).Replace('\\', '/').Trim();
+        if (string.IsNullOrWhiteSpace(normalized) || normalized.StartsWith("/", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Excel 文件内部路径无效。");
+        }
+
+        var segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Any(static segment => segment == "." || segment == ".."))
+        {
+            throw new InvalidOperationException("Excel 文件内部路径无效。");
+        }
+
+        return normalized.ToLowerInvariant();
+    }
+
+    private static void EnsureWorkbookEntryCompressionIsSafe(ZipArchiveEntry entry)
+    {
+        if (entry.CompressedLength <= 0 || entry.Length <= 1024 * 1024)
+        {
+            return;
+        }
+
+        var compressionRatio = entry.Length / (double)entry.CompressedLength;
+        if (compressionRatio > MaxInventoryWorkbookCompressionRatio)
+        {
+            throw new InvalidOperationException("Excel 文件压缩结构异常，已拒绝导入。");
+        }
+    }
+
+    private static void EnsureWorksheetRowCountIsSafe(ZipArchiveEntry worksheetEntry)
+    {
+        using var worksheetStream = worksheetEntry.Open();
+        using var reader = XmlReader.Create(
+            worksheetStream,
+            new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                IgnoreComments = true,
+                IgnoreProcessingInstructions = true,
+                XmlResolver = null
+            });
+
+        var rowCount = 0;
+        while (reader.Read())
+        {
+            if (reader.NodeType != XmlNodeType.Element || !string.Equals(reader.LocalName, "row", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            rowCount++;
+            if (rowCount > MaxInventoryWorkbookDataRows + 1)
+            {
+                throw new InvalidOperationException($"Excel 数据行超过单次导入上限（{MaxInventoryWorkbookDataRows} 行）。");
+            }
         }
     }
 
