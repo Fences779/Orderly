@@ -34,8 +34,13 @@ public sealed class SessionLockService : ISessionLockService
         }
     }
 
-    public void UnlockWithPin()
+    public void UnlockWithPin(bool verified)
     {
+        if (!verified)
+        {
+            return;
+        }
+
         if (_state == SessionLockState.PendingPinUnlock)
         {
             SetState(SessionLockState.Unlocked);

@@ -92,7 +92,7 @@ public partial class App
                 var verified = await localAuthService.VerifyPinAsync(session.AccountId, dialog.EnteredPin);
                 if (verified)
                 {
-                    _sessionLockService?.UnlockWithPin();
+                    _sessionLockService?.UnlockWithPin(verified);
                     break;
                 }
 

@@ -12,6 +12,6 @@ public interface ISessionLockService
     void MarkSignedIn();
     void LockBySystemResume();
     void LockManually();
-    void UnlockWithPin();
+    void UnlockWithPin(bool verified);
     void Logout();
 }
