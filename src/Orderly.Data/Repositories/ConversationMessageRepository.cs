@@ -10,6 +10,15 @@ namespace Orderly.Data.Repositories;
 
 public sealed class ConversationMessageRepository : IConversationMessageRepository
 {
+    private const int MaxSenderNameCharacters = 80;
+    private const int MaxContentCharacters = 8000;
+    private const int MaxSourceMessageIdCharacters = 160;
+    private const int MaxMetadataJsonCharacters = 4096;
+    private const int MaxRemoteIdCharacters = 160;
+
+    private static readonly DateTime MinMessageTime = new(2000, 1, 1);
+    private static readonly DateTime MaxMessageTime = new(2100, 1, 1);
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -21,6 +30,9 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
 
     public async Task<ConversationMessage> CreateAsync(ConversationMessage message, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
+        NormalizeMessage(message);
         var now = DateTime.Now;
         if (message.CreatedAt == default)
         {
@@ -63,6 +75,9 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
 
     public async Task UpdateAsync(ConversationMessage message, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
+        NormalizeMessage(message);
         message.UpdatedAt = DateTime.Now;
         message.IsSynced = false;
         message.Version = Math.Max(1, message.Version + 1);
@@ -124,6 +139,12 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
 
     public async Task<ConversationMessage?> GetBySourceMessageIdAsync(string sourceMessageId, CancellationToken cancellationToken = default)
     {
+        sourceMessageId = NormalizeRequiredText(
+            sourceMessageId,
+            MaxSourceMessageIdCharacters,
+            "消息来源标识",
+            allowLineBreaks: false);
+
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -207,6 +228,76 @@ public sealed class ConversationMessageRepository : IConversationMessageReposito
         }
 
         return rows;
+    }
+
+    private static void NormalizeMessage(ConversationMessage message)
+    {
+        if (message.CustomerId <= 0)
+        {
+            throw new InvalidOperationException("会话消息缺少有效客户。");
+        }
+
+        if (message.OrderId is <= 0)
+        {
+            throw new InvalidOperationException("会话消息订单标识无效。");
+        }
+
+        if (message.DealId is <= 0)
+        {
+            throw new InvalidOperationException("会话消息成交标识无效。");
+        }
+
+        if (!Enum.IsDefined(message.Direction))
+        {
+            throw new InvalidOperationException("会话消息方向无效。");
+        }
+
+        if (!Enum.IsDefined(message.Channel))
+        {
+            throw new InvalidOperationException("会话消息渠道无效。");
+        }
+
+        if (message.MessageTime == default)
+        {
+            message.MessageTime = DateTime.Now;
+        }
+        else if (message.MessageTime < MinMessageTime || message.MessageTime > MaxMessageTime)
+        {
+            throw new InvalidOperationException("会话消息时间超出允许范围。");
+        }
+
+        message.SenderName = NormalizeOptionalText(message.SenderName, MaxSenderNameCharacters, "发送人", allowLineBreaks: false);
+        message.Content = NormalizeRequiredText(message.Content, MaxContentCharacters, "消息内容", allowLineBreaks: true);
+        message.SourceMessageId = NormalizeOptionalText(message.SourceMessageId, MaxSourceMessageIdCharacters, "消息来源标识", allowLineBreaks: false);
+        message.MetadataJson = NormalizeOptionalText(message.MetadataJson, MaxMetadataJsonCharacters, "消息元数据", allowLineBreaks: false);
+        message.RemoteId = NormalizeOptionalText(message.RemoteId, MaxRemoteIdCharacters, "会话消息远端标识", allowLineBreaks: false);
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private static void AddParameters(SqliteCommand command, ConversationMessage message, IFieldEncryptionService fieldEncryptionService)
