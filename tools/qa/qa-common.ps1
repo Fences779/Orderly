@@ -60,11 +60,19 @@ function Get-OrderlyAppExePath {
 }
 
 function Get-ArtifactRoot {
-    return Join-RepoPath @('artifacts')
+    if (-not [string]::IsNullOrWhiteSpace($env:ORDERLY_QA_ARTIFACT_ROOT)) {
+        return [System.IO.Path]::GetFullPath($env:ORDERLY_QA_ARTIFACT_ROOT)
+    }
+
+    return Join-Path ([System.IO.Path]::GetTempPath()) 'Orderly-SN\artifacts'
+}
+
+function Get-QaDatabaseRoot {
+    return Join-Path (Get-ArtifactRoot) 'qa-db'
 }
 
 function Get-QaSmokeRoot {
-    return Join-RepoPath @('artifacts', 'qa-smoke')
+    return Join-Path (Get-ArtifactRoot) 'qa-smoke'
 }
 
 function New-QaSmokeRunDirectory {

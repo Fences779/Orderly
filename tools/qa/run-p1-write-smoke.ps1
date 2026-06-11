@@ -69,7 +69,7 @@ Write-Step "Starting P1 write smoke"
 Write-Step "Repo root: $(Get-RepoRoot)"
 $previousQaDbPath = $env:ORDERLY_QA_DB_PATH
 if ([string]::IsNullOrWhiteSpace($env:ORDERLY_QA_DB_PATH)) {
-    $env:ORDERLY_QA_DB_PATH = Join-RepoPath @('artifacts', 'qa-db', 'orderly.qa.db')
+    $env:ORDERLY_QA_DB_PATH = Join-Path (Get-QaDatabaseRoot) 'orderly.qa.db'
 }
 
 Write-Step "Database path: $(Get-DefaultDatabasePath)"

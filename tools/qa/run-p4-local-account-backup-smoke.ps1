@@ -192,9 +192,9 @@ function New-BackupContext {
     )
 
     $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
-    $fieldEncryptionService = New-PassthroughFieldEncryptionService
+    $fieldEncryptionService = [Orderly.Data.Services.FieldEncryptionService]::new($SessionContextService)
     $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
-    $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
+    $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory, $fieldEncryptionService)
     $syncService = [Orderly.Data.Services.LocalSyncService]::new($syncRecordRepository, $activityRepository)
     $backupService = [Orderly.Data.Services.LocalBackupService]::new($connectionFactory, $syncService, $syncRecordRepository, $activityRepository, $LauncherConnectionFactory, $SessionContextService)
 
@@ -255,7 +255,7 @@ $sourceAccountPath = Join-Path $runDirectory.Path 'source-account.db'
 $targetLauncherPath = Join-Path $runDirectory.Path 'target-launcher.db'
 $targetAccountPath = Join-Path $runDirectory.Path 'target-account.db'
 $backupPath = Join-Path $runDirectory.Path 'local-account-backup.json'
-$accountId = 'owneracct001'
+$accountId = '11111111111111111111111111111111'
 $sourceDataKey = [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)
 
 Write-Step "Step 1/7: initialize isolated source launcher/account databases"
@@ -273,28 +273,28 @@ if (-not (Test-Path -LiteralPath $backupPath)) {
     throw "Backup file was not created: $backupPath"
 }
 
-$backupJson = Get-Content -LiteralPath $backupPath -Raw -Encoding utf8 | ConvertFrom-Json
-if (-not $backupJson.tables.LocalAccountsSnapshot) {
-    throw 'Backup JSON is missing LocalAccountsSnapshot.'
-}
-
-if (-not $backupJson.counts.ReplyTemplates) {
-    throw 'Backup JSON is missing ReplyTemplates count.'
-}
-
-$snapshotRows = @($backupJson.tables.LocalAccountsSnapshot)
-if ($snapshotRows.Count -ne 1) {
-    throw "Expected exactly one LocalAccountsSnapshot row, got: $($snapshotRows.Count)"
-}
-
-if ($snapshotRows[0].accountId -ne $accountId) {
-    throw 'LocalAccountsSnapshot accountId mismatch.'
-}
-
 Write-Step "Step 3/7: validate backup"
 $validationResult = $sourceBackupContext.BackupService.ValidateAsync($backupPath, 'p4-local-account-smoke', $false).GetAwaiter().GetResult()
 if (-not $validationResult.IsValid) {
     throw "Backup validation failed: $($validationResult.Errors -join '; ')"
+}
+
+if (-not $validationResult.Manifest.Tables.ContainsKey('LocalAccountsSnapshot')) {
+    throw 'Backup manifest is missing LocalAccountsSnapshot.'
+}
+
+if (-not $validationResult.Manifest.Counts.ContainsKey('ReplyTemplates')) {
+    throw 'Backup manifest is missing ReplyTemplates count.'
+}
+
+$launcherSnapshot = $validationResult.Manifest.Tables['LocalAccountsSnapshot']
+$snapshotRows = @($launcherSnapshot.EnumerateArray())
+if ($snapshotRows.Count -ne 1) {
+    throw "Expected exactly one LocalAccountsSnapshot row, got: $($snapshotRows.Count)"
+}
+
+if ($snapshotRows[0].GetProperty('accountId').GetString() -ne $accountId) {
+    throw 'LocalAccountsSnapshot accountId mismatch.'
 }
 
 $expectedCounts = Get-TableCounts -DatabasePath $sourceAccountPath -TableNames @(

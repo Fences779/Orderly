@@ -249,7 +249,7 @@ function New-BackupContext {
     $connectionFactory = New-SqliteConnectionFactory -DatabasePath $DatabasePath
     $fieldEncryptionService = [Orderly.Data.Services.FieldEncryptionService]::new($SessionContextService)
     $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
-    $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
+    $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory, $fieldEncryptionService)
     $syncService = [Orderly.Data.Services.LocalSyncService]::new($syncRecordRepository, $activityRepository)
     $backupService = [Orderly.Data.Services.LocalBackupService]::new(
         $connectionFactory,

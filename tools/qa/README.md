@@ -68,4 +68,4 @@ powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p3-full-regression.ps1
 - 默认回归不联网，不调用真实 AI API
 - 本目录结论不覆盖最终 UI / XAML 视觉验收
 - 本目录结论不覆盖 125% 缩放收尾
-- `artifacts\qa-smoke\` 只存运行产物，不提交
+- QA 运行产物默认写入 `%TEMP%\Orderly-SN\artifacts\`，可用 `ORDERLY_QA_ARTIFACT_ROOT` 覆盖；不要写入仓库工作区

@@ -33,7 +33,7 @@ function Invoke-QaScript {
 Write-Step "Starting P1 smoke"
 Write-Step "Repo root: $(Get-RepoRoot)"
 $previousQaDbPath = $env:ORDERLY_QA_DB_PATH
-$qaDbPath = Join-RepoPath @('artifacts', 'qa-db', 'orderly.qa.db')
+$qaDbPath = Join-Path (Get-QaDatabaseRoot) 'orderly.qa.db'
 $env:ORDERLY_QA_DB_PATH = $qaDbPath
 Write-Step "QA smoke database override: $qaDbPath"
 
