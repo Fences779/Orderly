@@ -11,6 +11,11 @@ namespace Orderly.Data.Repositories;
 public sealed class ActivityLogRepository : IActivityLogRepository
 {
     private const int MaxRecentActivityCount = 500;
+    private const int MaxTitleCharacters = 160;
+    private const int MaxDescriptionCharacters = 2000;
+    private const int MaxOperatorCharacters = 80;
+    private const int MaxMetadataJsonCharacters = 8192;
+    private const int MaxRemoteIdCharacters = 160;
 
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
@@ -23,6 +28,9 @@ public sealed class ActivityLogRepository : IActivityLogRepository
 
     public async Task<ActivityLog> CreateAsync(ActivityLog activityLog, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(activityLog);
+
+        NormalizeActivityLog(activityLog);
         var now = DateTime.Now;
         if (activityLog.CreatedAt == default)
         {
@@ -37,6 +45,7 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         activityLog.MetadataJson = await EnsureQaMetadataAsync(connection, activityLog, cancellationToken);
+        activityLog.MetadataJson = NormalizeOptionalText(activityLog.MetadataJson, MaxMetadataJsonCharacters, "活动日志元数据");
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO ActivityLogs (
@@ -112,6 +121,9 @@ public sealed class ActivityLogRepository : IActivityLogRepository
 
     public async Task UpdateAsync(ActivityLog activityLog, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(activityLog);
+
+        NormalizeActivityLog(activityLog);
         activityLog.UpdatedAt = DateTime.Now;
         activityLog.IsSynced = false;
         activityLog.Version = Math.Max(1, activityLog.Version + 1);
@@ -119,6 +131,7 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         activityLog.MetadataJson = await EnsureQaMetadataAsync(connection, activityLog, cancellationToken);
+        activityLog.MetadataJson = NormalizeOptionalText(activityLog.MetadataJson, MaxMetadataJsonCharacters, "活动日志元数据");
         await using var command = connection.CreateCommand();
         command.CommandText = """
             UPDATE ActivityLogs
@@ -192,6 +205,62 @@ public sealed class ActivityLogRepository : IActivityLogRepository
         }
 
         return QaDataScope.EnsureActivityMetadataTagged(activityLog.MetadataJson, "runtime");
+    }
+
+    private static void NormalizeActivityLog(ActivityLog activityLog)
+    {
+        if (!Enum.IsDefined(activityLog.Type))
+        {
+            throw new InvalidOperationException("活动日志类型无效。");
+        }
+
+        if (activityLog.CustomerId is <= 0)
+        {
+            throw new InvalidOperationException("活动日志客户标识无效。");
+        }
+
+        if (activityLog.DealId is <= 0)
+        {
+            throw new InvalidOperationException("活动日志成交标识无效。");
+        }
+
+        if (activityLog.OrderId is <= 0)
+        {
+            throw new InvalidOperationException("活动日志订单标识无效。");
+        }
+
+        activityLog.Title = NormalizeRequiredText(activityLog.Title, MaxTitleCharacters, "活动日志标题");
+        activityLog.Description = NormalizeOptionalText(activityLog.Description, MaxDescriptionCharacters, "活动日志描述");
+        activityLog.Operator = NormalizeOptionalText(activityLog.Operator, MaxOperatorCharacters, "活动日志操作人");
+        activityLog.MetadataJson = NormalizeOptionalText(activityLog.MetadataJson, MaxMetadataJsonCharacters, "活动日志元数据");
+        activityLog.RemoteId = NormalizeOptionalText(activityLog.RemoteId, MaxRemoteIdCharacters, "活动日志远端标识");
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private static async Task<bool> IsQaScopedAsync(SqliteConnection connection, ActivityLog activityLog, CancellationToken cancellationToken)
