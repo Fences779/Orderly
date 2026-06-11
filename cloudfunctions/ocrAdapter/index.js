@@ -2,7 +2,6 @@ const cloud = require('wx-server-sdk')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
-const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const MAX_EVENT_BYTES = 65536
 const MAX_FILE_ID_LENGTH = 512
 const OCR_PROVIDERS = ['mock']
@@ -37,12 +36,7 @@ function normalizeFileId(value) {
 
 function isAllowedOperatorId(operatorId) {
   const allowed = normalizeList(process.env[ALLOWED_OPENIDS_ENV_NAME])
-  return allowed.indexOf(operatorId) >= 0 || isAuthAllowAllDevEnabled()
-}
-
-function isAuthAllowAllDevEnabled() {
-  const runtime = String(process.env.ORDERLY_RUNTIME_ENV || process.env.NODE_ENV || '').trim().toLowerCase()
-  return process.env[AUTH_ALLOW_ALL_DEV_ENV_NAME] === '1' && ['development', 'dev', 'test', 'local'].indexOf(runtime) >= 0
+  return allowed.indexOf(operatorId) >= 0
 }
 
 function rejectOversizedEvent(event) {
