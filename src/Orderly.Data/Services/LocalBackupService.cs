@@ -19,7 +19,14 @@ public sealed partial class LocalBackupService : IBackupService
     private const string BackupIntegrityProtectedKeyFileName = "backup-integrity.dpapi";
     private const string BackupIntegrityLegacyRawKeyFileName = "backup-integrity.key";
     private const string BackupIntegrityProtectedEntropyPurpose = "Orderly.LocalBackupService.BackupIntegrity.v1";
+    private const string BackupEncryptionFormat = "OrderlyEncryptedBackup";
+    private const string BackupEncryptionAlgorithm = "AES-256-GCM";
+    private const string BackupEncryptionKeyScope = "session-data-key";
+    private const string BackupEncryptionAssociatedData = "Orderly.LocalBackupService.EncryptedBackup.v1";
     private const int BackupIntegrityKeyByteLength = 32;
+    private const int BackupEncryptionKeyByteLength = 32;
+    private const int BackupEncryptionNonceByteLength = 12;
+    private const int BackupEncryptionTagByteLength = 16;
     private const int MaxProtectedBackupIntegrityKeyBytes = 4096;
     private const long MaxBackupFileBytes = 64L * 1024L * 1024L;
     private const int MaxBackupJsonDepth = 32;

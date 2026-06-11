@@ -265,6 +265,142 @@ public sealed partial class LocalBackupService
         return await reader.ReadToEndAsync(cancellationToken);
     }
 
+    private string EncryptBackupJson(string manifestJson)
+    {
+        var key = GetSessionBackupEncryptionKey();
+        try
+        {
+            var plaintext = Utf8NoBom.GetBytes(manifestJson);
+            var ciphertext = new byte[plaintext.Length];
+            var nonce = RandomNumberGenerator.GetBytes(BackupEncryptionNonceByteLength);
+            var tag = new byte[BackupEncryptionTagByteLength];
+            try
+            {
+                using var aes = new AesGcm(key, BackupEncryptionTagByteLength);
+                aes.Encrypt(
+                    nonce,
+                    plaintext,
+                    ciphertext,
+                    tag,
+                    Utf8NoBom.GetBytes(BackupEncryptionAssociatedData));
+
+                var envelope = new JsonObject
+                {
+                    ["format"] = BackupEncryptionFormat,
+                    ["version"] = 1,
+                    ["algorithm"] = BackupEncryptionAlgorithm,
+                    ["keyScope"] = BackupEncryptionKeyScope,
+                    ["nonce"] = Convert.ToBase64String(nonce),
+                    ["tag"] = Convert.ToBase64String(tag),
+                    ["ciphertext"] = Convert.ToBase64String(ciphertext)
+                };
+
+                return envelope.ToJsonString(SerializerOptions);
+            }
+            finally
+            {
+                SensitiveBuffer.Clear(plaintext, ciphertext, nonce, tag);
+            }
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(key);
+        }
+    }
+
+    private string DecryptBackupJsonEnvelope(string fileJson)
+    {
+        using var document = JsonDocument.Parse(fileJson, BackupJsonDocumentOptions);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object
+            || !root.TryGetProperty("format", out var formatElement)
+            || formatElement.ValueKind != JsonValueKind.String)
+        {
+            throw new InvalidOperationException("备份文件未加密，已拒绝读取。");
+        }
+
+        var format = formatElement.GetString();
+        if (!string.Equals(format, BackupEncryptionFormat, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("备份文件加密格式不受支持。");
+        }
+
+        var version = ReadEnvelopeInt(root, "version");
+        if (version != 1)
+        {
+            throw new InvalidOperationException("备份文件加密版本不受支持。");
+        }
+
+        if (!string.Equals(ReadEnvelopeString(root, "algorithm"), BackupEncryptionAlgorithm, StringComparison.Ordinal)
+            || !string.Equals(ReadEnvelopeString(root, "keyScope"), BackupEncryptionKeyScope, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("备份文件加密算法或 key scope 不受支持。");
+        }
+
+        var nonce = FromBase64(ReadEnvelopeString(root, "nonce"), "nonce", BackupEncryptionNonceByteLength);
+        var tag = FromBase64(ReadEnvelopeString(root, "tag"), "tag", BackupEncryptionTagByteLength);
+        var ciphertext = FromBase64(ReadEnvelopeString(root, "ciphertext"), "ciphertext", (int)MaxBackupFileBytes);
+        RequireEnvelopeBytes(nonce, BackupEncryptionNonceByteLength, "nonce");
+        RequireEnvelopeBytes(tag, BackupEncryptionTagByteLength, "tag");
+        var plaintext = new byte[ciphertext.Length];
+        var key = GetSessionBackupEncryptionKey();
+        try
+        {
+            using var aes = new AesGcm(key, BackupEncryptionTagByteLength);
+            aes.Decrypt(
+                nonce,
+                ciphertext,
+                tag,
+                plaintext,
+                Utf8NoBom.GetBytes(BackupEncryptionAssociatedData));
+
+            return Utf8NoBom.GetString(plaintext);
+        }
+        catch (CryptographicException ex)
+        {
+            throw new InvalidOperationException("备份文件解密失败。", ex);
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(key, nonce, tag, ciphertext, plaintext);
+        }
+    }
+
+    private byte[] GetSessionBackupEncryptionKey()
+    {
+        var dataKey = _sessionContextService?.Current?.DataKey;
+        if (dataKey is not { Length: BackupEncryptionKeyByteLength })
+        {
+            throw new InvalidOperationException("当前会话缺少备份加密所需的数据密钥。");
+        }
+
+        return dataKey.ToArray();
+    }
+
+    private static void RequireEnvelopeBytes(byte[] bytes, int expectedLength, string fieldName)
+    {
+        if (bytes.Length != expectedLength)
+        {
+            throw new InvalidOperationException($"备份文件加密 envelope 字段 {fieldName} 长度无效。");
+        }
+    }
+
+    private static string ReadEnvelopeString(JsonElement root, string propertyName)
+    {
+        return root.TryGetProperty(propertyName, out var element) && element.ValueKind == JsonValueKind.String
+            ? element.GetString() ?? string.Empty
+            : throw new InvalidOperationException($"备份文件加密 envelope 缺少 {propertyName}。");
+    }
+
+    private static int ReadEnvelopeInt(JsonElement root, string propertyName)
+    {
+        return root.TryGetProperty(propertyName, out var element)
+            && element.ValueKind == JsonValueKind.Number
+            && element.TryGetInt32(out var value)
+            ? value
+            : throw new InvalidOperationException($"备份文件加密 envelope 缺少 {propertyName}。");
+    }
+
     private static void DeleteTemporaryBackupFile(string tempPath)
     {
         try

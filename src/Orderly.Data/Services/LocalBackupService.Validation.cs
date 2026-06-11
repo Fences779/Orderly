@@ -86,6 +86,7 @@ public sealed partial class LocalBackupService
         try
         {
             json = await ReadBackupJsonSafelyAsync(safeBackupPath, cancellationToken);
+            json = DecryptBackupJsonEnvelope(json);
         }
         catch (Exception ex)
         {
