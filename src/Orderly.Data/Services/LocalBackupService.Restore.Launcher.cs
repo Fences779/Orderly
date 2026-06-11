@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
+using System.Globalization;
 using System.Text.Json;
 
 namespace Orderly.Data.Services;
@@ -11,6 +12,7 @@ public sealed partial class LocalBackupService
     private const int MaxLauncherWrappedKeyBytes = 32;
     private const int MaxLauncherNonceBytes = 12;
     private const int MaxLauncherTagBytes = 16;
+    private const int MaxLauncherTimestampCharacters = 64;
 
     private async Task RestoreLauncherSnapshotAsync(BackupManifest manifest, CancellationToken cancellationToken)
     {
@@ -270,20 +272,33 @@ public sealed partial class LocalBackupService
             throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在缺失关键字段的账号快照。");
         }
 
-        ValidateLauncherSnapshotDate(row.CreatedAt, "CreatedAt");
-        ValidateLauncherSnapshotDate(row.UpdatedAt, "UpdatedAt");
+        row.CreatedAt = NormalizeLauncherSnapshotDate(row.CreatedAt, "CreatedAt");
+        row.UpdatedAt = NormalizeLauncherSnapshotDate(row.UpdatedAt, "UpdatedAt");
         if (!string.IsNullOrWhiteSpace(row.LastLoginAt))
         {
-            ValidateLauncherSnapshotDate(row.LastLoginAt, "LastLoginAt");
+            row.LastLoginAt = NormalizeLauncherSnapshotDate(row.LastLoginAt, "LastLoginAt");
         }
     }
 
-    private static void ValidateLauncherSnapshotDate(string value, string fieldName)
+    private static string NormalizeLauncherSnapshotDate(string value, string fieldName)
     {
-        if (!DateTimeOffset.TryParse(value, out _))
+        var normalized = value.Trim();
+        if (normalized.Length > MaxLauncherTimestampCharacters)
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 字段 {fieldName} 的时间长度超过上限。");
+        }
+
+        if (normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 字段 {fieldName} 包含不允许的控制字符。");
+        }
+
+        if (!DateTimeOffset.TryParse(normalized, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out _))
         {
             throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 字段 {fieldName} 的时间格式无效。");
         }
+
+        return normalized;
     }
 
     private static void ValidateLauncherSnapshotCredentialFields(
