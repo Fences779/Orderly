@@ -39,7 +39,7 @@ function New-BackupServiceContext {
     $fieldContext = New-QaFieldEncryptionContext -DatabasePath $DatabasePath
     $fieldEncryptionService = $fieldContext.FieldEncryptionService
     $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
-    $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
+    $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory, $fieldEncryptionService)
     $syncService = [Orderly.Data.Services.LocalSyncService]::new($syncRecordRepository, $activityRepository)
     $backupService = [Orderly.Data.Services.LocalBackupService]::new($connectionFactory, $syncService, $syncRecordRepository, $activityRepository)
 
@@ -259,7 +259,7 @@ function Assert-RestoreAudit {
         throw "local-restore SyncRecord missing createdBy=$CreatedBy."
     }
 
-    if ($metadata.backupPath -ne $BackupPath) {
+    if ($metadata.backupPath -ne [System.IO.Path]::GetFileName($BackupPath)) {
         throw 'local-restore SyncRecord backupPath mismatch.'
     }
 

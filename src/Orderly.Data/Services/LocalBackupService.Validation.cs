@@ -321,10 +321,17 @@ public sealed partial class LocalBackupService
         {
             if (row.ValueKind != JsonValueKind.Object)
             {
-                continue;
+                errors.Add($"表 {tableName} 存在非对象行。");
+                return;
             }
 
             var properties = row.EnumerateObject().ToArray();
+            if (properties.Length == 0)
+            {
+                errors.Add($"表 {tableName} 存在空对象行。");
+                return;
+            }
+
             if (properties.Length > MaxBackupRowColumns)
             {
                 errors.Add($"表 {tableName} 存在列数超过上限 {MaxBackupRowColumns} 的行。");
@@ -349,24 +356,24 @@ public sealed partial class LocalBackupService
 
     private static void ValidateJsonValueLimits(string tableName, string fieldName, JsonElement value)
     {
-        if (value.ValueKind == JsonValueKind.String && (value.GetString()?.Length ?? 0) > MaxBackupStringValueLength)
+        if (value.ValueKind == JsonValueKind.String)
         {
-            throw new InvalidOperationException($"表 {tableName} 字段 {fieldName} 的字符串长度超过上限。");
+            if ((value.GetString()?.Length ?? 0) > MaxBackupStringValueLength)
+            {
+                throw new InvalidOperationException($"表 {tableName} 字段 {fieldName} 的字符串长度超过上限。");
+            }
+
+            return;
         }
 
-        if (value.ValueKind == JsonValueKind.Object)
+        if (value.ValueKind is JsonValueKind.Null
+            or JsonValueKind.Number
+            or JsonValueKind.True
+            or JsonValueKind.False)
         {
-            foreach (var property in value.EnumerateObject())
-            {
-                ValidateJsonValueLimits(tableName, property.Name, property.Value);
-            }
+            return;
         }
-        else if (value.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var item in value.EnumerateArray())
-            {
-                ValidateJsonValueLimits(tableName, fieldName, item);
-            }
-        }
+
+        throw new InvalidOperationException($"表 {tableName} 字段 {fieldName} 必须是标量值。");
     }
 }
