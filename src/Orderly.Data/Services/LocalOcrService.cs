@@ -1,6 +1,7 @@
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
 using Orderly.Core.Services;
+using Orderly.Data.Sqlite;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -8,6 +9,23 @@ namespace Orderly.Data.Services;
 
 public sealed class LocalOcrService : IOcrService
 {
+    private const long MaxOcrSourceFileBytes = 20L * 1024L * 1024L;
+    private const int MaxOcrSourcePathCharacters = 1024;
+    private const int MaxOcrSourceNameCharacters = 160;
+    private const int MaxOcrExtractedTextCharacters = 10000;
+    private const int MaxOcrErrorMessageCharacters = 512;
+    private const int MaxOcrMetadataJsonCharacters = 4096;
+
+    private static readonly HashSet<string> AllowedOcrImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".bmp",
+        ".gif",
+        ".webp"
+    };
+
     private readonly IOcrResultRepository _ocrResultRepository;
     private readonly IActivityLogRepository _activityLogRepository;
     private readonly IConversationService _conversationService;
@@ -27,6 +45,9 @@ public sealed class LocalOcrService : IOcrService
 
     public async Task<OcrResult> CreateOcrTaskAsync(OcrResult result, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(result);
+
+        NormalizeOcrTaskInput(result);
         result.Status = OcrStatus.Pending;
         result.ExtractedText = string.Empty;
         result.ErrorMessage = string.Empty;
@@ -45,7 +66,7 @@ public sealed class LocalOcrService : IOcrService
         }
 
         result.Status = OcrStatus.Completed;
-        result.ExtractedText = extractedText;
+        result.ExtractedText = NormalizeOcrText(extractedText, MaxOcrExtractedTextCharacters, "OCR 文本");
         result.ErrorMessage = string.Empty;
         await _ocrResultRepository.UpdateAsync(result, cancellationToken);
         await AddActivityAsync(ActivityType.OcrTaskCompleted, result, "OCR 完成", result.SourceName, cancellationToken);
@@ -61,12 +82,13 @@ public sealed class LocalOcrService : IOcrService
         }
 
         result.Status = OcrStatus.Failed;
-        result.ErrorMessage = errorMessage;
+        var normalizedErrorMessage = NormalizeOcrText(errorMessage, MaxOcrErrorMessageCharacters, "OCR 错误信息");
+        result.ErrorMessage = normalizedErrorMessage;
         var metadata = ParseMetadata(result.MetadataJson);
-        metadata["errorSummary"] = errorMessage;
+        metadata["errorSummary"] = normalizedErrorMessage;
         result.MetadataJson = metadata.ToJsonString();
         await _ocrResultRepository.UpdateAsync(result, cancellationToken);
-        await AddActivityAsync(ActivityType.OcrTaskFailed, result, "OCR 失败", errorMessage, cancellationToken);
+        await AddActivityAsync(ActivityType.OcrTaskFailed, result, "OCR 失败", normalizedErrorMessage, cancellationToken);
         return result;
     }
 
@@ -136,6 +158,93 @@ public sealed class LocalOcrService : IOcrService
             Description = description,
             Operator = "local-stub"
         }, cancellationToken);
+    }
+
+    private static void NormalizeOcrTaskInput(OcrResult result)
+    {
+        result.SourcePath = NormalizeOcrSourcePath(result.SourcePath);
+        result.SourceName = NormalizeOcrSourceName(result.SourceName, result.SourcePath);
+        result.MetadataJson = NormalizeOcrText(result.MetadataJson, MaxOcrMetadataJsonCharacters, "OCR 元数据");
+    }
+
+    private static string NormalizeOcrSourcePath(string? sourcePath)
+    {
+        var trimmed = sourcePath?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            throw new InvalidOperationException("OCR 图片路径不能为空。");
+        }
+
+        if (trimmed.Length > MaxOcrSourcePathCharacters
+            || trimmed.Any(char.IsControl))
+        {
+            throw new InvalidOperationException("OCR 图片路径长度超限或包含控制字符。");
+        }
+
+        var fullPath = Path.GetFullPath(trimmed);
+        if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("OCR 图片不能来自网络共享路径。");
+        }
+
+        var extension = Path.GetExtension(fullPath);
+        if (!AllowedOcrImageExtensions.Contains(extension))
+        {
+            throw new InvalidOperationException("OCR 仅支持 PNG、JPG、JPEG、BMP、GIF 或 WEBP 图片。");
+        }
+
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "OCR 图片目录");
+        }
+
+        if (LocalDataFileSecurity.IsReparsePoint(fullPath))
+        {
+            throw new InvalidOperationException("OCR 图片文件不能是链接文件。");
+        }
+
+        if (File.Exists(fullPath))
+        {
+            var fileInfo = new FileInfo(fullPath);
+            if (fileInfo.Length > MaxOcrSourceFileBytes)
+            {
+                throw new InvalidOperationException($"OCR 图片不能超过 {MaxOcrSourceFileBytes / 1024L / 1024L} MB。");
+            }
+        }
+
+        return fullPath;
+    }
+
+    private static string NormalizeOcrSourceName(string? sourceName, string sourcePath)
+    {
+        var normalized = Path.GetFileName(sourceName);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            normalized = Path.GetFileName(sourcePath);
+        }
+
+        normalized = normalized.Trim();
+        if (string.IsNullOrWhiteSpace(normalized)
+            || normalized.Length > MaxOcrSourceNameCharacters
+            || normalized.Any(char.IsControl))
+        {
+            throw new InvalidOperationException("OCR 图片文件名无效。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOcrText(string? value, int maxCharacters, string fieldName)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters
+            || normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            throw new InvalidOperationException($"{fieldName}长度超限或包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private async Task PersistConvertedMessageIdAsync(OcrResult result, int messageId, CancellationToken cancellationToken)
