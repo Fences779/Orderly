@@ -894,6 +894,15 @@ async function handleRequest(event) {
     }
 
     const signedQuantity = movementType === 'out' || movementType === 'reserve' ? -Math.abs(quantity) : quantity
+    const currentStockOnHand = normalizeNumber(sku.stockOnHand)
+    const currentStockReserved = normalizeNumber(sku.stockReserved)
+    if (movementType === 'release' && currentStockReserved - Math.abs(quantity) < 0) {
+      return { ok: false, code: 'negative_reserved_stock', message: '释放数量不能超过已预留库存。' }
+    }
+    if (movementType !== 'reserve' && movementType !== 'release' && currentStockOnHand + signedQuantity < 0) {
+      return { ok: false, code: 'negative_stock_on_hand', message: '库存流水会导致库存为负，已拒绝。' }
+    }
+
     const movement = Object.assign({}, movementInput, {
       workspaceId,
       skuId,
