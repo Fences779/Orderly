@@ -200,16 +200,17 @@ public sealed partial class LocalBackupService
 
         LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "备份输出目录");
 
-        var tempPath = Path.Combine(
-            directory,
-            $".{Path.GetFileName(backupPath)}.{Guid.NewGuid():N}.tmp");
-
         try
         {
-            EnsureBackupPathIsNotLinked(tempPath);
+            if (File.Exists(backupPath))
+            {
+                throw new InvalidOperationException("备份文件已存在，请选择新的输出文件名。");
+            }
+
+            EnsureBackupPathIsNotLinked(backupPath);
             var bytes = Utf8NoBom.GetBytes(json);
             await using (var stream = new FileStream(
-                tempPath,
+                backupPath,
                 new FileStreamOptions
                 {
                     Mode = FileMode.CreateNew,
@@ -223,13 +224,11 @@ public sealed partial class LocalBackupService
             }
 
             EnsureBackupPathIsNotLinked(backupPath);
-            File.Move(tempPath, backupPath, overwrite: true);
-            EnsureBackupPathIsNotLinked(backupPath);
             LocalDataFileSecurity.HardenFile(backupPath);
         }
         catch
         {
-            DeleteTemporaryBackupFile(tempPath);
+            DeleteTemporaryBackupFile(backupPath);
             throw;
         }
     }
@@ -245,7 +244,7 @@ public sealed partial class LocalBackupService
             {
                 Mode = FileMode.Open,
                 Access = FileAccess.Read,
-                Share = FileShare.Read,
+                Share = FileShare.None,
                 BufferSize = 81920,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan
             });
