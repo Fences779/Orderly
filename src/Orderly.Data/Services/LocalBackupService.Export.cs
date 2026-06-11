@@ -93,24 +93,24 @@ public sealed partial class LocalBackupService
         var metadata = ParseMetadata(record.MetadataJson);
         var manifest = new BackupManifest
         {
-            SchemaVersion = metadata["schemaVersion"]?.GetValue<int?>() ?? CurrentSchemaVersion,
-            App = metadata["app"]?.GetValue<string>() ?? "Orderly",
+            SchemaVersion = ReadMetadataInt(metadata, "schemaVersion", CurrentSchemaVersion),
+            App = ReadMetadataString(metadata, "app", "Orderly"),
             ExportedAt = TryGetDateTimeOffset(metadata["exportedAt"]) ?? new DateTimeOffset(record.UpdatedAt),
             Counts = ParseCounts(metadata["counts"] as JsonObject),
-            Checksum = metadata["checksum"]?.GetValue<string>() ?? string.Empty,
-            IntegrityAlgorithm = metadata["integrityAlgorithm"]?.GetValue<string>() ?? string.Empty,
-            IntegrityKeyScope = metadata["integrityKeyScope"]?.GetValue<string>() ?? string.Empty,
-            IntegrityTag = metadata["integrityTag"]?.GetValue<string>() ?? string.Empty
+            Checksum = ReadMetadataString(metadata, "checksum"),
+            IntegrityAlgorithm = ReadMetadataString(metadata, "integrityAlgorithm"),
+            IntegrityKeyScope = ReadMetadataString(metadata, "integrityKeyScope"),
+            IntegrityTag = ReadMetadataString(metadata, "integrityTag")
         };
 
         return new BackupResult
         {
             SyncRecordId = record.Id,
             SyncStatus = record.SyncStatus,
-            BackupPath = metadata["backupPath"]?.GetValue<string>() ?? string.Empty,
+            BackupPath = ReadMetadataString(metadata, "backupPath"),
             ErrorSummary = !string.IsNullOrWhiteSpace(record.ErrorMessage)
                 ? record.ErrorMessage
-                : metadata["errorSummary"]?.GetValue<string>() ?? string.Empty,
+                : ReadMetadataString(metadata, "errorSummary"),
             Manifest = manifest
         };
     }

@@ -23,6 +23,8 @@ public sealed partial class LocalBackupService : IBackupService
     private const int MaxBackupTableRows = 50_000;
     private const int MaxBackupRowColumns = 128;
     private const int MaxBackupStringValueLength = 64 * 1024;
+    private const int MaxBackupMetadataScalarCharacters = 4096;
+    private const int MaxBackupMetadataTimestampCharacters = 128;
 
     private static readonly string[] IncludedTableNames =
     [

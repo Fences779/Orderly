@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Data.Sqlite;
+using System.Globalization;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
@@ -624,14 +625,52 @@ public sealed partial class LocalBackupService
             return null;
         }
 
-        if (node is JsonValue jsonValue
-            && jsonValue.TryGetValue<string>(out var text)
-            && DateTimeOffset.TryParse(text, out var parsed))
+        if (node is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var text))
         {
-            return parsed;
+            var normalized = NormalizeBackupMetadataScalar(text, maxCharacters: MaxBackupMetadataTimestampCharacters);
+            if (!string.IsNullOrWhiteSpace(normalized)
+                && DateTimeOffset.TryParse(normalized, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
+            {
+                return parsed;
+            }
         }
 
         return null;
+    }
+
+    private static int ReadMetadataInt(JsonObject metadata, string name, int fallback)
+    {
+        return metadata[name] is JsonValue value && value.TryGetValue<int>(out var parsed)
+            ? parsed
+            : fallback;
+    }
+
+    private static string ReadMetadataString(JsonObject metadata, string name, string fallback = "")
+    {
+        if (metadata[name] is not JsonValue value || !value.TryGetValue<string>(out var parsed))
+        {
+            return fallback;
+        }
+
+        var normalized = NormalizeBackupMetadataScalar(parsed, MaxBackupMetadataScalarCharacters);
+        return string.IsNullOrWhiteSpace(normalized) ? fallback : normalized;
+    }
+
+    private static string NormalizeBackupMetadataScalar(string? value, int maxCharacters)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > maxCharacters
+            || normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            return string.Empty;
+        }
+
+        return normalized;
     }
 
     private static string BuildExportMetadataJson(
