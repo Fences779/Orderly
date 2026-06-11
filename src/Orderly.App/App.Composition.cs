@@ -123,19 +123,45 @@ public partial class App
 
         if (File.Exists(keyPath))
         {
-            var existingKey = File.ReadAllBytes(keyPath);
-            if (existingKey.Length == QaSessionDataKeyLength)
+            var existingKey = TryReadQaSessionDataKey(keyPath);
+            if (existingKey is not null)
             {
                 HardenQaSessionDataKeyFile(keyPath);
                 return existingKey;
             }
-
-            CryptographicOperations.ZeroMemory(existingKey);
         }
 
         var key = RandomNumberGenerator.GetBytes(QaSessionDataKeyLength);
         WriteQaSessionDataKeyFile(keyPath, key);
         return key;
+    }
+
+    private static byte[]? TryReadQaSessionDataKey(string keyPath)
+    {
+        using var stream = new FileStream(
+            keyPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: QaSessionDataKeyLength,
+            FileOptions.SequentialScan);
+        if (stream.Length != QaSessionDataKeyLength)
+        {
+            return null;
+        }
+
+        var key = new byte[QaSessionDataKeyLength];
+        try
+        {
+            stream.ReadExactly(key);
+            LocalDataFileSecurity.EnsureFileIsNotLinked(keyPath, "QA session data key file");
+            return key;
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(key);
+            throw;
+        }
     }
 
     private static void WriteQaSessionDataKeyFile(string keyPath, byte[] key)
