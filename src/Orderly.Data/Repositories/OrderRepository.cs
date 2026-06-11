@@ -10,6 +10,17 @@ namespace Orderly.Data.Repositories;
 
 public sealed class OrderRepository : IOrderRepository
 {
+    private const int MaxTitleCharacters = 120;
+    private const int MaxRequirementCharacters = 2000;
+    private const int MaxShortFieldCharacters = 80;
+    private const int MaxExternalIdCharacters = 160;
+    private const int MaxRawPayloadCharacters = 4096;
+    private const int MaxRemoteIdCharacters = 160;
+    private const decimal MaxOrderAmount = 100_000_000m;
+
+    private static readonly DateTime MinOrderDate = new(2000, 1, 1);
+    private static readonly DateTime MaxOrderDate = new(2100, 1, 1);
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -52,6 +63,9 @@ public sealed class OrderRepository : IOrderRepository
 
     public async Task<MerchantOrder> CreateAsync(MerchantOrder order, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(order);
+
+        NormalizeOrder(order);
         var now = DateTime.Now;
         if (order.CreatedAt == default)
         {
@@ -84,6 +98,9 @@ public sealed class OrderRepository : IOrderRepository
 
     public async Task UpdateAsync(MerchantOrder order, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(order);
+
+        NormalizeOrder(order);
         order.UpdatedAt = DateTime.Now;
         order.IsSynced = false;
         order.Version = Math.Max(1, order.Version + 1);
@@ -161,6 +178,70 @@ public sealed class OrderRepository : IOrderRepository
         }
 
         return rows;
+    }
+
+    private static void NormalizeOrder(MerchantOrder order)
+    {
+        if (order.CustomerId <= 0)
+        {
+            throw new InvalidOperationException("订单缺少有效客户。");
+        }
+
+        if (order.DealId is <= 0)
+        {
+            throw new InvalidOperationException("订单成交标识无效。");
+        }
+
+        if (!Enum.IsDefined(order.Status))
+        {
+            throw new InvalidOperationException("订单状态无效。");
+        }
+
+        if (order.Amount < 0 || order.Amount > MaxOrderAmount)
+        {
+            throw new InvalidOperationException("订单金额超出允许范围。");
+        }
+
+        if (order.NextFollowUpAt is DateTime nextFollowUpAt
+            && (nextFollowUpAt < MinOrderDate || nextFollowUpAt > MaxOrderDate))
+        {
+            throw new InvalidOperationException("订单下次跟进时间超出允许范围。");
+        }
+
+        order.Title = NormalizeRequiredText(order.Title, MaxTitleCharacters, "订单标题", allowLineBreaks: false);
+        order.Requirement = NormalizeOptionalText(order.Requirement, MaxRequirementCharacters, "订单需求", allowLineBreaks: true);
+        order.SourcePlatform = NormalizeOptionalText(order.SourcePlatform, MaxShortFieldCharacters, "订单来源平台", allowLineBreaks: false);
+        order.Channel = NormalizeOptionalText(order.Channel, MaxShortFieldCharacters, "订单渠道", allowLineBreaks: false);
+        order.ExternalId = NormalizeOptionalText(order.ExternalId, MaxExternalIdCharacters, "订单外部标识", allowLineBreaks: false);
+        order.RawPayload = NormalizeOptionalText(order.RawPayload, MaxRawPayloadCharacters, "订单原始载荷", allowLineBreaks: true);
+        order.RemoteId = NormalizeOptionalText(order.RemoteId, MaxRemoteIdCharacters, "订单远端标识", allowLineBreaks: false);
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private static MerchantOrder MapWithCustomer(SqliteDataReader reader, IFieldEncryptionService fieldEncryptionService)
