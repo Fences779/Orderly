@@ -9,6 +9,11 @@ namespace Orderly.Data.Repositories;
 
 public sealed class SyncRecordRepository : ISyncRecordRepository
 {
+    private const int MaxEntityTypeCharacters = 80;
+    private const int MaxRemoteIdCharacters = 160;
+    private const int MaxErrorMessageCharacters = 2000;
+    private const int MaxMetadataJsonCharacters = 8192;
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -20,6 +25,9 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
 
     public async Task<SyncRecord> CreateAsync(SyncRecord record, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(record);
+
+        NormalizeRecord(record);
         var now = DateTime.Now;
         if (record.CreatedAt == default)
         {
@@ -52,6 +60,9 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
 
     public async Task UpdateAsync(SyncRecord record, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(record);
+
+        NormalizeRecord(record);
         record.UpdatedAt = DateTime.Now;
         record.IsSynced = record.SyncStatus == SyncStatus.Synced;
         record.Version = Math.Max(1, record.Version + 1);
@@ -101,6 +112,9 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
 
     public async Task<SyncRecord?> GetByEntityAsync(string entityType, int entityId, CancellationToken cancellationToken = default)
     {
+        entityType = NormalizeRequiredText(entityType, MaxEntityTypeCharacters, "同步实体类型", allowLineBreaks: false);
+        EnsureEntityId(entityId);
+
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -122,6 +136,8 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
 
     public async Task<SyncRecord?> GetLatestByEntityTypeAsync(string entityType, CancellationToken cancellationToken = default)
     {
+        entityType = NormalizeRequiredText(entityType, MaxEntityTypeCharacters, "同步实体类型", allowLineBreaks: false);
+
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
@@ -163,6 +179,56 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         }
 
         return rows;
+    }
+
+    private static void NormalizeRecord(SyncRecord record)
+    {
+        record.EntityType = NormalizeRequiredText(record.EntityType, MaxEntityTypeCharacters, "同步实体类型", allowLineBreaks: false);
+        EnsureEntityId(record.EntityId);
+
+        if (!Enum.IsDefined(record.SyncStatus))
+        {
+            throw new InvalidOperationException("同步状态无效。");
+        }
+
+        record.RemoteId = NormalizeOptionalText(record.RemoteId, MaxRemoteIdCharacters, "同步远端标识", allowLineBreaks: false);
+        record.ErrorMessage = NormalizeOptionalText(record.ErrorMessage, MaxErrorMessageCharacters, "同步错误消息", allowLineBreaks: true);
+        record.MetadataJson = NormalizeOptionalText(record.MetadataJson, MaxMetadataJsonCharacters, "同步元数据", allowLineBreaks: false);
+    }
+
+    private static void EnsureEntityId(int entityId)
+    {
+        if (entityId <= 0)
+        {
+            throw new InvalidOperationException("同步实体标识无效。");
+        }
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private static void AddParameters(SqliteCommand command, SyncRecord record, IFieldEncryptionService fieldEncryptionService)
