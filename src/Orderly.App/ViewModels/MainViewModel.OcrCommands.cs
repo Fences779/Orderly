@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
 using Orderly.Core.Models;
 using System.IO;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
@@ -9,6 +10,12 @@ namespace Orderly.App.ViewModels;
 public partial class MainViewModel
 {
     private const string LocalOcrFallbackText = "【本地OCR占位】请人工确认截图内容后转为沟通记录。";
+    private const int MaxOcrMetadataJsonCharacters = 4096;
+
+    private static readonly JsonDocumentOptions OcrMetadataJsonDocumentOptions = new()
+    {
+        MaxDepth = 16
+    };
 
     [RelayCommand(CanExecute = nameof(CanSelectOcrImage))]
     private async Task SelectOcrImageAsync()
@@ -137,23 +144,40 @@ public partial class MainViewModel
     private int? TryGetCurrentOcrConvertedMessageId()
     {
         var metadata = ParseOcrMetadata(CurrentOcrResult?.MetadataJson);
-        return metadata["convertedToMessageId"]?.GetValue<int?>();
+        return ReadOcrMetadataInt(metadata, "convertedToMessageId");
     }
 
     private static JsonObject ParseOcrMetadata(string? metadataJson)
     {
-        if (string.IsNullOrWhiteSpace(metadataJson))
+        if (string.IsNullOrWhiteSpace(metadataJson) || metadataJson.Length > MaxOcrMetadataJsonCharacters)
         {
             return new JsonObject();
         }
 
         try
         {
-            return JsonNode.Parse(metadataJson) as JsonObject ?? new JsonObject();
+            return JsonNode.Parse(metadataJson, documentOptions: OcrMetadataJsonDocumentOptions) as JsonObject ?? new JsonObject();
         }
         catch (Exception)
         {
             return new JsonObject();
+        }
+    }
+
+    private static int? ReadOcrMetadataInt(JsonObject metadata, string name)
+    {
+        if (!metadata.TryGetPropertyValue(name, out var node) || node is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return node.GetValue<int>();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            return null;
         }
     }
 }
