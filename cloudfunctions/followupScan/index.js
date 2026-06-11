@@ -698,6 +698,28 @@ async function upsertById(collection, data, workspaceId) {
   return Object.assign({}, data, { _id: added._id })
 }
 
+async function saveInventoryMovementAtomically(input) {
+  return db.runTransaction(async (transaction) => {
+    const txSku = (await transaction.collection('sku_catalog').doc(input.skuId).get()).data
+    if (!txSku || txSku.workspaceId !== input.workspaceId) {
+      return { ok: false, code: 'not_found', message: 'SKU 不存在。' }
+    }
+
+    const currentStockOnHand = normalizeNumber(txSku.stockOnHand)
+    const currentStockReserved = normalizeNumber(txSku.stockReserved)
+    if (input.movementType === 'release' && currentStockReserved - Math.abs(input.quantity) < 0) {
+      return { ok: false, code: 'negative_reserved_stock', message: '释放数量不能超过已预留库存。' }
+    }
+    if (input.movementType !== 'reserve' && input.movementType !== 'release' && currentStockOnHand + input.signedQuantity < 0) {
+      return { ok: false, code: 'negative_stock_on_hand', message: '库存流水会导致库存为负，已拒绝。' }
+    }
+
+    const added = await transaction.collection('inventory_movements').add({ data: input.movement })
+    await transaction.collection('sku_catalog').doc(input.skuId).update({ data: input.stockPatch })
+    return { ok: true, id: added._id }
+  })
+}
+
 async function createTaskIfMissing(workspaceId, task) {
   const existed = await db.collection('followup_tasks').where({ workspaceId, dedupeKey: task.dedupeKey }).limit(1).get()
   if (existed.data && existed.data.length) return null
@@ -922,7 +944,6 @@ async function handleRequest(event) {
       updatedBy: operatorId
     })
     delete movement.type
-    const added = await db.collection('inventory_movements').add({ data: movement })
     const _ = db.command
     const stockPatch = { updatedAt: now(), updatedBy: operatorId }
     if (movementType === 'reserve') {
@@ -933,8 +954,17 @@ async function handleRequest(event) {
       stockPatch.stockOnHand = _.inc(signedQuantity)
     }
     if (movementType === 'in') stockPatch.lastRestockedAt = movement.occurredAt
-    await db.collection('sku_catalog').doc(skuId).update({ data: stockPatch })
-    return { ok: true, movement: Object.assign({}, movement, { _id: added._id }) }
+    const atomicResult = await saveInventoryMovementAtomically({
+      workspaceId,
+      skuId,
+      movementType,
+      quantity,
+      signedQuantity,
+      movement,
+      stockPatch
+    })
+    if (!atomicResult.ok) return atomicResult
+    return { ok: true, movement: Object.assign({}, movement, { _id: atomicResult.id }) }
   }
   if (mode === 'cashflowSave') {
     const input = pickFields(event.entry, CASHFLOW_FIELDS)
