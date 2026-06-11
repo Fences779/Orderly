@@ -105,7 +105,7 @@ public sealed class InventoryGatewayOptions
     private static int ReadMinTokenLength()
     {
         _ = int.TryParse(Environment.GetEnvironmentVariable(MinTokenLengthEnvironmentVariableName), out var minLength);
-        return minLength <= 0 ? DefaultMinTokenLength : Math.Clamp(minLength, 8, 128);
+        return minLength <= 0 ? DefaultMinTokenLength : Math.Clamp(minLength, DefaultMinTokenLength, 128);
     }
 
     private static bool IsPlaceholderToken(string token)

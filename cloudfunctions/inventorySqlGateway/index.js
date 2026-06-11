@@ -272,7 +272,9 @@ function validateToken(request) {
 }
 
 function validateGatewayTokenStrength(expected) {
-  const minLength = getPositiveIntEnv('ORDERLY_INVENTORY_GATEWAY_MIN_TOKEN_LENGTH', DEFAULT_MIN_GATEWAY_TOKEN_LENGTH, 128)
+  const minLength = Math.max(
+    DEFAULT_MIN_GATEWAY_TOKEN_LENGTH,
+    getPositiveIntEnv('ORDERLY_INVENTORY_GATEWAY_MIN_TOKEN_LENGTH', DEFAULT_MIN_GATEWAY_TOKEN_LENGTH, 128))
   const normalized = normalizeSecretText(expected)
   const lowered = normalized.toLowerCase()
   if (!normalized || normalized.length < minLength || ['replace-me', 'changeme', 'change-me', 'test', 'token', 'password'].includes(lowered)) {
