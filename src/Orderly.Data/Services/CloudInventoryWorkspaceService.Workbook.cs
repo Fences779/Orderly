@@ -10,6 +10,8 @@ public sealed partial class CloudInventoryWorkspaceService
 {
     private const long MaxInventoryWorkbookBytes = 10 * 1024 * 1024;
     private const int MaxInventoryWorkbookDataRows = 500;
+    private const int MaxInventoryWorkbookHeaderCharacters = 128;
+    private const int MaxInventoryWorkbookCellCharacters = 1024;
     private const int WorkbookBackupRetentionCount = 5;
     private const string WorkbookBackupTimestampFormat = "yyyyMMdd-HHmmss";
 
@@ -352,7 +354,10 @@ public sealed partial class CloudInventoryWorkspaceService
         var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var cell in headerRow.CellsUsed())
         {
-            var normalized = NormalizeHeader(cell.GetString());
+            var normalized = NormalizeHeader(NormalizeWorkbookCellText(
+                cell.GetString(),
+                "Excel 表头",
+                MaxInventoryWorkbookHeaderCharacters));
             if (!string.IsNullOrWhiteSpace(normalized) && !map.ContainsKey(normalized))
             {
                 map[normalized] = cell.Address.ColumnNumber;
@@ -393,7 +398,10 @@ public sealed partial class CloudInventoryWorkspaceService
             return string.Empty;
         }
 
-        return row.Cell(columnIndex).GetFormattedString().Trim();
+        return NormalizeWorkbookCellText(
+            row.Cell(columnIndex).GetFormattedString(),
+            "Excel 单元格",
+            MaxInventoryWorkbookCellCharacters);
     }
 
     private static decimal ReadCellDecimal(IXLRow row, Dictionary<string, int> headerMap, IEnumerable<string> aliases)
@@ -466,6 +474,27 @@ public sealed partial class CloudInventoryWorkspaceService
             .Trim()
             .Where(static ch => !char.IsWhiteSpace(ch) && ch is not '_' and not '-' and not '/' and not '(' and not ')' and not '（' and not '）'))
             .ToLowerInvariant();
+    }
+
+    private static string NormalizeWorkbookCellText(string? value, string displayName, int maxCharacters)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{displayName}超过客户端处理上限（{maxCharacters} 字符）。");
+        }
+
+        if (normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            throw new InvalidOperationException($"{displayName}包含不允许的控制字符。");
+        }
+
+        return normalized;
     }
 
     private static bool RowsEqual(InventoryWorkbookRow left, InventoryWorkbookRow right)
