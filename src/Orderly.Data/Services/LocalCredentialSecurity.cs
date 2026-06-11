@@ -7,8 +7,10 @@ internal static class LocalCredentialSecurity
     internal const int DefaultPasswordIterations = 200000;
     internal const int DefaultPinIterations = 200000;
     internal const int DefaultRecoveryIterations = 200000;
+    internal const int MaxCredentialIterations = 2_000_000;
 
     private const int SaltByteLength = 16;
+    private const int MaxSaltByteLength = 64;
     private const int HashByteLength = 32;
     private const int DataKeyByteLength = 32;
     private const int NonceByteLength = 12;
@@ -176,8 +178,8 @@ internal static class LocalCredentialSecurity
 
     internal static bool HasUsableHashParameters(byte[]? salt, int iterations, byte[]? expectedHash)
     {
-        return salt is { Length: >= SaltByteLength }
-            && iterations >= DefaultPasswordIterations
+        return salt is { Length: >= SaltByteLength and <= MaxSaltByteLength }
+            && iterations is >= DefaultPasswordIterations and <= MaxCredentialIterations
             && (expectedHash is null || expectedHash.Length == HashByteLength);
     }
 

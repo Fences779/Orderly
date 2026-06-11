@@ -9,9 +9,6 @@ namespace Orderly.Data.Repositories;
 
 public sealed class LocalAccountRepository : ILocalAccountRepository
 {
-    private const int MaxCredentialIterations = 2_000_000;
-    private const int MaxSaltByteLength = 64;
-
     private readonly LauncherConnectionFactory _connectionFactory;
 
     public LocalAccountRepository(LauncherConnectionFactory connectionFactory)
@@ -418,9 +415,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
 
     private static void ValidateHashParameters(byte[]? hash, byte[]? salt, int iterations, string fieldName)
     {
-        if (!LocalCredentialSecurity.HasUsableHashParameters(salt, iterations, hash)
-            || salt is not { Length: <= MaxSaltByteLength }
-            || iterations > MaxCredentialIterations)
+        if (!LocalCredentialSecurity.HasUsableHashParameters(salt, iterations, hash))
         {
             throw new InvalidOperationException($"{fieldName}哈希参数无效。");
         }
