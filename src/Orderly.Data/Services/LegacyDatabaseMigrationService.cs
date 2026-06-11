@@ -208,6 +208,7 @@ public sealed class LegacyDatabaseMigrationService : ILegacyDatabaseMigrationSer
         {
             if (File.Exists(path))
             {
+                EnsureDatabaseFileIsNotLinked(path, "Target account database sidecar cannot be a linked file.");
                 File.Delete(path);
             }
         }
