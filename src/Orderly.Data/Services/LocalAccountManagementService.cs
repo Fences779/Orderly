@@ -151,11 +151,16 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
 
     public async Task DisableMemberAsync(string memberAccountId, CancellationToken cancellationToken = default)
     {
-        RequireOwnerSession();
+        var ownerSession = RequireOwnerSession();
         var member = await GetAccountRequiredAsync(memberAccountId, cancellationToken);
         if (member.Role != LocalAccountRole.Member)
         {
             throw new InvalidOperationException("仅允许禁用 Member 账号。");
+        }
+
+        if (!string.Equals(member.AdminOwnerAccountId, ownerSession.AccountId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("该账号不属于当前主账号，无法禁用。");
         }
 
         member.IsEnabled = false;
