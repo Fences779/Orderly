@@ -588,7 +588,9 @@ public sealed partial class LocalBackupService
 
         try
         {
-            return JsonNode.Parse(metadataJson) as JsonObject ?? new JsonObject();
+            return metadataJson.Length > MaxBackupStringValueLength
+                ? new JsonObject()
+                : JsonNode.Parse(metadataJson, documentOptions: BackupJsonDocumentOptions) as JsonObject ?? new JsonObject();
         }
         catch (JsonException)
         {

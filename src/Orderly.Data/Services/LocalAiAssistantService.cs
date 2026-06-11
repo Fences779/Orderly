@@ -10,6 +10,13 @@ namespace Orderly.Data.Services;
 public sealed class LocalAiAssistantService : IAiAssistantService
 {
     private const int ContextMessageLimit = 5;
+    private const int MaxMetadataJsonCharacters = 8192;
+    private const int MaxMetadataScalarCharacters = 64;
+
+    private static readonly JsonDocumentOptions MetadataJsonDocumentOptions = new()
+    {
+        MaxDepth = 16
+    };
 
     private readonly ICustomerRepository _customerRepository;
     private readonly IOrderRepository _orderRepository;
@@ -496,14 +503,14 @@ public sealed class LocalAiAssistantService : IAiAssistantService
     private static string ReadProviderName(string metadataJson)
     {
         var root = ParseMetadata(metadataJson);
-        var provider = root?["provider"]?.GetValue<string>();
+        var provider = ReadMetadataString(root, "provider");
         return string.IsNullOrWhiteSpace(provider) ? "local-stub" : provider;
     }
 
     private static bool ReadUsedFallback(string metadataJson)
     {
         var root = ParseMetadata(metadataJson);
-        return root?["usedFallback"]?.GetValue<bool>() ?? false;
+        return ReadMetadataBool(root, "usedFallback") ?? false;
     }
 
     private static string? SummarizeProviderError(Exception exception)
@@ -519,16 +526,58 @@ public sealed class LocalAiAssistantService : IAiAssistantService
 
     private static JsonObject? ParseMetadata(string metadataJson)
     {
-        if (string.IsNullOrWhiteSpace(metadataJson))
+        if (string.IsNullOrWhiteSpace(metadataJson) || metadataJson.Length > MaxMetadataJsonCharacters)
         {
             return null;
         }
 
         try
         {
-            return JsonNode.Parse(metadataJson) as JsonObject;
+            return JsonNode.Parse(metadataJson, documentOptions: MetadataJsonDocumentOptions) as JsonObject;
         }
         catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? ReadMetadataString(JsonObject? metadata, string name)
+    {
+        if (metadata?[name] is not JsonNode value)
+        {
+            return null;
+        }
+
+        try
+        {
+            var normalized = value.GetValue<string>().Trim();
+            if (normalized.Length == 0
+                || normalized.Length > MaxMetadataScalarCharacters
+                || normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+            {
+                return null;
+            }
+
+            return normalized;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            return null;
+        }
+    }
+
+    private static bool? ReadMetadataBool(JsonObject? metadata, string name)
+    {
+        if (metadata?[name] is not JsonNode value)
+        {
+            return null;
+        }
+
+        try
+        {
+            return value.GetValue<bool>();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
         {
             return null;
         }
@@ -559,8 +608,8 @@ public sealed class LocalAiAssistantService : IAiAssistantService
                 suggestionId = suggestion.Id,
                 suggestionStatus = suggestion.Status.ToString(),
                 suggestion.MessageId,
-                provider = suggestionMetadata?["provider"]?.GetValue<string>(),
-                usedFallback = suggestionMetadata?["usedFallback"]?.GetValue<bool>()
+                provider = ReadMetadataString(suggestionMetadata, "provider"),
+                usedFallback = ReadMetadataBool(suggestionMetadata, "usedFallback")
             })
         }, cancellationToken);
     }

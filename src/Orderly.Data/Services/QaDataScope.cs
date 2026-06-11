@@ -9,6 +9,13 @@ internal static class QaDataScope
     public const string CurrentTag = "p13qa";
     public const string CurrentDisplayMarker = "[P1.3_QA]";
     public const string P2DisplayMarker = "[P2_QA]";
+    private const int MaxQaMetadataJsonCharacters = 8192;
+    private const int MaxLegacyMetadataCharacters = 1024;
+
+    private static readonly JsonDocumentOptions QaMetadataJsonDocumentOptions = new()
+    {
+        MaxDepth = 16
+    };
 
     private static readonly string[] QaRemoteIdPrefixes = ["p13qa-", "p2qa-", "p35qa-", "p36qa-"];
     private static readonly string[] QaExternalIdPrefixes = ["p13qa-", "p2qa-", "p35qa-", "p36qa-"];
@@ -265,14 +272,14 @@ internal static class QaDataScope
 
     private static JsonObject ParseObject(string metadataJson)
     {
-        if (string.IsNullOrWhiteSpace(metadataJson))
+        if (string.IsNullOrWhiteSpace(metadataJson) || metadataJson.Length > MaxQaMetadataJsonCharacters)
         {
             return new JsonObject();
         }
 
         try
         {
-            if (JsonNode.Parse(metadataJson) is JsonObject root)
+            if (JsonNode.Parse(metadataJson, documentOptions: QaMetadataJsonDocumentOptions) is JsonObject root)
             {
                 return root;
             }
@@ -283,7 +290,9 @@ internal static class QaDataScope
 
         return new JsonObject
         {
-            ["legacyMetadata"] = metadataJson
+            ["legacyMetadata"] = metadataJson.Length <= MaxLegacyMetadataCharacters
+                ? metadataJson
+                : metadataJson[..MaxLegacyMetadataCharacters]
         };
     }
 

@@ -8,6 +8,14 @@ namespace Orderly.Data.Services;
 
 public sealed class LocalAutoReplyService : IAutoReplyService
 {
+    private const int MaxMetadataJsonCharacters = 8192;
+    private const int MaxLegacyMetadataCharacters = 1024;
+
+    private static readonly JsonDocumentOptions MetadataJsonDocumentOptions = new()
+    {
+        MaxDepth = 16
+    };
+
     private readonly IAiSuggestionRepository _suggestionRepository;
     private readonly IOrderRepository _orderRepository;
     private readonly IActivityLogRepository _activityLogRepository;
@@ -224,20 +232,22 @@ public sealed class LocalAutoReplyService : IAutoReplyService
 
     private static JsonObject ParseMetadata(string metadataJson)
     {
-        if (string.IsNullOrWhiteSpace(metadataJson))
+        if (string.IsNullOrWhiteSpace(metadataJson) || metadataJson.Length > MaxMetadataJsonCharacters)
         {
             return new JsonObject();
         }
 
         try
         {
-            return JsonNode.Parse(metadataJson) as JsonObject ?? new JsonObject();
+            return JsonNode.Parse(metadataJson, documentOptions: MetadataJsonDocumentOptions) as JsonObject ?? new JsonObject();
         }
         catch (JsonException)
         {
             return new JsonObject
             {
-                ["legacyMetadata"] = metadataJson
+                ["legacyMetadata"] = metadataJson.Length <= MaxLegacyMetadataCharacters
+                    ? metadataJson
+                    : metadataJson[..MaxLegacyMetadataCharacters]
             };
         }
     }
