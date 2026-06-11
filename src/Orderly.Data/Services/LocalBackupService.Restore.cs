@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
+using System.Globalization;
 using System.Text.Json;
 
 namespace Orderly.Data.Services;
@@ -249,6 +250,10 @@ public sealed partial class LocalBackupService
                     properties[index].Name,
                     properties[index].Value,
                     declaredType);
+                ValidateRestoreValueSemantics(
+                    safeTableName,
+                    properties[index].Name,
+                    properties[index].Value);
                 command.Parameters.AddWithValue(
                     $"$p{index}",
                     ConvertRestoreJsonValue(safeTableName, properties[index].Name, properties[index].Value));
@@ -256,6 +261,99 @@ public sealed partial class LocalBackupService
 
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
+    }
+
+    private static void ValidateRestoreValueSemantics(
+        string tableName,
+        string columnName,
+        JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Null
+            || TryGetSensitivePlaintextDefault(tableName, columnName, out _))
+        {
+            return;
+        }
+
+        if (columnName is "Id" or "CustomerId" or "DealId" or "OrderId" or "MessageId")
+        {
+            if (!value.TryGetInt64(out var id) || id <= 0)
+            {
+                throw new InvalidOperationException($"表 {tableName} 字段 {columnName} 的标识无效。");
+            }
+
+            return;
+        }
+
+        if (columnName == "Version")
+        {
+            if (!value.TryGetInt64(out var version) || version < 1)
+            {
+                throw new InvalidOperationException($"表 {tableName} 字段 Version 的版本号无效。");
+            }
+
+            return;
+        }
+
+        if (columnName is "IsSynced" or "IsPinned" or "IsFavorite")
+        {
+            if (value.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                return;
+            }
+
+            if (!value.TryGetInt64(out var flag) || flag is not 0 and not 1)
+            {
+                throw new InvalidOperationException($"表 {tableName} 字段 {columnName} 的布尔值无效。");
+            }
+
+            return;
+        }
+
+        var enumType = GetRestoreEnumType(tableName, columnName);
+        if (enumType is not null)
+        {
+            if (!value.TryGetInt32(out var enumValue) || !Enum.IsDefined(enumType, enumValue))
+            {
+                throw new InvalidOperationException($"表 {tableName} 字段 {columnName} 的枚举值无效。");
+            }
+
+            return;
+        }
+
+        if (columnName.EndsWith("At", StringComparison.Ordinal)
+            && value.ValueKind == JsonValueKind.String)
+        {
+            var text = value.GetString();
+            if (!DateTimeOffset.TryParse(
+                    text,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.RoundtripKind,
+                    out var timestamp)
+                || timestamp.Year is < 2000 or > 2100)
+            {
+                throw new InvalidOperationException($"表 {tableName} 字段 {columnName} 的时间值无效。");
+            }
+        }
+    }
+
+    private static Type? GetRestoreEnumType(string tableName, string columnName)
+    {
+        return (tableName, columnName) switch
+        {
+            ("Customers", "Status") => typeof(CustomerStatus),
+            ("Customers", "Priority") => typeof(CustomerPriority),
+            ("Deals", "Stage") => typeof(DealStage),
+            ("Orders", "Status") => typeof(OrderStatus),
+            ("FollowUps", "Status") => typeof(FollowUpStatus),
+            ("CustomerNotes", "Type") => typeof(NoteType),
+            ("PriceAdjustments", "Status") => typeof(PriceAdjustmentStatus),
+            ("ActivityLogs", "Type") => typeof(ActivityType),
+            ("ConversationMessages", "Direction") => typeof(MessageDirection),
+            ("ConversationMessages", "Channel") => typeof(MessageChannel),
+            ("AiSuggestions", "Status") => typeof(AiSuggestionStatus),
+            ("OcrResults", "Status") => typeof(OcrStatus),
+            _ => null
+        };
     }
 
     private static async Task<Dictionary<string, string>> ReadRestoreColumnTypesAsync(
