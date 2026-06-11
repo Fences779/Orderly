@@ -205,6 +205,11 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("仅允许重置 Member 主密码。");
         }
 
+        if (!string.Equals(member.AdminOwnerAccountId, ownerSession.AccountId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("该账号不属于当前主账号，无法重置主密码。");
+        }
+
         var memberDataKey = UnwrapDataKeyWithKey(ownerSession.DataKey, member.AdminEncryptedDataKey, member.AdminDataKeyNonce, member.AdminDataKeyTag);
         byte[] passwordSalt = [];
         byte[] passwordHash = [];
@@ -324,7 +329,7 @@ public sealed partial class LocalAccountManagementService
 
     public async Task ResetMemberPinAsync(string memberAccountId, string newPin, CancellationToken cancellationToken = default)
     {
-        RequireOwnerSession();
+        var ownerSession = RequireOwnerSession();
         if (!LocalCredentialSecurity.IsValidPin(newPin))
         {
             throw new InvalidOperationException("PIN 必须为 6 位数字。");
@@ -334,6 +339,11 @@ public sealed partial class LocalAccountManagementService
         if (member.Role != LocalAccountRole.Member)
         {
             throw new InvalidOperationException("仅允许重置 Member PIN。");
+        }
+
+        if (!string.Equals(member.AdminOwnerAccountId, ownerSession.AccountId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("该账号不属于当前主账号，无法重置 PIN。");
         }
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
