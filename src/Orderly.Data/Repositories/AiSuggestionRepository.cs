@@ -10,6 +10,11 @@ namespace Orderly.Data.Repositories;
 
 public sealed class AiSuggestionRepository : IAiSuggestionRepository
 {
+    private const int MaxSuggestionTextCharacters = 4000;
+    private const int MaxReasonCharacters = 1000;
+    private const int MaxMetadataJsonCharacters = 8192;
+    private const int MaxRemoteIdCharacters = 160;
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -21,6 +26,9 @@ public sealed class AiSuggestionRepository : IAiSuggestionRepository
 
     public async Task<AiSuggestion> CreateAsync(AiSuggestion suggestion, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(suggestion);
+
+        NormalizeSuggestion(suggestion);
         var now = DateTime.Now;
         if (suggestion.CreatedAt == default)
         {
@@ -63,6 +71,9 @@ public sealed class AiSuggestionRepository : IAiSuggestionRepository
 
     public async Task UpdateAsync(AiSuggestion suggestion, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(suggestion);
+
+        NormalizeSuggestion(suggestion);
         suggestion.UpdatedAt = DateTime.Now;
         suggestion.IsSynced = false;
         suggestion.Version = Math.Max(1, suggestion.Version + 1);
@@ -171,6 +182,67 @@ public sealed class AiSuggestionRepository : IAiSuggestionRepository
         }
 
         return rows;
+    }
+
+    private static void NormalizeSuggestion(AiSuggestion suggestion)
+    {
+        if (suggestion.CustomerId <= 0)
+        {
+            throw new InvalidOperationException("AI 建议缺少有效客户。");
+        }
+
+        if (suggestion.OrderId is <= 0)
+        {
+            throw new InvalidOperationException("AI 建议订单标识无效。");
+        }
+
+        if (suggestion.MessageId is <= 0)
+        {
+            throw new InvalidOperationException("AI 建议消息标识无效。");
+        }
+
+        if (!Enum.IsDefined(suggestion.Status))
+        {
+            throw new InvalidOperationException("AI 建议状态无效。");
+        }
+
+        if (suggestion.Confidence is double confidence
+            && (double.IsNaN(confidence) || double.IsInfinity(confidence) || confidence < 0 || confidence > 1))
+        {
+            throw new InvalidOperationException("AI 建议置信度超出允许范围。");
+        }
+
+        suggestion.SuggestionText = NormalizeRequiredText(suggestion.SuggestionText, MaxSuggestionTextCharacters, "AI 建议内容", allowLineBreaks: true);
+        suggestion.Reason = NormalizeOptionalText(suggestion.Reason, MaxReasonCharacters, "AI 建议原因", allowLineBreaks: true);
+        suggestion.MetadataJson = NormalizeOptionalText(suggestion.MetadataJson, MaxMetadataJsonCharacters, "AI 建议元数据", allowLineBreaks: false);
+        suggestion.RemoteId = NormalizeOptionalText(suggestion.RemoteId, MaxRemoteIdCharacters, "AI 建议远端标识", allowLineBreaks: false);
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private static void AddParameters(SqliteCommand command, AiSuggestion suggestion, IFieldEncryptionService fieldEncryptionService)
