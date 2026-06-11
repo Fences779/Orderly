@@ -144,11 +144,7 @@ function validateWorkspaceBinding(operatorId, workspaceId, allowedWorkspaceIds) 
     return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
   }
 
-  if (allowedWorkspaceIds.length > 1) {
-    return { ok: false, code: 'workspace_binding_required', message: '工作区权限未配置。' }
-  }
-
-  return { ok: true }
+  return { ok: false, code: 'workspace_binding_required', message: '工作区权限未配置。' }
 }
 
 function resolveOperatorWorkspaceIds(operatorId) {
