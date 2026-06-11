@@ -25,7 +25,9 @@ const DEFAULT_AUTO_SCAN_MIN_INTERVAL_MS = 60 * 1000
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 const MODE_PERMISSIONS = {
   taskAction: 'followup:write',
-  manualCreate: 'followup:create'
+  manualCreate: 'followup:create',
+  templateSave: 'templates:write',
+  templateUse: 'templates:use'
 }
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
 const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
