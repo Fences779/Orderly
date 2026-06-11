@@ -6,7 +6,6 @@ namespace Orderly.Data.Services;
 
 public sealed class StringNarrationGatewayClient
 {
-    public const string OperatorId = "pc-admin";
     private const long MaxResponseBodyBytes = 1024L * 1024L;
     private const int MaxResponseJsonDepth = 32;
 
@@ -28,26 +27,37 @@ public sealed class StringNarrationGatewayClient
     public async Task<JsonElement> InvokeAsync(string action, object payload, CancellationToken cancellationToken = default)
     {
         var endpoint = _options.GetEndpointUri();
-        _options.ValidateToken();
+        _options.ValidateOperatorId();
+        var token = _options.GetTokenForAction(action);
         var sendTokenInBody = _options.ShouldSendTokenInBody(endpoint);
+        var requestId = Guid.NewGuid().ToString("N");
+        var requestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         object requestPayload = sendTokenInBody
             ? new
             {
                 action,
-                token = _options.Token,
-                operatorId = OperatorId,
+                token,
+                operatorId = _options.OperatorId,
+                requestId,
+                requestTimestamp,
                 payload
             }
             : new
             {
                 action,
-                operatorId = OperatorId,
+                operatorId = _options.OperatorId,
+                requestId,
+                requestTimestamp,
                 payload
             };
 
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.Token);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.TryAddWithoutValidation("X-Orderly-Gateway-Action", action);
+        request.Headers.TryAddWithoutValidation("X-Orderly-Gateway-Operator-Id", _options.OperatorId);
+        request.Headers.TryAddWithoutValidation("X-Orderly-Gateway-Request-Id", requestId);
+        request.Headers.TryAddWithoutValidation("X-Orderly-Gateway-Request-Timestamp", requestTimestamp);
         request.Content = new StringContent(JsonSerializer.Serialize(requestPayload, JsonOptions), Encoding.UTF8, "application/json");
 
         HttpResponseMessage response;

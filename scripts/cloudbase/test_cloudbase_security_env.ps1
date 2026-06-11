@@ -185,6 +185,19 @@ $valuesFileValues = Read-ValuesFile -Path $ValuesFile
 $cloudBaseValues = Read-CloudBaseConfiguredValues
 $failures = New-Object System.Collections.Generic.List[string]
 $minimumGatewayTokenLength = 24
+$adminGatewayActionTokenNames = @(
+    'ADMIN_PC_GATEWAY_TOKEN_WHOAMI',
+    'ADMIN_PC_GATEWAY_TOKEN_ORDER_LIST',
+    'ADMIN_PC_GATEWAY_TOKEN_ORDER_DETAIL',
+    'ADMIN_PC_GATEWAY_TOKEN_UPDATE_FULFILLMENT',
+    'ADMIN_PC_GATEWAY_TOKEN_UPDATE_EXCEPTION',
+    'ADMIN_PC_GATEWAY_TOKEN_FULFILLMENT_STATS',
+    'ADMIN_PC_GATEWAY_TOKEN_GENERATE_PRODUCTION_ORDER',
+    'ADMIN_PC_GATEWAY_TOKEN_INVENTORY_LIST',
+    'ADMIN_PC_GATEWAY_TOKEN_INVENTORY_MANAGEMENT_DASHBOARD',
+    'ADMIN_PC_GATEWAY_TOKEN_CASHFLOW_LIST',
+    'ADMIN_PC_GATEWAY_TOKEN_CASHFLOW_HEALTH_DASHBOARD'
+)
 
 foreach ($name in $RequiredVariable) {
     $value = Resolve-VariableValue -Name $name -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
@@ -195,14 +208,37 @@ foreach ($name in $RequiredVariable) {
 }
 
 $adminGatewayEndpoint = Resolve-VariableValue -Name 'ADMIN_PC_GATEWAY_ENDPOINT' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
-$adminGatewayToken = Resolve-VariableValue -Name 'ADMIN_PC_GATEWAY_TOKEN' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
-if ((-not [string]::IsNullOrWhiteSpace($adminGatewayEndpoint)) -or (-not [string]::IsNullOrWhiteSpace($adminGatewayToken))) {
-    if (Test-WeakValue -Value $adminGatewayToken) {
-        $failures.Add('Missing or weak required variable: ADMIN_PC_GATEWAY_TOKEN')
+$legacyAdminGatewayToken = Resolve-VariableValue -Name 'ADMIN_PC_GATEWAY_TOKEN' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+$adminGatewayOperatorId = Resolve-VariableValue -Name 'ADMIN_PC_GATEWAY_OPERATOR_ID' -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+$adminGatewayActionTokens = @($adminGatewayActionTokenNames | ForEach-Object {
+        Resolve-VariableValue -Name $_ -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+    })
+$adminGatewayConfigured = (-not [string]::IsNullOrWhiteSpace($adminGatewayEndpoint)) -or
+    (-not [string]::IsNullOrWhiteSpace($adminGatewayOperatorId)) -or
+    (-not [string]::IsNullOrWhiteSpace($legacyAdminGatewayToken)) -or
+    (($adminGatewayActionTokens | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count -gt 0)
+if ($adminGatewayConfigured) {
+    if (-not [string]::IsNullOrWhiteSpace($legacyAdminGatewayToken)) {
+        $failures.Add('ADMIN_PC_GATEWAY_TOKEN is deprecated; configure per-action ADMIN_PC_GATEWAY_TOKEN_<ACTION> variables.')
+    }
+
+    if (Test-WeakValue -Value $adminGatewayOperatorId) {
+        $failures.Add('Missing or weak required variable: ADMIN_PC_GATEWAY_OPERATOR_ID')
+    }
+
+    if ($adminGatewayOperatorId.Trim().ToLowerInvariant() -in @('pc-admin', 'admin', 'administrator', 'root', 'test')) {
+        $failures.Add('ADMIN_PC_GATEWAY_OPERATOR_ID must not use a shared default high-privilege identity.')
+    }
+
+    foreach ($name in $adminGatewayActionTokenNames) {
+        $value = Resolve-VariableValue -Name $name -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
+        if (Test-WeakValue -Value $value) {
+            $failures.Add("Missing or weak required variable: $name")
+        }
     }
 }
 
-foreach ($name in @('ADMIN_PC_GATEWAY_TOKEN', 'ORDERLY_INVENTORY_GATEWAY_TOKEN')) {
+foreach ($name in @($adminGatewayActionTokenNames + @('ORDERLY_INVENTORY_GATEWAY_TOKEN'))) {
     $value = Resolve-VariableValue -Name $name -ValuesFileValues $valuesFileValues -CloudBaseValues $cloudBaseValues
     if ((-not [string]::IsNullOrWhiteSpace($value)) -and $value.Trim().Length -lt $minimumGatewayTokenLength) {
         $failures.Add("$name must be at least $minimumGatewayTokenLength characters.")
