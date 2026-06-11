@@ -6,6 +6,13 @@ namespace Orderly.Data.Services;
 
 public sealed class OrderService : IOrderService
 {
+    private const int MaxOrderTitleCharacters = 120;
+    private const int MaxRequirementCharacters = 2000;
+    private const int MaxShortFieldCharacters = 80;
+    private const int MaxExternalIdCharacters = 160;
+    private const int MaxRawPayloadCharacters = 4096;
+    private const decimal MaxOrderAmount = 100_000_000m;
+
     private readonly IOrderRepository _orderRepository;
     private readonly IActivityLogRepository _activityLogRepository;
 
@@ -32,7 +39,10 @@ public sealed class OrderService : IOrderService
 
     public async Task<Order> SaveOrderAsync(Order order, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(order);
+
         var merchantOrder = ToMerchantOrder(order);
+        NormalizeOrder(merchantOrder);
         if (merchantOrder.Id <= 0)
         {
             var created = await _orderRepository.CreateAsync(merchantOrder, cancellationToken);
@@ -60,6 +70,11 @@ public sealed class OrderService : IOrderService
 
     public async Task UpdateStatusAsync(int id, OrderStatus status, CancellationToken cancellationToken = default)
     {
+        if (!Enum.IsDefined(status))
+        {
+            throw new InvalidOperationException("订单状态无效。");
+        }
+
         var order = await _orderRepository.GetByIdAsync(id, cancellationToken);
         if (order is null || order.Status == status)
         {
@@ -117,5 +132,57 @@ public sealed class OrderService : IOrderService
             Description = description,
             Operator = "local"
         }, cancellationToken);
+    }
+
+    private static void NormalizeOrder(MerchantOrder order)
+    {
+        if (order.CustomerId <= 0)
+        {
+            throw new InvalidOperationException("订单缺少有效客户。");
+        }
+
+        if (!Enum.IsDefined(order.Status))
+        {
+            throw new InvalidOperationException("订单状态无效。");
+        }
+
+        if (order.Amount < 0 || order.Amount > MaxOrderAmount)
+        {
+            throw new InvalidOperationException("订单金额超出允许范围。");
+        }
+
+        order.Title = NormalizeRequiredText(order.Title, MaxOrderTitleCharacters, "订单标题");
+        order.Requirement = NormalizeOptionalText(order.Requirement, MaxRequirementCharacters, "订单需求");
+        order.SourcePlatform = NormalizeOptionalText(order.SourcePlatform, MaxShortFieldCharacters, "订单来源平台");
+        order.Channel = NormalizeOptionalText(order.Channel, MaxShortFieldCharacters, "订单渠道");
+        order.ExternalId = NormalizeOptionalText(order.ExternalId, MaxExternalIdCharacters, "订单外部标识");
+        order.RawPayload = NormalizeOptionalText(order.RawPayload, MaxRawPayloadCharacters, "订单原始载荷");
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 }
