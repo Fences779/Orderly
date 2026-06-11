@@ -144,6 +144,7 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
             {
                 sourceFileName = preview.SourceFileName,
                 sourceFileHash = preview.SourceFileHash,
+                idempotencyKey = preview.SourceFileHash,
                 rows = preview.Rows.Select(MapRowPayload).ToList()
             },
             cancellationToken);

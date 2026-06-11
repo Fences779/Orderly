@@ -131,6 +131,11 @@ function normalizeKeyText(value, maxLength = MAX_SHORT_TEXT_LENGTH) {
   return text.length <= maxLength ? text : ''
 }
 
+function normalizeIdempotencyKey(value) {
+  const key = normalizeKeyText(value, MAX_SHORT_TEXT_LENGTH)
+  return /^[A-Za-z0-9._:-]+$/.test(key) ? key : ''
+}
+
 function normalizeNumber(value) {
   const number = Number(value || 0)
   return Number.isFinite(number) ? number : 0
@@ -516,6 +521,56 @@ async function inventoryExportRows(workspaceId) {
   }
 }
 
+function buildInventoryBulkLockName(workspaceId, idempotencyKey) {
+  const digest = crypto.createHash('sha256').update(`${workspaceId}\n${idempotencyKey}`).digest('hex').slice(0, 32)
+  return `orderly:inventoryBulk:${digest}`
+}
+
+async function acquireInventoryBulkLock(connection, lockName) {
+  const [rows] = await connection.execute('SELECT GET_LOCK(?, 5) AS lockResult', [lockName])
+  const lockResult = Number(rows && rows[0] && rows[0].lockResult)
+  if (lockResult !== 1) {
+    throw createError(409, 'bulk_upsert_in_progress', '库存导入批次正在处理中，请稍后重试。')
+  }
+}
+
+async function releaseInventoryBulkLock(connection, lockName) {
+  try {
+    await connection.execute('SELECT RELEASE_LOCK(?)', [lockName])
+  } catch (error) {
+    console.error('inventory bulk lock release failed', { name: error && error.name ? String(error.name) : 'Error' })
+  }
+}
+
+function mapInventoryBulkBatchReplay(row) {
+  return {
+    ok: true,
+    batchNo: row.batch_no,
+    totalRows: Number(row.total_rows || 0),
+    insertedCount: Number(row.inserted_rows || 0),
+    updatedCount: Number(row.updated_rows || 0),
+    unchangedCount: Number(row.unchanged_rows || 0),
+    skippedCount: Number(row.skipped_rows || 0),
+    updatedAt: toTimestamp(row.created_at) || Date.now(),
+    idempotentReplay: true
+  }
+}
+
+async function findCompletedInventoryBulkBatch(connection, workspaceId, idempotencyKey) {
+  const [rows] = await connection.execute(
+    `SELECT batch_no, total_rows, inserted_rows, updated_rows, unchanged_rows, skipped_rows, created_at
+       FROM inventory_sync_batches
+      WHERE workspace_id = ?
+        AND source_file_hash = ?
+        AND total_rows > 0
+      ORDER BY id DESC
+      LIMIT 1
+      FOR UPDATE`,
+    [workspaceId, idempotencyKey]
+  )
+  return rows && rows[0] ? mapInventoryBulkBatchReplay(rows[0]) : null
+}
+
 async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
   const inputRows = Array.isArray(payload.rows) ? payload.rows : []
   if (!inputRows.length) {
@@ -527,7 +582,13 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
     throw createError(413, 'too_many_import_rows', `库存导入行数超过单次上限（${maxBulkRows}）。`)
   }
 
+  const idempotencyKey = normalizeIdempotencyKey(payload.idempotencyKey || payload.sourceFileHash)
+  if (!idempotencyKey) {
+    throw createError(400, 'idempotency_key_required', '库存导入缺少有效幂等键。')
+  }
+
   const connection = await getPool().getConnection()
+  const lockName = buildInventoryBulkLockName(workspaceId, idempotencyKey)
   const batchNo = `batch-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`
   const now = nowSql()
 
@@ -535,9 +596,18 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
   let updatedCount = 0
   let unchangedCount = 0
   let skippedCount = 0
+  let transactionStarted = false
 
   try {
+    await acquireInventoryBulkLock(connection, lockName)
     await connection.beginTransaction()
+    transactionStarted = true
+
+    const existingBatch = await findCompletedInventoryBulkBatch(connection, workspaceId, idempotencyKey)
+    if (existingBatch) {
+      await connection.commit()
+      return existingBatch
+    }
 
     const [batchInsert] = await connection.execute(
       `INSERT INTO inventory_sync_batches
@@ -547,9 +617,9 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
         workspaceId,
         batchNo,
         limitText(payload.sourceFileName, MAX_SOURCE_TEXT_LENGTH),
-        limitText(payload.sourceFileHash, MAX_SHORT_TEXT_LENGTH),
+        idempotencyKey,
         operatorId,
-        JSON.stringify({ mode: 'inventoryBulkUpsert' }),
+        JSON.stringify({ mode: 'inventoryBulkUpsert', idempotencyKey }),
         now
       ]
     )
@@ -719,9 +789,12 @@ async function inventoryBulkUpsert(payload, workspaceId, operatorId) {
       updatedAt: Date.now()
     }
   } catch (error) {
-    await connection.rollback()
+    if (transactionStarted) {
+      await connection.rollback()
+    }
     throw error
   } finally {
+    await releaseInventoryBulkLock(connection, lockName)
     connection.release()
   }
 }
