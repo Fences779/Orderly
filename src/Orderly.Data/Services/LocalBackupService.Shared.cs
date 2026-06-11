@@ -89,6 +89,24 @@ public sealed partial class LocalBackupService
         }
     }
 
+    private static byte[] FromBase64(string base64, string fieldName, int maxDecodedBytes)
+    {
+        var maxEncodedLength = ((maxDecodedBytes + 2) / 3) * 4;
+        if (string.IsNullOrWhiteSpace(base64) || base64.Length > maxEncodedLength)
+        {
+            throw new InvalidOperationException($"字段 {fieldName} 的 Base64 数据超过长度上限。");
+        }
+
+        var bytes = FromBase64(base64, fieldName);
+        if (bytes.Length <= maxDecodedBytes)
+        {
+            return bytes;
+        }
+
+        SensitiveBuffer.Clear(bytes);
+        throw new InvalidOperationException($"字段 {fieldName} 的 Base64 数据超过长度上限。");
+    }
+
     private static object ToDbBlobFromBase64(string? base64)
     {
         if (string.IsNullOrWhiteSpace(base64))

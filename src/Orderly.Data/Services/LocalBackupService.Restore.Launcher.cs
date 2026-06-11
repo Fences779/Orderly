@@ -6,6 +6,12 @@ namespace Orderly.Data.Services;
 
 public sealed partial class LocalBackupService
 {
+    private const int MaxLauncherCredentialHashBytes = 32;
+    private const int MaxLauncherCredentialSaltBytes = 64;
+    private const int MaxLauncherWrappedKeyBytes = 32;
+    private const int MaxLauncherNonceBytes = 12;
+    private const int MaxLauncherTagBytes = 16;
+
     private async Task RestoreLauncherSnapshotAsync(BackupManifest manifest, CancellationToken cancellationToken)
     {
         if (_launcherConnectionFactory is null)
@@ -153,21 +159,21 @@ public sealed partial class LocalBackupService
         command.Parameters.AddWithValue("$accountId", row.AccountId);
         command.Parameters.AddWithValue("$username", row.Username);
         command.Parameters.AddWithValue("$displayName", row.DisplayName);
-        var passwordHash = FromBase64(row.PasswordHash, "PasswordHash");
-        var passwordSalt = FromBase64(row.PasswordSalt, "PasswordSalt");
-        var pinHash = FromBase64(row.PinHash, "PinHash");
-        var pinSalt = FromBase64(row.PinSalt, "PinSalt");
-        var recoveryKeyHash = FromBase64OrEmpty(row.RecoveryKeyHash, "RecoveryKeyHash");
-        var recoveryKeySalt = FromBase64OrEmpty(row.RecoveryKeySalt, "RecoveryKeySalt");
-        var recoveryEncryptedDataKey = FromBase64OrEmpty(row.RecoveryEncryptedDataKey, "RecoveryEncryptedDataKey");
-        var recoveryDataKeyNonce = FromBase64OrEmpty(row.RecoveryDataKeyNonce, "RecoveryDataKeyNonce");
-        var recoveryDataKeyTag = FromBase64OrEmpty(row.RecoveryDataKeyTag, "RecoveryDataKeyTag");
-        var encryptedDataKey = FromBase64(row.EncryptedDataKey, "EncryptedDataKey");
-        var dataKeyNonce = FromBase64(row.DataKeyNonce, "DataKeyNonce");
-        var dataKeyTag = FromBase64(row.DataKeyTag, "DataKeyTag");
-        var adminEncryptedDataKey = FromBase64OrEmpty(row.AdminEncryptedDataKey, "AdminEncryptedDataKey");
-        var adminDataKeyNonce = FromBase64OrEmpty(row.AdminDataKeyNonce, "AdminDataKeyNonce");
-        var adminDataKeyTag = FromBase64OrEmpty(row.AdminDataKeyTag, "AdminDataKeyTag");
+        var passwordHash = FromBase64(row.PasswordHash, "PasswordHash", MaxLauncherCredentialHashBytes);
+        var passwordSalt = FromBase64(row.PasswordSalt, "PasswordSalt", MaxLauncherCredentialSaltBytes);
+        var pinHash = FromBase64(row.PinHash, "PinHash", MaxLauncherCredentialHashBytes);
+        var pinSalt = FromBase64(row.PinSalt, "PinSalt", MaxLauncherCredentialSaltBytes);
+        var recoveryKeyHash = FromBase64OrEmpty(row.RecoveryKeyHash, "RecoveryKeyHash", MaxLauncherCredentialHashBytes);
+        var recoveryKeySalt = FromBase64OrEmpty(row.RecoveryKeySalt, "RecoveryKeySalt", MaxLauncherCredentialSaltBytes);
+        var recoveryEncryptedDataKey = FromBase64OrEmpty(row.RecoveryEncryptedDataKey, "RecoveryEncryptedDataKey", MaxLauncherWrappedKeyBytes);
+        var recoveryDataKeyNonce = FromBase64OrEmpty(row.RecoveryDataKeyNonce, "RecoveryDataKeyNonce", MaxLauncherNonceBytes);
+        var recoveryDataKeyTag = FromBase64OrEmpty(row.RecoveryDataKeyTag, "RecoveryDataKeyTag", MaxLauncherTagBytes);
+        var encryptedDataKey = FromBase64(row.EncryptedDataKey, "EncryptedDataKey", MaxLauncherWrappedKeyBytes);
+        var dataKeyNonce = FromBase64(row.DataKeyNonce, "DataKeyNonce", MaxLauncherNonceBytes);
+        var dataKeyTag = FromBase64(row.DataKeyTag, "DataKeyTag", MaxLauncherTagBytes);
+        var adminEncryptedDataKey = FromBase64OrEmpty(row.AdminEncryptedDataKey, "AdminEncryptedDataKey", MaxLauncherWrappedKeyBytes);
+        var adminDataKeyNonce = FromBase64OrEmpty(row.AdminDataKeyNonce, "AdminDataKeyNonce", MaxLauncherNonceBytes);
+        var adminDataKeyTag = FromBase64OrEmpty(row.AdminDataKeyTag, "AdminDataKeyTag", MaxLauncherTagBytes);
         ValidateLauncherSnapshotCredentialFields(
             row,
             passwordHash,
@@ -385,9 +391,9 @@ public sealed partial class LocalBackupService
         }
     }
 
-    private static byte[] FromBase64OrEmpty(string? base64, string fieldName)
+    private static byte[] FromBase64OrEmpty(string? base64, string fieldName, int maxDecodedBytes)
     {
-        return string.IsNullOrWhiteSpace(base64) ? [] : FromBase64(base64, fieldName);
+        return string.IsNullOrWhiteSpace(base64) ? [] : FromBase64(base64, fieldName, maxDecodedBytes);
     }
 
     private static object ToDbBlob(byte[] value)
