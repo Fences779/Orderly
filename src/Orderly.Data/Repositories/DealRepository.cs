@@ -10,6 +10,16 @@ namespace Orderly.Data.Repositories;
 
 public sealed class DealRepository : IDealRepository
 {
+    private const int MaxTitleCharacters = 120;
+    private const int MaxRequirementCharacters = 2000;
+    private const int MaxShortFieldCharacters = 80;
+    private const int MaxLostReasonCharacters = 1000;
+    private const int MaxRemoteIdCharacters = 160;
+    private const decimal MaxDealAmount = 100_000_000m;
+
+    private static readonly DateTime MinDealDate = new(2000, 1, 1);
+    private static readonly DateTime MaxDealDate = new(2100, 1, 1);
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -21,6 +31,9 @@ public sealed class DealRepository : IDealRepository
 
     public async Task<Deal> CreateAsync(Deal deal, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(deal);
+
+        NormalizeDeal(deal);
         var now = DateTime.Now;
         if (deal.CreatedAt == default)
         {
@@ -78,6 +91,9 @@ public sealed class DealRepository : IDealRepository
 
     public async Task UpdateAsync(Deal deal, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(deal);
+
+        NormalizeDeal(deal);
         deal.UpdatedAt = DateTime.Now;
         deal.IsSynced = false;
         deal.Version = Math.Max(1, deal.Version + 1);
@@ -151,6 +167,74 @@ public sealed class DealRepository : IDealRepository
         }
 
         return rows;
+    }
+
+    private static void NormalizeDeal(Deal deal)
+    {
+        if (deal.CustomerId <= 0)
+        {
+            throw new InvalidOperationException("成交机会缺少有效客户。");
+        }
+
+        if (!Enum.IsDefined(deal.Stage))
+        {
+            throw new InvalidOperationException("成交阶段无效。");
+        }
+
+        if (deal.EstimatedAmount < 0 || deal.EstimatedAmount > MaxDealAmount)
+        {
+            throw new InvalidOperationException("成交金额超出允许范围。");
+        }
+
+        EnsureOptionalDateInRange(deal.ExpectedCloseAt, "预计成交时间");
+        EnsureOptionalDateInRange(deal.ClosedAt, "成交关闭时间");
+
+        deal.Title = NormalizeRequiredText(deal.Title, MaxTitleCharacters, "成交标题", allowLineBreaks: false);
+        deal.Requirement = NormalizeOptionalText(deal.Requirement, MaxRequirementCharacters, "成交需求", allowLineBreaks: true);
+        deal.SourcePlatform = NormalizeOptionalText(deal.SourcePlatform, MaxShortFieldCharacters, "成交来源平台", allowLineBreaks: false);
+        deal.Channel = NormalizeOptionalText(deal.Channel, MaxShortFieldCharacters, "成交渠道", allowLineBreaks: false);
+        deal.LostReason = NormalizeOptionalText(deal.LostReason, MaxLostReasonCharacters, "丢单原因", allowLineBreaks: true);
+        deal.RemoteId = NormalizeOptionalText(deal.RemoteId, MaxRemoteIdCharacters, "成交远端标识", allowLineBreaks: false);
+    }
+
+    private static void EnsureOptionalDateInRange(DateTime? value, string fieldName)
+    {
+        if (value is not DateTime dateTime)
+        {
+            return;
+        }
+
+        if (dateTime < MinDealDate || dateTime > MaxDealDate)
+        {
+            throw new InvalidOperationException($"{fieldName}超出允许范围。");
+        }
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private const string SelectSql = """
