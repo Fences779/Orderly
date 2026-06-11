@@ -358,9 +358,15 @@ public sealed partial class LocalBackupService
     {
         if (value.ValueKind == JsonValueKind.String)
         {
-            if ((value.GetString()?.Length ?? 0) > MaxBackupStringValueLength)
+            var stringValue = value.GetString() ?? string.Empty;
+            if (stringValue.Length > MaxBackupStringValueLength)
             {
                 throw new InvalidOperationException($"表 {tableName} 字段 {fieldName} 的字符串长度超过上限。");
+            }
+
+            if (stringValue.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+            {
+                throw new InvalidOperationException($"表 {tableName} 字段 {fieldName} 包含不允许的控制字符。");
             }
 
             return;
