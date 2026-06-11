@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 
 namespace Orderly.Data.Services;
 
@@ -6,6 +7,15 @@ internal static class OutboundEndpointPolicy
 {
     private const string AllowLocalEndpointsEnvironmentVariableName = "ORDERLY_ALLOW_LOCAL_ENDPOINTS";
     private const string AllowedOutboundHostsEnvironmentVariableName = "ORDERLY_ALLOWED_OUTBOUND_HOSTS";
+
+    public static HttpMessageHandler CreateValidatedHttpMessageHandler()
+    {
+        return new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            ConnectCallback = ConnectWithValidatedAddressAsync
+        };
+    }
 
     public static void Validate(
         Uri endpoint,
@@ -100,6 +110,74 @@ internal static class OutboundEndpointPolicy
         {
             throw new InvalidOperationException($"{configurationName} 解析到了本机、私网、链路本地或 metadata 地址，已拒绝出站请求。");
         }
+    }
+
+    private static async ValueTask<Stream> ConnectWithValidatedAddressAsync(
+        SocketsHttpConnectionContext context,
+        CancellationToken cancellationToken)
+    {
+        var host = context.DnsEndPoint.Host.Trim('[', ']').Trim();
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            throw new InvalidOperationException("出站请求主机不能为空。");
+        }
+
+        var addresses = await ResolveConnectionAddressesAsync(host, cancellationToken);
+        if (!IsLocalEndpointAllowedForDevelopment() && addresses.Any(IsRestrictedAddress))
+        {
+            throw new InvalidOperationException("出站请求解析到了本机、私网、链路本地或 metadata 地址，已拒绝连接。");
+        }
+
+        Exception? lastError = null;
+        foreach (var address in addresses)
+        {
+            var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+            {
+                NoDelay = true
+            };
+
+            try
+            {
+                await socket.ConnectAsync(new IPEndPoint(address, context.DnsEndPoint.Port), cancellationToken);
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch (Exception ex) when (ex is SocketException or IOException or OperationCanceledException)
+            {
+                lastError = ex;
+                socket.Dispose();
+                if (ex is OperationCanceledException)
+                {
+                    throw;
+                }
+            }
+        }
+
+        throw new InvalidOperationException("出站请求无法连接到已校验的目标地址。", lastError);
+    }
+
+    private static async Task<IPAddress[]> ResolveConnectionAddressesAsync(string host, CancellationToken cancellationToken)
+    {
+        if (IPAddress.TryParse(host, out var address))
+        {
+            return [address];
+        }
+
+        IPAddress[] addresses;
+        try
+        {
+            addresses = await Dns.GetHostAddressesAsync(host, cancellationToken);
+        }
+        catch (SocketException ex)
+        {
+            throw new InvalidOperationException("出站请求主机无法解析。", ex);
+        }
+
+        if (addresses.Length == 0)
+        {
+            throw new InvalidOperationException("出站请求主机无法解析。");
+        }
+
+        return addresses;
     }
 
     private static bool IsRestrictedAddress(IPAddress address)

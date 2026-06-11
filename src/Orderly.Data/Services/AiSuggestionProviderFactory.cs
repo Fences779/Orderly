@@ -20,13 +20,7 @@ public static class AiSuggestionProviderFactory
 
     private static HttpClient CreateHttpClient(AiProviderOptions options)
     {
-        var client = new HttpClient(new HttpClientHandler
-        {
-            AllowAutoRedirect = false
-        })
-        {
-            Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds)
-        };
+        var client = OutboundHttpClientFactory.Create(TimeSpan.FromSeconds(options.TimeoutSeconds));
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return client;
     }

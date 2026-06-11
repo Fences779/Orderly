@@ -111,24 +111,14 @@ public partial class App
             _sessionContextService);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
         var stringNarrationGatewayOptions = StringNarrationGatewayOptions.FromEnvironment();
-        var stringNarrationHttpClient = new HttpClient(new HttpClientHandler
-        {
-            AllowAutoRedirect = false
-        })
-        {
-            Timeout = TimeSpan.FromSeconds(stringNarrationGatewayOptions.TimeoutSeconds)
-        };
+        var stringNarrationHttpClient = OutboundHttpClientFactory.Create(
+            TimeSpan.FromSeconds(stringNarrationGatewayOptions.TimeoutSeconds));
         var stringNarrationGatewayClient = new StringNarrationGatewayClient(stringNarrationHttpClient, stringNarrationGatewayOptions);
         IStringNarrationOrderService stringNarrationOrderService = new StringNarrationGatewayOrderService(stringNarrationGatewayClient);
         IStringNarrationBusinessService stringNarrationBusinessService = new StringNarrationGatewayBusinessService(stringNarrationGatewayClient);
         var inventoryGatewayOptions = InventoryGatewayOptions.FromEnvironment();
-        var inventoryHttpClient = new HttpClient(new HttpClientHandler
-        {
-            AllowAutoRedirect = false
-        })
-        {
-            Timeout = TimeSpan.FromSeconds(inventoryGatewayOptions.TimeoutSeconds)
-        };
+        var inventoryHttpClient = OutboundHttpClientFactory.Create(
+            TimeSpan.FromSeconds(inventoryGatewayOptions.TimeoutSeconds));
         IInventoryWorkspaceService inventoryWorkspaceService = inventoryGatewayOptions.IsConfigured
             ? new CloudInventoryWorkspaceService(new InventoryGatewayClient(inventoryHttpClient, inventoryGatewayOptions))
             : new StringNarrationInventoryWorkspaceServiceAdapter(stringNarrationBusinessService);
