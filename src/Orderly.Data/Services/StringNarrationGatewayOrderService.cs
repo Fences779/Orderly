@@ -170,7 +170,7 @@ public sealed partial class StringNarrationGatewayOrderService : IStringNarratio
             AddIfPresent(payload, "action", request.NormalizedAction);
             AddIfPresent(payload, "resolutionStatus", request.TargetResolutionStatus);
             AddIfPresent(payload, "resolutionAction", request.ResolutionAction);
-            AddIfPresent(payload, "adminResolutionRemark", request.AdminResolutionRemark);
+            AddIfPresent(payload, "adminResolutionRemark", request.AdminResolutionRemark, StringNarrationGatewayInputSafety.MaxRemarkCharacters);
             AddIfPresent(payload, "owner", request.Owner);
             AddIfPresent(payload, "assignee", request.Assignee);
             AddIfPresent(payload, "priority", request.Priority);

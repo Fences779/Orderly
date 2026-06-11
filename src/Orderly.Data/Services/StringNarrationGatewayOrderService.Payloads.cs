@@ -7,17 +7,21 @@ public sealed partial class StringNarrationGatewayOrderService
     private static Dictionary<string, object?> BuildLookupPayload(string orderNo, string tradeNo, string id)
     {
         var payload = new Dictionary<string, object?>(StringComparer.Ordinal);
-        if (!string.IsNullOrWhiteSpace(id))
+        var safeId = StringNarrationGatewayInputSafety.NormalizeIdentifier(id, "_id");
+        var safeOrderNo = StringNarrationGatewayInputSafety.NormalizeIdentifier(orderNo, "orderNo");
+        var safeTradeNo = StringNarrationGatewayInputSafety.NormalizeIdentifier(tradeNo, "tradeNo");
+
+        if (!string.IsNullOrWhiteSpace(safeId))
         {
-            payload["_id"] = id.Trim();
+            payload["_id"] = safeId;
         }
-        else if (!string.IsNullOrWhiteSpace(orderNo))
+        else if (!string.IsNullOrWhiteSpace(safeOrderNo))
         {
-            payload["orderNo"] = orderNo.Trim();
+            payload["orderNo"] = safeOrderNo;
         }
-        else if (!string.IsNullOrWhiteSpace(tradeNo))
+        else if (!string.IsNullOrWhiteSpace(safeTradeNo))
         {
-            payload["tradeNo"] = tradeNo.Trim();
+            payload["tradeNo"] = safeTradeNo;
         }
         else
         {
@@ -32,15 +36,15 @@ public sealed partial class StringNarrationGatewayOrderService
         var payload = new Dictionary<string, object?>(StringComparer.Ordinal);
         if (includePageInfo)
         {
-            payload["page"] = query.Page <= 0 ? 1 : query.Page;
-            payload["pageSize"] = query.PageSize <= 0 ? 20 : query.PageSize;
+            payload["page"] = StringNarrationGatewayInputSafety.NormalizePage(query.Page);
+            payload["pageSize"] = StringNarrationGatewayInputSafety.NormalizePageSize(query.PageSize, fallback: 20);
         }
 
-        AddIfPresent(payload, "keyword", query.Keyword);
-        AddIfPresent(payload, "status", query.Status);
-        AddIfPresent(payload, "fulfillmentStatus", query.FulfillmentStatus);
-        AddIfPositive(payload, "startAt", query.StartAt);
-        AddIfPositive(payload, "endAt", query.EndAt);
+        AddIfPresent(payload, "keyword", query.Keyword, StringNarrationGatewayInputSafety.MaxKeywordCharacters);
+        AddIfPresent(payload, "status", query.Status, StringNarrationGatewayInputSafety.MaxFilterCharacters);
+        AddIfPresent(payload, "fulfillmentStatus", query.FulfillmentStatus, StringNarrationGatewayInputSafety.MaxFilterCharacters);
+        AddIfPositive(payload, "startAt", StringNarrationGatewayInputSafety.NormalizeTimestamp(query.StartAt));
+        AddIfPositive(payload, "endAt", StringNarrationGatewayInputSafety.NormalizeTimestamp(query.EndAt));
         return payload;
     }
 
@@ -52,11 +56,21 @@ public sealed partial class StringNarrationGatewayOrderService
         }
     }
 
-    private static void AddIfPresent(Dictionary<string, object?> payload, string key, string? value)
+    private static void AddIfPresent(
+        Dictionary<string, object?> payload,
+        string key,
+        string? value,
+        int maxCharacters = StringNarrationGatewayInputSafety.MaxFilterCharacters)
     {
-        if (!string.IsNullOrWhiteSpace(value))
+        var normalized = maxCharacters == StringNarrationGatewayInputSafety.MaxRemarkCharacters
+            ? StringNarrationGatewayInputSafety.NormalizeRemark(value, key)
+            : maxCharacters == StringNarrationGatewayInputSafety.MaxKeywordCharacters
+                ? StringNarrationGatewayInputSafety.NormalizeKeyword(value, key)
+                : StringNarrationGatewayInputSafety.NormalizeFilter(value, key);
+
+        if (!string.IsNullOrWhiteSpace(normalized))
         {
-            payload[key] = value.Trim();
+            payload[key] = normalized;
         }
     }
 }

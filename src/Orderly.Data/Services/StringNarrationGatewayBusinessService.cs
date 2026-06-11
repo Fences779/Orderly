@@ -23,7 +23,7 @@ public sealed partial class StringNarrationGatewayBusinessService : IStringNarra
         try
         {
             query ??= new StringNarrationInventoryQuery();
-            var root = await _client.InvokeAsync(InventoryListAction, query, cancellationToken);
+            var root = await _client.InvokeAsync(InventoryListAction, NormalizeInventoryQuery(query), cancellationToken);
             var payload = GetPayloadRoot(root);
             var items = ParseInventoryItems(payload);
             var movements = ParseInventoryMovements(payload);
@@ -48,9 +48,9 @@ public sealed partial class StringNarrationGatewayBusinessService : IStringNarra
         try
         {
             request ??= new StringNarrationInventoryManagementDashboardRequest();
-            var requestedStatus = NormalizeInventoryDashboardStatusValue(request.Status);
+            var gatewayRequest = NormalizeInventoryManagementDashboardRequest(request);
+            var requestedStatus = NormalizeInventoryDashboardStatusValue(gatewayRequest.Status);
             var shouldFilterClientSide = RequiresClientSideInventoryStatusFilter(requestedStatus);
-            var gatewayRequest = CloneInventoryManagementDashboardRequest(request);
             if (shouldFilterClientSide)
             {
                 gatewayRequest.Status = "all";
@@ -90,7 +90,7 @@ public sealed partial class StringNarrationGatewayBusinessService : IStringNarra
         try
         {
             query ??= new StringNarrationCashflowQuery();
-            var root = await _client.InvokeAsync(CashflowListAction, query, cancellationToken);
+            var root = await _client.InvokeAsync(CashflowListAction, NormalizeCashflowQuery(query), cancellationToken);
             var payload = GetPayloadRoot(root);
             var entries = ParseCashflowEntries(payload);
             var summary = TryGet(payload, "summary", out var summaryElement) && summaryElement.ValueKind == JsonValueKind.Object
@@ -118,7 +118,7 @@ public sealed partial class StringNarrationGatewayBusinessService : IStringNarra
         try
         {
             request ??= new StringNarrationCashflowHealthDashboardRequest();
-            var root = await _client.InvokeAsync(CashflowHealthDashboardAction, request, cancellationToken);
+            var root = await _client.InvokeAsync(CashflowHealthDashboardAction, NormalizeCashflowHealthDashboardRequest(request), cancellationToken);
             var payload = GetPayloadRoot(root);
             ValidateCashflowHealthDashboardPayload(payload);
             return ParseCashflowHealthDashboard(payload);
@@ -136,18 +136,56 @@ public sealed partial class StringNarrationGatewayBusinessService : IStringNarra
             : new InvalidOperationException($"调用串述 adminPcGateway action={action} 失败：{ex.Message}", ex);
     }
 
-    private static StringNarrationInventoryManagementDashboardRequest CloneInventoryManagementDashboardRequest(
+    private static StringNarrationInventoryQuery NormalizeInventoryQuery(StringNarrationInventoryQuery query)
+    {
+        return new StringNarrationInventoryQuery
+        {
+            Page = StringNarrationGatewayInputSafety.NormalizePage(query.Page),
+            PageSize = StringNarrationGatewayInputSafety.NormalizePageSize(query.PageSize, fallback: 100),
+            Keyword = StringNarrationGatewayInputSafety.NormalizeKeyword(query.Keyword, "keyword"),
+            Category = StringNarrationGatewayInputSafety.NormalizeFilter(query.Category, "category"),
+            IncludeDisabled = query.IncludeDisabled,
+            LowStockOnly = query.LowStockOnly
+        };
+    }
+
+    private static StringNarrationInventoryManagementDashboardRequest NormalizeInventoryManagementDashboardRequest(
         StringNarrationInventoryManagementDashboardRequest request)
     {
         return new StringNarrationInventoryManagementDashboardRequest
         {
-            Keyword = request.Keyword,
-            Category = request.Category,
-            Status = request.Status,
-            SortBy = request.SortBy,
-            SortDirection = request.SortDirection,
-            Page = request.Page,
-            PageSize = request.PageSize
+            Keyword = StringNarrationGatewayInputSafety.NormalizeKeyword(request.Keyword, "keyword"),
+            Category = StringNarrationGatewayInputSafety.NormalizeFilter(request.Category, "category"),
+            Status = StringNarrationGatewayInputSafety.NormalizeFilter(request.Status, "status"),
+            SortBy = StringNarrationGatewayInputSafety.NormalizeFilter(request.SortBy, "sortBy"),
+            SortDirection = StringNarrationGatewayInputSafety.NormalizeFilter(request.SortDirection, "sortDirection"),
+            Page = StringNarrationGatewayInputSafety.NormalizePage(request.Page),
+            PageSize = StringNarrationGatewayInputSafety.NormalizePageSize(request.PageSize, fallback: 10)
+        };
+    }
+
+    private static StringNarrationCashflowQuery NormalizeCashflowQuery(StringNarrationCashflowQuery query)
+    {
+        return new StringNarrationCashflowQuery
+        {
+            Page = StringNarrationGatewayInputSafety.NormalizePage(query.Page),
+            PageSize = StringNarrationGatewayInputSafety.NormalizePageSize(query.PageSize, fallback: 100),
+            Keyword = StringNarrationGatewayInputSafety.NormalizeKeyword(query.Keyword, "keyword"),
+            Direction = StringNarrationGatewayInputSafety.NormalizeFilter(query.Direction, "direction"),
+            Category = StringNarrationGatewayInputSafety.NormalizeFilter(query.Category, "category"),
+            StartAt = StringNarrationGatewayInputSafety.NormalizeTimestamp(query.StartAt),
+            EndAt = StringNarrationGatewayInputSafety.NormalizeTimestamp(query.EndAt)
+        };
+    }
+
+    private static StringNarrationCashflowHealthDashboardRequest NormalizeCashflowHealthDashboardRequest(
+        StringNarrationCashflowHealthDashboardRequest request)
+    {
+        return new StringNarrationCashflowHealthDashboardRequest
+        {
+            Range = StringNarrationGatewayInputSafety.NormalizeFilter(request.Range, "range"),
+            StartAt = StringNarrationGatewayInputSafety.NormalizeTimestamp(request.StartAt),
+            EndAt = StringNarrationGatewayInputSafety.NormalizeTimestamp(request.EndAt)
         };
     }
 
