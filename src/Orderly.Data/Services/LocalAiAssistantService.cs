@@ -394,17 +394,17 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         }
 
         var redacted = value;
-        if (preferences.AiBlockPhone)
+        if (preferences.AiAutoRedactBeforeSend || preferences.AiBlockPhone)
         {
             redacted = PhoneRegex.Replace(redacted, "[手机号已隐藏]");
         }
 
-        if (preferences.AiBlockFullAddress)
+        if (preferences.AiAutoRedactBeforeSend || preferences.AiBlockFullAddress)
         {
             redacted = AddressRegex.Replace(redacted, "[地址已隐藏]");
         }
 
-        if (preferences.AiBlockPaymentTransactionId)
+        if (preferences.AiAutoRedactBeforeSend || preferences.AiBlockPaymentTransactionId)
         {
             redacted = TransactionIdRegex.Replace(redacted, "[支付交易号已隐藏]");
         }
