@@ -10,6 +10,9 @@ namespace Orderly.Data.Repositories;
 
 public sealed class CustomerNoteRepository : ICustomerNoteRepository
 {
+    private const int MaxContentCharacters = 4000;
+    private const int MaxRemoteIdCharacters = 160;
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -21,6 +24,9 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
 
     public async Task<CustomerNote> CreateAsync(CustomerNote note, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(note);
+
+        NormalizeNote(note);
         var now = DateTime.Now;
         if (note.CreatedAt == default)
         {
@@ -76,6 +82,9 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
 
     public async Task UpdateAsync(CustomerNote note, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(note);
+
+        NormalizeNote(note);
         note.UpdatedAt = DateTime.Now;
         note.IsSynced = false;
         note.Version = Math.Max(1, note.Version + 1);
@@ -140,6 +149,59 @@ public sealed class CustomerNoteRepository : ICustomerNoteRepository
         }
 
         return rows;
+    }
+
+    private static void NormalizeNote(CustomerNote note)
+    {
+        if (note.CustomerId <= 0)
+        {
+            throw new InvalidOperationException("客户备注缺少有效客户。");
+        }
+
+        if (note.DealId is <= 0)
+        {
+            throw new InvalidOperationException("客户备注成交标识无效。");
+        }
+
+        if (note.OrderId is <= 0)
+        {
+            throw new InvalidOperationException("客户备注订单标识无效。");
+        }
+
+        if (!Enum.IsDefined(note.Type))
+        {
+            throw new InvalidOperationException("客户备注类型无效。");
+        }
+
+        note.Content = NormalizeRequiredText(note.Content, MaxContentCharacters, "客户备注内容", allowLineBreaks: true);
+        note.RemoteId = NormalizeOptionalText(note.RemoteId, MaxRemoteIdCharacters, "客户备注远端标识", allowLineBreaks: false);
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private const string SelectSql = """
