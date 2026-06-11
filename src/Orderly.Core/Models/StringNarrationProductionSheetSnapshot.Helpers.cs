@@ -1,9 +1,25 @@
+using System.Net;
 using System.Text.Json;
 
 namespace Orderly.Core.Models;
 
 public sealed partial class StringNarrationProductionSheetSnapshot
 {
+    private const int MaxDisplayImageUrlLength = 2048;
+
+    private static readonly string[] LocalImageHostSuffixes =
+    [
+        ".local",
+        ".localhost",
+        ".internal",
+        ".lan",
+        ".home",
+        ".corp",
+        ".test",
+        ".invalid",
+        ".example"
+    ];
+
     private static string FindNamedValue(JsonElement element, IReadOnlyList<string> fieldNames, int depth)
     {
         if (depth > 5)
@@ -216,14 +232,86 @@ public sealed partial class StringNarrationProductionSheetSnapshot
     private static string NormalizeImageUrl(string? value)
     {
         var normalized = value?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(normalized))
+        if (string.IsNullOrWhiteSpace(normalized)
+            || normalized.Length > MaxDisplayImageUrlLength
+            || normalized.Any(char.IsControl)
+            || string.Equals(normalized, "[object Object]", StringComparison.OrdinalIgnoreCase))
         {
             return string.Empty;
         }
 
-        return string.Equals(normalized, "[object Object]", StringComparison.OrdinalIgnoreCase)
-            ? string.Empty
-            : normalized;
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri)
+            || uri.Scheme != Uri.UriSchemeHttps
+            || !uri.IsDefaultPort
+            || !string.IsNullOrEmpty(uri.UserInfo)
+            || !string.IsNullOrEmpty(uri.Fragment)
+            || uri.HostNameType == UriHostNameType.Unknown
+            || IsLocalOrPrivateImageHost(uri.Host))
+        {
+            return string.Empty;
+        }
+
+        return uri.AbsoluteUri;
+    }
+
+    private static bool IsLocalOrPrivateImageHost(string host)
+    {
+        var normalizedHost = host.Trim().TrimEnd('.');
+        if (string.IsNullOrWhiteSpace(normalizedHost))
+        {
+            return true;
+        }
+
+        if (IPAddress.TryParse(normalizedHost, out var address))
+        {
+            return IsLocalOrPrivateImageAddress(address);
+        }
+
+        if (string.Equals(normalizedHost, "localhost", StringComparison.OrdinalIgnoreCase)
+            || !normalizedHost.Contains('.'))
+        {
+            return true;
+        }
+
+        return LocalImageHostSuffixes.Any(suffix => normalizedHost.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsLocalOrPrivateImageAddress(IPAddress address)
+    {
+        if (IPAddress.IsLoopback(address))
+        {
+            return true;
+        }
+
+        if (address.IsIPv4MappedToIPv6)
+        {
+            return IsLocalOrPrivateImageAddress(address.MapToIPv4());
+        }
+
+        var bytes = address.GetAddressBytes();
+        if (bytes.Length == 4)
+        {
+            return bytes[0] == 0
+                || bytes[0] == 10
+                || bytes[0] == 127
+                || (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127)
+                || (bytes[0] == 169 && bytes[1] == 254)
+                || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+                || (bytes[0] == 192 && bytes[1] == 0)
+                || (bytes[0] == 192 && bytes[1] == 168)
+                || (bytes[0] == 198 && (bytes[1] == 18 || bytes[1] == 19))
+                || bytes[0] >= 224;
+        }
+
+        if (bytes.Length == 16)
+        {
+            return bytes.All(value => value == 0)
+                || bytes[0] == 0xff
+                || (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80)
+                || (bytes[0] & 0xfe) == 0xfc;
+        }
+
+        return true;
     }
 
     private static string NormalizeLoopType(string value)
