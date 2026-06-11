@@ -129,7 +129,7 @@ public sealed class InventoryGatewayClient
         return property.ValueKind switch
         {
             JsonValueKind.String => property.GetString()?.Trim() ?? string.Empty,
-            JsonValueKind.Number => property.GetRawText(),
+            JsonValueKind.Number => NormalizeGatewayErrorCode(property.GetRawText()),
             JsonValueKind.True => "true",
             JsonValueKind.False => "false",
             _ => string.Empty
