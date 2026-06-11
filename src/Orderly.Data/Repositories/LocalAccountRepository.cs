@@ -9,6 +9,9 @@ namespace Orderly.Data.Repositories;
 
 public sealed class LocalAccountRepository : ILocalAccountRepository
 {
+    private const int MaxCredentialIterations = 2_000_000;
+    private const int MaxSaltByteLength = 64;
+
     private readonly LauncherConnectionFactory _connectionFactory;
 
     public LocalAccountRepository(LauncherConnectionFactory connectionFactory)
@@ -282,7 +285,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         };
     }
 
-    private static void AddParameters(SqliteCommand command, LocalAccount account)
+    private void AddParameters(SqliteCommand command, LocalAccount account)
     {
         var accountId = LocalCredentialSecurity.NormalizeAccountId(account.AccountId);
         var username = LocalCredentialSecurity.NormalizeAccountUsername(account.Username);
@@ -290,6 +293,8 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         var adminOwnerAccountId = string.IsNullOrWhiteSpace(account.AdminOwnerAccountId)
             ? string.Empty
             : LocalCredentialSecurity.NormalizeAccountId(account.AdminOwnerAccountId);
+        var databasePath = NormalizeAccountDatabasePath(accountId, account.DatabasePath);
+        ValidateAccountSecurityMaterial(account, accountId, adminOwnerAccountId);
 
         command.Parameters.AddWithValue("$accountId", accountId);
         command.Parameters.AddWithValue("$username", username);
@@ -313,7 +318,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         command.Parameters.AddWithValue("$adminEncryptedDataKey", ToDbBlob(account.AdminEncryptedDataKey));
         command.Parameters.AddWithValue("$adminDataKeyNonce", ToDbBlob(account.AdminDataKeyNonce));
         command.Parameters.AddWithValue("$adminDataKeyTag", ToDbBlob(account.AdminDataKeyTag));
-        command.Parameters.AddWithValue("$databasePath", account.DatabasePath);
+        command.Parameters.AddWithValue("$databasePath", databasePath);
         command.Parameters.AddWithValue("$role", (int)account.Role);
         command.Parameters.AddWithValue("$isEnabled", account.IsEnabled ? 1 : 0);
         command.Parameters.AddWithValue("$createdAt", account.CreatedAt.ToString("O"));
@@ -321,14 +326,127 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         command.Parameters.AddWithValue("$lastLoginAt", ToDbDate(account.LastLoginAt));
     }
 
+    private static void ValidateAccountSecurityMaterial(LocalAccount account, string accountId, string adminOwnerAccountId)
+    {
+        if (!Enum.IsDefined(account.Role))
+        {
+            throw new InvalidOperationException("账号角色无效。");
+        }
+
+        ValidateHashParameters(account.PasswordHash, account.PasswordSalt, account.PasswordIterations, "主密码");
+        ValidateHashParameters(account.PinHash, account.PinSalt, account.PinIterations, "PIN");
+        ValidateWrappedDataKey(account.EncryptedDataKey, account.DataKeyNonce, account.DataKeyTag, "主密码");
+
+        var hasRecoveryMaterial = HasBytes(account.RecoveryKeyHash)
+            || HasBytes(account.RecoveryKeySalt)
+            || account.RecoveryKeyIterations > 0
+            || HasBytes(account.RecoveryEncryptedDataKey)
+            || HasBytes(account.RecoveryDataKeyNonce)
+            || HasBytes(account.RecoveryDataKeyTag);
+        if (hasRecoveryMaterial)
+        {
+            ValidateHashParameters(account.RecoveryKeyHash, account.RecoveryKeySalt, account.RecoveryKeyIterations, "Recovery Key");
+            ValidateWrappedDataKey(
+                account.RecoveryEncryptedDataKey,
+                account.RecoveryDataKeyNonce,
+                account.RecoveryDataKeyTag,
+                "Recovery Key");
+        }
+
+        var hasAdminWrappedKey = HasBytes(account.AdminEncryptedDataKey)
+            || HasBytes(account.AdminDataKeyNonce)
+            || HasBytes(account.AdminDataKeyTag);
+        if (account.Role == LocalAccountRole.Owner)
+        {
+            if (!string.IsNullOrEmpty(adminOwnerAccountId) || hasAdminWrappedKey)
+            {
+                throw new InvalidOperationException("所有者账号不能包含成员管理密钥。");
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrEmpty(adminOwnerAccountId) || string.Equals(adminOwnerAccountId, accountId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("成员账号缺少有效的所有者标识。");
+        }
+
+        ValidateWrappedDataKey(
+            account.AdminEncryptedDataKey,
+            account.AdminDataKeyNonce,
+            account.AdminDataKeyTag,
+            "成员管理");
+    }
+
+    private string NormalizeAccountDatabasePath(string accountId, string? databasePath)
+    {
+        if (string.IsNullOrWhiteSpace(databasePath)
+            || databasePath.Length > 4096
+            || databasePath.Any(char.IsControl)
+            || !Path.IsPathFullyQualified(databasePath))
+        {
+            throw new InvalidOperationException("账号数据库路径无效。");
+        }
+
+        string normalizedPath;
+        try
+        {
+            normalizedPath = Path.GetFullPath(databasePath);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            throw new InvalidOperationException("账号数据库路径无效。", ex);
+        }
+
+        if (!string.Equals(Path.GetExtension(normalizedPath), ".db", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("账号数据库路径必须使用 .db 扩展名。");
+        }
+
+        LocalDataFileSecurity.EnsureFileIsNotLinked(normalizedPath, "账号数据库文件");
+
+        var launcherPath = Path.GetFullPath(_connectionFactory.DatabasePath);
+        var expectedLauncherPath = Path.GetFullPath(DatabasePaths.GetLauncherDatabasePath());
+        if (string.Equals(launcherPath, expectedLauncherPath, StringComparison.OrdinalIgnoreCase)
+            && !DatabasePaths.IsExpectedAccountDatabasePath(accountId, normalizedPath))
+        {
+            throw new InvalidOperationException("账号数据库路径不属于当前账号。");
+        }
+
+        return normalizedPath;
+    }
+
+    private static void ValidateHashParameters(byte[]? hash, byte[]? salt, int iterations, string fieldName)
+    {
+        if (!LocalCredentialSecurity.HasUsableHashParameters(salt, iterations, hash)
+            || salt is not { Length: <= MaxSaltByteLength }
+            || iterations > MaxCredentialIterations)
+        {
+            throw new InvalidOperationException($"{fieldName}哈希参数无效。");
+        }
+    }
+
+    private static void ValidateWrappedDataKey(byte[]? ciphertext, byte[]? nonce, byte[]? tag, string fieldName)
+    {
+        if (!LocalCredentialSecurity.HasUsableWrappedDataKey(ciphertext, nonce, tag))
+        {
+            throw new InvalidOperationException($"{fieldName}数据密钥包裹信息无效。");
+        }
+    }
+
+    private static bool HasBytes(byte[]? value)
+    {
+        return value is { Length: > 0 };
+    }
+
     private static object ToDbDate(DateTime? value)
     {
         return value is null ? DBNull.Value : value.Value.ToString("O");
     }
 
-    private static object ToDbBlob(byte[] value)
+    private static object ToDbBlob(byte[]? value)
     {
-        return value.Length == 0 ? DBNull.Value : value;
+        return value is null or { Length: 0 } ? DBNull.Value : value;
     }
 
     private static object ToDbText(string value)
