@@ -15,6 +15,12 @@ public sealed class LocalOcrService : IOcrService
     private const int MaxOcrExtractedTextCharacters = 10000;
     private const int MaxOcrErrorMessageCharacters = 512;
     private const int MaxOcrMetadataJsonCharacters = 4096;
+    private const int MaxOcrMetadataScalarCharacters = 160;
+
+    private static readonly JsonDocumentOptions OcrMetadataJsonDocumentOptions = new()
+    {
+        MaxDepth = 16
+    };
 
     private static readonly HashSet<string> AllowedOcrImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -250,7 +256,7 @@ public sealed class LocalOcrService : IOcrService
     private async Task PersistConvertedMessageIdAsync(OcrResult result, int messageId, CancellationToken cancellationToken)
     {
         var metadata = ParseMetadata(result.MetadataJson);
-        var currentId = metadata["convertedToMessageId"]?.GetValue<int?>();
+        var currentId = ReadMetadataInt(metadata, "convertedToMessageId");
         if (currentId == messageId)
         {
             return;
@@ -270,12 +276,12 @@ public sealed class LocalOcrService : IOcrService
     {
         return JsonSerializer.Serialize(new
         {
-            source = ocrMetadata["source"]?.GetValue<string>() ?? "manual-image",
+            source = ReadMetadataString(ocrMetadata, "source", "manual-image"),
             createdBy = "p2.5",
             ocrResultId = result.Id,
-            provider = ocrMetadata["provider"]?.GetValue<string>() ?? "local",
-            usedFallback = ocrMetadata["usedFallback"]?.GetValue<bool>() ?? true,
-            fileName = ocrMetadata["fileName"]?.GetValue<string>() ?? result.SourceName
+            provider = ReadMetadataString(ocrMetadata, "provider", "local"),
+            usedFallback = ReadMetadataBool(ocrMetadata, "usedFallback", fallback: true),
+            fileName = ReadMetadataString(ocrMetadata, "fileName", result.SourceName)
         });
     }
 
@@ -288,7 +294,7 @@ public sealed class LocalOcrService : IOcrService
 
         try
         {
-            return JsonNode.Parse(metadataJson) as JsonObject ?? new JsonObject();
+            return JsonNode.Parse(metadataJson, documentOptions: OcrMetadataJsonDocumentOptions) as JsonObject ?? new JsonObject();
         }
         catch (JsonException)
         {
@@ -296,6 +302,58 @@ public sealed class LocalOcrService : IOcrService
             {
                 ["legacyMetadata"] = metadataJson
             };
+        }
+    }
+
+    private static string ReadMetadataString(JsonObject metadata, string name, string fallback)
+    {
+        if (!metadata.TryGetPropertyValue(name, out var node) || node is null)
+        {
+            return fallback;
+        }
+
+        try
+        {
+            var value = NormalizeOcrText(node.GetValue<string>(), MaxOcrMetadataScalarCharacters, $"OCR 元数据 {name}");
+            return string.IsNullOrWhiteSpace(value) ? fallback : value;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            return fallback;
+        }
+    }
+
+    private static bool ReadMetadataBool(JsonObject metadata, string name, bool fallback)
+    {
+        if (!metadata.TryGetPropertyValue(name, out var node) || node is null)
+        {
+            return fallback;
+        }
+
+        try
+        {
+            return node.GetValue<bool>();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            return fallback;
+        }
+    }
+
+    private static int? ReadMetadataInt(JsonObject metadata, string name)
+    {
+        if (!metadata.TryGetPropertyValue(name, out var node) || node is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return node.GetValue<int>();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            return null;
         }
     }
 }
