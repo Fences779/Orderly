@@ -42,6 +42,8 @@ log/
 .env
 .env.*
 cloudbaserc.json
+cloudbaserc.*.json
+!cloudbaserc.example.json
 appsettings.Development.json
 secrets.json
 *.pfx
