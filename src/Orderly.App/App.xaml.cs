@@ -27,6 +27,10 @@ public partial class App : System.Windows.Application
     private const string QaSessionDisplayName = "QA Local User";
     private const int QaSessionDataKeyLength = 32;
     private const string QaSessionKeyFilePrefix = "qa-session-data-key-";
+    private const string QaSessionProtectedKeyFileExtension = ".dpapi";
+    private const string QaSessionLegacyRawKeyFileExtension = ".key";
+    private const string QaSessionProtectedEntropyPurpose = "Orderly.QaSessionDataKey.v1";
+    private const int MaxProtectedQaSessionDataKeyBytes = 4096;
     private const string PrivilegedQaStartupEnvName = "ORDERLY_ENABLE_PRIVILEGED_QA_STARTUP";
     private const string QaDataRootEnvName = "ORDERLY_QA_DATA_ROOT";
 

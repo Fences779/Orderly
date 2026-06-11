@@ -119,51 +119,69 @@ public partial class App
             throw new InvalidOperationException("QA session data key file cannot be a linked file.");
         }
 
+        DeleteLegacyRawQaSessionDataKeyFile(databasePath);
         if (File.Exists(keyPath))
         {
-            var existingKey = TryReadQaSessionDataKey(keyPath);
-            if (existingKey is not null)
-            {
-                HardenQaSessionDataKeyFile(keyPath);
-                return existingKey;
-            }
+            var existingKey = ReadProtectedQaSessionDataKey(keyPath);
+            HardenQaSessionDataKeyFile(keyPath);
+            return existingKey;
         }
 
         var key = RandomNumberGenerator.GetBytes(QaSessionDataKeyLength);
-        WriteQaSessionDataKeyFile(keyPath, key);
+        WriteProtectedQaSessionDataKeyFile(keyPath, key);
         return key;
     }
 
-    private static byte[]? TryReadQaSessionDataKey(string keyPath)
+    private static byte[] ReadProtectedQaSessionDataKey(string keyPath)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            throw new InvalidOperationException("当前系统不支持受保护的 QA session data key。");
+        }
+
         using var stream = new FileStream(
             keyPath,
             FileMode.Open,
             FileAccess.Read,
-            FileShare.Read,
+            FileShare.None,
             bufferSize: QaSessionDataKeyLength,
             FileOptions.SequentialScan);
-        if (stream.Length != QaSessionDataKeyLength)
+        if (stream.Length <= 0 || stream.Length > MaxProtectedQaSessionDataKeyBytes)
         {
-            return null;
+            throw new InvalidOperationException("QA session data key file length is invalid.");
         }
 
-        var key = new byte[QaSessionDataKeyLength];
+        var protectedKey = new byte[stream.Length];
         try
         {
-            stream.ReadExactly(key);
+            stream.ReadExactly(protectedKey);
             LocalDataFileSecurity.EnsureFileIsNotLinked(keyPath, "QA session data key file");
-            return key;
+            var key = ProtectedData.Unprotect(
+                protectedKey,
+                GetQaSessionDataKeyProtectedEntropy(),
+                DataProtectionScope.CurrentUser);
+            if (key.Length == QaSessionDataKeyLength)
+            {
+                return key;
+            }
+
+            CryptographicOperations.ZeroMemory(key);
+            throw new InvalidOperationException("QA session data key length is invalid.");
         }
         catch
         {
-            CryptographicOperations.ZeroMemory(key);
+            CryptographicOperations.ZeroMemory(protectedKey);
             throw;
         }
     }
 
-    private static void WriteQaSessionDataKeyFile(string keyPath, byte[] key)
+    private static void WriteProtectedQaSessionDataKeyFile(string keyPath, byte[] key)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            throw new InvalidOperationException("当前系统不支持受保护的 QA session data key。");
+        }
+
         if (key.Length != QaSessionDataKeyLength)
         {
             throw new InvalidOperationException("QA session data key length is invalid.");
@@ -176,6 +194,10 @@ public partial class App
         }
 
         LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "QA session data key directory");
+        var protectedKey = ProtectedData.Protect(
+            key,
+            GetQaSessionDataKeyProtectedEntropy(),
+            DataProtectionScope.CurrentUser);
         var tempPath = Path.Combine(
             directory,
             $".{Path.GetFileName(keyPath)}.{Guid.NewGuid():N}.tmp");
@@ -188,10 +210,10 @@ public partial class App
                 FileMode.CreateNew,
                 FileAccess.Write,
                 FileShare.None,
-                bufferSize: QaSessionDataKeyLength,
+                bufferSize: protectedKey.Length,
                 FileOptions.WriteThrough))
             {
-                stream.Write(key);
+                stream.Write(protectedKey);
                 stream.Flush(flushToDisk: true);
             }
 
@@ -205,6 +227,10 @@ public partial class App
         {
             DeleteTemporaryQaSessionDataKeyFile(tempPath);
             throw;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(protectedKey);
         }
     }
 
@@ -227,6 +253,16 @@ public partial class App
 
     private static string GetQaSessionDataKeyPath(string databasePath)
     {
+        return GetQaSessionDataKeyPath(databasePath, QaSessionProtectedKeyFileExtension);
+    }
+
+    private static string GetLegacyRawQaSessionDataKeyPath(string databasePath)
+    {
+        return GetQaSessionDataKeyPath(databasePath, QaSessionLegacyRawKeyFileExtension);
+    }
+
+    private static string GetQaSessionDataKeyPath(string databasePath, string extension)
+    {
         var normalizedDatabasePath = Path.GetFullPath(databasePath).ToUpperInvariant();
         var pathBytes = Encoding.UTF8.GetBytes(normalizedDatabasePath);
         var hash = SHA256.HashData(pathBytes);
@@ -234,12 +270,36 @@ public partial class App
         {
             return Path.Combine(
                 DatabasePaths.GetIdentityDirectoryPath(),
-                $"{QaSessionKeyFilePrefix}{Convert.ToHexString(hash).ToLowerInvariant()}.key");
+                $"{QaSessionKeyFilePrefix}{Convert.ToHexString(hash).ToLowerInvariant()}{extension}");
         }
         finally
         {
             CryptographicOperations.ZeroMemory(pathBytes);
             CryptographicOperations.ZeroMemory(hash);
+        }
+    }
+
+    private static byte[] GetQaSessionDataKeyProtectedEntropy()
+    {
+        return Encoding.UTF8.GetBytes(QaSessionProtectedEntropyPurpose);
+    }
+
+    private static void DeleteLegacyRawQaSessionDataKeyFile(string databasePath)
+    {
+        var legacyPath = GetLegacyRawQaSessionDataKeyPath(databasePath);
+        try
+        {
+            if (File.Exists(legacyPath) && !LocalDataFileSecurity.IsReparsePoint(legacyPath))
+            {
+                File.Delete(legacyPath);
+            }
+        }
+        catch (Exception ex) when (
+            ex is IOException
+                or UnauthorizedAccessException
+                or SystemException)
+        {
+            throw new InvalidOperationException("旧版裸 QA session data key file 清理失败。", ex);
         }
     }
 
