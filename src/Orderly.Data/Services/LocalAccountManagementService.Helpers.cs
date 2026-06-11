@@ -128,12 +128,57 @@ public sealed partial class LocalAccountManagementService
             return;
         }
 
-        if (ContainsReparsePoint(targetDirectory))
+        var accountsRoot = Path.GetFullPath(DatabasePaths.GetAccountsDirectoryPath());
+        var fullTargetDirectory = Path.GetFullPath(targetDirectory);
+        if (!IsPathInsideDirectory(fullTargetDirectory, accountsRoot))
+        {
+            throw new InvalidOperationException("账号工作区路径超出账号数据目录，已拒绝删除。");
+        }
+
+        DeleteDirectoryTreeWithoutLinks(fullTargetDirectory);
+    }
+
+    private static void DeleteDirectoryTreeWithoutLinks(string directory)
+    {
+        EnsureDirectoryIsPlain(directory);
+
+        var options = new EnumerationOptions
+        {
+            AttributesToSkip = 0,
+            IgnoreInaccessible = false,
+            RecurseSubdirectories = false
+        };
+
+        foreach (var file in Directory.EnumerateFiles(directory, "*", options))
+        {
+            DeletePlainFile(file);
+        }
+
+        foreach (var subdirectory in Directory.EnumerateDirectories(directory, "*", options))
+        {
+            DeleteDirectoryTreeWithoutLinks(subdirectory);
+        }
+
+        EnsureDirectoryIsPlain(directory);
+        Directory.Delete(directory, recursive: false);
+    }
+
+    private static void DeletePlainFile(string file)
+    {
+        if (HasReparsePoint(file))
         {
             throw new InvalidOperationException("账号工作区包含链接文件，已拒绝删除。");
         }
 
-        Directory.Delete(targetDirectory, recursive: true);
+        File.Delete(file);
+    }
+
+    private static void EnsureDirectoryIsPlain(string directory)
+    {
+        if (HasReparsePoint(directory))
+        {
+            throw new InvalidOperationException("账号工作区包含链接目录，已拒绝删除。");
+        }
     }
 
     private static bool IsPathInsideDirectory(string targetDirectory, string rootDirectory)
