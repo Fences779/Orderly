@@ -74,6 +74,8 @@ public sealed class LocalAuthService : ILocalAuthService
         var dataKey = RandomNumberGenerator.GetBytes(32);
         (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrapped = ([], [], []);
         (byte[] Ciphertext, byte[] Nonce, byte[] Tag) recoveryWrapped = ([], [], []);
+        var accountCreated = false;
+        LocalSessionContext? pendingSession = null;
         try
         {
             wrapped = LocalCredentialSecurity.WrapDataKey(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, dataKey);
@@ -108,6 +110,7 @@ public sealed class LocalAuthService : ILocalAuthService
             };
 
             await _accountRepository.CreateAsync(account, cancellationToken);
+            accountCreated = true;
 
             var migrationPlan = await _legacyMigrationService.BuildPlanAsync(accountId, cancellationToken);
             LegacyDatabaseMigrationResult? migrationResult = null;
@@ -127,21 +130,74 @@ public sealed class LocalAuthService : ILocalAuthService
             var initializer = new DatabaseInitializer(accountConnectionFactory);
             await initializer.InitializeAsync(cancellationToken);
 
-            var session = CreateSession(account, dataKey, now);
-            _sessionContextService.SetCurrent(session);
+            pendingSession = CreateSession(account, dataKey, now);
+            _sessionContextService.SetCurrent(pendingSession);
+            await BackfillFirstOwnerSensitiveFieldsAsync(accountConnectionFactory, cancellationToken);
+
             return new CreateFirstOwnerResult
             {
-                Session = session,
+                Session = pendingSession,
                 RecoveryKey = recoveryKey,
                 LegacyMigrationPlan = migrationPlan,
                 LegacyMigrationResult = migrationResult
             };
+        }
+        catch
+        {
+            _sessionContextService.Clear();
+            if (pendingSession?.DataKey is { Length: > 0 } pendingDataKey)
+            {
+                CryptographicOperations.ZeroMemory(pendingDataKey);
+            }
+
+            if (accountCreated)
+            {
+                await CleanupFailedFirstOwnerAsync(accountId, databasePath, cancellationToken);
+            }
+
+            throw;
         }
         finally
         {
             SensitiveBuffer.Clear(dataKey, passwordSalt, passwordHash, pinSalt, pinHash, recoverySalt, recoveryHash);
             SensitiveBuffer.ClearWrappedDataKey(wrapped);
             SensitiveBuffer.ClearWrappedDataKey(recoveryWrapped);
+        }
+    }
+
+    private async Task BackfillFirstOwnerSensitiveFieldsAsync(
+        SqliteConnectionFactory accountConnectionFactory,
+        CancellationToken cancellationToken)
+    {
+        var fieldEncryptionService = new FieldEncryptionService(_sessionContextService);
+        var sensitiveMigrationService = new SensitiveFieldMigrationService(accountConnectionFactory, fieldEncryptionService);
+        await sensitiveMigrationService.BackfillAsync(cancellationToken);
+    }
+
+    private async Task CleanupFailedFirstOwnerAsync(
+        string accountId,
+        string databasePath,
+        CancellationToken cancellationToken)
+    {
+        await _accountRepository.DeleteAsync(accountId, cancellationToken);
+        DeleteExpectedAccountDatabaseFiles(accountId, databasePath);
+    }
+
+    private static void DeleteExpectedAccountDatabaseFiles(string accountId, string databasePath)
+    {
+        if (!DatabasePaths.IsExpectedAccountDatabasePath(accountId, databasePath))
+        {
+            return;
+        }
+
+        foreach (var path in new[] { databasePath, databasePath + "-journal", databasePath + "-wal", databasePath + "-shm" })
+        {
+            if (LocalDataFileSecurity.IsReparsePoint(path) || !File.Exists(path))
+            {
+                continue;
+            }
+
+            File.Delete(path);
         }
     }
 
