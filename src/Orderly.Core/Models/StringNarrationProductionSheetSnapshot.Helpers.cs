@@ -6,6 +6,7 @@ namespace Orderly.Core.Models;
 public sealed partial class StringNarrationProductionSheetSnapshot
 {
     private const int MaxDisplayImageUrlLength = 2048;
+    private const int MaxSnapshotScalarTextLength = 1024;
 
     private static readonly string[] LocalImageHostSuffixes =
     [
@@ -201,12 +202,30 @@ public sealed partial class StringNarrationProductionSheetSnapshot
     {
         return value.ValueKind switch
         {
-            JsonValueKind.String => value.GetString()?.Trim() ?? string.Empty,
-            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.String => NormalizeSnapshotScalar(value.GetString()),
+            JsonValueKind.Number => NormalizeSnapshotScalar(value.GetRawText()),
             JsonValueKind.True => "true",
             JsonValueKind.False => "false",
             _ => string.Empty
         };
+    }
+
+    private static string NormalizeSnapshotScalar(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > MaxSnapshotScalarTextLength)
+        {
+            return string.Empty;
+        }
+
+        return normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t')
+            ? string.Empty
+            : normalized;
     }
 
     private static bool TryGetPropertyIgnoreCase(JsonElement element, string name, out JsonElement value)
