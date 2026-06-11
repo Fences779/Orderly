@@ -5,6 +5,13 @@ namespace Orderly.Data.Services;
 
 internal static class ProjectionMetadataHelper
 {
+    private const int MaxMetadataJsonCharacters = 8192;
+
+    private static readonly JsonDocumentOptions MetadataJsonDocumentOptions = new()
+    {
+        MaxDepth = 16
+    };
+
     public static string? ReadAutoReplyState(string metadataJson)
     {
         return AutoReplyMetadataHelper.ReadState(metadataJson);
@@ -12,14 +19,14 @@ internal static class ProjectionMetadataHelper
 
     public static int? ReadConvertedToMessageId(string metadataJson)
     {
-        if (string.IsNullOrWhiteSpace(metadataJson))
+        if (string.IsNullOrWhiteSpace(metadataJson) || metadataJson.Length > MaxMetadataJsonCharacters)
         {
             return null;
         }
 
         try
         {
-            using var document = JsonDocument.Parse(metadataJson);
+            using var document = JsonDocument.Parse(metadataJson, MetadataJsonDocumentOptions);
             if (!document.RootElement.TryGetProperty("convertedToMessageId", out var convertedElement))
             {
                 return null;

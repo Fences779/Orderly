@@ -6,6 +6,14 @@ namespace Orderly.App.ViewModels;
 
 public sealed class AiSuggestionListItem
 {
+    private const int MaxMetadataJsonCharacters = 8192;
+    private const int MaxProviderLabelCharacters = 64;
+
+    private static readonly JsonDocumentOptions MetadataJsonDocumentOptions = new()
+    {
+        MaxDepth = 16
+    };
+
     private readonly string? _autoReplyState;
     private readonly string _providerBadgeText;
 
@@ -71,16 +79,17 @@ public sealed class AiSuggestionListItem
 
     private static string ReadProviderBadgeText(string metadataJson)
     {
-        if (string.IsNullOrWhiteSpace(metadataJson))
+        if (string.IsNullOrWhiteSpace(metadataJson) || metadataJson.Length > MaxMetadataJsonCharacters)
         {
             return "Local Stub";
         }
 
         try
         {
-            using var document = JsonDocument.Parse(metadataJson);
+            using var document = JsonDocument.Parse(metadataJson, MetadataJsonDocumentOptions);
             var provider = document.RootElement.TryGetProperty("provider", out var providerElement)
-                ? providerElement.GetString()
+                && providerElement.ValueKind == JsonValueKind.String
+                    ? NormalizeProviderLabel(providerElement.GetString())
                 : null;
             var usedFallback = document.RootElement.TryGetProperty("usedFallback", out var fallbackElement)
                 && fallbackElement.ValueKind is JsonValueKind.True or JsonValueKind.False
@@ -101,5 +110,22 @@ public sealed class AiSuggestionListItem
         {
             return "Local Stub";
         }
+    }
+
+    private static string? NormalizeProviderLabel(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > MaxProviderLabelCharacters
+            || normalized.Any(static ch => char.IsControl(ch) && ch is not '\r' and not '\n' and not '\t'))
+        {
+            return null;
+        }
+
+        return normalized;
     }
 }
