@@ -15,9 +15,12 @@ public sealed partial class LocalBackupService : IBackupService
     private const string LauncherLocalAccountsTableName = "LocalAccountsSnapshot";
     private const string BackupIntegrityAlgorithm = "HMACSHA256";
     private const string BackupIntegritySessionKeyScope = "session-data-key";
-    private const string BackupIntegrityMachineKeyScope = "machine-local-key";
-    private const string BackupIntegrityKeyFileName = "backup-integrity.key";
+    private const string BackupIntegrityMachineProtectedKeyScope = "machine-protected-key";
+    private const string BackupIntegrityProtectedKeyFileName = "backup-integrity.dpapi";
+    private const string BackupIntegrityLegacyRawKeyFileName = "backup-integrity.key";
+    private const string BackupIntegrityProtectedEntropyPurpose = "Orderly.LocalBackupService.BackupIntegrity.v1";
     private const int BackupIntegrityKeyByteLength = 32;
+    private const int MaxProtectedBackupIntegrityKeyBytes = 4096;
     private const long MaxBackupFileBytes = 64L * 1024L * 1024L;
     private const int MaxBackupJsonDepth = 32;
     private const int MaxBackupTableRows = 50_000;

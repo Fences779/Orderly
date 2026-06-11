@@ -2,9 +2,8 @@ using Microsoft.Data.Sqlite;
 using Orderly.Core.Models;
 using Orderly.Data.Sqlite;
 using System.Globalization;
-using System.Security.AccessControl;
 using System.Security.Cryptography;
-using System.Security.Principal;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -406,7 +405,7 @@ public sealed partial class LocalBackupService
     {
         return _sessionContextService?.Current?.DataKey is { Length: > 0 }
             ? BackupIntegritySessionKeyScope
-            : BackupIntegrityMachineKeyScope;
+            : BackupIntegrityMachineProtectedKeyScope;
     }
 
     private byte[] GetBackupIntegrityKey(string keyScope)
@@ -414,7 +413,7 @@ public sealed partial class LocalBackupService
         return keyScope switch
         {
             BackupIntegritySessionKeyScope => GetSessionBackupIntegrityKey(),
-            BackupIntegrityMachineKeyScope => GetMachineBackupIntegrityKey(),
+            BackupIntegrityMachineProtectedKeyScope => GetMachineBackupIntegrityKey(),
             _ => throw new InvalidOperationException("备份完整性 key scope 不受支持。")
         };
     }
@@ -432,21 +431,24 @@ public sealed partial class LocalBackupService
 
     private static byte[] GetMachineBackupIntegrityKey()
     {
-        var keyPath = Path.Combine(DatabasePaths.GetIdentityDirectoryPath(), BackupIntegrityKeyFileName);
-        EnsureMachineBackupIntegrityKeyDirectory(keyPath);
-        if (LocalDataFileSecurity.IsReparsePoint(keyPath))
+        if (!OperatingSystem.IsWindows())
         {
-            throw new InvalidOperationException("备份完整性 key 文件不能是链接文件。");
+            throw new InvalidOperationException("缺少会话数据密钥，且当前系统不支持受保护的本机备份完整性 key。");
         }
+
+        var keyPath = Path.Combine(DatabasePaths.GetIdentityDirectoryPath(), BackupIntegrityProtectedKeyFileName);
+        EnsureMachineBackupIntegrityKeyDirectory(keyPath);
+        RejectLinkedMachineBackupIntegrityKeyFile(keyPath);
+        DeleteLegacyRawMachineBackupIntegrityKeyFile();
 
         if (File.Exists(keyPath))
         {
             HardenMachineBackupIntegrityKeyFile(keyPath);
-            return ReadMachineBackupIntegrityKeyFile(keyPath);
+            return ReadProtectedMachineBackupIntegrityKeyFile(keyPath);
         }
 
         var key = RandomNumberGenerator.GetBytes(BackupIntegrityKeyByteLength);
-        WriteMachineBackupIntegrityKeyFile(keyPath, key);
+        WriteProtectedMachineBackupIntegrityKeyFile(keyPath, key);
         return key;
     }
 
@@ -461,7 +463,8 @@ public sealed partial class LocalBackupService
         LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "备份完整性 key 目录");
     }
 
-    private static byte[] ReadMachineBackupIntegrityKeyFile(string keyPath)
+    [SupportedOSPlatform("windows")]
+    private static byte[] ReadProtectedMachineBackupIntegrityKeyFile(string keyPath)
     {
         using var stream = new FileStream(
             keyPath,
@@ -470,43 +473,66 @@ public sealed partial class LocalBackupService
             FileShare.Read,
             bufferSize: BackupIntegrityKeyByteLength,
             FileOptions.SequentialScan);
-        if (LocalDataFileSecurity.IsReparsePoint(keyPath))
-        {
-            throw new InvalidOperationException("备份完整性 key 文件不能是链接文件。");
-        }
+        RejectLinkedMachineBackupIntegrityKeyFile(keyPath);
 
-        if (stream.Length != BackupIntegrityKeyByteLength)
+        if (stream.Length <= 0 || stream.Length > MaxProtectedBackupIntegrityKeyBytes)
         {
             throw new InvalidOperationException("备份完整性 key 文件长度无效。");
         }
 
-        var key = new byte[BackupIntegrityKeyByteLength];
-        stream.ReadExactly(key);
-        return key;
+        var protectedKey = new byte[stream.Length];
+        try
+        {
+            stream.ReadExactly(protectedKey);
+            var key = ProtectedData.Unprotect(
+                protectedKey,
+                GetBackupIntegrityProtectedEntropy(),
+                DataProtectionScope.CurrentUser);
+            if (key.Length == BackupIntegrityKeyByteLength)
+            {
+                return key;
+            }
+
+            SensitiveBuffer.Clear(key);
+            throw new InvalidOperationException("备份完整性 key 解密后长度无效。");
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(protectedKey);
+        }
     }
 
-    private static void WriteMachineBackupIntegrityKeyFile(string keyPath, byte[] key)
+    [SupportedOSPlatform("windows")]
+    private static void WriteProtectedMachineBackupIntegrityKeyFile(string keyPath, byte[] key)
     {
         if (key.Length != BackupIntegrityKeyByteLength)
         {
             throw new InvalidOperationException("备份完整性 key 长度无效。");
         }
 
-        if (LocalDataFileSecurity.IsReparsePoint(keyPath))
-        {
-            throw new InvalidOperationException("备份完整性 key 文件不能是链接文件。");
-        }
+        RejectLinkedMachineBackupIntegrityKeyFile(keyPath);
 
-        using (var stream = new FileStream(
-            keyPath,
-            FileMode.CreateNew,
-            FileAccess.Write,
-            FileShare.None,
-            bufferSize: BackupIntegrityKeyByteLength,
-            FileOptions.WriteThrough))
+        var protectedKey = ProtectedData.Protect(
+            key,
+            GetBackupIntegrityProtectedEntropy(),
+            DataProtectionScope.CurrentUser);
+        try
         {
-            stream.Write(key);
-            stream.Flush(flushToDisk: true);
+            using (var stream = new FileStream(
+                keyPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: BackupIntegrityKeyByteLength,
+                FileOptions.WriteThrough))
+            {
+                stream.Write(protectedKey);
+                stream.Flush(flushToDisk: true);
+            }
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(protectedKey);
         }
 
         HardenMachineBackupIntegrityKeyFile(keyPath);
@@ -518,47 +544,46 @@ public sealed partial class LocalBackupService
         {
             File.SetAttributes(keyPath, File.GetAttributes(keyPath) | FileAttributes.Hidden);
         }
-        catch (IOException)
+        catch (Exception ex) when (
+            ex is IOException
+                or UnauthorizedAccessException
+                or SystemException)
         {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
+            throw new InvalidOperationException("备份完整性 key 文件属性加固失败。", ex);
         }
 
+        LocalDataFileSecurity.HardenFile(keyPath);
+    }
+
+    private static byte[] GetBackupIntegrityProtectedEntropy()
+    {
+        return Utf8NoBom.GetBytes(BackupIntegrityProtectedEntropyPurpose);
+    }
+
+    private static void RejectLinkedMachineBackupIntegrityKeyFile(string keyPath)
+    {
+        if (LocalDataFileSecurity.IsReparsePoint(keyPath))
+        {
+            throw new InvalidOperationException("备份完整性 key 文件不能是链接文件。");
+        }
+    }
+
+    private static void DeleteLegacyRawMachineBackupIntegrityKeyFile()
+    {
+        var legacyPath = Path.Combine(DatabasePaths.GetIdentityDirectoryPath(), BackupIntegrityLegacyRawKeyFileName);
         try
         {
-            var currentUser = WindowsIdentity.GetCurrent().User;
-            if (currentUser is null)
+            if (File.Exists(legacyPath) && !LocalDataFileSecurity.IsReparsePoint(legacyPath))
             {
-                throw new InvalidOperationException("无法识别当前用户，不能加固备份完整性 key。");
+                File.Delete(legacyPath);
             }
-
-            var fileInfo = new FileInfo(keyPath);
-            var security = fileInfo.GetAccessControl();
-            foreach (FileSystemAccessRule rule in security.GetAccessRules(includeExplicit: true, includeInherited: true, targetType: typeof(SecurityIdentifier)))
-            {
-                security.RemoveAccessRuleAll(rule);
-            }
-
-            security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-            security.AddAccessRule(new FileSystemAccessRule(currentUser, FileSystemRights.FullControl, AccessControlType.Allow));
-            security.AddAccessRule(new FileSystemAccessRule(
-                new SecurityIdentifier(WellKnownSidType.LocalSystemSid, domainSid: null),
-                FileSystemRights.FullControl,
-                AccessControlType.Allow));
-            fileInfo.SetAccessControl(security);
         }
         catch (Exception ex) when (
             ex is IOException
                 or UnauthorizedAccessException
                 or SystemException)
         {
-            throw new InvalidOperationException("备份完整性 key 文件权限加固失败。", ex);
+            throw new InvalidOperationException("旧版裸备份完整性 key 文件清理失败。", ex);
         }
     }
 
