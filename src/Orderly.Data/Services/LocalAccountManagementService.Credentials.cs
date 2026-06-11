@@ -127,10 +127,13 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("当前账号已被禁用。");
         }
 
+        ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposeSignIn, account.Username);
         if (!LocalCredentialSecurity.VerifyHash(currentMasterPassword, account.PasswordSalt, account.PasswordIterations, account.PasswordHash))
         {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposeSignIn, account.Username);
             throw new InvalidOperationException("当前主密码错误。");
         }
+        RecordCredentialAttemptResult(CredentialAttemptPurposeSignIn, account.Username, success: true);
 
         var passwordSalt = RandomNumberGenerator.GetBytes(16);
         var passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
@@ -169,10 +172,13 @@ public sealed partial class LocalAccountManagementService
             throw new InvalidOperationException("当前账号已被禁用。");
         }
 
+        ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, account.AccountId);
         if (!LocalCredentialSecurity.VerifyHash(currentPin, account.PinSalt, account.PinIterations, account.PinHash))
         {
+            RecordCredentialAttemptFailure(CredentialAttemptPurposePin, account.AccountId);
             throw new InvalidOperationException("当前 PIN 错误。");
         }
+        RecordCredentialAttemptResult(CredentialAttemptPurposePin, account.AccountId, success: true);
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
         var pinHash = LocalCredentialSecurity.ComputeHash(newPin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
