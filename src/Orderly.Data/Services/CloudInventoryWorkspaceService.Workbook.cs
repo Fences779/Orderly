@@ -15,13 +15,8 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static List<InventoryWorkbookRow> LoadWorkbookRows(string workbookPath, out List<InventoryImportRowError> errors)
     {
-        var fileInfo = GetSafeExistingWorkbookFileInfo(workbookPath);
-        if (fileInfo.Length > MaxInventoryWorkbookBytes)
-        {
-            throw new InvalidOperationException($"Excel 文件超过导入上限（{MaxInventoryWorkbookBytes / 1024 / 1024}MB）。");
-        }
-
-        using var workbook = new XLWorkbook(fileInfo.FullName);
+        using var workbookStream = OpenSafeWorkbookReadStream(workbookPath);
+        using var workbook = new XLWorkbook(workbookStream);
         var worksheet = workbook.Worksheets.FirstOrDefault(static sheet => string.Equals(sheet.Name, "Inventory", StringComparison.OrdinalIgnoreCase))
             ?? workbook.Worksheets.FirstOrDefault()
             ?? throw new InvalidOperationException("Excel 中没有可读取的工作表。");
@@ -520,10 +515,40 @@ public sealed partial class CloudInventoryWorkspaceService
 
     private static string ComputeFileHash(string path)
     {
-        var fileInfo = GetSafeExistingWorkbookFileInfo(path);
-        using var stream = File.OpenRead(fileInfo.FullName);
+        using var stream = OpenSafeWorkbookReadStream(path);
         var hash = SHA256.HashData(stream);
         return Convert.ToHexString(hash);
+    }
+
+    private static FileStream OpenSafeWorkbookReadStream(string workbookPath)
+    {
+        var fileInfo = GetSafeExistingWorkbookFileInfo(workbookPath);
+        var stream = new FileStream(
+            fileInfo.FullName,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 81920,
+            FileOptions.SequentialScan);
+        try
+        {
+            if (stream.Length > MaxInventoryWorkbookBytes)
+            {
+                throw new InvalidOperationException($"Excel 文件超过导入上限（{MaxInventoryWorkbookBytes / 1024 / 1024}MB）。");
+            }
+
+            if (LocalDataFileSecurity.IsReparsePoint(fileInfo.FullName))
+            {
+                throw new InvalidOperationException("Excel 文件不能是链接文件。");
+            }
+
+            return stream;
+        }
+        catch
+        {
+            stream.Dispose();
+            throw;
+        }
     }
 
     private static FileInfo GetSafeExistingWorkbookFileInfo(string workbookPath)
