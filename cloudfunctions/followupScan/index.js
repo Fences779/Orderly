@@ -28,7 +28,8 @@ const MODE_PERMISSIONS = {
   manualCreate: 'followup:create',
   templateSave: 'templates:write',
   templateUse: 'templates:use',
-  skuSave: 'inventory:write'
+  skuSave: 'inventory:write',
+  inventoryMovementSave: 'inventory:movement'
 }
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
 const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
