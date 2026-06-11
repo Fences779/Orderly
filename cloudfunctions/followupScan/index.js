@@ -7,7 +7,6 @@ const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
-const AUTH_ALLOW_ALL_DEV_ENV_NAME = 'ORDERLY_AUTH_ALLOW_ALL_DEV'
 const AUTO_SCAN_ENV_NAME = 'ORDERLY_ENABLE_FOLLOWUP_AUTO_SCAN'
 const AUTO_SCAN_SECRET_ENV_NAME = 'ORDERLY_FOLLOWUP_AUTO_SCAN_SECRET'
 const AUTO_SCAN_WORKSPACE_ID_ENV_NAME = 'ORDERLY_FOLLOWUP_AUTO_SCAN_WORKSPACE_ID'
@@ -146,12 +145,7 @@ function requireOperatorId() {
 
 function isAllowedOperatorId(operatorId) {
   const allowed = normalizeArray(process.env[ALLOWED_OPENIDS_ENV_NAME])
-  return allowed.indexOf(operatorId) >= 0 || isAuthAllowAllDevEnabled()
-}
-
-function isAuthAllowAllDevEnabled() {
-  const runtime = String(process.env.ORDERLY_RUNTIME_ENV || process.env.NODE_ENV || '').trim().toLowerCase()
-  return process.env[AUTH_ALLOW_ALL_DEV_ENV_NAME] === '1' && ['development', 'dev', 'test', 'local'].indexOf(runtime) >= 0
+  return allowed.indexOf(operatorId) >= 0
 }
 
 function rejectOversizedEvent(event) {
