@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Orderly.Core.Models;
 using Orderly.Core.Services;
@@ -276,8 +277,8 @@ public sealed partial class StringNarrationGatewayOrderService : IStringNarratio
                     continue;
                 }
 
-                if (property.Value.ValueKind == JsonValueKind.String
-                    && int.TryParse(property.Value.GetString(), out count))
+                if (TryReadBoundedString(property.Value, out var stringCount)
+                    && int.TryParse(stringCount, NumberStyles.Integer, CultureInfo.InvariantCulture, out count))
                 {
                     counts[StringNarrationFulfillmentStatusCatalog.Normalize(property.Name)] = count;
                 }
@@ -292,7 +293,8 @@ public sealed partial class StringNarrationGatewayOrderService : IStringNarratio
                 {
                     counts[definition.FulfillmentStatus] = count;
                 }
-                else if (value.ValueKind == JsonValueKind.String && int.TryParse(value.GetString(), out count))
+                else if (TryReadBoundedString(value, out var stringCount)
+                         && int.TryParse(stringCount, NumberStyles.Integer, CultureInfo.InvariantCulture, out count))
                 {
                     counts[definition.FulfillmentStatus] = count;
                 }
