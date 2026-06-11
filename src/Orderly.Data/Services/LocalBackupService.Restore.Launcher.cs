@@ -13,6 +13,12 @@ public sealed partial class LocalBackupService
     private const int MaxLauncherNonceBytes = 12;
     private const int MaxLauncherTagBytes = 16;
     private const int MaxLauncherTimestampCharacters = 64;
+    private const int MaxLauncherSnapshotJsonDepth = 16;
+
+    private static readonly JsonSerializerOptions LauncherSnapshotJsonOptions = new()
+    {
+        MaxDepth = MaxLauncherSnapshotJsonDepth
+    };
 
     private async Task RestoreLauncherSnapshotAsync(BackupManifest manifest, CancellationToken cancellationToken)
     {
@@ -31,27 +37,32 @@ public sealed partial class LocalBackupService
             throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 的备份结构无效。");
         }
 
-        List<LauncherAccountBackupRow>? rows;
+        var rowCount = launcherTableElement.GetArrayLength();
+        if (rowCount == 0)
+        {
+            return;
+        }
+
+        if (rowCount > 1)
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 包含多条账号快照，不允许恢复。");
+        }
+
+        LauncherAccountBackupRow? row;
         try
         {
-            rows = JsonSerializer.Deserialize<List<LauncherAccountBackupRow>>(launcherTableElement.GetRawText());
+            row = JsonSerializer.Deserialize<LauncherAccountBackupRow>(launcherTableElement[0].GetRawText(), LauncherSnapshotJsonOptions);
         }
         catch (JsonException ex)
         {
             throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 解析失败：{ex.Message}");
         }
 
-        if (rows is null || rows.Count == 0)
+        if (row is null)
         {
-            return;
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 的账号快照为空。");
         }
 
-        if (rows.Count > 1)
-        {
-            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 包含多条账号快照，不允许恢复。");
-        }
-
-        var row = rows[0];
         ValidateLauncherSnapshotRow(row);
 
         var currentSessionAccountId = _sessionContextService?.Current?.AccountId;
