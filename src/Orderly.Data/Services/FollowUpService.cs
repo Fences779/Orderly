@@ -6,6 +6,13 @@ namespace Orderly.Data.Services;
 
 public sealed class FollowUpService : IFollowUpService
 {
+    private const int MaxFollowUpTitleCharacters = 120;
+    private const int MaxFollowUpContentCharacters = 2000;
+    private const int ActivityDescriptionCharacters = 120;
+
+    private static readonly DateTime MinFollowUpDate = new(2000, 1, 1);
+    private static readonly DateTime MaxFollowUpDate = new(2100, 1, 1);
+
     private readonly IFollowUpRepository _followUpRepository;
     private readonly IActivityLogRepository _activityLogRepository;
 
@@ -32,6 +39,9 @@ public sealed class FollowUpService : IFollowUpService
 
     public async Task<FollowUp> SaveFollowUpAsync(FollowUp followUp, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(followUp);
+
+        NormalizeFollowUp(followUp);
         if (followUp.Id <= 0)
         {
             var created = await _followUpRepository.CreateAsync(followUp, cancellationToken);
@@ -45,6 +55,7 @@ public sealed class FollowUpService : IFollowUpService
 
     public async Task CompleteFollowUpAsync(int id, DateTime completedAt, CancellationToken cancellationToken = default)
     {
+        EnsureDateInRange(completedAt, "跟进完成时间");
         var followUp = await _followUpRepository.GetByIdAsync(id, cancellationToken);
         if (followUp is null || !FollowUpStatusHelper.CanTransition(followUp.Status))
         {
@@ -59,6 +70,7 @@ public sealed class FollowUpService : IFollowUpService
 
     public async Task SnoozeFollowUpAsync(int id, DateTime scheduledAt, CancellationToken cancellationToken = default)
     {
+        EnsureDateInRange(scheduledAt, "跟进计划时间");
         var followUp = await _followUpRepository.GetByIdAsync(id, cancellationToken);
         if (followUp is null || !FollowUpStatusHelper.CanTransition(followUp.Status) || followUp.ScheduledAt == scheduledAt)
         {
@@ -102,8 +114,82 @@ public sealed class FollowUpService : IFollowUpService
             DealId = dealId,
             OrderId = orderId,
             Title = title,
-            Description = description,
+            Description = BuildActivityDescription(description),
             Operator = "local"
         }, cancellationToken);
+    }
+
+    private static void NormalizeFollowUp(FollowUp followUp)
+    {
+        if (followUp.CustomerId <= 0)
+        {
+            throw new InvalidOperationException("跟进缺少有效客户。");
+        }
+
+        if (!Enum.IsDefined(followUp.Status))
+        {
+            throw new InvalidOperationException("跟进状态无效。");
+        }
+
+        EnsureDateInRange(followUp.ScheduledAt, "跟进计划时间");
+        if (followUp.CompletedAt is DateTime completedAt)
+        {
+            EnsureDateInRange(completedAt, "跟进完成时间");
+        }
+
+        if (followUp.ReminderAt is DateTime reminderAt)
+        {
+            EnsureDateInRange(reminderAt, "跟进提醒时间");
+        }
+
+        followUp.Title = NormalizeRequiredText(followUp.Title, MaxFollowUpTitleCharacters, "跟进标题", allowLineBreaks: false);
+        followUp.Content = NormalizeOptionalText(followUp.Content, MaxFollowUpContentCharacters, "跟进内容", allowLineBreaks: true);
+    }
+
+    private static void EnsureDateInRange(DateTime value, string fieldName)
+    {
+        if (value < MinFollowUpDate || value > MaxFollowUpDate)
+        {
+            throw new InvalidOperationException($"{fieldName}超出允许范围。");
+        }
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
+    }
+
+    private static string BuildActivityDescription(string description)
+    {
+        var singleLine = new string((description ?? string.Empty)
+            .Select(static ch => ch is '\r' or '\n' or '\t' ? ' ' : ch)
+            .ToArray())
+            .Trim();
+
+        return singleLine.Length <= ActivityDescriptionCharacters
+            ? singleLine
+            : $"{singleLine[..ActivityDescriptionCharacters]}...";
     }
 }
