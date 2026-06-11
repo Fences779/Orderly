@@ -263,28 +263,33 @@ public sealed partial class LocalBackupService
             return null;
         }
 
+        if (!schemaVersionElement.TryGetInt32(out var schemaVersion))
+        {
+            errors.Add("schemaVersion 格式无效。");
+        }
+
+        var app = ReadRequiredManifestString(appElement, "app", MaxBackupMetadataScalarCharacters, errors);
+        var exportedAtText = ReadRequiredManifestString(exportedAtElement, "exportedAt", MaxBackupMetadataTimestampCharacters, errors);
+        var exportedAtValid = DateTimeOffset.TryParse(exportedAtText, out var exportedAt);
+        if (!exportedAtValid)
+        {
+            errors.Add("exportedAt 格式无效。");
+        }
+
+        if (errors.Count > 0)
+        {
+            return null;
+        }
+
         var manifest = new BackupManifest
         {
-            SchemaVersion = schemaVersionElement.GetInt32(),
-            App = appElement.GetString() ?? "Orderly",
-            ExportedAt = DateTimeOffset.TryParse(exportedAtElement.GetString(), out var exportedAt)
-                ? exportedAt
-                : default,
-            Checksum = root.TryGetProperty("checksum", out var checksumElement) && checksumElement.ValueKind == JsonValueKind.String
-                ? checksumElement.GetString() ?? string.Empty
-                : string.Empty,
-            IntegrityAlgorithm = root.TryGetProperty("integrityAlgorithm", out var integrityAlgorithmElement)
-                && integrityAlgorithmElement.ValueKind == JsonValueKind.String
-                ? integrityAlgorithmElement.GetString() ?? string.Empty
-                : string.Empty,
-            IntegrityKeyScope = root.TryGetProperty("integrityKeyScope", out var integrityKeyScopeElement)
-                && integrityKeyScopeElement.ValueKind == JsonValueKind.String
-                ? integrityKeyScopeElement.GetString() ?? string.Empty
-                : string.Empty,
-            IntegrityTag = root.TryGetProperty("integrityTag", out var integrityTagElement)
-                && integrityTagElement.ValueKind == JsonValueKind.String
-                ? integrityTagElement.GetString() ?? string.Empty
-                : string.Empty
+            SchemaVersion = schemaVersion,
+            App = app,
+            ExportedAt = exportedAt,
+            Checksum = ReadOptionalManifestString(root, "checksum", MaxBackupMetadataScalarCharacters),
+            IntegrityAlgorithm = ReadOptionalManifestString(root, "integrityAlgorithm", MaxBackupMetadataScalarCharacters),
+            IntegrityKeyScope = ReadOptionalManifestString(root, "integrityKeyScope", MaxBackupMetadataScalarCharacters),
+            IntegrityTag = ReadOptionalManifestString(root, "integrityTag", MaxBackupMetadataScalarCharacters)
         };
 
         foreach (var property in countsElement.EnumerateObject())
@@ -300,12 +305,42 @@ public sealed partial class LocalBackupService
             manifest.Tables[property.Name] = property.Value.Clone();
         }
 
-        if (manifest.ExportedAt == default)
+        return manifest;
+    }
+
+    private static string ReadRequiredManifestString(
+        JsonElement element,
+        string fieldName,
+        int maxCharacters,
+        ICollection<string> errors)
+    {
+        var value = NormalizeManifestString(element.GetString(), maxCharacters);
+        if (string.IsNullOrWhiteSpace(value))
         {
-            errors.Add("exportedAt 格式无效。");
+            errors.Add($"{fieldName} 格式无效。");
         }
 
-        return manifest;
+        return value;
+    }
+
+    private static string ReadOptionalManifestString(JsonElement root, string fieldName, int maxCharacters)
+    {
+        return root.TryGetProperty(fieldName, out var element) && element.ValueKind == JsonValueKind.String
+            ? NormalizeManifestString(element.GetString(), maxCharacters)
+            : string.Empty;
+    }
+
+    private static string NormalizeManifestString(string? value, int maxCharacters)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim();
+        return normalized.Length <= maxCharacters && !normalized.Any(char.IsControl)
+            ? normalized
+            : string.Empty;
     }
 
     private static void ValidateTableShape(string tableName, JsonElement tableElement, ICollection<string> errors)
