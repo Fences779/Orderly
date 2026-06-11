@@ -10,6 +10,14 @@ namespace Orderly.Data.Repositories;
 
 public sealed class PriceAdjustmentRepository : IPriceAdjustmentRepository
 {
+    private const int MaxReasonCharacters = 1000;
+    private const int MaxPersonNameCharacters = 80;
+    private const int MaxRemoteIdCharacters = 160;
+    private const decimal MaxAdjustmentAmount = 100_000_000m;
+
+    private static readonly DateTime MinAdjustmentDate = new(2000, 1, 1);
+    private static readonly DateTime MaxAdjustmentDate = new(2100, 1, 1);
+
     private readonly SqliteConnectionFactory _connectionFactory;
     private readonly IFieldEncryptionService _fieldEncryptionService;
 
@@ -21,6 +29,9 @@ public sealed class PriceAdjustmentRepository : IPriceAdjustmentRepository
 
     public async Task<PriceAdjustment> CreateAsync(PriceAdjustment adjustment, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(adjustment);
+
+        NormalizeAdjustment(adjustment);
         var now = DateTime.Now;
         if (adjustment.CreatedAt == default)
         {
@@ -105,6 +116,9 @@ public sealed class PriceAdjustmentRepository : IPriceAdjustmentRepository
 
     public async Task UpdateAsync(PriceAdjustment adjustment, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(adjustment);
+
+        NormalizeAdjustment(adjustment);
         adjustment.UpdatedAt = DateTime.Now;
         adjustment.IsSynced = false;
         adjustment.Version = Math.Max(1, adjustment.Version + 1);
@@ -178,6 +192,86 @@ public sealed class PriceAdjustmentRepository : IPriceAdjustmentRepository
         }
 
         return rows;
+    }
+
+    private static void NormalizeAdjustment(PriceAdjustment adjustment)
+    {
+        if (adjustment.CustomerId <= 0)
+        {
+            throw new InvalidOperationException("改价申请缺少有效客户。");
+        }
+
+        if (adjustment.DealId is <= 0)
+        {
+            throw new InvalidOperationException("改价申请成交机会无效。");
+        }
+
+        if (adjustment.OrderId is <= 0)
+        {
+            throw new InvalidOperationException("改价申请订单无效。");
+        }
+
+        if (!Enum.IsDefined(adjustment.Status))
+        {
+            throw new InvalidOperationException("改价状态无效。");
+        }
+
+        if (adjustment.OriginalAmount < 0 || adjustment.OriginalAmount > MaxAdjustmentAmount)
+        {
+            throw new InvalidOperationException("改价原价超出允许范围。");
+        }
+
+        if (adjustment.AdjustedAmount < 0 || adjustment.AdjustedAmount > MaxAdjustmentAmount)
+        {
+            throw new InvalidOperationException("改价后价格超出允许范围。");
+        }
+
+        EnsureOptionalDateInRange(adjustment.ApprovedAt, "改价审批时间");
+
+        adjustment.Reason = NormalizeRequiredText(adjustment.Reason, MaxReasonCharacters, "改价原因", allowLineBreaks: true);
+        adjustment.RequestedBy = NormalizeOptionalText(adjustment.RequestedBy, MaxPersonNameCharacters, "改价申请人", allowLineBreaks: false);
+        adjustment.ApprovedBy = NormalizeOptionalText(adjustment.ApprovedBy, MaxPersonNameCharacters, "改价审批人", allowLineBreaks: false);
+        adjustment.RemoteId = NormalizeOptionalText(adjustment.RemoteId, MaxRemoteIdCharacters, "改价远端标识", allowLineBreaks: false);
+    }
+
+    private static void EnsureOptionalDateInRange(DateTime? value, string fieldName)
+    {
+        if (value is not DateTime dateTime)
+        {
+            return;
+        }
+
+        if (dateTime < MinAdjustmentDate || dateTime > MaxAdjustmentDate)
+        {
+            throw new InvalidOperationException($"{fieldName}超出允许范围。");
+        }
+    }
+
+    private static string NormalizeRequiredText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = NormalizeOptionalText(value, maxCharacters, fieldName, allowLineBreaks);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException($"{fieldName}不能为空。");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeOptionalText(string? value, int maxCharacters, string fieldName, bool allowLineBreaks)
+    {
+        var normalized = value?.Trim() ?? string.Empty;
+        if (normalized.Length > maxCharacters)
+        {
+            throw new InvalidOperationException($"{fieldName}不能超过 {maxCharacters} 个字符。");
+        }
+
+        if (normalized.Any(ch => char.IsControl(ch) && !(allowLineBreaks && ch is '\r' or '\n' or '\t')))
+        {
+            throw new InvalidOperationException($"{fieldName}不能包含控制字符。");
+        }
+
+        return normalized;
     }
 
     private const string SelectSql = """
