@@ -214,6 +214,12 @@ public sealed partial class LocalBackupService
             throw new InvalidOperationException($"表 {safeTableName} 的备份结构无效。");
         }
 
+        var columnTypes = await ReadRestoreColumnTypesAsync(
+            connection,
+            transaction,
+            safeTableName,
+            cancellationToken);
+
         foreach (var row in tableElement.EnumerateArray())
         {
             if (row.ValueKind != JsonValueKind.Object)
@@ -232,12 +238,87 @@ public sealed partial class LocalBackupService
 
             for (var index = 0; index < properties.Length; index++)
             {
+                if (!columnTypes.TryGetValue(properties[index].Name, out var declaredType))
+                {
+                    throw new InvalidOperationException(
+                        $"表 {safeTableName} 字段 {properties[index].Name} 不存在于目标数据库。");
+                }
+
+                ValidateRestoreValueType(
+                    safeTableName,
+                    properties[index].Name,
+                    properties[index].Value,
+                    declaredType);
                 command.Parameters.AddWithValue(
                     $"$p{index}",
                     ConvertRestoreJsonValue(safeTableName, properties[index].Name, properties[index].Value));
             }
 
             await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    private static async Task<Dictionary<string, string>> ReadRestoreColumnTypesAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string tableName,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"PRAGMA table_info({QuoteSqlIdentifier(tableName)});";
+
+        var columnTypes = new Dictionary<string, string>(StringComparer.Ordinal);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            columnTypes[reader.GetString(1)] = reader.GetString(2);
+        }
+
+        if (columnTypes.Count == 0)
+        {
+            throw new InvalidOperationException($"表 {tableName} 不存在于目标数据库。");
+        }
+
+        return columnTypes;
+    }
+
+    private static void ValidateRestoreValueType(
+        string tableName,
+        string columnName,
+        JsonElement value,
+        string declaredType)
+    {
+        if (value.ValueKind == JsonValueKind.Null)
+        {
+            return;
+        }
+
+        var normalizedType = declaredType.Trim().ToUpperInvariant();
+        var isValid = normalizedType switch
+        {
+            var type when type.Contains("INT", StringComparison.Ordinal) =>
+                value.ValueKind is JsonValueKind.True or JsonValueKind.False
+                || value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out _),
+            var type when type.Contains("REAL", StringComparison.Ordinal)
+                || type.Contains("FLOA", StringComparison.Ordinal)
+                || type.Contains("DOUB", StringComparison.Ordinal)
+                || type.Contains("NUM", StringComparison.Ordinal)
+                || type.Contains("DEC", StringComparison.Ordinal) =>
+                value.ValueKind == JsonValueKind.Number,
+            var type when type.Contains("CHAR", StringComparison.Ordinal)
+                || type.Contains("CLOB", StringComparison.Ordinal)
+                || type.Contains("TEXT", StringComparison.Ordinal) =>
+                value.ValueKind == JsonValueKind.String,
+            var type when type.Contains("BLOB", StringComparison.Ordinal) =>
+                value.ValueKind == JsonValueKind.String,
+            _ => false
+        };
+
+        if (!isValid)
+        {
+            throw new InvalidOperationException(
+                $"表 {tableName} 字段 {columnName} 的值类型与目标列 {declaredType} 不匹配。");
         }
     }
 
