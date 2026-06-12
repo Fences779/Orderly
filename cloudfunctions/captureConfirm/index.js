@@ -238,13 +238,13 @@ function sanitizeLogData(value, key) {
   return value
 }
 
-async function addLog(workspaceId, entityType, entityId, actionType, beforeData, afterData, note, operatorId) {
-  await db.collection('activity_logs').add({
+async function addLog(database, workspaceId, entityType, entityId, actionType, beforeData, afterData, note, operatorId) {
+  await database.collection('activity_logs').add({
     data: { workspaceId, entityType, entityId, actionType, beforeData: sanitizeLogData(beforeData), afterData: sanitizeLogData(afterData), note, operatorId, createdAt: now() }
   })
 }
 
-async function createCustomer(workspaceId, form, operatorId) {
+async function createCustomer(database, workspaceId, form, operatorId) {
   const customer = {
     workspaceId,
     name: normalizeText(form.customerName),
@@ -265,9 +265,9 @@ async function createCustomer(workspaceId, form, operatorId) {
     createdBy: operatorId,
     updatedBy: operatorId
   }
-  const added = await db.collection('customers').add({ data: customer })
+  const added = await database.collection('customers').add({ data: customer })
   const full = Object.assign({}, customer, { _id: added._id })
-  await addLog(workspaceId, 'customer', added._id, 'customer_create', {}, full, 'capture 确认建档', operatorId)
+  await addLog(database, workspaceId, 'customer', added._id, 'customer_create', {}, full, 'capture 确认建档', operatorId)
   return full
 }
 
@@ -306,70 +306,72 @@ async function handleRequest(event) {
   const urgencyLevel = normalizeUrgencyLevel(form.urgencyLevel || 'low')
   if (!urgencyLevel) return { ok: false, code: 'invalid_urgency_level', message: '非法 urgencyLevel。' }
 
-  const capture = (await db.collection('captures').doc(captureId).get()).data
-  if (!capture || capture.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'capture 不存在。' }
-  if (capture.confirmStatus === 'confirmed' && capture.linkedDealId) {
-    return { ok: true, customerId: capture.linkedCustomerId, dealId: capture.linkedDealId, message: 'capture 已确认' }
-  }
-  if (capture.createdBy !== operatorId) {
-    return { ok: false, code: 'not_found', message: 'capture 不存在。' }
-  }
-
-  let customer
-  if (event.customerMode === 'existing' && event.selectedCustomerId) {
-    const selectedCustomerId = normalizeDocId(event.selectedCustomerId)
-    if (!selectedCustomerId) return { ok: false, code: 'invalid_customer_id', message: '非法客户 ID。' }
-    customer = (await db.collection('customers').doc(selectedCustomerId).get()).data
-    if (!customer || customer.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
-    await db.collection('customers').doc(selectedCustomerId).update({ data: { lastContactAt: now(), updatedAt: now(), updatedBy: operatorId } })
-  } else {
-    customer = await createCustomer(workspaceId, Object.assign({}, form, { customerName, platform }), operatorId)
-  }
-
-  const deal = {
-    workspaceId,
-    customerId: customer._id,
-    title: normalizeText(form.title || demandSummary.slice(0, 24)),
-    sourceEntry: platform || customer.platform || 'wechat',
-    dealStage,
-    priorityLevel: urgencyLevel === 'high' ? 'high' : 'medium',
-    intentCategory: normalizeText(form.intentCategory),
-    demandSummary,
-    styleTags: normalizeLimitedArray(form.styleTags),
-    materialTags: normalizeLimitedArray(form.materialTags),
-    sizeSpec: normalizeText(form.sizeSpec),
-    colorPref: normalizeText(form.colorPref),
-    budgetMin: money(form.budgetMin),
-    budgetMax: money(form.budgetMax),
-    deadlineAt: normalizeTextWithLimit(form.deadlineAt, 64),
-    urgencyLevel,
-    riskFlags: normalizeLimitedArray(form.riskFlags),
-    latestQuoteId: '',
-    nextFollowupAt: '',
-    lastInteractionAt: now(),
-    followupCount: 0,
-    lossReason: '',
-    archivedAt: '',
-    createdAt: now(),
-    updatedAt: now(),
-    createdBy: operatorId,
-    updatedBy: operatorId
-  }
-  const addedDeal = await db.collection('deals').add({ data: deal })
-  const dealId = addedDeal._id
-  await db.collection('captures').doc(captureId).update({
-    data: {
-      parserResult: capture.parserResult,
-      confirmStatus: 'confirmed',
-      linkedCustomerId: customer._id,
-      linkedDealId: dealId,
-      updatedAt: now()
+  return db.runTransaction(async (transaction) => {
+    const capture = (await transaction.collection('captures').doc(captureId).get()).data
+    if (!capture || capture.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'capture 不存在。' }
+    if (capture.confirmStatus === 'confirmed' && capture.linkedDealId) {
+      return { ok: true, customerId: capture.linkedCustomerId, dealId: capture.linkedDealId, message: 'capture 已确认' }
     }
-  })
-  await addLog(workspaceId, 'capture', captureId, 'capture_confirm', capture, { linkedCustomerId: customer._id, linkedDealId: dealId }, 'capture 确认入库', operatorId)
-  await addLog(workspaceId, 'deal', dealId, 'deal_create', {}, Object.assign({}, deal, { _id: dealId }), 'capture 确认创建 deal', operatorId)
+    if (capture.createdBy !== operatorId) {
+      return { ok: false, code: 'not_found', message: 'capture 不存在。' }
+    }
 
-  return { ok: true, customerId: customer._id, dealId }
+    let customer
+    if (event.customerMode === 'existing' && event.selectedCustomerId) {
+      const selectedCustomerId = normalizeDocId(event.selectedCustomerId)
+      if (!selectedCustomerId) return { ok: false, code: 'invalid_customer_id', message: '非法客户 ID。' }
+      customer = (await transaction.collection('customers').doc(selectedCustomerId).get()).data
+      if (!customer || customer.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: '客户不存在。' }
+      await transaction.collection('customers').doc(selectedCustomerId).update({ data: { lastContactAt: now(), updatedAt: now(), updatedBy: operatorId } })
+    } else {
+      customer = await createCustomer(transaction, workspaceId, Object.assign({}, form, { customerName, platform }), operatorId)
+    }
+
+    const deal = {
+      workspaceId,
+      customerId: customer._id,
+      title: normalizeText(form.title || demandSummary.slice(0, 24)),
+      sourceEntry: platform || customer.platform || 'wechat',
+      dealStage,
+      priorityLevel: urgencyLevel === 'high' ? 'high' : 'medium',
+      intentCategory: normalizeText(form.intentCategory),
+      demandSummary,
+      styleTags: normalizeLimitedArray(form.styleTags),
+      materialTags: normalizeLimitedArray(form.materialTags),
+      sizeSpec: normalizeText(form.sizeSpec),
+      colorPref: normalizeText(form.colorPref),
+      budgetMin: money(form.budgetMin),
+      budgetMax: money(form.budgetMax),
+      deadlineAt: normalizeTextWithLimit(form.deadlineAt, 64),
+      urgencyLevel,
+      riskFlags: normalizeLimitedArray(form.riskFlags),
+      latestQuoteId: '',
+      nextFollowupAt: '',
+      lastInteractionAt: now(),
+      followupCount: 0,
+      lossReason: '',
+      archivedAt: '',
+      createdAt: now(),
+      updatedAt: now(),
+      createdBy: operatorId,
+      updatedBy: operatorId
+    }
+    const addedDeal = await transaction.collection('deals').add({ data: deal })
+    const dealId = addedDeal._id
+    await transaction.collection('captures').doc(captureId).update({
+      data: {
+        parserResult: capture.parserResult,
+        confirmStatus: 'confirmed',
+        linkedCustomerId: customer._id,
+        linkedDealId: dealId,
+        updatedAt: now()
+      }
+    })
+    await addLog(transaction, workspaceId, 'capture', captureId, 'capture_confirm', capture, { linkedCustomerId: customer._id, linkedDealId: dealId }, 'capture 确认入库', operatorId)
+    await addLog(transaction, workspaceId, 'deal', dealId, 'deal_create', {}, Object.assign({}, deal, { _id: dealId }), 'capture 确认创建 deal', operatorId)
+
+    return { ok: true, customerId: customer._id, dealId }
+  })
 }
 
 exports.main = async (event) => {
