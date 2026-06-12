@@ -68,39 +68,39 @@ function getPool() {
     decimalNumbers: true,
     dateStrings: true
   }
-  const ssl = resolveSqlSsl(host)
-  if (ssl) config.ssl = ssl
+  config.ssl = resolveSqlSsl()
 
   pool = mysql.createPool(config)
   return pool
 }
 
-function resolveSqlSsl(host) {
-  const allowPlaintext = normalizeBool(getEnv('ORDERLY_INVENTORY_SQL_ALLOW_PLAINTEXT'), false)
-  const rawMode = getEnv('ORDERLY_INVENTORY_SQL_SSL_MODE')
-  const mode = (rawMode || (allowPlaintext || isLocalSqlHost(host) ? 'disabled' : 'required')).toLowerCase()
-  if (['disabled', 'disable', 'off', 'false', '0', 'plaintext'].includes(mode)) {
-    if (!allowPlaintext && !isLocalSqlHost(host)) {
-      throw createError(500, 'sql_tls_required', '库存 SQL 连接必须启用 TLS。', false)
-    }
-    return null
+function resolveSqlSsl() {
+  const allowPlaintext = getEnv('ORDERLY_INVENTORY_SQL_ALLOW_PLAINTEXT')
+  if (normalizeBool(allowPlaintext, false)) {
+    throw createError(500, 'sql_tls_required', '库存 SQL 连接必须启用 TLS，不能配置为明文连接。', false)
   }
 
-  if (!['required', 'require', 'true', '1', 'verify_ca', 'verify_identity'].includes(mode)) {
+  const rawMode = getEnv('ORDERLY_INVENTORY_SQL_SSL_MODE')
+  const mode = rawMode.toLowerCase()
+  if (['disabled', 'disable', 'off', 'false', '0', 'plaintext'].includes(mode)) {
+    throw createError(500, 'sql_tls_required', '库存 SQL 连接必须启用 TLS，不能配置为明文连接。', false)
+  }
+
+  if (mode && !['required', 'require', 'true', '1', 'verify_ca', 'verify_identity'].includes(mode)) {
     throw createError(500, 'sql_tls_mode_invalid', '库存 SQL TLS 模式配置无效。', false)
   }
 
+  const rejectUnauthorized = getEnv('ORDERLY_INVENTORY_SQL_SSL_REJECT_UNAUTHORIZED')
+  if (rejectUnauthorized && !normalizeBool(rejectUnauthorized, true)) {
+    throw createError(500, 'sql_tls_verification_required', '库存 SQL 连接必须校验证书。', false)
+  }
+
   const ssl = {
-    rejectUnauthorized: normalizeBool(getEnv('ORDERLY_INVENTORY_SQL_SSL_REJECT_UNAUTHORIZED'), true)
+    rejectUnauthorized: true
   }
   const ca = getEnv('ORDERLY_INVENTORY_SQL_SSL_CA')
   if (ca) ssl.ca = ca.replace(/\\n/g, '\n')
   return ssl
-}
-
-function isLocalSqlHost(host) {
-  const normalized = String(host || '').trim().toLowerCase()
-  return normalized === 'localhost' || normalized === '::1' || normalized.startsWith('127.')
 }
 
 function createError(statusCode, code, message, expose = statusCode < 500) {
