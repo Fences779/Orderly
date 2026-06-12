@@ -133,6 +133,7 @@ public sealed class LocalAuthService : ILocalAuthService
             pendingSession = CreateSession(account, dataKey, now);
             _sessionContextService.SetCurrent(pendingSession);
             await BackfillFirstOwnerSensitiveFieldsAsync(accountConnectionFactory, cancellationToken);
+            CryptographicOperations.ZeroMemory(pendingSession.DataKey);
 
             return new CreateFirstOwnerResult
             {
@@ -268,6 +269,7 @@ public sealed class LocalAuthService : ILocalAuthService
 
             var session = CreateSession(account, dataKey, account.LastLoginAt.Value);
             _sessionContextService.SetCurrent(session);
+            CryptographicOperations.ZeroMemory(session.DataKey);
             ClearCredentialFailures("signin", normalizedUsername);
             return LocalSignInResult.Success(session);
         }
@@ -303,6 +305,13 @@ public sealed class LocalAuthService : ILocalAuthService
         }
 
         var verified = LocalCredentialSecurity.VerifyHash(pin, account.PinSalt, account.PinIterations, account.PinHash);
+        if (verified
+            && _sessionContextService.IsSignedIn
+            && !_sessionContextService.IsDataKeyAvailable)
+        {
+            verified = _sessionContextService.TryRestoreDataKey(normalizedAccountId);
+        }
+
         RecordCredentialResult("pin", normalizedAccountId, verified);
         return verified;
     }

@@ -5,7 +5,13 @@ namespace Orderly.Data.Services;
 
 public sealed class SessionLockService : ISessionLockService
 {
+    private readonly ISessionContextService _sessionContextService;
     private SessionLockState _state = SessionLockState.LoggedOut;
+
+    public SessionLockService(ISessionContextService sessionContextService)
+    {
+        _sessionContextService = sessionContextService;
+    }
 
     public event EventHandler<SessionLockState>? LockStateChanged;
 
@@ -22,6 +28,7 @@ public sealed class SessionLockService : ISessionLockService
     {
         if (_state == SessionLockState.Unlocked)
         {
+            _sessionContextService.SuspendDataKey();
             SetState(SessionLockState.PendingPinUnlock);
         }
     }
@@ -30,6 +37,7 @@ public sealed class SessionLockService : ISessionLockService
     {
         if (_state == SessionLockState.Unlocked)
         {
+            _sessionContextService.SuspendDataKey();
             SetState(SessionLockState.PendingPinUnlock);
         }
     }

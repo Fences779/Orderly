@@ -236,13 +236,26 @@ public partial class App : System.Windows.Application
         }
 
         _isLoginCompleted = true;
-        _sessionContextService?.SetCurrent(session);
+        var currentSession = _sessionContextService?.Current;
+        if (currentSession is null
+            || !string.Equals(currentSession.AccountId, session.AccountId, StringComparison.Ordinal)
+            || _sessionContextService?.IsDataKeyAvailable != true)
+        {
+            if (session.DataKey.Length != 32)
+            {
+                throw new InvalidOperationException("Authenticated session data key is unavailable.");
+            }
+
+            _sessionContextService?.SetCurrent(session);
+            currentSession = _sessionContextService?.Current;
+        }
+
         _sessionLockService?.MarkSignedIn();
         _loginView?.Close();
 
         try
         {
-            await InitializeWorkspaceAsync(session.DatabasePath);
+            await InitializeWorkspaceAsync(currentSession?.DatabasePath ?? session.DatabasePath);
         }
         catch (Exception ex)
         {

@@ -50,7 +50,7 @@ public partial class App
         var legacyMigrationService = new LegacyDatabaseMigrationService();
 
         _sessionContextService = new SessionContextService();
-        _sessionLockService = new SessionLockService();
+        _sessionLockService = new SessionLockService(_sessionContextService);
         _fieldEncryptionService = new FieldEncryptionService(_sessionContextService);
         _localAuthService = new LocalAuthService(accountRepository, legacyMigrationService, _sessionContextService, credentialAttemptTracker);
         _localAccountManagementService = new LocalAccountManagementService(accountRepository, _sessionContextService, credentialAttemptTracker);

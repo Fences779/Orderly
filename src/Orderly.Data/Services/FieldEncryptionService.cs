@@ -172,7 +172,9 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
     private byte[] RequireCurrentDataKey()
     {
         var dataKey = _sessionContextService.Current?.DataKey;
-        if (dataKey is null || dataKey.Length != DataKeyByteLength)
+        if (!_sessionContextService.IsDataKeyAvailable
+            || dataKey is null
+            || dataKey.Length != DataKeyByteLength)
         {
             throw new InvalidOperationException("No signed-in session data key is available.");
         }
