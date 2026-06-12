@@ -20,13 +20,19 @@ function chooseImage() {
 }
 
 function uploadImage(path) {
-  const suffix = path.split('.').pop() || 'jpg'
+  const suffix = normalizeImageSuffix(path)
   return wx.cloud.uploadFile({
     cloudPath: 'captures/ocr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '.' + suffix,
     filePath: path
   }).then(function(res) {
     return res.fileID
   })
+}
+
+function normalizeImageSuffix(path) {
+  const raw = String(path || '').split('.').pop() || 'jpg'
+  const suffix = raw.trim().toLowerCase()
+  return /^(png|jpg|jpeg|bmp|gif|webp)$/.test(suffix) ? suffix : 'jpg'
 }
 
 function recognize(fileID) {
