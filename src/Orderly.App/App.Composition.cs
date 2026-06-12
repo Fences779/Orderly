@@ -28,7 +28,9 @@ public partial class App
         }
 
         var launcherPath = DatabasePaths.GetLauncherDatabasePath();
-        _launcherConnectionFactory = new LauncherConnectionFactory(launcherPath);
+        Func<byte[]?> launcherKeyProvider = static () => LauncherDatabaseKeyStore.GetOrCreateKeyCopy();
+        SqliteDatabaseEncryptionMigrator.EnsureEncrypted(launcherPath, launcherKeyProvider, "启动器数据库");
+        _launcherConnectionFactory = new LauncherConnectionFactory(launcherPath, launcherKeyProvider);
         var launcherInitializer = new LauncherDatabaseInitializer(_launcherConnectionFactory);
         await launcherInitializer.InitializeAsync();
     }
@@ -373,7 +375,10 @@ public partial class App
         }
 
         _databasePath = databasePath;
-        _connectionFactory = new SqliteConnectionFactory(_databasePath);
+        var sessionContextService = _sessionContextService ?? throw new InvalidOperationException("Session context service is not initialized.");
+        Func<byte[]?> accountKeyProvider = () => sessionContextService.Current?.DataKey?.ToArray();
+        SqliteDatabaseEncryptionMigrator.EnsureEncrypted(_databasePath, accountKeyProvider, "账号数据库");
+        _connectionFactory = new SqliteConnectionFactory(_databasePath, accountKeyProvider);
 
         var initializer = new DatabaseInitializer(_connectionFactory);
         await initializer.InitializeAsync();

@@ -152,7 +152,7 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
 
             await _accountRepository.CreateAsync(member, cancellationToken);
 
-            var initializer = new DatabaseInitializer(new SqliteConnectionFactory(member.DatabasePath));
+            var initializer = new DatabaseInitializer(new SqliteConnectionFactory(member.DatabasePath, () => memberDataKey.ToArray()));
             await initializer.InitializeAsync(cancellationToken);
 
             return MapSummary(member);

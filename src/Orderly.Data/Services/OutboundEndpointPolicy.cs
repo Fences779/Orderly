@@ -201,7 +201,8 @@ internal static class OutboundEndpointPolicy
         if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
         {
             var bytes = address.GetAddressBytes();
-            return bytes[0] == 10
+            return bytes[0] == 0
+                || bytes[0] == 10
                 || bytes[0] == 127
                 || (bytes[0] == 169 && bytes[1] == 254)
                 || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)

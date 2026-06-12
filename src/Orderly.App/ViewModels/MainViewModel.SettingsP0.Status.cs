@@ -40,8 +40,8 @@ public partial class MainViewModel
 
     private void RefreshSecurityRuntimeStatus()
     {
-        DatabaseEncryptionStatusText = "未启用全库加密（文件层明文）；敏感字段通过会话密钥加密列保护。";
-        BackupEncryptionStatusText = "本地备份为 JSON 文件，未加密。";
+        DatabaseEncryptionStatusText = "已启用 SQLCipher 全库加密（AES-256；账号库用会话数据密钥，启动器库用本机 DPAPI 密钥）；敏感字段额外列级加密。";
+        BackupEncryptionStatusText = "本地备份为加密文件（AES-GCM 信封，配合 HMAC-SHA256 完整性校验，使用会话/本机保护密钥）。";
         LocalAccessProtectionStatusText = _sessionContextService?.IsSignedIn == true
             ? "已启用本地账号登录与 PIN 锁定链路。"
             : "未登录，无法确认本机访问保护状态。";
@@ -93,6 +93,7 @@ public partial class MainViewModel
                 Mode = SqliteOpenMode.ReadOnly
             }.ToString());
             await connection.OpenAsync(cancellationToken);
+            SqliteConnectionKeying.ApplyRawKey(connection, _sessionContextService?.Current?.DataKey?.ToArray());
 
             foreach (var table in requiredTables)
             {

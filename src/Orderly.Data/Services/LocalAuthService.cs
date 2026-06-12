@@ -136,7 +136,8 @@ public sealed class LocalAuthService : ILocalAuthService
                 }
             }
 
-            var accountConnectionFactory = new SqliteConnectionFactory(databasePath);
+            SqliteDatabaseEncryptionMigrator.EnsureEncrypted(databasePath, () => dataKey.ToArray(), "账号数据库");
+            var accountConnectionFactory = new SqliteConnectionFactory(databasePath, () => dataKey.ToArray());
             var initializer = new DatabaseInitializer(accountConnectionFactory);
             await initializer.InitializeAsync(cancellationToken);
 
