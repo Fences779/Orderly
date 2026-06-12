@@ -29,7 +29,8 @@ const MODE_PERMISSIONS = {
   templateSave: 'templates:write',
   templateUse: 'templates:use',
   skuSave: 'inventory:write',
-  inventoryMovementSave: 'inventory:movement'
+  inventoryMovementSave: 'inventory:movement',
+  cashflowSave: 'finance:write'
 }
 const MANUAL_TASK_FIELDS = ['dealId', 'customerId', 'customerName', 'dueAt', 'priorityScore', 'templateId', 'suggestedText']
 const TEMPLATE_FIELDS = ['_id', 'title', 'name', 'scene', 'sceneType', 'content', 'variables', 'enabled', 'tags', 'sortOrder']
