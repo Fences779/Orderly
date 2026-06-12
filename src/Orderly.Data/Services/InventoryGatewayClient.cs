@@ -27,7 +27,7 @@ public sealed class InventoryGatewayClient
     public async Task<JsonElement> InvokeAsync(string action, object payload, CancellationToken cancellationToken = default)
     {
         var endpoint = _options.GetEndpointUri();
-        _options.ValidateToken();
+        var token = _options.GetTokenForAction(action);
 
         var requestPayload = new
         {
@@ -36,7 +36,7 @@ public sealed class InventoryGatewayClient
         };
 
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.Token);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = new StringContent(JsonSerializer.Serialize(requestPayload, JsonOptions), Encoding.UTF8, "application/json");
 
         HttpResponseMessage response;

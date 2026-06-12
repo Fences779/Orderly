@@ -13,6 +13,7 @@ const HARD_MAX_EVENT_BYTES = 5 * 1024 * 1024
 const DEFAULT_MIN_GATEWAY_TOKEN_LENGTH = 24
 const MAX_GATEWAY_TOKEN_LENGTH = 4096
 const MAX_GATEWAY_AUTH_HEADER_LENGTH = MAX_GATEWAY_TOKEN_LENGTH + 16
+const ACTION_TOKEN_ENV_PREFIX = 'ORDERLY_INVENTORY_GATEWAY_TOKEN_'
 const MAX_SHORT_TEXT_LENGTH = 128
 const MAX_NOTE_TEXT_LENGTH = 512
 const MAX_SOURCE_TEXT_LENGTH = 256
@@ -258,10 +259,11 @@ function normalizeRequest(event) {
   })
 }
 
-function validateToken(request) {
-  const expected = getEnv('ORDERLY_INVENTORY_GATEWAY_TOKEN')
+function validateToken(request, action) {
+  const variableName = buildActionTokenEnvName(action)
+  const expected = getEnv(variableName)
   if (!expected) {
-    throw createError(500, 'gateway_token_missing', '库存云端网关未配置鉴权 token。', false)
+    throw createError(500, 'gateway_token_missing', `库存云端网关未配置 action token：${variableName}。`, false)
   }
   validateGatewayTokenStrength(expected)
 
@@ -274,6 +276,20 @@ function validateToken(request) {
   if (!tokensMatch(bearer, expected)) {
     throw createError(401, 'unauthorized', '库存云端网关 token 无效。')
   }
+}
+
+function buildActionTokenEnvName(action) {
+  const suffix = normalizeText(action)
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/_{2,}/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase()
+  if (!suffix) {
+    throw createError(400, 'unsupported_action', '不支持的 action。')
+  }
+
+  return ACTION_TOKEN_ENV_PREFIX + suffix
 }
 
 function validateGatewayTokenStrength(expected) {
@@ -810,7 +826,7 @@ exports.main = async (event) => {
     const action = normalizeText(request.action)
     const payload = request.payload && typeof request.payload === 'object' ? request.payload : {}
 
-    validateToken(request)
+    validateToken(request, action)
 
     let result
     if (action === 'inventoryDashboard') {
