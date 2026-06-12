@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.Input;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+using Orderly.Core.Security;
 using Orderly.Data.Sqlite;
 
 namespace Orderly.App.ViewModels;
@@ -206,13 +207,11 @@ public partial class MainViewModel
             log.Id,
             Type = log.Type.ToString(),
             log.TypeLabel,
-            log.Title,
-            log.Description,
-            log.Operator,
             CreatedAt = log.CreatedAt.ToString("O"),
             log.CustomerId,
             log.OrderId,
-            log.DealId
+            log.DealId,
+            SensitiveDetailsRedacted = true
         }).ToArray();
 
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
@@ -447,18 +446,20 @@ public partial class MainViewModel
                 latest.EntityId,
                 syncStatus = latest.SyncStatus.ToString(),
                 lastSyncedAt = latest.LastSyncedAt?.ToString("O"),
-                latest.ErrorMessage,
+                errorCode = DiagnosticDataPolicy.ClassifyError(latest.ErrorMessage),
                 latest.UpdatedAt,
-                latest.CreatedAt
+                latest.CreatedAt,
+                sensitiveDetailsRedacted = true
             },
             failedActivities = failures.Select(item => new
             {
                 item.Id,
                 type = item.Type.ToString(),
-                item.Title,
-                item.Description,
-                item.Operator,
-                createdAt = item.CreatedAt.ToString("O")
+                createdAt = item.CreatedAt.ToString("O"),
+                item.CustomerId,
+                item.OrderId,
+                item.DealId,
+                sensitiveDetailsRedacted = true
             })
         };
 
