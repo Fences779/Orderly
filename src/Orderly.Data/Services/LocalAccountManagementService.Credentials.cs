@@ -154,6 +154,8 @@ public sealed partial class LocalAccountManagementService
             account.UpdatedAt = DateTime.Now;
 
             await _accountRepository.UpdateAsync(account, cancellationToken);
+            // 安全敏感事件：当前账号主密码变更与数据密钥重封装。
+            TryAudit(SecurityEventType.CredentialChange, account.Username, SecurityEventOutcome.Success);
         }
         finally
         {
@@ -199,6 +201,8 @@ public sealed partial class LocalAccountManagementService
             account.PinHashVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
             account.UpdatedAt = DateTime.Now;
             await _accountRepository.UpdateAsync(account, cancellationToken);
+            // 安全敏感事件：当前账号 PIN 变更。
+            TryAudit(SecurityEventType.CredentialChange, account.AccountId, SecurityEventOutcome.Success);
         }
         finally
         {
@@ -245,6 +249,8 @@ public sealed partial class LocalAccountManagementService
             member.UpdatedAt = DateTime.Now;
 
             await _accountRepository.UpdateAsync(member, cancellationToken);
+            // 安全敏感事件：Owner 重置 Member 主密码与数据密钥重封装。
+            TryAudit(SecurityEventType.KeyRewrap, member.AccountId, SecurityEventOutcome.Success);
         }
         finally
         {
@@ -331,6 +337,8 @@ public sealed partial class LocalAccountManagementService
             member.UpdatedAt = DateTime.Now;
 
             await _accountRepository.UpdateAsync(member, cancellationToken);
+            // 安全敏感事件：经 Owner 验证后重置 Member 主密码与数据密钥重封装。
+            TryAudit(SecurityEventType.KeyRewrap, member.AccountId, SecurityEventOutcome.Success);
         }
         finally
         {
@@ -378,6 +386,8 @@ public sealed partial class LocalAccountManagementService
             member.PinHashVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
             member.UpdatedAt = DateTime.Now;
             await _accountRepository.UpdateAsync(member, cancellationToken);
+            // 安全敏感事件：Owner 重置 Member PIN。
+            TryAudit(SecurityEventType.CredentialChange, member.AccountId, SecurityEventOutcome.Success);
         }
         finally
         {
@@ -452,6 +462,8 @@ public sealed partial class LocalAccountManagementService
             owner.DataKeyTag = wrappedByPassword.Tag;
             owner.UpdatedAt = DateTime.Now;
             await _accountRepository.UpdateAsync(owner, cancellationToken);
+            // 安全敏感事件：经恢复密钥重置 Owner 主密码与数据密钥重封装。
+            TryAudit(SecurityEventType.KeyRewrap, owner.AccountId, SecurityEventOutcome.Success);
         }
         finally
         {

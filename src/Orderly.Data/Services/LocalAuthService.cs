@@ -15,17 +15,20 @@ public sealed class LocalAuthService : ILocalAuthService
     private readonly CredentialAttemptTracker _credentialAttemptTracker;
     private readonly ILegacyDatabaseMigrationService _legacyMigrationService;
     private readonly ISessionContextService _sessionContextService;
+    private readonly ISecurityAuditService _securityAudit;
 
     public LocalAuthService(
         ILocalAccountRepository accountRepository,
         ILegacyDatabaseMigrationService legacyMigrationService,
         ISessionContextService sessionContextService,
-        CredentialAttemptTracker? credentialAttemptTracker = null)
+        CredentialAttemptTracker? credentialAttemptTracker = null,
+        ISecurityAuditService? securityAuditService = null)
     {
         _accountRepository = accountRepository;
         _credentialAttemptTracker = credentialAttemptTracker ?? new CredentialAttemptTracker();
         _legacyMigrationService = legacyMigrationService;
         _sessionContextService = sessionContextService;
+        _securityAudit = securityAuditService ?? new SecurityAuditService();
     }
 
     public async Task<bool> HasAnyAccountAsync(CancellationToken cancellationToken = default)
@@ -566,21 +569,47 @@ public sealed class LocalAuthService : ILocalAuthService
 
     private bool IsCredentialAttemptBlocked(string purpose, string identifier)
     {
-        return _credentialAttemptTracker.IsBlocked(purpose, identifier);
+        var blocked = _credentialAttemptTracker.IsBlocked(purpose, identifier);
+        if (blocked)
+        {
+            // 安全敏感事件：账户/凭证因失败锁定被拒绝（防篡改审计，主体以哈希存储）。
+            TryAudit(SecurityEventType.AccountLockout, identifier, SecurityEventOutcome.Locked);
+        }
+
+        return blocked;
     }
 
     private void RecordCredentialResult(string purpose, string identifier, bool success)
     {
         _credentialAttemptTracker.RecordResult(purpose, identifier, success);
+        if (!success)
+        {
+            TryAudit(SecurityEventType.AuthenticationFailure, identifier, SecurityEventOutcome.Failure);
+        }
     }
 
     private void RecordCredentialFailure(string purpose, string identifier)
     {
         _credentialAttemptTracker.RecordFailure(purpose, identifier);
+        // 安全敏感事件：认证失败（防篡改审计，主体以哈希存储）。
+        TryAudit(SecurityEventType.AuthenticationFailure, identifier, SecurityEventOutcome.Failure);
     }
 
     private void ClearCredentialFailures(string purpose, string identifier)
     {
         _credentialAttemptTracker.ClearFailures(purpose, identifier);
+    }
+
+    // 安全审计写入为"尽力而为"：绝不改变既有控制流与返回语义，任何异常都被吞掉。
+    private void TryAudit(SecurityEventType eventType, string? subject, SecurityEventOutcome outcome)
+    {
+        try
+        {
+            _securityAudit.Record(eventType, subject, outcome);
+        }
+        catch
+        {
+            // 审计失败不得影响安全分支的原有行为。
+        }
     }
 }

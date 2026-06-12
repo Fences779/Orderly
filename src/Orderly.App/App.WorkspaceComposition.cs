@@ -25,6 +25,10 @@ public partial class App
         var connectionFactory = _connectionFactory ?? throw new InvalidOperationException("Database connection factory is not initialized.");
         var fieldEncryptionService = _fieldEncryptionService ?? throw new InvalidOperationException("Field encryption service is not initialized.");
 
+        // 在构造任何仓储（写入路径）前做启动期 fail-closed 断言：
+        // 生产路径必须为真实 AES-GCM 实现，检测到空操作加密器即拒绝进入写入路径，避免敏感字段明文落盘。
+        FieldEncryptionGuard.EnsureProductionGrade(fieldEncryptionService, nameof(InitializeWorkspaceAsync));
+
         await BackfillSensitiveFieldsAsync(connectionFactory);
 
         ICustomerRepository customerRepository = new CustomerRepository(connectionFactory, fieldEncryptionService);

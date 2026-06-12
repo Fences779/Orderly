@@ -12,15 +12,21 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
     private readonly ILocalAccountRepository _accountRepository;
     private readonly CredentialAttemptTracker _credentialAttemptTracker;
     private readonly ISessionContextService _sessionContextService;
+    private readonly ISecurityAuditService _securityAudit;
+    private readonly IAbuseDetectionService _abuseDetection;
 
     public LocalAccountManagementService(
         ILocalAccountRepository accountRepository,
         ISessionContextService sessionContextService,
-        CredentialAttemptTracker? credentialAttemptTracker = null)
+        CredentialAttemptTracker? credentialAttemptTracker = null,
+        ISecurityAuditService? securityAuditService = null,
+        IAbuseDetectionService? abuseDetectionService = null)
     {
         _accountRepository = accountRepository;
         _credentialAttemptTracker = credentialAttemptTracker ?? new CredentialAttemptTracker();
         _sessionContextService = sessionContextService;
+        _securityAudit = securityAuditService ?? new SecurityAuditService();
+        _abuseDetection = abuseDetectionService ?? new DefaultAbuseDetectionService();
     }
 
     public async Task<IReadOnlyList<LocalAccountSummary>> ListAccountsAsync(CancellationToken cancellationToken = default)
@@ -36,6 +42,9 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
 
     public async Task<IReadOnlyList<LocalAccountSummary>> ListAccountDirectoryAsync(CancellationToken cancellationToken = default)
     {
+        ThrowIfUnauthenticatedDirectoryReadThrottled();
+        // 跨事件埋点：未认证目录读取属于跨账户枚举信号，汇入跨事件聚合检测。
+        TryObserveAbuse(AbuseSignalKind.CrossAccountEnumeration, subject: null);
         var accounts = await _accountRepository.ListAsync(cancellationToken);
         return MapUnauthenticatedDirectorySummaries(accounts);
     }
@@ -167,6 +176,8 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
 
         if (!string.Equals(member.AdminOwnerAccountId, ownerSession.AccountId, StringComparison.OrdinalIgnoreCase))
         {
+            // 跨事件埋点：对不属于当前主账号的账号发起禁用操作 = 跨账户操作探测。
+            TryObserveAbuse(AbuseSignalKind.CrossAccountOperationProbe, ownerSession.AccountId);
             throw new InvalidOperationException("该账号不属于当前主账号，无法禁用。");
         }
 
@@ -201,6 +212,8 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
 
         if (!string.Equals(target.AdminOwnerAccountId, owner.AccountId, StringComparison.OrdinalIgnoreCase))
         {
+            // 跨事件埋点：对不属于当前主账号的账号发起删除操作 = 跨账户操作探测。
+            TryObserveAbuse(AbuseSignalKind.CrossAccountOperationProbe, owner.AccountId);
             throw new InvalidOperationException("该账号不属于当前主账号，无法删除。");
         }
 

@@ -6,7 +6,10 @@ internal static class EncryptedFieldScope
 {
     public static string Encrypt(IFieldEncryptionService fieldEncryptionService, string plaintext, string legacyFieldName, long rowId)
     {
-        return fieldEncryptionService.Encrypt(plaintext, Build(legacyFieldName, rowId));
+        // Fail-closed 兜底：若写入路径被注入空操作加密器，绝不回写明文（脱敏占位符替代），避免敏感字段明文落盘。
+        return FieldEncryptionGuard.ProtectFieldValue(
+            fieldEncryptionService,
+            () => fieldEncryptionService.Encrypt(plaintext, Build(legacyFieldName, rowId)));
     }
 
     public static string EncryptOrEmpty(IFieldEncryptionService fieldEncryptionService, string plaintext, string legacyFieldName, long rowId)

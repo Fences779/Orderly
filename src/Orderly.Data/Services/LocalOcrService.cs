@@ -71,6 +71,13 @@ public sealed class LocalOcrService : IOcrService
             return null;
         }
 
+        // 状态机门控：仅允许从 Pending 进入终态。若已处于终态（Completed/Failed），
+        // 拒绝非法转换并幂等返回当前终态记录，不覆盖 Status/ExtractedText/MetadataJson。
+        if (result.Status != OcrStatus.Pending)
+        {
+            return result;
+        }
+
         result.Status = OcrStatus.Completed;
         result.ExtractedText = NormalizeOcrText(extractedText, MaxOcrExtractedTextCharacters, "OCR 文本");
         result.ErrorMessage = string.Empty;
@@ -85,6 +92,13 @@ public sealed class LocalOcrService : IOcrService
         if (result is null)
         {
             return null;
+        }
+
+        // 状态机门控：仅允许从 Pending 进入终态。若已处于终态（Completed/Failed），
+        // 拒绝非法转换并幂等返回当前终态记录，不覆盖 Status/ExtractedText/MetadataJson。
+        if (result.Status != OcrStatus.Pending)
+        {
+            return result;
         }
 
         result.Status = OcrStatus.Failed;

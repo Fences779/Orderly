@@ -1,4 +1,5 @@
 using Orderly.Core.Models;
+using Orderly.Core.Services;
 using Orderly.Data.Sqlite;
 using System.Security.Cryptography;
 
@@ -11,6 +12,38 @@ public sealed partial class LocalAccountManagementService
     private const string CredentialAttemptPurposeRecovery = "recovery";
     private const string CredentialAttemptBlockedMessage = "认证尝试过于频繁，请稍后再试。";
 
+    // 未认证目录读取的字段最小化：Role 规约为单一中性值，不披露真实角色元数据。
+    private const LocalAccountRole NeutralUnauthenticatedDirectoryRole = LocalAccountRole.Member;
+
+    // 未认证目录读取的轻量频率限制（按调用来源维度 = 服务实例）：
+    // 滑动时间窗内超过阈值即抑制，返回与"认证尝试过于频繁"一致的受控结果。
+    private const int MaxUnauthenticatedDirectoryReadsPerWindow = 50;
+    private static readonly TimeSpan UnauthenticatedDirectoryReadWindow = TimeSpan.FromSeconds(1);
+
+    private readonly object _unauthenticatedDirectoryReadSyncRoot = new();
+    private int _unauthenticatedDirectoryReadCount;
+    private DateTime _unauthenticatedDirectoryReadWindowStart = DateTime.MinValue;
+
+    private void ThrowIfUnauthenticatedDirectoryReadThrottled()
+    {
+        lock (_unauthenticatedDirectoryReadSyncRoot)
+        {
+            var now = DateTime.UtcNow;
+            if (_unauthenticatedDirectoryReadWindowStart == DateTime.MinValue
+                || now - _unauthenticatedDirectoryReadWindowStart > UnauthenticatedDirectoryReadWindow)
+            {
+                _unauthenticatedDirectoryReadWindowStart = now;
+                _unauthenticatedDirectoryReadCount = 0;
+            }
+
+            _unauthenticatedDirectoryReadCount++;
+            if (_unauthenticatedDirectoryReadCount > MaxUnauthenticatedDirectoryReadsPerWindow)
+            {
+                throw new InvalidOperationException(CredentialAttemptBlockedMessage);
+            }
+        }
+    }
+
     private LocalSessionContext RequireCurrentSession()
     {
         return _sessionContextService.Current ?? throw new InvalidOperationException("当前没有已登录会话。");
@@ -21,6 +54,10 @@ public sealed partial class LocalAccountManagementService
         var session = RequireCurrentSession();
         if (session.Role != LocalAccountRole.Owner)
         {
+            // 安全敏感事件：越权拒绝（非 Owner 尝试执行受限操作）。
+            TryAudit(SecurityEventType.AuthorizationDenied, session.AccountId, SecurityEventOutcome.Denied);
+            // 跨事件埋点：越权拒绝信号汇入跨事件聚合检测。
+            TryObserveAbuse(AbuseSignalKind.AuthorizationDenied, session.AccountId);
             throw new UnauthorizedAccessException("仅 Owner 允许执行此操作。");
         }
 
@@ -83,7 +120,9 @@ public sealed partial class LocalAccountManagementService
                 AccountId = account.AccountId,
                 Username = account.Username,
                 DisplayName = account.DisplayName,
-                Role = account.Role,
+                // 字段最小化：登录选择器仅消费 Username / DisplayName / IsEnabled。
+                // Role 等元数据规约为单一中性值，避免在未认证目录读取中披露角色名册。
+                Role = NeutralUnauthenticatedDirectoryRole,
                 IsEnabled = account.IsEnabled,
                 CreatedAt = DateTime.MinValue,
                 LastLoginAt = null,
@@ -269,6 +308,8 @@ public sealed partial class LocalAccountManagementService
     {
         if (_credentialAttemptTracker.IsBlocked(purpose, identifier))
         {
+            // 安全敏感事件：因失败锁定被拒绝（防篡改审计，主体以哈希存储）。
+            TryAudit(SecurityEventType.AccountLockout, identifier, SecurityEventOutcome.Locked);
             throw new InvalidOperationException(CredentialAttemptBlockedMessage);
         }
     }
@@ -276,11 +317,43 @@ public sealed partial class LocalAccountManagementService
     private void RecordCredentialAttemptResult(string purpose, string identifier, bool success)
     {
         _credentialAttemptTracker.RecordResult(purpose, identifier, success);
+        if (!success)
+        {
+            TryAudit(SecurityEventType.AuthenticationFailure, identifier, SecurityEventOutcome.Failure);
+        }
     }
 
     private void RecordCredentialAttemptFailure(string purpose, string identifier)
     {
         _credentialAttemptTracker.RecordFailure(purpose, identifier);
+        // 安全敏感事件：认证失败（防篡改审计，主体以哈希存储）。
+        TryAudit(SecurityEventType.AuthenticationFailure, identifier, SecurityEventOutcome.Failure);
+    }
+
+    // 安全审计写入为"尽力而为"：绝不改变既有控制流与返回语义，任何异常都被吞掉。
+    private void TryAudit(SecurityEventType eventType, string? subject, SecurityEventOutcome outcome)
+    {
+        try
+        {
+            _securityAudit.Record(eventType, subject, outcome);
+        }
+        catch
+        {
+            // 审计失败不得影响安全分支的原有行为。
+        }
+    }
+
+    // 跨事件异常检测埋点为"尽力而为"：绝不改变既有控制流与返回语义，任何异常都被吞掉。
+    private void TryObserveAbuse(AbuseSignalKind kind, string? subject)
+    {
+        try
+        {
+            _abuseDetection.ObserveSecurityEvent(kind, subject);
+        }
+        catch
+        {
+            // 检测失败不得影响安全分支的原有行为。
+        }
     }
 
     private async Task UpgradeVerifiedPinHashIfNeededAsync(LocalAccount account, string pin, CancellationToken cancellationToken)

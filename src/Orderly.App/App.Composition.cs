@@ -52,6 +52,8 @@ public partial class App
         _sessionContextService = new SessionContextService();
         _sessionLockService = new SessionLockService(_sessionContextService);
         _fieldEncryptionService = new FieldEncryptionService(_sessionContextService);
+        // 启动期 fail-closed 断言：生产路径必须装配真实 AES-GCM 字段加密器，绝不允许空操作加密器静默注入。
+        FieldEncryptionGuard.EnsureProductionGrade(_fieldEncryptionService, nameof(EnsureAuthServicesPrepared));
         _localAuthService = new LocalAuthService(accountRepository, legacyMigrationService, _sessionContextService, credentialAttemptTracker);
         _localAccountManagementService = new LocalAccountManagementService(accountRepository, _sessionContextService, credentialAttemptTracker);
 
