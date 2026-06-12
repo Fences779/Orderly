@@ -283,8 +283,11 @@ public partial class LoginViewModel : ObservableObject
             }
             else
             {
+                var migration = result.LegacyMigrationResult;
                 Console.WriteLine(
-                    $"已执行 legacy 数据复制：{result.LegacyMigrationResult.Plan.LegacyDatabasePath} -> {result.LegacyMigrationResult.Plan.TargetDatabasePath}");
+                    $"已执行 legacy 数据复制：state={migration.Plan.State}; copied={migration.Copied}; " +
+                    $"overwritten={migration.Overwritten}; sourceBytes={migration.Plan.LegacyDatabaseSizeBytes}; " +
+                    $"executedAt={migration.ExecutedAt:O}");
             }
         }
         catch (Exception ex)
