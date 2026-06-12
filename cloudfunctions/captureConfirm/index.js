@@ -309,11 +309,11 @@ async function handleRequest(event) {
   return db.runTransaction(async (transaction) => {
     const capture = (await transaction.collection('captures').doc(captureId).get()).data
     if (!capture || capture.workspaceId !== workspaceId) return { ok: false, code: 'not_found', message: 'capture 不存在。' }
-    if (capture.confirmStatus === 'confirmed' && capture.linkedDealId) {
-      return { ok: true, customerId: capture.linkedCustomerId, dealId: capture.linkedDealId, message: 'capture 已确认' }
-    }
     if (capture.createdBy !== operatorId) {
       return { ok: false, code: 'not_found', message: 'capture 不存在。' }
+    }
+    if (capture.confirmStatus === 'confirmed' && capture.linkedDealId) {
+      return { ok: true, customerId: capture.linkedCustomerId, dealId: capture.linkedDealId, message: 'capture 已确认' }
     }
 
     let customer
