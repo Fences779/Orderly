@@ -239,7 +239,9 @@ async function ensureCollections() {
 
 async function upsertDoc(collection, row) {
   const data = Object.assign({}, row)
-  await db.collection(collection).add({ data })
+  const id = data._id
+  delete data._id
+  await db.collection(collection).doc(id).set({ data })
   return 'created'
 }
 
