@@ -3,7 +3,8 @@ param()
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$repoRoot = [System.IO.Path]::GetFullPath((Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path)
+$repoRootWithSeparator = $repoRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 $targets = @(
     'ordely.db',
     'orderly.db',
@@ -18,9 +19,14 @@ foreach ($relativePath in $targets) {
         continue
     }
 
-    $resolved = (Resolve-Path -LiteralPath $target).Path
-    if (-not $resolved.StartsWith($repoRoot, [StringComparison]::OrdinalIgnoreCase)) {
+    $resolved = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $target).Path)
+    if ($resolved -ne $repoRoot -and -not $resolved.StartsWith($repoRootWithSeparator, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Refusing to remove path outside repository: $resolved"
+    }
+
+    $item = Get-Item -LiteralPath $resolved -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "Refusing to remove reparse point: $resolved"
     }
 
     Remove-Item -LiteralPath $resolved -Recurse -Force
