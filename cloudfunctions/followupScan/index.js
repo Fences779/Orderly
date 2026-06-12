@@ -24,6 +24,8 @@ const AUTO_SCAN_TIMESTAMP_WINDOW_MS = 5 * 60 * 1000
 const DEFAULT_AUTO_SCAN_MIN_INTERVAL_MS = 60 * 1000
 const USER_AUTH_MODES = ['inventoryManagementDashboard', 'cashflowHealthDashboard', 'taskAction', 'manualCreate', 'templateSave', 'templateUse', 'skuSave', 'inventoryMovementSave', 'cashflowSave']
 const MODE_PERMISSIONS = {
+  inventoryManagementDashboard: 'inventory:read',
+  cashflowHealthDashboard: 'finance:read',
   taskAction: 'followup:write',
   manualCreate: 'followup:create',
   templateSave: 'templates:write',
