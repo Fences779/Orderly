@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk')
+const crypto = require('node:crypto')
 const { createSeed } = require('./seedData')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -8,10 +9,16 @@ const COLLECTIONS = ['customers', 'deals', 'quotes', 'sku_catalog', 'inventory_m
 const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
+const OPERATOR_PERMISSIONS_ENV_NAME = 'ORDERLY_OPERATOR_PERMISSIONS'
 const ENABLE_SEED_ENV_NAME = 'ORDERLY_ENABLE_DEAL_INIT_SEED'
+const SEED_RUNTIME_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_RUNTIME'
+const SEED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_WORKSPACE_IDS'
 const SEED_ADMIN_OPENIDS_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_OPENIDS'
+const SEED_CONFIRMATION_ENV_NAME = 'ORDERLY_DEAL_INIT_SEED_CONFIRMATION'
+const SEED_PERMISSION = 'seed:init'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
+const MIN_CONFIRMATION_LENGTH = 16
 
 function normalizeList(value) {
   return String(value || '')
@@ -30,10 +37,19 @@ function normalizeWorkspaceList(value) {
   return normalizeList(value).map(normalizeWorkspaceId).filter(Boolean)
 }
 
-function requireSeedAuthorization() {
+function normalizeText(value, maxLength = 256) {
+  if (value == null || typeof value === 'object') return ''
+  const text = String(value).replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return text.length <= maxLength ? text : ''
+}
+
+function requireSeedAuthorization(event) {
   if (process.env[ENABLE_SEED_ENV_NAME] !== '1') {
     return { ok: false, code: 'seed_disabled', message: '演示数据初始化未启用。' }
   }
+
+  const runtime = requireSeedRuntime()
+  if (!runtime.ok) return runtime
 
   const operatorId = cloud.getWXContext().OPENID || ''
   const allowedOpenids = normalizeList(process.env[SEED_ADMIN_OPENIDS_ENV_NAME])
@@ -41,7 +57,91 @@ function requireSeedAuthorization() {
     return { ok: false, code: 'unauthorized', message: '无权执行演示数据初始化。' }
   }
 
+  if (!hasOperatorPermission(operatorId, SEED_PERMISSION)) {
+    return { ok: false, code: 'permission_denied', message: '无权执行演示数据初始化。' }
+  }
+
+  if (!validateSeedConfirmation(event)) {
+    return { ok: false, code: 'seed_confirmation_required', message: '缺少有效的演示数据初始化确认参数。' }
+  }
+
   return { ok: true, operatorId }
+}
+
+function requireSeedRuntime() {
+  const seedRuntime = normalizeText(process.env[SEED_RUNTIME_ENV_NAME]).toLowerCase()
+  if (!['local', 'dev', 'development', 'test', 'qa', 'staging', 'sandbox'].includes(seedRuntime)) {
+    return { ok: false, code: 'seed_runtime_required', message: '演示数据初始化必须配置为非生产 seed runtime。' }
+  }
+
+  const ambientRuntime = [
+    process.env.ORDERLY_RUNTIME_ENV,
+    process.env.NODE_ENV,
+    process.env.TCB_ENV
+  ].map((item) => normalizeText(item).toLowerCase()).filter(Boolean)
+  if (ambientRuntime.some(isProductionRuntime)) {
+    return { ok: false, code: 'seed_production_forbidden', message: '生产运行时禁止初始化演示数据。' }
+  }
+
+  return { ok: true }
+}
+
+function isProductionRuntime(value) {
+  return /(^|[-_:])(prod|production|live)([-_:]|$)/.test(value)
+}
+
+function validateSeedConfirmation(event) {
+  const expected = normalizeText(process.env[SEED_CONFIRMATION_ENV_NAME])
+  if (expected.length < MIN_CONFIRMATION_LENGTH || isPlaceholderSecret(expected)) return false
+
+  const supplied = normalizeText(event && (event.confirmation || event.confirmSeed || event.confirmationToken))
+  if (supplied.length !== expected.length) return false
+
+  const suppliedBytes = Buffer.from(supplied)
+  const expectedBytes = Buffer.from(expected)
+  return suppliedBytes.length === expectedBytes.length && crypto.timingSafeEqual(suppliedBytes, expectedBytes)
+}
+
+function isPlaceholderSecret(value) {
+  return ['replace-me', 'changeme', 'change-me', 'test', 'token', 'password'].includes(value.trim().toLowerCase())
+}
+
+function hasOperatorPermission(operatorId, permission) {
+  const permissions = resolveOperatorPermissions(operatorId)
+  return permissions.includes('*') || permissions.includes(permission)
+}
+
+function resolveOperatorPermissions(operatorId) {
+  if (!operatorId) return []
+  const raw = String(process.env[OPERATOR_PERMISSIONS_ENV_NAME] || '').trim()
+  if (!raw) return []
+
+  if (raw[0] === '{') {
+    try {
+      const parsed = JSON.parse(raw)
+      return normalizePermissionList(parsed && parsed[operatorId])
+    } catch (err) {
+      return []
+    }
+  }
+
+  const entries = raw.split(/[;；\r\n]+/).map((item) => item.trim()).filter(Boolean)
+  for (const entry of entries) {
+    const separatorIndex = entry.indexOf('=') >= 0 ? entry.indexOf('=') : entry.indexOf(':')
+    if (separatorIndex <= 0) continue
+    const key = entry.slice(0, separatorIndex).trim()
+    if (key === operatorId) return normalizePermissionList(entry.slice(separatorIndex + 1))
+  }
+
+  return []
+}
+
+function normalizePermissionList(value) {
+  if (!value) return []
+  const values = Array.isArray(value)
+    ? value.map((item) => String(item).trim())
+    : String(value).split(/[,\s，、|/]+/).map((item) => item.trim())
+  return values.filter((item) => item === '*' || /^[a-z][a-z0-9:_-]{1,64}$/.test(item))
 }
 
 function rejectOversizedEvent(event) {
@@ -67,8 +167,15 @@ function resolveWorkspaceId(event, operatorId) {
   const requestedWorkspaceId = rawWorkspaceId == null ? '' : String(rawWorkspaceId).trim()
   const workspaceId = requestedWorkspaceId ? normalizeWorkspaceId(rawWorkspaceId) : DEFAULT_WORKSPACE_ID
   if (!workspaceId) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+  const seedWorkspaces = normalizeWorkspaceList(process.env[SEED_WORKSPACE_IDS_ENV_NAME])
+  if (seedWorkspaces.length === 0) {
+    return { ok: false, code: 'seed_workspace_allowlist_required', message: '演示数据初始化工作区未配置。' }
+  }
+
+  if (seedWorkspaces.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
+
   const configured = normalizeWorkspaceList(process.env[ALLOWED_WORKSPACE_IDS_ENV_NAME])
-  const allowed = Array.from(new Set(configured.length ? configured : [DEFAULT_WORKSPACE_ID]))
+  const allowed = Array.from(new Set(configured.length ? configured : seedWorkspaces))
   if (allowed.indexOf(workspaceId) < 0) return { ok: false, code: 'workspace_forbidden', message: '无权访问该工作区。' }
   const binding = validateWorkspaceBinding(operatorId, workspaceId, allowed)
   if (!binding.ok) return binding
@@ -132,24 +239,25 @@ async function ensureCollections() {
 
 async function upsertDoc(collection, row) {
   const data = Object.assign({}, row)
-  const id = data._id
-  let existing = null
-  try {
-    existing = (await db.collection(collection).doc(id).get()).data || null
-  } catch (err) {
-    existing = null
-  }
-
-  if (existing) {
-    if (existing.workspaceId !== row.workspaceId) return 'workspace_conflict'
-    delete data._id
-    await db.collection(collection).doc(id).update({ data })
-    return 'updated'
-  }
-
-  delete data._id
-  await db.collection(collection).doc(id).set({ data })
+  await db.collection(collection).add({ data })
   return 'created'
+}
+
+async function findExistingSeedDoc(seed) {
+  for (const collection of Object.keys(seed)) {
+    for (const row of seed[collection]) {
+      let existing = null
+      try {
+        existing = (await db.collection(collection).doc(row._id).get()).data || null
+      } catch (err) {
+        existing = null
+      }
+
+      if (existing) return { collection, id: row._id, workspaceId: existing.workspaceId || '' }
+    }
+  }
+
+  return null
 }
 
 function logInternalError(scope, err) {
@@ -158,29 +266,31 @@ function logInternalError(scope, err) {
 }
 
 async function handleRequest(event) {
-  const auth = requireSeedAuthorization()
-  if (!auth.ok) return auth
-
   const request = event || {}
   const oversized = rejectOversizedEvent(request)
   if (oversized) return oversized
   const polluted = rejectPollutedEvent(request)
   if (polluted) return polluted
 
+  const auth = requireSeedAuthorization(request)
+  if (!auth.ok) return auth
+
   const workspace = resolveWorkspaceId(request, auth.operatorId)
   if (!workspace.ok) return workspace
   const workspaceId = workspace.workspaceId
   await ensureCollections()
   const seed = createSeed(workspaceId)
+  const existingSeed = await findExistingSeedDoc(seed)
+  if (existingSeed) {
+    return { ok: false, code: 'seed_target_not_empty', message: '演示数据目标已存在，已拒绝覆盖。' }
+  }
+
   const counts = {}
   for (const collection of Object.keys(seed)) {
-    counts[collection] = { created: 0, updated: 0 }
+    counts[collection] = { created: 0 }
     for (const row of seed[collection]) {
-      const result = await upsertDoc(collection, row)
-      if (result === 'workspace_conflict') {
-        return { ok: false, code: 'seed_workspace_conflict', message: '演示数据 ID 已属于其他工作区，已拒绝覆盖。' }
-      }
-      counts[collection][result] += 1
+      await upsertDoc(collection, row)
+      counts[collection].created += 1
     }
   }
   return {
