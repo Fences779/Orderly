@@ -6,6 +6,7 @@ const DEFAULT_WORKSPACE_ID = 'default'
 const ALLOWED_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_ALLOWED_WORKSPACE_IDS'
 const ALLOWED_OPENIDS_ENV_NAME = 'ORDERLY_ALLOWED_OPENIDS'
 const OPENID_WORKSPACE_IDS_ENV_NAME = 'ORDERLY_OPENID_WORKSPACE_IDS'
+const OPERATOR_PERMISSIONS_ENV_NAME = 'ORDERLY_OPERATOR_PERMISSIONS'
 const MAX_EVENT_BYTES = 65536
 const MAX_WORKSPACE_ID_LENGTH = 128
 const MAX_SHORT_TEXT_LENGTH = 128
@@ -17,6 +18,7 @@ const MAX_TAGS = 20
 const URGENCY_LEVELS = ['low', 'medium', 'high']
 const SUGGESTED_STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing']
 const CUSTOMER_MATCH_FIELDS = ['_id', 'name', 'platform', 'contactHandle']
+const CAPTURE_MATCH_PERMISSION = 'captures:match'
 
 const STYLE_WORDS = ['简约', '高级', '复古', '甜酷', '清冷', '温柔', '国风', '通勤', '可爱', '低调', '显白']
 const MATERIAL_WORDS = ['珍珠', '水晶', '玛瑙', '银', '14k', '18k', '朱砂', '檀木', '贝母', '琉璃', '天然石']
@@ -180,6 +182,50 @@ function normalizeWorkspaceBindingValue(value) {
   return values
     .map((item) => (item === '*' ? '*' : normalizeWorkspaceId(item)))
     .filter(Boolean)
+}
+
+function requireOperatorPermission(operatorId, permission) {
+  const permissions = resolveOperatorPermissions(operatorId)
+  if (permissions.length === 0) return { ok: false, code: 'permission_binding_required', message: '操作权限未配置。' }
+  if (permissions.indexOf('*') >= 0 || permissions.indexOf(permission) >= 0) return { ok: true }
+  const namespacePermission = permission.split(':')[0] + ':*'
+  if (permissions.indexOf(namespacePermission) >= 0) return { ok: true }
+  return { ok: false, code: 'permission_forbidden', message: '无权执行该操作。' }
+}
+
+function resolveOperatorPermissions(operatorId) {
+  if (!operatorId) return []
+  const raw = String(process.env[OPERATOR_PERMISSIONS_ENV_NAME] || '').trim()
+  if (!raw) return []
+
+  if (raw[0] === '{') {
+    try {
+      const parsed = JSON.parse(raw)
+      return normalizePermissionBindingValue(parsed && parsed[operatorId])
+    } catch (err) {
+      return []
+    }
+  }
+
+  const entries = raw.split(/[;；\r\n]+/).map((item) => item.trim()).filter(Boolean)
+  for (const entry of entries) {
+    const separatorIndex = entry.indexOf('=') >= 0 ? entry.indexOf('=') : entry.indexOf(':')
+    if (separatorIndex <= 0) continue
+    const key = entry.slice(0, separatorIndex).trim()
+    if (key === operatorId) return normalizePermissionBindingValue(entry.slice(separatorIndex + 1))
+  }
+
+  return []
+}
+
+function normalizePermissionBindingValue(value) {
+  if (!value) return []
+  const values = Array.isArray(value)
+    ? value.map((item) => String(item).trim())
+    : String(value).split(/[,\s，、|/]+/).map((item) => item.trim())
+  return values
+    .map((item) => (item === '*' ? '*' : item.toLowerCase()))
+    .filter((item) => item === '*' || /^[a-z][a-z0-9_-]*(?::[a-z0-9_*.-]+)?$/.test(item))
 }
 
 function addDays(days) {
@@ -362,11 +408,15 @@ async function handleRequest(event) {
   const rawImageUrl = normalizeText(event.rawImageUrl, MAX_IMAGE_URL_LENGTH)
   const sourceType = normalizeText(event.sourceType || 'clipboard', MAX_SOURCE_TYPE_LENGTH) || 'clipboard'
   const parserResult = normalizeParserResult(event.parserResult || parseText(rawText || ocrText))
-  const customerMatches = await matchCustomers(workspaceId, parserResult)
   if (event.mode === 'matchOnly') {
+    const permission = requireOperatorPermission(operatorId, CAPTURE_MATCH_PERMISSION)
+    if (!permission.ok) return permission
+
+    const customerMatches = await matchCustomers(workspaceId, parserResult)
     return { ok: true, parserResult, customerMatches }
   }
   if (!rawText && !ocrText) return { ok: false, message: '缺少可解析文本' }
+  const customerMatches = await matchCustomers(workspaceId, parserResult)
   const capture = {
     workspaceId,
     sourceType,
