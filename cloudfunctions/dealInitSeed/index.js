@@ -248,13 +248,8 @@ async function upsertDoc(collection, row) {
 async function findExistingSeedDoc(seed) {
   for (const collection of Object.keys(seed)) {
     for (const row of seed[collection]) {
-      let existing = null
-      try {
-        existing = (await db.collection(collection).doc(row._id).get()).data || null
-      } catch (err) {
-        existing = null
-      }
-
+      const result = await db.collection(collection).where({ _id: row._id }).limit(1).get()
+      const existing = result.data && result.data.length > 0 ? result.data[0] : null
       if (existing) return { collection, id: row._id, workspaceId: existing.workspaceId || '' }
     }
   }
