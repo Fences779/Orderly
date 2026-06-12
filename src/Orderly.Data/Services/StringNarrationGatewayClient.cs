@@ -6,6 +6,7 @@ namespace Orderly.Data.Services;
 
 public sealed class StringNarrationGatewayClient
 {
+    private const long MaxRequestBodyBytes = 256L * 1024L;
     private const long MaxResponseBodyBytes = 1024L * 1024L;
     private const int MaxResponseJsonDepth = 32;
 
@@ -58,7 +59,13 @@ public sealed class StringNarrationGatewayClient
         request.Headers.TryAddWithoutValidation("X-Orderly-Gateway-Operator-Id", _options.OperatorId);
         request.Headers.TryAddWithoutValidation("X-Orderly-Gateway-Request-Id", requestId);
         request.Headers.TryAddWithoutValidation("X-Orderly-Gateway-Request-Timestamp", requestTimestamp);
-        request.Content = new StringContent(JsonSerializer.Serialize(requestPayload, JsonOptions), Encoding.UTF8, "application/json");
+        var requestJson = JsonSerializer.Serialize(requestPayload, JsonOptions);
+        if (Encoding.UTF8.GetByteCount(requestJson) > MaxRequestBodyBytes)
+        {
+            throw new InvalidOperationException("串述 adminPcGateway 请求体超过安全上限。");
+        }
+
+        request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 
         HttpResponseMessage response;
         try
@@ -79,7 +86,8 @@ public sealed class StringNarrationGatewayClient
             response.Content,
             MaxResponseBodyBytes,
             "串述 adminPcGateway",
-            cancellationToken);
+            cancellationToken,
+            TimeSpan.FromSeconds(_options.TimeoutSeconds));
         if (!response.IsSuccessStatusCode)
         {
             if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)

@@ -4,11 +4,17 @@ namespace Orderly.Data.Services;
 
 internal static class LocalCredentialSecurity
 {
-    internal const int DefaultPasswordIterations = 200000;
-    internal const int DefaultPinIterations = 200000;
-    internal const int DefaultRecoveryIterations = 200000;
+    internal const int LegacyCredentialFormatVersion = 1;
+    internal const int CurrentCredentialFormatVersion = 2;
+    internal const int MinimumCredentialIterations = 200000;
+    internal const int DefaultPasswordIterations = 600000;
+    internal const int DefaultPinIterations = 600000;
+    internal const int DefaultRecoveryIterations = 600000;
     internal const int MaxCredentialIterations = 2_000_000;
 
+    private const string PasswordDataKeyPurpose = "Orderly.LocalAccount.PasswordDataKey.v2";
+    private const string RecoveryDataKeyPurpose = "Orderly.LocalAccount.RecoveryDataKey.v2";
+    private const string PinVerifierPurpose = "Orderly.LocalAccount.PinVerifier.v2";
     private const int SaltByteLength = 16;
     private const int MaxSaltByteLength = 64;
     private const int HashByteLength = 32;
@@ -176,10 +182,51 @@ internal static class LocalCredentialSecurity
         }
     }
 
+    internal static byte[] ComputePinHash(string? pin, byte[] salt, int iterations, int formatVersion)
+    {
+        var baseHash = ComputeHash(pin, salt, iterations);
+        if (formatVersion <= LegacyCredentialFormatVersion)
+        {
+            return baseHash;
+        }
+
+        try
+        {
+            return DeriveLocalProtectedKey(baseHash, PinVerifierPurpose);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(baseHash);
+        }
+    }
+
+    internal static bool VerifyPinHash(string? pin, byte[] salt, int iterations, byte[] expectedHash, int formatVersion)
+    {
+        if (string.IsNullOrEmpty(pin) || pin.Length > MaxSecretCharLength)
+        {
+            return false;
+        }
+
+        if (!HasUsableHashParameters(salt, iterations, expectedHash))
+        {
+            return false;
+        }
+
+        var actualHash = ComputePinHash(pin, salt, iterations, formatVersion);
+        try
+        {
+            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(actualHash);
+        }
+    }
+
     internal static bool HasUsableHashParameters(byte[]? salt, int iterations, byte[]? expectedHash)
     {
         return salt is { Length: >= SaltByteLength and <= MaxSaltByteLength }
-            && iterations is >= DefaultPasswordIterations and <= MaxCredentialIterations
+            && iterations is >= MinimumCredentialIterations and <= MaxCredentialIterations
             && (expectedHash is null || expectedHash.Length == HashByteLength);
     }
 
@@ -192,12 +239,56 @@ internal static class LocalCredentialSecurity
 
     internal static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string? secret, byte[] salt, int iterations, byte[] dataKey)
     {
+        return WrapPasswordDataKey(secret, salt, iterations, dataKey);
+    }
+
+    internal static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapPasswordDataKey(string? secret, byte[] salt, int iterations, byte[] dataKey)
+    {
         if (dataKey.Length != DataKeyByteLength)
         {
             throw new InvalidOperationException("账号数据密钥长度无效。");
         }
 
-        var key = ComputeHash(secret, salt, iterations);
+        var verifierHash = ComputeHash(secret, salt, iterations);
+        try
+        {
+            var key = DeriveLocalProtectedKey(verifierHash, PasswordDataKeyPurpose);
+            try
+            {
+                return WrapDataKeyWithKey(key, dataKey);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(key);
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(verifierHash);
+        }
+    }
+
+    internal static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapRecoveryDataKey(string? secret, byte[] salt, int iterations, byte[] dataKey)
+    {
+        var verifierHash = ComputeHash(secret, salt, iterations);
+        try
+        {
+            return WrapRecoveryDataKeyWithVerifierHash(verifierHash, dataKey);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(verifierHash);
+        }
+    }
+
+    internal static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapRecoveryDataKeyWithVerifierHash(byte[] verifierHash, byte[] dataKey)
+    {
+        if (verifierHash.Length != HashByteLength || dataKey.Length != DataKeyByteLength)
+        {
+            throw new InvalidOperationException("账号密钥包裹参数无效。");
+        }
+
+        var key = DeriveLocalProtectedKey(verifierHash, RecoveryDataKeyPurpose);
         try
         {
             return WrapDataKeyWithKey(key, dataKey);
@@ -226,9 +317,74 @@ internal static class LocalCredentialSecurity
 
     internal static byte[] UnwrapDataKey(string? secret, byte[] salt, int iterations, byte[] ciphertext, byte[] nonce, byte[] tag)
     {
-        var key = ComputeHash(secret, salt, iterations);
+        return UnwrapPasswordDataKey(secret, salt, iterations, ciphertext, nonce, tag, LegacyCredentialFormatVersion);
+    }
+
+    internal static byte[] UnwrapPasswordDataKey(
+        string? secret,
+        byte[] salt,
+        int iterations,
+        byte[] ciphertext,
+        byte[] nonce,
+        byte[] tag,
+        int formatVersion)
+    {
+        var verifierHash = ComputeHash(secret, salt, iterations);
+        byte[] key = [];
         try
         {
+            key = formatVersion <= LegacyCredentialFormatVersion
+                ? verifierHash.ToArray()
+                : DeriveLocalProtectedKey(verifierHash, PasswordDataKeyPurpose);
+
+            return UnwrapDataKeyWithKey(key, ciphertext, nonce, tag);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(verifierHash);
+            CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    internal static byte[] UnwrapRecoveryDataKey(
+        string? secret,
+        byte[] salt,
+        int iterations,
+        byte[] ciphertext,
+        byte[] nonce,
+        byte[] tag,
+        int formatVersion)
+    {
+        var verifierHash = ComputeHash(secret, salt, iterations);
+        try
+        {
+            return UnwrapRecoveryDataKeyWithVerifierHash(verifierHash, ciphertext, nonce, tag, formatVersion);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(verifierHash);
+        }
+    }
+
+    internal static byte[] UnwrapRecoveryDataKeyWithVerifierHash(
+        byte[] verifierHash,
+        byte[] ciphertext,
+        byte[] nonce,
+        byte[] tag,
+        int formatVersion)
+    {
+        if (verifierHash.Length != HashByteLength)
+        {
+            throw new InvalidOperationException("账号密钥包裹参数无效。");
+        }
+
+        byte[] key = [];
+        try
+        {
+            key = formatVersion <= LegacyCredentialFormatVersion
+                ? verifierHash.ToArray()
+                : DeriveLocalProtectedKey(verifierHash, RecoveryDataKeyPurpose);
+
             return UnwrapDataKeyWithKey(key, ciphertext, nonce, tag);
         }
         finally
@@ -255,6 +411,33 @@ internal static class LocalCredentialSecurity
         if (!HasUsableHashParameters(salt, iterations, expectedHash))
         {
             throw new InvalidOperationException("账号凭据哈希参数无效。");
+        }
+    }
+
+    private static byte[] DeriveLocalProtectedKey(byte[] verifierHash, string purpose)
+    {
+        if (verifierHash.Length != HashByteLength)
+        {
+            throw new InvalidOperationException("账号凭据哈希参数无效。");
+        }
+
+        var localSecret = LocalCredentialSecretStore.GetOrCreateSecret();
+        var purposeBytes = System.Text.Encoding.UTF8.GetBytes(purpose);
+        var input = new byte[purposeBytes.Length + 1 + verifierHash.Length];
+        try
+        {
+            Buffer.BlockCopy(purposeBytes, 0, input, 0, purposeBytes.Length);
+            input[purposeBytes.Length] = 0;
+            Buffer.BlockCopy(verifierHash, 0, input, purposeBytes.Length + 1, verifierHash.Length);
+
+            using var hmac = new HMACSHA256(localSecret);
+            return hmac.ComputeHash(input);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(localSecret);
+            CryptographicOperations.ZeroMemory(purposeBytes);
+            CryptographicOperations.ZeroMemory(input);
         }
     }
 }

@@ -47,6 +47,19 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
         return DecryptCore(ciphertext, associatedData, allowAssociatedDataPayload: true);
     }
 
+    public bool UsesAssociatedDataPayload(string ciphertext)
+    {
+        var payload = DecodePayload(ciphertext);
+        try
+        {
+            return payload[0] == AssociatedDataPayloadVersion;
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(payload);
+        }
+    }
+
     private string EncryptCore(string plaintext, string associatedData, bool useAssociatedData)
     {
         plaintext ??= string.Empty;
@@ -110,21 +123,7 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
             throw new InvalidOperationException("Ciphertext payload is invalid.");
         }
 
-        byte[] payload;
-        try
-        {
-            payload = Convert.FromBase64String(encodedPayload);
-        }
-        catch (FormatException)
-        {
-            throw new InvalidOperationException("Ciphertext payload is invalid.");
-        }
-
-        if (payload.Length < HeaderByteLength || payload.Length > MaxPayloadByteLength)
-        {
-            CryptographicOperations.ZeroMemory(payload);
-            throw new InvalidOperationException("Ciphertext payload is invalid.");
-        }
+        var payload = DecodePayload(ciphertext);
 
         var payloadVersion = payload[0];
         var usesAssociatedData = payloadVersion == AssociatedDataPayloadVersion;
@@ -180,6 +179,51 @@ public sealed class FieldEncryptionService : IFieldEncryptionService
         }
 
         return dataKey;
+    }
+
+    private static byte[] DecodePayload(string ciphertext)
+    {
+        ciphertext ??= string.Empty;
+        if (ciphertext.Length == 0)
+        {
+            throw new InvalidOperationException("Ciphertext payload is invalid.");
+        }
+
+        if (ciphertext.Length > MaxCiphertextLength
+            || !ciphertext.StartsWith(Prefix, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Ciphertext payload is invalid.");
+        }
+
+        var encodedPayload = ciphertext[Prefix.Length..];
+        if (encodedPayload.Length == 0 || encodedPayload.Length > MaxEncodedPayloadLength)
+        {
+            throw new InvalidOperationException("Ciphertext payload is invalid.");
+        }
+
+        byte[] payload;
+        try
+        {
+            payload = Convert.FromBase64String(encodedPayload);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("Ciphertext payload is invalid.");
+        }
+
+        if (payload.Length < HeaderByteLength || payload.Length > MaxPayloadByteLength)
+        {
+            CryptographicOperations.ZeroMemory(payload);
+            throw new InvalidOperationException("Ciphertext payload is invalid.");
+        }
+
+        if (payload[0] != LegacyPayloadVersion && payload[0] != AssociatedDataPayloadVersion)
+        {
+            CryptographicOperations.ZeroMemory(payload);
+            throw new InvalidOperationException("Ciphertext version is not supported.");
+        }
+
+        return payload;
     }
 
     private static byte[] BuildAssociatedDataBytes(string associatedData)

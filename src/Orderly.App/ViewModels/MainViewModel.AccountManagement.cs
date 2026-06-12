@@ -86,7 +86,11 @@ public partial class MainViewModel
             ResetMemberPinCommand,
             ResetOwnerPasswordWithRecoveryKeyCommand,
             ChangeCurrentMasterPasswordCommand,
-            ChangeCurrentPinCommand);
+            ChangeCurrentPinCommand,
+            SelectBackupFileCommand,
+            ExportBackupCommand,
+            ValidateBackupCommand,
+            RestoreBackupCommand);
     }
 
     partial void OnSelectedManagedAccountChanged(LocalAccountSummary? value)

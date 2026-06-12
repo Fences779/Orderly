@@ -33,12 +33,15 @@ public sealed class LauncherDatabaseInitializer
                 PasswordHash BLOB NOT NULL,
                 PasswordSalt BLOB NOT NULL,
                 PasswordIterations INTEGER NOT NULL,
+                PasswordKeyVersion INTEGER NOT NULL DEFAULT 1,
                 PinHash BLOB NOT NULL,
                 PinSalt BLOB NOT NULL,
                 PinIterations INTEGER NOT NULL,
+                PinHashVersion INTEGER NOT NULL DEFAULT 1,
                 RecoveryKeyHash BLOB NULL,
                 RecoveryKeySalt BLOB NULL,
                 RecoveryKeyIterations INTEGER NULL,
+                RecoveryKeyVersion INTEGER NOT NULL DEFAULT 1,
                 RecoveryEncryptedDataKey BLOB NULL,
                 RecoveryDataKeyNonce BLOB NULL,
                 RecoveryDataKeyTag BLOB NULL,
@@ -54,7 +57,8 @@ public sealed class LauncherDatabaseInitializer
                 IsEnabled INTEGER NOT NULL DEFAULT 1,
                 CreatedAt TEXT NOT NULL,
                 UpdatedAt TEXT NOT NULL,
-                LastLoginAt TEXT NULL
+                LastLoginAt TEXT NULL,
+                MetadataMac BLOB NULL
             );
             """, cancellationToken);
 
@@ -68,6 +72,15 @@ public sealed class LauncherDatabaseInitializer
             ON LocalAccounts(IsEnabled);
             """, cancellationToken);
 
+        await ExecuteAsync(connection, """
+            CREATE UNIQUE INDEX IF NOT EXISTS UX_LocalAccounts_SingleOwner
+            ON LocalAccounts(Role)
+            WHERE Role = 0;
+            """, cancellationToken);
+
+        await EnsureColumnAsync(connection, "LocalAccounts", "PasswordKeyVersion", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await EnsureColumnAsync(connection, "LocalAccounts", "PinHashVersion", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await EnsureColumnAsync(connection, "LocalAccounts", "RecoveryKeyVersion", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
         await EnsureColumnAsync(connection, "LocalAccounts", "RecoveryEncryptedDataKey", "BLOB NULL", cancellationToken);
         await EnsureColumnAsync(connection, "LocalAccounts", "RecoveryDataKeyNonce", "BLOB NULL", cancellationToken);
         await EnsureColumnAsync(connection, "LocalAccounts", "RecoveryDataKeyTag", "BLOB NULL", cancellationToken);
@@ -75,6 +88,7 @@ public sealed class LauncherDatabaseInitializer
         await EnsureColumnAsync(connection, "LocalAccounts", "AdminEncryptedDataKey", "BLOB NULL", cancellationToken);
         await EnsureColumnAsync(connection, "LocalAccounts", "AdminDataKeyNonce", "BLOB NULL", cancellationToken);
         await EnsureColumnAsync(connection, "LocalAccounts", "AdminDataKeyTag", "BLOB NULL", cancellationToken);
+        await EnsureColumnAsync(connection, "LocalAccounts", "MetadataMac", "BLOB NULL", cancellationToken);
     }
 
     private static async Task ExecuteAsync(SqliteConnection connection, string commandText, CancellationToken cancellationToken)

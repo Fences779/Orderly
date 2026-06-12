@@ -64,7 +64,11 @@ public sealed class LocalAuthService : ILocalAuthService
         var passwordHash = LocalCredentialSecurity.ComputeHash(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        var pinHash = LocalCredentialSecurity.ComputeHash(request.Pin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
+        var pinHash = LocalCredentialSecurity.ComputePinHash(
+            request.Pin,
+            pinSalt,
+            LocalCredentialSecurity.DefaultPinIterations,
+            LocalCredentialSecurity.CurrentCredentialFormatVersion);
 
         var recoveryKey = LocalCredentialSecurity.GenerateRecoveryKey();
         var normalizedRecoveryKey = LocalCredentialSecurity.NormalizeRecoveryKey(recoveryKey);
@@ -78,8 +82,8 @@ public sealed class LocalAuthService : ILocalAuthService
         LocalSessionContext? pendingSession = null;
         try
         {
-            wrapped = LocalCredentialSecurity.WrapDataKey(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, dataKey);
-            recoveryWrapped = LocalCredentialSecurity.WrapDataKey(normalizedRecoveryKey, recoverySalt, LocalCredentialSecurity.DefaultRecoveryIterations, dataKey);
+            wrapped = LocalCredentialSecurity.WrapPasswordDataKey(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, dataKey);
+            recoveryWrapped = LocalCredentialSecurity.WrapRecoveryDataKey(normalizedRecoveryKey, recoverySalt, LocalCredentialSecurity.DefaultRecoveryIterations, dataKey);
 
             var account = new LocalAccount
             {
@@ -89,12 +93,15 @@ public sealed class LocalAuthService : ILocalAuthService
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
                 PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations,
+                PasswordKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion,
                 PinHash = pinHash,
                 PinSalt = pinSalt,
                 PinIterations = LocalCredentialSecurity.DefaultPinIterations,
+                PinHashVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion,
                 RecoveryKeyHash = recoveryHash,
                 RecoveryKeySalt = recoverySalt,
                 RecoveryKeyIterations = LocalCredentialSecurity.DefaultRecoveryIterations,
+                RecoveryKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion,
                 RecoveryEncryptedDataKey = recoveryWrapped.Ciphertext,
                 RecoveryDataKeyNonce = recoveryWrapped.Nonce,
                 RecoveryDataKeyTag = recoveryWrapped.Tag,
@@ -248,7 +255,8 @@ public sealed class LocalAuthService : ILocalAuthService
                 account.PasswordIterations,
                 account.EncryptedDataKey,
                 account.DataKeyNonce,
-                account.DataKeyTag);
+                account.DataKeyTag,
+                account.PasswordKeyVersion);
         }
         catch (CryptographicException)
         {
@@ -265,6 +273,7 @@ public sealed class LocalAuthService : ILocalAuthService
         {
             account.LastLoginAt = DateTime.Now;
             account.UpdatedAt = account.LastLoginAt.Value;
+            UpgradePasswordAndRecoveryMaterialIfNeeded(account, masterPassword, dataKey);
             await _accountRepository.UpdateAsync(account, cancellationToken);
 
             var session = CreateSession(account, dataKey, account.LastLoginAt.Value);
@@ -304,12 +313,17 @@ public sealed class LocalAuthService : ILocalAuthService
             return false;
         }
 
-        var verified = LocalCredentialSecurity.VerifyHash(pin, account.PinSalt, account.PinIterations, account.PinHash);
+        var verified = LocalCredentialSecurity.VerifyPinHash(pin, account.PinSalt, account.PinIterations, account.PinHash, account.PinHashVersion);
         if (verified
             && _sessionContextService.IsSignedIn
             && !_sessionContextService.IsDataKeyAvailable)
         {
             verified = _sessionContextService.TryRestoreDataKey(normalizedAccountId);
+        }
+
+        if (verified)
+        {
+            await UpgradePinHashIfNeededAsync(account, pin, cancellationToken);
         }
 
         RecordCredentialResult("pin", normalizedAccountId, verified);
@@ -381,15 +395,123 @@ public sealed class LocalAuthService : ILocalAuthService
         int iterations,
         byte[] encryptedDataKey,
         byte[] nonce,
-        byte[] tag)
+        byte[] tag,
+        int formatVersion)
     {
-        return LocalCredentialSecurity.UnwrapDataKey(
+        return LocalCredentialSecurity.UnwrapPasswordDataKey(
             masterPassword,
             passwordSalt,
             iterations,
             encryptedDataKey,
             nonce,
-            tag);
+            tag,
+            formatVersion);
+    }
+
+    private static void UpgradePasswordAndRecoveryMaterialIfNeeded(LocalAccount account, string masterPassword, byte[] dataKey)
+    {
+        UpgradePasswordMaterialIfNeeded(account, masterPassword, dataKey);
+        UpgradeRecoveryMaterialIfNeeded(account, dataKey);
+    }
+
+    private static void UpgradePasswordMaterialIfNeeded(LocalAccount account, string masterPassword, byte[] dataKey)
+    {
+        if (account.PasswordKeyVersion >= LocalCredentialSecurity.CurrentCredentialFormatVersion
+            && account.PasswordIterations >= LocalCredentialSecurity.DefaultPasswordIterations)
+        {
+            return;
+        }
+
+        var passwordSalt = RandomNumberGenerator.GetBytes(16);
+        var passwordHash = LocalCredentialSecurity.ComputeHash(masterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
+        var wrapped = LocalCredentialSecurity.WrapPasswordDataKey(masterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, dataKey);
+        SensitiveBuffer.Clear(account.PasswordSalt, account.PasswordHash);
+        SensitiveBuffer.ClearWrappedDataKey((account.EncryptedDataKey, account.DataKeyNonce, account.DataKeyTag));
+
+        account.PasswordSalt = passwordSalt;
+        account.PasswordHash = passwordHash;
+        account.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
+        account.PasswordKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
+        account.EncryptedDataKey = wrapped.Ciphertext;
+        account.DataKeyNonce = wrapped.Nonce;
+        account.DataKeyTag = wrapped.Tag;
+    }
+
+    private static void UpgradeRecoveryMaterialIfNeeded(LocalAccount account, byte[] dataKey)
+    {
+        var hasRecoveryMaterial = LocalCredentialSecurity.HasUsableHashParameters(
+                account.RecoveryKeySalt,
+                account.RecoveryKeyIterations,
+                account.RecoveryKeyHash)
+            && LocalCredentialSecurity.HasUsableWrappedDataKey(
+                account.RecoveryEncryptedDataKey,
+                account.RecoveryDataKeyNonce,
+                account.RecoveryDataKeyTag);
+        if (!hasRecoveryMaterial)
+        {
+            account.RecoveryKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
+            return;
+        }
+
+        if (account.RecoveryKeyVersion >= LocalCredentialSecurity.CurrentCredentialFormatVersion)
+        {
+            return;
+        }
+
+        var recoveryDataKey = LocalCredentialSecurity.UnwrapRecoveryDataKeyWithVerifierHash(
+            account.RecoveryKeyHash,
+            account.RecoveryEncryptedDataKey,
+            account.RecoveryDataKeyNonce,
+            account.RecoveryDataKeyTag,
+            account.RecoveryKeyVersion);
+        try
+        {
+            if (!CryptographicOperations.FixedTimeEquals(recoveryDataKey, dataKey))
+            {
+                throw new InvalidOperationException("Recovery Key 数据密钥与当前账号不匹配。");
+            }
+
+            var wrapped = LocalCredentialSecurity.WrapRecoveryDataKeyWithVerifierHash(account.RecoveryKeyHash, dataKey);
+            SensitiveBuffer.ClearWrappedDataKey((account.RecoveryEncryptedDataKey, account.RecoveryDataKeyNonce, account.RecoveryDataKeyTag));
+            account.RecoveryEncryptedDataKey = wrapped.Ciphertext;
+            account.RecoveryDataKeyNonce = wrapped.Nonce;
+            account.RecoveryDataKeyTag = wrapped.Tag;
+            account.RecoveryKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(recoveryDataKey);
+        }
+    }
+
+    private async Task UpgradePinHashIfNeededAsync(LocalAccount account, string pin, CancellationToken cancellationToken)
+    {
+        if (account.PinHashVersion >= LocalCredentialSecurity.CurrentCredentialFormatVersion
+            && account.PinIterations >= LocalCredentialSecurity.DefaultPinIterations)
+        {
+            return;
+        }
+
+        var pinSalt = RandomNumberGenerator.GetBytes(16);
+        var pinHash = LocalCredentialSecurity.ComputePinHash(
+            pin,
+            pinSalt,
+            LocalCredentialSecurity.DefaultPinIterations,
+            LocalCredentialSecurity.CurrentCredentialFormatVersion);
+        try
+        {
+            SensitiveBuffer.Clear(account.PinSalt, account.PinHash);
+            account.PinSalt = pinSalt;
+            account.PinHash = pinHash;
+            account.PinIterations = LocalCredentialSecurity.DefaultPinIterations;
+            account.PinHashVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
+            account.UpdatedAt = DateTime.Now;
+            await _accountRepository.UpdateAsync(account, cancellationToken);
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(pinSalt, pinHash);
+        }
     }
 
     private static LocalSessionContext CreateSession(LocalAccount account, byte[] dataKey, DateTime signedInAt)

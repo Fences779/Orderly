@@ -10,6 +10,8 @@ public sealed partial class LocalBackupService
         string createdBy = "p2.8",
         CancellationToken cancellationToken = default)
     {
+        RequireOwnerSessionForRestore();
+
         var validation = await ValidateCoreAsync(backupPath, cancellationToken);
 
         TargetInspectionResult inspection;

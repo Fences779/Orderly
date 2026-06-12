@@ -1,5 +1,6 @@
 using Orderly.Data.Sqlite;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace Orderly.Data.Services;
@@ -13,6 +14,7 @@ public sealed class CredentialAttemptTracker
     private readonly object _syncRoot = new();
     private readonly Dictionary<string, AttemptState> _attempts = new(StringComparer.Ordinal);
     private readonly string _stateFilePath;
+    private readonly Mutex _processMutex;
 
     public CredentialAttemptTracker()
         : this(Path.Combine(DatabasePaths.GetIdentityDirectoryPath(), StateFileName))
@@ -27,6 +29,7 @@ public sealed class CredentialAttemptTracker
         }
 
         _stateFilePath = Path.GetFullPath(stateFilePath);
+        _processMutex = new Mutex(initiallyOwned: false, BuildMutexName(_stateFilePath));
         var directory = Path.GetDirectoryName(_stateFilePath);
         if (!string.IsNullOrWhiteSpace(directory))
         {
@@ -44,6 +47,7 @@ public sealed class CredentialAttemptTracker
 
         lock (_syncRoot)
         {
+            using var _ = AcquireProcessMutex();
             LoadAttempts();
             if (!_attempts.TryGetValue(key, out var state))
             {
@@ -83,6 +87,7 @@ public sealed class CredentialAttemptTracker
 
         lock (_syncRoot)
         {
+            using var _ = AcquireProcessMutex();
             LoadAttempts();
             if (_attempts.TryGetValue(key, out var state) && state.LockedUntil > now)
             {
@@ -112,6 +117,7 @@ public sealed class CredentialAttemptTracker
 
         lock (_syncRoot)
         {
+            using var _ = AcquireProcessMutex();
             LoadAttempts();
             if (_attempts.Remove(key))
             {
@@ -139,7 +145,8 @@ public sealed class CredentialAttemptTracker
         try
         {
             LocalDataFileSecurity.EnsureFileIsNotLinked(_stateFilePath, "凭据尝试状态文件");
-            var json = File.ReadAllText(_stateFilePath);
+            var bytes = File.ReadAllBytes(_stateFilePath);
+            var json = DecodePersistedJson(bytes);
             var persisted = JsonSerializer.Deserialize<Dictionary<string, AttemptState>>(json);
             if (persisted is null)
             {
@@ -178,7 +185,27 @@ public sealed class CredentialAttemptTracker
         try
         {
             var json = JsonSerializer.Serialize(_attempts);
-            File.WriteAllText(tempPath, json);
+            var jsonBytes = Encoding.UTF8.GetBytes(json);
+            byte[] protectedBytes = [];
+            try
+            {
+                if (!OperatingSystem.IsWindows())
+                {
+                    throw new PlatformNotSupportedException("凭据尝试状态保护需要 Windows DPAPI。");
+                }
+
+                protectedBytes = ProtectedData.Protect(
+                    jsonBytes,
+                    optionalEntropy: null,
+                    DataProtectionScope.CurrentUser);
+                File.WriteAllBytes(tempPath, protectedBytes);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(jsonBytes);
+                CryptographicOperations.ZeroMemory(protectedBytes);
+            }
+
             LocalDataFileSecurity.HardenFile(tempPath);
             File.Move(tempPath, _stateFilePath, overwrite: true);
             LocalDataFileSecurity.HardenFile(_stateFilePath);
@@ -204,6 +231,79 @@ public sealed class CredentialAttemptTracker
     private static bool IsValidPersistedKey(string key)
     {
         return key.Length == 64 && key.All(static ch => char.IsAsciiHexDigit(ch));
+    }
+
+    private static string DecodePersistedJson(byte[] persistedBytes)
+    {
+        if (persistedBytes.Length == 0)
+        {
+            return "{}";
+        }
+
+        if (persistedBytes[0] == (byte)'{')
+        {
+            return Encoding.UTF8.GetString(persistedBytes);
+        }
+
+        byte[] jsonBytes = [];
+        try
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                throw new PlatformNotSupportedException("凭据尝试状态保护需要 Windows DPAPI。");
+            }
+
+            jsonBytes = ProtectedData.Unprotect(
+                persistedBytes,
+                optionalEntropy: null,
+                DataProtectionScope.CurrentUser);
+            return Encoding.UTF8.GetString(jsonBytes);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(jsonBytes);
+        }
+    }
+
+    private static string BuildMutexName(string stateFilePath)
+    {
+        var pathHash = SHA256.HashData(Encoding.UTF8.GetBytes(stateFilePath.ToUpperInvariant()));
+        return "Local\\OrderlyCredentialAttempts-" + Convert.ToHexString(pathHash);
+    }
+
+    private MutexLease AcquireProcessMutex()
+    {
+        try
+        {
+            _processMutex.WaitOne();
+            return new MutexLease(_processMutex);
+        }
+        catch (AbandonedMutexException)
+        {
+            return new MutexLease(_processMutex);
+        }
+    }
+
+    private sealed class MutexLease : IDisposable
+    {
+        private readonly Mutex _mutex;
+        private bool _disposed;
+
+        public MutexLease(Mutex mutex)
+        {
+            _mutex = mutex;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _mutex.ReleaseMutex();
+            _disposed = true;
+        }
     }
 
     private sealed class AttemptState

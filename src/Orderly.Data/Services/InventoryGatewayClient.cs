@@ -58,7 +58,8 @@ public sealed class InventoryGatewayClient
             response.Content,
             MaxResponseBodyBytes,
             "库存云端网关",
-            cancellationToken);
+            cancellationToken,
+            TimeSpan.FromSeconds(_options.TimeoutSeconds));
         if (!response.IsSuccessStatusCode)
         {
             if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)

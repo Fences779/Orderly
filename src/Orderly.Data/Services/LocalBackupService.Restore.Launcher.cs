@@ -87,12 +87,15 @@ public sealed partial class LocalBackupService
                 PasswordHash,
                 PasswordSalt,
                 PasswordIterations,
+                PasswordKeyVersion,
                 PinHash,
                 PinSalt,
                 PinIterations,
+                PinHashVersion,
                 RecoveryKeyHash,
                 RecoveryKeySalt,
                 RecoveryKeyIterations,
+                RecoveryKeyVersion,
                 RecoveryEncryptedDataKey,
                 RecoveryDataKeyNonce,
                 RecoveryDataKeyTag,
@@ -108,7 +111,8 @@ public sealed partial class LocalBackupService
                 IsEnabled,
                 CreatedAt,
                 UpdatedAt,
-                LastLoginAt
+                LastLoginAt,
+                MetadataMac
             )
             VALUES (
                 $accountId,
@@ -117,12 +121,15 @@ public sealed partial class LocalBackupService
                 $passwordHash,
                 $passwordSalt,
                 $passwordIterations,
+                $passwordKeyVersion,
                 $pinHash,
                 $pinSalt,
                 $pinIterations,
+                $pinHashVersion,
                 $recoveryKeyHash,
                 $recoveryKeySalt,
                 $recoveryKeyIterations,
+                $recoveryKeyVersion,
                 $recoveryEncryptedDataKey,
                 $recoveryDataKeyNonce,
                 $recoveryDataKeyTag,
@@ -138,7 +145,8 @@ public sealed partial class LocalBackupService
                 $isEnabled,
                 $createdAt,
                 $updatedAt,
-                $lastLoginAt
+                $lastLoginAt,
+                $metadataMac
             )
             ON CONFLICT(AccountId) DO UPDATE SET
                 Username = excluded.Username,
@@ -146,12 +154,15 @@ public sealed partial class LocalBackupService
                 PasswordHash = excluded.PasswordHash,
                 PasswordSalt = excluded.PasswordSalt,
                 PasswordIterations = excluded.PasswordIterations,
+                PasswordKeyVersion = excluded.PasswordKeyVersion,
                 PinHash = excluded.PinHash,
                 PinSalt = excluded.PinSalt,
                 PinIterations = excluded.PinIterations,
+                PinHashVersion = excluded.PinHashVersion,
                 RecoveryKeyHash = excluded.RecoveryKeyHash,
                 RecoveryKeySalt = excluded.RecoveryKeySalt,
                 RecoveryKeyIterations = excluded.RecoveryKeyIterations,
+                RecoveryKeyVersion = excluded.RecoveryKeyVersion,
                 RecoveryEncryptedDataKey = excluded.RecoveryEncryptedDataKey,
                 RecoveryDataKeyNonce = excluded.RecoveryDataKeyNonce,
                 RecoveryDataKeyTag = excluded.RecoveryDataKeyTag,
@@ -167,7 +178,8 @@ public sealed partial class LocalBackupService
                 IsEnabled = excluded.IsEnabled,
                 CreatedAt = excluded.CreatedAt,
                 UpdatedAt = excluded.UpdatedAt,
-                LastLoginAt = excluded.LastLoginAt;
+                LastLoginAt = excluded.LastLoginAt,
+                MetadataMac = excluded.MetadataMac;
             """;
         command.Parameters.AddWithValue("$accountId", row.AccountId);
         command.Parameters.AddWithValue("$username", row.Username);
@@ -187,35 +199,75 @@ public sealed partial class LocalBackupService
         var adminEncryptedDataKey = FromBase64OrEmpty(row.AdminEncryptedDataKey, "AdminEncryptedDataKey", MaxLauncherWrappedKeyBytes);
         var adminDataKeyNonce = FromBase64OrEmpty(row.AdminDataKeyNonce, "AdminDataKeyNonce", MaxLauncherNonceBytes);
         var adminDataKeyTag = FromBase64OrEmpty(row.AdminDataKeyTag, "AdminDataKeyTag", MaxLauncherTagBytes);
-        ValidateLauncherSnapshotCredentialFields(
-            row,
-            passwordHash,
-            passwordSalt,
-            pinHash,
-            pinSalt,
-            recoveryKeyHash,
-            recoveryKeySalt,
-            recoveryEncryptedDataKey,
-            recoveryDataKeyNonce,
-            recoveryDataKeyTag,
-            encryptedDataKey,
-            dataKeyNonce,
-            dataKeyTag,
-            adminEncryptedDataKey,
-            adminDataKeyNonce,
-            adminDataKeyTag);
-
+        byte[] metadataMac = [];
         try
         {
+            metadataMac = LocalAccountMetadataSecurity.ComputeMac(new LocalAccount
+            {
+                AccountId = row.AccountId,
+                Username = row.Username,
+                DisplayName = row.DisplayName,
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt,
+                PasswordIterations = row.PasswordIterations,
+                PasswordKeyVersion = row.PasswordKeyVersion,
+                PinHash = pinHash,
+                PinSalt = pinSalt,
+                PinIterations = row.PinIterations,
+                PinHashVersion = row.PinHashVersion,
+                RecoveryKeyHash = recoveryKeyHash,
+                RecoveryKeySalt = recoveryKeySalt,
+                RecoveryKeyIterations = row.RecoveryKeyIterations ?? 0,
+                RecoveryKeyVersion = row.RecoveryKeyVersion,
+                RecoveryEncryptedDataKey = recoveryEncryptedDataKey,
+                RecoveryDataKeyNonce = recoveryDataKeyNonce,
+                RecoveryDataKeyTag = recoveryDataKeyTag,
+                EncryptedDataKey = encryptedDataKey,
+                DataKeyNonce = dataKeyNonce,
+                DataKeyTag = dataKeyTag,
+                AdminOwnerAccountId = row.AdminOwnerAccountId ?? string.Empty,
+                AdminEncryptedDataKey = adminEncryptedDataKey,
+                AdminDataKeyNonce = adminDataKeyNonce,
+                AdminDataKeyTag = adminDataKeyTag,
+                DatabasePath = restoredDatabasePath,
+                Role = (LocalAccountRole)row.Role,
+                IsEnabled = row.IsEnabled,
+                CreatedAt = DateTime.Parse(row.CreatedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                UpdatedAt = DateTime.Parse(row.UpdatedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                LastLoginAt = string.IsNullOrWhiteSpace(row.LastLoginAt)
+                    ? null
+                    : DateTime.Parse(row.LastLoginAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+            });
+            ValidateLauncherSnapshotCredentialFields(
+                row,
+                passwordHash,
+                passwordSalt,
+                pinHash,
+                pinSalt,
+                recoveryKeyHash,
+                recoveryKeySalt,
+                recoveryEncryptedDataKey,
+                recoveryDataKeyNonce,
+                recoveryDataKeyTag,
+                encryptedDataKey,
+                dataKeyNonce,
+                dataKeyTag,
+                adminEncryptedDataKey,
+                adminDataKeyNonce,
+                adminDataKeyTag);
+
             command.Parameters.AddWithValue("$passwordHash", passwordHash);
             command.Parameters.AddWithValue("$passwordSalt", passwordSalt);
             command.Parameters.AddWithValue("$passwordIterations", row.PasswordIterations);
+            command.Parameters.AddWithValue("$passwordKeyVersion", row.PasswordKeyVersion);
             command.Parameters.AddWithValue("$pinHash", pinHash);
             command.Parameters.AddWithValue("$pinSalt", pinSalt);
             command.Parameters.AddWithValue("$pinIterations", row.PinIterations);
+            command.Parameters.AddWithValue("$pinHashVersion", row.PinHashVersion);
             command.Parameters.AddWithValue("$recoveryKeyHash", ToDbBlob(recoveryKeyHash));
             command.Parameters.AddWithValue("$recoveryKeySalt", ToDbBlob(recoveryKeySalt));
             command.Parameters.AddWithValue("$recoveryKeyIterations", row.RecoveryKeyIterations is null ? DBNull.Value : row.RecoveryKeyIterations.Value);
+            command.Parameters.AddWithValue("$recoveryKeyVersion", row.RecoveryKeyVersion);
             command.Parameters.AddWithValue("$recoveryEncryptedDataKey", ToDbBlob(recoveryEncryptedDataKey));
             command.Parameters.AddWithValue("$recoveryDataKeyNonce", ToDbBlob(recoveryDataKeyNonce));
             command.Parameters.AddWithValue("$recoveryDataKeyTag", ToDbBlob(recoveryDataKeyTag));
@@ -232,6 +284,7 @@ public sealed partial class LocalBackupService
             command.Parameters.AddWithValue("$createdAt", row.CreatedAt);
             command.Parameters.AddWithValue("$updatedAt", row.UpdatedAt);
             command.Parameters.AddWithValue("$lastLoginAt", string.IsNullOrWhiteSpace(row.LastLoginAt) ? DBNull.Value : row.LastLoginAt);
+            command.Parameters.AddWithValue("$metadataMac", metadataMac);
 
             await command.ExecuteNonQueryAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -253,7 +306,8 @@ public sealed partial class LocalBackupService
                 dataKeyTag,
                 adminEncryptedDataKey,
                 adminDataKeyNonce,
-                adminDataKeyTag);
+                adminDataKeyTag,
+                metadataMac);
         }
     }
 
@@ -289,6 +343,10 @@ public sealed partial class LocalBackupService
         {
             row.LastLoginAt = NormalizeLauncherSnapshotDate(row.LastLoginAt, "LastLoginAt");
         }
+
+        row.PasswordKeyVersion = NormalizeLauncherCredentialVersion(row.PasswordKeyVersion, "PasswordKeyVersion");
+        row.PinHashVersion = NormalizeLauncherCredentialVersion(row.PinHashVersion, "PinHashVersion");
+        row.RecoveryKeyVersion = NormalizeLauncherCredentialVersion(row.RecoveryKeyVersion, "RecoveryKeyVersion");
     }
 
     private static string NormalizeLauncherSnapshotDate(string value, string fieldName)
@@ -335,6 +393,10 @@ public sealed partial class LocalBackupService
         {
             throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 存在不安全或无效的账号凭据哈希参数。");
         }
+
+        ValidateLauncherCredentialVersion(row.PasswordKeyVersion, "PasswordKeyVersion");
+        ValidateLauncherCredentialVersion(row.PinHashVersion, "PinHashVersion");
+        ValidateLauncherCredentialVersion(row.RecoveryKeyVersion, "RecoveryKeyVersion");
 
         if (!LocalCredentialSecurity.HasUsableWrappedDataKey(encryptedDataKey, dataKeyNonce, dataKeyTag))
         {
@@ -425,5 +487,24 @@ public sealed partial class LocalBackupService
     private static object ToDbBlob(byte[] value)
     {
         return value.Length == 0 ? DBNull.Value : value;
+    }
+
+    private static int NormalizeLauncherCredentialVersion(int version, string fieldName)
+    {
+        if (version == 0)
+        {
+            return LocalCredentialSecurity.LegacyCredentialFormatVersion;
+        }
+
+        ValidateLauncherCredentialVersion(version, fieldName);
+        return version;
+    }
+
+    private static void ValidateLauncherCredentialVersion(int version, string fieldName)
+    {
+        if (version is < LocalCredentialSecurity.LegacyCredentialFormatVersion or > LocalCredentialSecurity.CurrentCredentialFormatVersion)
+        {
+            throw new InvalidOperationException($"表 {LauncherLocalAccountsTableName} 字段 {fieldName} 的凭据版本无效。");
+        }
     }
 }

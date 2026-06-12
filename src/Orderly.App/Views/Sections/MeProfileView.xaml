@@ -127,12 +127,12 @@
 
                                                 <StackPanel Grid.Row="0" Grid.Column="4">
                                                     <TextBlock Text="主密码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
-                                                    <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Text="{Binding NewMemberPassword, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <PasswordBox x:Name="NewMemberPasswordBox" Height="30" PasswordChanged="SecretInput_PasswordChanged" />
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Row="0" Grid.Column="6">
-                                                    <TextBlock Text="PIN 码 (4位)" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
-                                                    <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Text="{Binding NewMemberPin, UpdateSourceTrigger=PropertyChanged}" />
+                                                    <TextBlock Text="PIN 码 (6位)" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                                    <PasswordBox x:Name="NewMemberPinBox" Height="30" MaxLength="6" PasswordChanged="SecretInput_PasswordChanged" />
                                                 </StackPanel>
                                             </Grid>
                                             <Button Content="创建账号" Command="{Binding CreateMemberCommand}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="32" Padding="14,0" Margin="0,12,0,0" HorizontalAlignment="Right" />
@@ -222,7 +222,7 @@
                                                             <ColumnDefinition Width="8" />
                                                             <ColumnDefinition Width="Auto" />
                                                         </Grid.ColumnDefinitions>
-                                                        <TextBox Grid.Column="0" Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Text="{Binding ResetMemberPasswordInput, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <PasswordBox x:Name="ResetMemberPasswordBox" Grid.Column="0" Height="30" PasswordChanged="SecretInput_PasswordChanged" />
                                                         <Button Grid.Column="2" Content="重置密码" Command="{Binding ResetMemberPasswordCommand}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="30" Padding="12,0" Margin="0" />
                                                     </Grid>
                                                 </StackPanel>
@@ -236,7 +236,7 @@
                                                             <ColumnDefinition Width="8" />
                                                             <ColumnDefinition Width="Auto" />
                                                         </Grid.ColumnDefinitions>
-                                                        <TextBox Grid.Column="0" Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Text="{Binding ResetMemberPinInput, UpdateSourceTrigger=PropertyChanged}" />
+                                                        <PasswordBox x:Name="ResetMemberPinBox" Grid.Column="0" Height="30" MaxLength="6" PasswordChanged="SecretInput_PasswordChanged" />
                                                         <Button Grid.Column="2" Content="重置 PIN" Command="{Binding ResetMemberPinCommand}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="30" Padding="12,0" Margin="0" />
                                                     </Grid>
                                                 </StackPanel>
@@ -268,10 +268,10 @@
                                             <TextBlock Text="修改账户主密码" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,12" />
 
                                             <TextBlock Text="当前密码验证" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
-                                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Margin="0,0,0,10" Text="{Binding CurrentMasterPasswordInput, UpdateSourceTrigger=PropertyChanged}" />
+                                            <PasswordBox x:Name="CurrentMasterPasswordBox" Height="30" Margin="0,0,0,10" PasswordChanged="SecretInput_PasswordChanged" />
 
                                             <TextBlock Text="输入新主密码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
-                                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Margin="0,0,0,12" Text="{Binding NewCurrentMasterPasswordInput, UpdateSourceTrigger=PropertyChanged}" />
+                                            <PasswordBox x:Name="NewCurrentMasterPasswordBox" Height="30" Margin="0,0,0,12" PasswordChanged="SecretInput_PasswordChanged" />
 
                                             <Button Content="确认修改主密码" Command="{Binding ChangeCurrentMasterPasswordCommand}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="32" Padding="14,0" HorizontalAlignment="Left" />
                                         </StackPanel>
@@ -281,10 +281,10 @@
                                             <TextBlock Text="修改安全 PIN 码" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,12" />
 
                                             <TextBlock Text="当前 PIN 验证" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
-                                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Margin="0,0,0,10" Text="{Binding CurrentPinInput, UpdateSourceTrigger=PropertyChanged}" />
+                                            <PasswordBox x:Name="CurrentPinBox" Height="30" Margin="0,0,0,10" MaxLength="6" PasswordChanged="SecretInput_PasswordChanged" />
 
                                             <TextBlock Text="输入新 PIN 码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
-                                            <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Margin="0,0,0,12" Text="{Binding NewCurrentPinInput, UpdateSourceTrigger=PropertyChanged}" />
+                                            <PasswordBox x:Name="NewCurrentPinBox" Height="30" Margin="0,0,0,12" MaxLength="6" PasswordChanged="SecretInput_PasswordChanged" />
 
                                             <Button Content="确认修改 PIN 码" Command="{Binding ChangeCurrentPinCommand}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="32" Padding="14,0" HorizontalAlignment="Left" />
                                         </StackPanel>

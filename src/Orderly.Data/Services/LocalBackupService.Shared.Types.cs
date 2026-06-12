@@ -25,6 +25,9 @@ public sealed partial class LocalBackupService
         [JsonPropertyName("passwordIterations")]
         public int PasswordIterations { get; set; }
 
+        [JsonPropertyName("passwordKeyVersion")]
+        public int PasswordKeyVersion { get; set; } = LocalCredentialSecurity.LegacyCredentialFormatVersion;
+
         [JsonPropertyName("pinHash")]
         public string PinHash { get; set; } = string.Empty;
 
@@ -34,6 +37,9 @@ public sealed partial class LocalBackupService
         [JsonPropertyName("pinIterations")]
         public int PinIterations { get; set; }
 
+        [JsonPropertyName("pinHashVersion")]
+        public int PinHashVersion { get; set; } = LocalCredentialSecurity.LegacyCredentialFormatVersion;
+
         [JsonPropertyName("recoveryKeyHash")]
         public string? RecoveryKeyHash { get; set; }
 
@@ -42,6 +48,9 @@ public sealed partial class LocalBackupService
 
         [JsonPropertyName("recoveryKeyIterations")]
         public int? RecoveryKeyIterations { get; set; }
+
+        [JsonPropertyName("recoveryKeyVersion")]
+        public int RecoveryKeyVersion { get; set; } = LocalCredentialSecurity.LegacyCredentialFormatVersion;
 
         [JsonPropertyName("recoveryEncryptedDataKey")]
         public string? RecoveryEncryptedDataKey { get; set; }

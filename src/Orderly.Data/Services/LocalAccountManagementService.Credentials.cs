@@ -41,13 +41,14 @@ public sealed partial class LocalAccountManagementService
         {
             return (
                 owner,
-                UnwrapDataKey(
+                UnwrapPasswordDataKey(
                     ownerMasterPassword,
                     owner.PasswordSalt,
-                    owner.PasswordIterations,
-                    owner.EncryptedDataKey,
-                    owner.DataKeyNonce,
-                    owner.DataKeyTag));
+                owner.PasswordIterations,
+                owner.EncryptedDataKey,
+                owner.DataKeyNonce,
+                owner.DataKeyTag,
+                owner.PasswordKeyVersion));
         }
         catch (CryptographicException)
         {
@@ -98,12 +99,14 @@ public sealed partial class LocalAccountManagementService
         RecordCredentialAttemptResult(CredentialAttemptPurposeSignIn, normalizedOwnerUsername, success: true);
         ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, owner.AccountId);
 
-        if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
+        var ownerPinValue = ownerPin.Trim();
+        if (!LocalCredentialSecurity.VerifyPinHash(ownerPinValue, owner.PinSalt, owner.PinIterations, owner.PinHash, owner.PinHashVersion))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposePin, owner.AccountId);
             throw new InvalidOperationException(GenericOwnerCredentialFailureMessage);
         }
 
+        await UpgradeVerifiedPinHashIfNeededAsync(owner, ownerPinValue, cancellationToken);
         RecordCredentialAttemptResult(CredentialAttemptPurposePin, owner.AccountId, success: true);
         return owner;
     }
@@ -137,13 +140,14 @@ public sealed partial class LocalAccountManagementService
 
         var passwordSalt = RandomNumberGenerator.GetBytes(16);
         var passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
-        var wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, session.DataKey);
+        var wrappedByPassword = WrapPasswordDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, session.DataKey);
 
         try
         {
             account.PasswordSalt = passwordSalt;
             account.PasswordHash = passwordHash;
             account.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
+            account.PasswordKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
             account.EncryptedDataKey = wrappedByPassword.Ciphertext;
             account.DataKeyNonce = wrappedByPassword.Nonce;
             account.DataKeyTag = wrappedByPassword.Tag;
@@ -173,7 +177,7 @@ public sealed partial class LocalAccountManagementService
         }
 
         ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, account.AccountId);
-        if (!LocalCredentialSecurity.VerifyHash(currentPin, account.PinSalt, account.PinIterations, account.PinHash))
+        if (!LocalCredentialSecurity.VerifyPinHash(currentPin, account.PinSalt, account.PinIterations, account.PinHash, account.PinHashVersion))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposePin, account.AccountId);
             throw new InvalidOperationException("当前 PIN 错误。");
@@ -181,13 +185,18 @@ public sealed partial class LocalAccountManagementService
         RecordCredentialAttemptResult(CredentialAttemptPurposePin, account.AccountId, success: true);
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        var pinHash = LocalCredentialSecurity.ComputeHash(newPin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
+        var pinHash = LocalCredentialSecurity.ComputePinHash(
+            newPin,
+            pinSalt,
+            LocalCredentialSecurity.DefaultPinIterations,
+            LocalCredentialSecurity.CurrentCredentialFormatVersion);
 
         try
         {
             account.PinSalt = pinSalt;
             account.PinHash = pinHash;
             account.PinIterations = LocalCredentialSecurity.DefaultPinIterations;
+            account.PinHashVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
             account.UpdatedAt = DateTime.Now;
             await _accountRepository.UpdateAsync(account, cancellationToken);
         }
@@ -224,11 +233,12 @@ public sealed partial class LocalAccountManagementService
         {
             passwordSalt = RandomNumberGenerator.GetBytes(16);
             passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
-            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
+            wrappedByPassword = WrapPasswordDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
 
             member.PasswordSalt = passwordSalt;
             member.PasswordHash = passwordHash;
             member.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
+            member.PasswordKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
             member.EncryptedDataKey = wrappedByPassword.Ciphertext;
             member.DataKeyNonce = wrappedByPassword.Nonce;
             member.DataKeyTag = wrappedByPassword.Tag;
@@ -309,11 +319,12 @@ public sealed partial class LocalAccountManagementService
             memberDataKey = UnwrapDataKeyWithKey(ownerDataKey, member.AdminEncryptedDataKey, member.AdminDataKeyNonce, member.AdminDataKeyTag);
             passwordSalt = RandomNumberGenerator.GetBytes(16);
             passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
-            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
+            wrappedByPassword = WrapPasswordDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
 
             member.PasswordSalt = passwordSalt;
             member.PasswordHash = passwordHash;
             member.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
+            member.PasswordKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
             member.EncryptedDataKey = wrappedByPassword.Ciphertext;
             member.DataKeyNonce = wrappedByPassword.Nonce;
             member.DataKeyTag = wrappedByPassword.Tag;
@@ -353,13 +364,18 @@ public sealed partial class LocalAccountManagementService
         }
 
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        var pinHash = LocalCredentialSecurity.ComputeHash(newPin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
+        var pinHash = LocalCredentialSecurity.ComputePinHash(
+            newPin,
+            pinSalt,
+            LocalCredentialSecurity.DefaultPinIterations,
+            LocalCredentialSecurity.CurrentCredentialFormatVersion);
 
         try
         {
             member.PinSalt = pinSalt;
             member.PinHash = pinHash;
             member.PinIterations = LocalCredentialSecurity.DefaultPinIterations;
+            member.PinHashVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
             member.UpdatedAt = DateTime.Now;
             await _accountRepository.UpdateAsync(member, cancellationToken);
         }
@@ -400,13 +416,14 @@ public sealed partial class LocalAccountManagementService
         byte[] ownerDataKey;
         try
         {
-            ownerDataKey = UnwrapDataKey(
+            ownerDataKey = UnwrapRecoveryDataKey(
                 normalizedRecoveryKey,
                 owner.RecoveryKeySalt,
                 owner.RecoveryKeyIterations,
                 owner.RecoveryEncryptedDataKey,
                 owner.RecoveryDataKeyNonce,
-                owner.RecoveryDataKeyTag);
+                owner.RecoveryDataKeyTag,
+                owner.RecoveryKeyVersion);
         }
         catch (CryptographicException)
         {
@@ -424,11 +441,12 @@ public sealed partial class LocalAccountManagementService
         {
             passwordSalt = RandomNumberGenerator.GetBytes(16);
             passwordHash = LocalCredentialSecurity.ComputeHash(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
-            wrappedByPassword = WrapDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, ownerDataKey);
+            wrappedByPassword = WrapPasswordDataKey(newMasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, ownerDataKey);
 
             owner.PasswordSalt = passwordSalt;
             owner.PasswordHash = passwordHash;
             owner.PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations;
+            owner.PasswordKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
             owner.EncryptedDataKey = wrappedByPassword.Ciphertext;
             owner.DataKeyNonce = wrappedByPassword.Nonce;
             owner.DataKeyTag = wrappedByPassword.Tag;
@@ -468,11 +486,13 @@ public sealed partial class LocalAccountManagementService
         }
 
         ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, owner.AccountId);
-        if (!LocalCredentialSecurity.VerifyHash(ownerPin.Trim(), owner.PinSalt, owner.PinIterations, owner.PinHash))
+        var ownerPinValue = ownerPin.Trim();
+        if (!LocalCredentialSecurity.VerifyPinHash(ownerPinValue, owner.PinSalt, owner.PinIterations, owner.PinHash, owner.PinHashVersion))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposePin, owner.AccountId);
             throw new InvalidOperationException(GenericOwnerRecoveryFailureMessage);
         }
+        await UpgradeVerifiedPinHashIfNeededAsync(owner, ownerPinValue, cancellationToken);
         RecordCredentialAttemptResult(CredentialAttemptPurposePin, owner.AccountId, success: true);
 
         if (!LocalCredentialSecurity.HasUsableHashParameters(owner.RecoveryKeySalt, owner.RecoveryKeyIterations, owner.RecoveryKeyHash)
@@ -527,11 +547,13 @@ public sealed partial class LocalAccountManagementService
         }
 
         ThrowIfCredentialAttemptBlocked(CredentialAttemptPurposePin, member.AccountId);
-        if (!LocalCredentialSecurity.VerifyHash(memberPin.Trim(), member.PinSalt, member.PinIterations, member.PinHash))
+        var memberPinValue = memberPin.Trim();
+        if (!LocalCredentialSecurity.VerifyPinHash(memberPinValue, member.PinSalt, member.PinIterations, member.PinHash, member.PinHashVersion))
         {
             RecordCredentialAttemptFailure(CredentialAttemptPurposePin, member.AccountId);
             throw new InvalidOperationException(GenericMemberRecoveryFailureMessage);
         }
+        await UpgradeVerifiedPinHashIfNeededAsync(member, memberPinValue, cancellationToken);
         RecordCredentialAttemptResult(CredentialAttemptPurposePin, member.AccountId, success: true);
 
         var (owner, ownerDataKey) = await VerifyOwnerCredentialsInternalAsync(

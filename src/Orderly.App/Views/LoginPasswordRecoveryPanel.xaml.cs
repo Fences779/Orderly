@@ -33,7 +33,7 @@ public partial class LoginPasswordRecoveryPanel : System.Windows.Controls.UserCo
         TxtRecoveryAdminPin.Password = string.Empty;
         TxtRecoveryKeyInput.Text = string.Empty;
         TxtRecoveryOwnerPin.Password = string.Empty;
-        TxtRecoveryNewPassword.Text = string.Empty;
+        TxtRecoveryNewPassword.Password = string.Empty;
     }
 
     // Mirrors the parent's prior inline write of the recovery notice text/visibility.
@@ -75,7 +75,7 @@ public partial class LoginPasswordRecoveryPanel : System.Windows.Controls.UserCo
             TxtRecoveryAdminPin.Password = string.Empty;
         }
 
-        TxtRecoveryNewPassword.Text = string.Empty;
+        TxtRecoveryNewPassword.Password = string.Empty;
     }
 
     private async void BtnResetOwnerPassword_Click(object sender, RoutedEventArgs e)
@@ -106,7 +106,7 @@ public partial class LoginPasswordRecoveryPanel : System.Windows.Controls.UserCo
                 TxtRecoveryOwnerUsername.Text,
                 TxtRecoveryOwnerPin.Password,
                 TxtRecoveryKeyInput.Text,
-                TxtRecoveryNewPassword.Text);
+                TxtRecoveryNewPassword.Password);
             return;
         }
 
@@ -135,7 +135,7 @@ public partial class LoginPasswordRecoveryPanel : System.Windows.Controls.UserCo
                 TxtRecoveryAdminUsername.Text,
                 TxtRecoveryAdminPassword.Password,
                 TxtRecoveryAdminPin.Password,
-                TxtRecoveryNewPassword.Text);
+                TxtRecoveryNewPassword.Password);
             return;
         }
 

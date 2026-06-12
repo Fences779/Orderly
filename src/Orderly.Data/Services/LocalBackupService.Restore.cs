@@ -13,6 +13,8 @@ public sealed partial class LocalBackupService
         string createdBy = "p2.8",
         CancellationToken cancellationToken = default)
     {
+        RequireOwnerSessionForRestore();
+
         var entityId = GenerateBackupEntityId();
         BackupValidationResult validation = new()
         {

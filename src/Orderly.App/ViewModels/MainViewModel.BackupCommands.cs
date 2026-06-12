@@ -155,17 +155,18 @@ public partial class MainViewModel
 
     private bool CanManageBackup()
     {
-        return !IsBusy;
+        return IsCurrentUserOwner && !IsBusy;
     }
 
     private bool CanValidateBackup()
     {
-        return !IsBusy && !string.IsNullOrWhiteSpace(SelectedBackupPath);
+        return IsCurrentUserOwner && !IsBusy && !string.IsNullOrWhiteSpace(SelectedBackupPath);
     }
 
     private bool CanRestoreBackup()
     {
-        return !IsBusy
+        return IsCurrentUserOwner
+            && !IsBusy
             && !string.IsNullOrWhiteSpace(SelectedBackupPath)
             && RestorePreview is not null
             && string.Equals(RestorePreview.BackupPath, SelectedBackupPath, StringComparison.OrdinalIgnoreCase)

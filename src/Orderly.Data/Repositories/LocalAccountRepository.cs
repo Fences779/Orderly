@@ -95,12 +95,15 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 PasswordHash,
                 PasswordSalt,
                 PasswordIterations,
+                PasswordKeyVersion,
                 PinHash,
                 PinSalt,
                 PinIterations,
+                PinHashVersion,
                 RecoveryKeyHash,
                 RecoveryKeySalt,
                 RecoveryKeyIterations,
+                RecoveryKeyVersion,
                 RecoveryEncryptedDataKey,
                 RecoveryDataKeyNonce,
                 RecoveryDataKeyTag,
@@ -116,7 +119,8 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 IsEnabled,
                 CreatedAt,
                 UpdatedAt,
-                LastLoginAt
+                LastLoginAt,
+                MetadataMac
             )
             VALUES (
                 $accountId,
@@ -125,12 +129,15 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 $passwordHash,
                 $passwordSalt,
                 $passwordIterations,
+                $passwordKeyVersion,
                 $pinHash,
                 $pinSalt,
                 $pinIterations,
+                $pinHashVersion,
                 $recoveryKeyHash,
                 $recoveryKeySalt,
                 $recoveryKeyIterations,
+                $recoveryKeyVersion,
                 $recoveryEncryptedDataKey,
                 $recoveryDataKeyNonce,
                 $recoveryDataKeyTag,
@@ -146,7 +153,8 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 $isEnabled,
                 $createdAt,
                 $updatedAt,
-                $lastLoginAt
+                $lastLoginAt,
+                $metadataMac
             );
             """;
         AddParameters(command, account);
@@ -171,12 +179,15 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 PasswordHash = $passwordHash,
                 PasswordSalt = $passwordSalt,
                 PasswordIterations = $passwordIterations,
+                PasswordKeyVersion = $passwordKeyVersion,
                 PinHash = $pinHash,
                 PinSalt = $pinSalt,
                 PinIterations = $pinIterations,
+                PinHashVersion = $pinHashVersion,
                 RecoveryKeyHash = $recoveryKeyHash,
                 RecoveryKeySalt = $recoveryKeySalt,
                 RecoveryKeyIterations = $recoveryKeyIterations,
+                RecoveryKeyVersion = $recoveryKeyVersion,
                 RecoveryEncryptedDataKey = $recoveryEncryptedDataKey,
                 RecoveryDataKeyNonce = $recoveryDataKeyNonce,
                 RecoveryDataKeyTag = $recoveryDataKeyTag,
@@ -192,7 +203,8 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 IsEnabled = $isEnabled,
                 CreatedAt = $createdAt,
                 UpdatedAt = $updatedAt,
-                LastLoginAt = $lastLoginAt
+                LastLoginAt = $lastLoginAt,
+                MetadataMac = $metadataMac
             WHERE AccountId = $accountId;
             """;
         AddParameters(command, account);
@@ -222,12 +234,15 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
             PasswordHash,
             PasswordSalt,
             PasswordIterations,
+            PasswordKeyVersion,
             PinHash,
             PinSalt,
             PinIterations,
+            PinHashVersion,
             RecoveryKeyHash,
             RecoveryKeySalt,
             RecoveryKeyIterations,
+            RecoveryKeyVersion,
             RecoveryEncryptedDataKey,
             RecoveryDataKeyNonce,
             RecoveryDataKeyTag,
@@ -243,13 +258,14 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
             IsEnabled,
             CreatedAt,
             UpdatedAt,
-            LastLoginAt
+            LastLoginAt,
+            MetadataMac
         FROM LocalAccounts
         """;
 
     private static LocalAccount Map(SqliteDataReader reader)
     {
-        return new LocalAccount
+        var account = new LocalAccount
         {
             AccountId = reader.GetString(0),
             Username = reader.GetString(1),
@@ -257,29 +273,36 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
             PasswordHash = (byte[])reader[3],
             PasswordSalt = (byte[])reader[4],
             PasswordIterations = reader.GetInt32(5),
-            PinHash = (byte[])reader[6],
-            PinSalt = (byte[])reader[7],
-            PinIterations = reader.GetInt32(8),
-            RecoveryKeyHash = reader.IsDBNull(9) ? [] : (byte[])reader[9],
-            RecoveryKeySalt = reader.IsDBNull(10) ? [] : (byte[])reader[10],
-            RecoveryKeyIterations = reader.IsDBNull(11) ? 0 : reader.GetInt32(11),
-            RecoveryEncryptedDataKey = reader.IsDBNull(12) ? [] : (byte[])reader[12],
-            RecoveryDataKeyNonce = reader.IsDBNull(13) ? [] : (byte[])reader[13],
-            RecoveryDataKeyTag = reader.IsDBNull(14) ? [] : (byte[])reader[14],
-            EncryptedDataKey = (byte[])reader[15],
-            DataKeyNonce = (byte[])reader[16],
-            DataKeyTag = (byte[])reader[17],
-            AdminOwnerAccountId = reader.IsDBNull(18) ? string.Empty : reader.GetString(18),
-            AdminEncryptedDataKey = reader.IsDBNull(19) ? [] : (byte[])reader[19],
-            AdminDataKeyNonce = reader.IsDBNull(20) ? [] : (byte[])reader[20],
-            AdminDataKeyTag = reader.IsDBNull(21) ? [] : (byte[])reader[21],
-            DatabasePath = reader.GetString(22),
-            Role = (LocalAccountRole)reader.GetInt32(23),
-            IsEnabled = reader.GetInt32(24) == 1,
-            CreatedAt = DateTime.Parse(reader.GetString(25), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(26), null, DateTimeStyles.RoundtripKind),
-            LastLoginAt = reader.IsDBNull(27) ? null : DateTime.Parse(reader.GetString(27), null, DateTimeStyles.RoundtripKind)
+            PasswordKeyVersion = reader.GetInt32(6),
+            PinHash = (byte[])reader[7],
+            PinSalt = (byte[])reader[8],
+            PinIterations = reader.GetInt32(9),
+            PinHashVersion = reader.GetInt32(10),
+            RecoveryKeyHash = reader.IsDBNull(11) ? [] : (byte[])reader[11],
+            RecoveryKeySalt = reader.IsDBNull(12) ? [] : (byte[])reader[12],
+            RecoveryKeyIterations = reader.IsDBNull(13) ? 0 : reader.GetInt32(13),
+            RecoveryKeyVersion = reader.GetInt32(14),
+            RecoveryEncryptedDataKey = reader.IsDBNull(15) ? [] : (byte[])reader[15],
+            RecoveryDataKeyNonce = reader.IsDBNull(16) ? [] : (byte[])reader[16],
+            RecoveryDataKeyTag = reader.IsDBNull(17) ? [] : (byte[])reader[17],
+            EncryptedDataKey = (byte[])reader[18],
+            DataKeyNonce = (byte[])reader[19],
+            DataKeyTag = (byte[])reader[20],
+            AdminOwnerAccountId = reader.IsDBNull(21) ? string.Empty : reader.GetString(21),
+            AdminEncryptedDataKey = reader.IsDBNull(22) ? [] : (byte[])reader[22],
+            AdminDataKeyNonce = reader.IsDBNull(23) ? [] : (byte[])reader[23],
+            AdminDataKeyTag = reader.IsDBNull(24) ? [] : (byte[])reader[24],
+            DatabasePath = reader.GetString(25),
+            Role = (LocalAccountRole)reader.GetInt32(26),
+            IsEnabled = reader.GetInt32(27) == 1,
+            CreatedAt = DateTime.Parse(reader.GetString(28), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(29), null, DateTimeStyles.RoundtripKind),
+            LastLoginAt = reader.IsDBNull(30) ? null : DateTime.Parse(reader.GetString(30), null, DateTimeStyles.RoundtripKind),
+            MetadataMac = reader.IsDBNull(31) ? [] : (byte[])reader[31]
         };
+
+        LocalAccountMetadataSecurity.VerifyOrThrow(account);
+        return account;
     }
 
     private void AddParameters(SqliteCommand command, LocalAccount account)
@@ -291,7 +314,14 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
             ? string.Empty
             : LocalCredentialSecurity.NormalizeAccountId(account.AdminOwnerAccountId);
         var databasePath = NormalizeAccountDatabasePath(accountId, account.DatabasePath);
+        NormalizeSecurityVersions(account);
+        account.AccountId = accountId;
+        account.Username = username;
+        account.DisplayName = displayName;
+        account.AdminOwnerAccountId = adminOwnerAccountId;
+        account.DatabasePath = databasePath;
         ValidateAccountSecurityMaterial(account, accountId, adminOwnerAccountId);
+        account.MetadataMac = LocalAccountMetadataSecurity.ComputeMac(account);
 
         command.Parameters.AddWithValue("$accountId", accountId);
         command.Parameters.AddWithValue("$username", username);
@@ -299,12 +329,15 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         command.Parameters.AddWithValue("$passwordHash", account.PasswordHash);
         command.Parameters.AddWithValue("$passwordSalt", account.PasswordSalt);
         command.Parameters.AddWithValue("$passwordIterations", account.PasswordIterations);
+        command.Parameters.AddWithValue("$passwordKeyVersion", account.PasswordKeyVersion);
         command.Parameters.AddWithValue("$pinHash", account.PinHash);
         command.Parameters.AddWithValue("$pinSalt", account.PinSalt);
         command.Parameters.AddWithValue("$pinIterations", account.PinIterations);
+        command.Parameters.AddWithValue("$pinHashVersion", account.PinHashVersion);
         command.Parameters.AddWithValue("$recoveryKeyHash", ToDbBlob(account.RecoveryKeyHash));
         command.Parameters.AddWithValue("$recoveryKeySalt", ToDbBlob(account.RecoveryKeySalt));
         command.Parameters.AddWithValue("$recoveryKeyIterations", ToDbInt(account.RecoveryKeyIterations));
+        command.Parameters.AddWithValue("$recoveryKeyVersion", account.RecoveryKeyVersion);
         command.Parameters.AddWithValue("$recoveryEncryptedDataKey", ToDbBlob(account.RecoveryEncryptedDataKey));
         command.Parameters.AddWithValue("$recoveryDataKeyNonce", ToDbBlob(account.RecoveryDataKeyNonce));
         command.Parameters.AddWithValue("$recoveryDataKeyTag", ToDbBlob(account.RecoveryDataKeyTag));
@@ -321,6 +354,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         command.Parameters.AddWithValue("$createdAt", account.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", account.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$lastLoginAt", ToDbDate(account.LastLoginAt));
+        command.Parameters.AddWithValue("$metadataMac", account.MetadataMac);
     }
 
     private static void ValidateAccountSecurityMaterial(LocalAccount account, string accountId, string adminOwnerAccountId)
@@ -332,6 +366,9 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
 
         ValidateHashParameters(account.PasswordHash, account.PasswordSalt, account.PasswordIterations, "主密码");
         ValidateHashParameters(account.PinHash, account.PinSalt, account.PinIterations, "PIN");
+        ValidateCredentialFormatVersion(account.PasswordKeyVersion, "主密码");
+        ValidateCredentialFormatVersion(account.PinHashVersion, "PIN");
+        ValidateCredentialFormatVersion(account.RecoveryKeyVersion, "Recovery Key");
         ValidateWrappedDataKey(account.EncryptedDataKey, account.DataKeyNonce, account.DataKeyTag, "主密码");
 
         var hasRecoveryMaterial = HasBytes(account.RecoveryKeyHash)
@@ -427,6 +464,26 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         {
             throw new InvalidOperationException($"{fieldName}数据密钥包裹信息无效。");
         }
+    }
+
+    private static void ValidateCredentialFormatVersion(int version, string fieldName)
+    {
+        if (version is < LocalCredentialSecurity.LegacyCredentialFormatVersion or > LocalCredentialSecurity.CurrentCredentialFormatVersion)
+        {
+            throw new InvalidOperationException($"{fieldName}凭据版本无效。");
+        }
+    }
+
+    private static void NormalizeSecurityVersions(LocalAccount account)
+    {
+        account.PasswordKeyVersion = NormalizeCredentialFormatVersion(account.PasswordKeyVersion);
+        account.PinHashVersion = NormalizeCredentialFormatVersion(account.PinHashVersion);
+        account.RecoveryKeyVersion = NormalizeCredentialFormatVersion(account.RecoveryKeyVersion);
+    }
+
+    private static int NormalizeCredentialFormatVersion(int version)
+    {
+        return version <= 0 ? LocalCredentialSecurity.LegacyCredentialFormatVersion : version;
     }
 
     private static bool HasBytes(byte[]? value)

@@ -66,7 +66,8 @@ public sealed class OpenAiCompatibleSuggestionProvider : IAiSuggestionProvider
             response.Content,
             MaxResponseBodyBytes,
             "OpenAI-compatible provider",
-            cancellationToken);
+            cancellationToken,
+            TimeSpan.FromSeconds(_options.TimeoutSeconds));
         var suggestionText = ChatCompletionSuggestionSupport.ExtractAssistantContent(body, "OpenAI-compatible provider");
         if (string.IsNullOrWhiteSpace(suggestionText))
         {

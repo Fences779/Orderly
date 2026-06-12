@@ -138,6 +138,17 @@ public sealed partial class CloudInventoryWorkspaceService : IInventoryWorkspace
             throw new InvalidOperationException("当前导入预览存在错误，无法提交到云端。");
         }
 
+        if (string.IsNullOrWhiteSpace(preview.SourcePath) || string.IsNullOrWhiteSpace(preview.SourceFileHash))
+        {
+            throw new InvalidOperationException("导入预览缺少源文件校验信息，请重新预览。");
+        }
+
+        var currentSourceFileHash = ComputeFileHash(preview.SourcePath);
+        if (!string.Equals(currentSourceFileHash, preview.SourceFileHash, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Excel 源文件已在预览后发生变化，请重新预览后再提交。");
+        }
+
         var root = await _client.InvokeAsync(
             "inventoryBulkUpsert",
             new

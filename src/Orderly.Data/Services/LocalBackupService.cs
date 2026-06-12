@@ -262,4 +262,15 @@ public sealed partial class LocalBackupService : IBackupService
             static column => column.DefaultValue,
             StringComparer.Ordinal);
     }
+
+    private void RequireOwnerSessionForRestore()
+    {
+        var session = _sessionContextService?.Current
+            ?? throw new UnauthorizedAccessException("恢复备份需要已登录 Owner 会话。");
+
+        if (session.Role != Orderly.Core.Models.LocalAccountRole.Owner)
+        {
+            throw new UnauthorizedAccessException("仅 Owner 允许恢复备份。");
+        }
+    }
 }

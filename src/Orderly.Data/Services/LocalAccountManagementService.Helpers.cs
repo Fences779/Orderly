@@ -1,5 +1,6 @@
 using Orderly.Core.Models;
 using Orderly.Data.Sqlite;
+using System.Security.Cryptography;
 
 namespace Orderly.Data.Services;
 
@@ -239,9 +240,9 @@ public sealed partial class LocalAccountManagementService
         return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
     }
 
-    private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKey(string secret, byte[] salt, int iterations, byte[] dataKey)
+    private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapPasswordDataKey(string secret, byte[] salt, int iterations, byte[] dataKey)
     {
-        return LocalCredentialSecurity.WrapDataKey(secret, salt, iterations, dataKey);
+        return LocalCredentialSecurity.WrapPasswordDataKey(secret, salt, iterations, dataKey);
     }
 
     private static (byte[] Ciphertext, byte[] Nonce, byte[] Tag) WrapDataKeyWithKey(byte[] key, byte[] dataKey)
@@ -249,9 +250,14 @@ public sealed partial class LocalAccountManagementService
         return LocalCredentialSecurity.WrapDataKeyWithKey(key, dataKey);
     }
 
-    private static byte[] UnwrapDataKey(string secret, byte[] salt, int iterations, byte[] ciphertext, byte[] nonce, byte[] tag)
+    private static byte[] UnwrapPasswordDataKey(string secret, byte[] salt, int iterations, byte[] ciphertext, byte[] nonce, byte[] tag, int formatVersion)
     {
-        return LocalCredentialSecurity.UnwrapDataKey(secret, salt, iterations, ciphertext, nonce, tag);
+        return LocalCredentialSecurity.UnwrapPasswordDataKey(secret, salt, iterations, ciphertext, nonce, tag, formatVersion);
+    }
+
+    private static byte[] UnwrapRecoveryDataKey(string secret, byte[] salt, int iterations, byte[] ciphertext, byte[] nonce, byte[] tag, int formatVersion)
+    {
+        return LocalCredentialSecurity.UnwrapRecoveryDataKey(secret, salt, iterations, ciphertext, nonce, tag, formatVersion);
     }
 
     private static byte[] UnwrapDataKeyWithKey(byte[] key, byte[] ciphertext, byte[] nonce, byte[] tag)
@@ -275,5 +281,35 @@ public sealed partial class LocalAccountManagementService
     private void RecordCredentialAttemptFailure(string purpose, string identifier)
     {
         _credentialAttemptTracker.RecordFailure(purpose, identifier);
+    }
+
+    private async Task UpgradeVerifiedPinHashIfNeededAsync(LocalAccount account, string pin, CancellationToken cancellationToken)
+    {
+        if (account.PinHashVersion >= LocalCredentialSecurity.CurrentCredentialFormatVersion
+            && account.PinIterations >= LocalCredentialSecurity.DefaultPinIterations)
+        {
+            return;
+        }
+
+        var pinSalt = RandomNumberGenerator.GetBytes(16);
+        var pinHash = LocalCredentialSecurity.ComputePinHash(
+            pin,
+            pinSalt,
+            LocalCredentialSecurity.DefaultPinIterations,
+            LocalCredentialSecurity.CurrentCredentialFormatVersion);
+        try
+        {
+            SensitiveBuffer.Clear(account.PinSalt, account.PinHash);
+            account.PinSalt = pinSalt;
+            account.PinHash = pinHash;
+            account.PinIterations = LocalCredentialSecurity.DefaultPinIterations;
+            account.PinHashVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion;
+            account.UpdatedAt = DateTime.Now;
+            await _accountRepository.UpdateAsync(account, cancellationToken);
+        }
+        finally
+        {
+            SensitiveBuffer.Clear(pinSalt, pinHash);
+        }
     }
 }

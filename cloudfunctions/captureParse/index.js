@@ -18,6 +18,7 @@ const MAX_TAGS = 20
 const URGENCY_LEVELS = ['low', 'medium', 'high']
 const SUGGESTED_STAGES = ['new_inquiry', 'needs_clarification', 'quote_preparing']
 const CUSTOMER_MATCH_FIELDS = ['_id', 'name', 'platform', 'contactHandle']
+const CAPTURE_CREATE_PERMISSION = 'captures:create'
 const CAPTURE_MATCH_PERMISSION = 'captures:match'
 
 const STYLE_WORDS = ['简约', '高级', '复古', '甜酷', '清冷', '温柔', '国风', '通勤', '可爱', '低调', '显白']
@@ -416,6 +417,10 @@ async function handleRequest(event) {
     return { ok: true, parserResult, customerMatches }
   }
   if (!rawText && !ocrText) return { ok: false, message: '缺少可解析文本' }
+  const createPermission = requireOperatorPermission(operatorId, CAPTURE_CREATE_PERMISSION)
+  if (!createPermission.ok) return createPermission
+  const matchPermission = requireOperatorPermission(operatorId, CAPTURE_MATCH_PERMISSION)
+  if (!matchPermission.ok) return matchPermission
   const customerMatches = await matchCustomers(workspaceId, parserResult)
   const capture = {
     workspaceId,

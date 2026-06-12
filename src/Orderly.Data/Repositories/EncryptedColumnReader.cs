@@ -115,21 +115,14 @@ internal static class EncryptedColumnReader
             throw new InvalidOperationException($"Encrypted field {fieldName} is empty.");
         }
 
+        var rowId = reader.GetInt64(rowIdIndex);
         try
         {
-            var rowId = reader.GetInt64(rowIdIndex);
             return fieldEncryptionService.Decrypt(cipher, EncryptedFieldScope.Build(fieldName, rowId));
         }
-        catch (InvalidOperationException scopedEx)
+        catch (InvalidOperationException ex)
         {
-            try
-            {
-                return fieldEncryptionService.Decrypt(cipher, fieldName);
-            }
-            catch (InvalidOperationException legacyEx)
-            {
-                throw new InvalidOperationException($"Encrypted field {fieldName} cannot be decrypted.", new AggregateException(scopedEx, legacyEx));
-            }
+            throw new InvalidOperationException($"Encrypted field {fieldName} cannot be decrypted.", ex);
         }
     }
 }

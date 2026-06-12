@@ -65,7 +65,8 @@ public sealed class DeepSeekSuggestionProvider : IAiSuggestionProvider
             response.Content,
             MaxResponseBodyBytes,
             "DeepSeek provider",
-            cancellationToken);
+            cancellationToken,
+            TimeSpan.FromSeconds(_options.TimeoutSeconds));
         var suggestionText = ChatCompletionSuggestionSupport.ExtractAssistantContent(body, "DeepSeek provider");
         if (string.IsNullOrWhiteSpace(suggestionText))
         {

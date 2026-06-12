@@ -100,13 +100,17 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
         var passwordSalt = RandomNumberGenerator.GetBytes(16);
         var passwordHash = LocalCredentialSecurity.ComputeHash(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
         var pinSalt = RandomNumberGenerator.GetBytes(16);
-        var pinHash = LocalCredentialSecurity.ComputeHash(request.Pin, pinSalt, LocalCredentialSecurity.DefaultPinIterations);
+        var pinHash = LocalCredentialSecurity.ComputePinHash(
+            request.Pin,
+            pinSalt,
+            LocalCredentialSecurity.DefaultPinIterations,
+            LocalCredentialSecurity.CurrentCredentialFormatVersion);
         (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByPassword = ([], [], []);
         (byte[] Ciphertext, byte[] Nonce, byte[] Tag) wrappedByOwner = ([], [], []);
 
         try
         {
-            wrappedByPassword = LocalCredentialSecurity.WrapDataKey(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
+            wrappedByPassword = LocalCredentialSecurity.WrapPasswordDataKey(request.MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations, memberDataKey);
             wrappedByOwner = WrapDataKeyWithKey(ownerDataKey, memberDataKey);
 
             var member = new LocalAccount
@@ -117,9 +121,12 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
                 PasswordHash = passwordHash,
                 PasswordSalt = passwordSalt,
                 PasswordIterations = LocalCredentialSecurity.DefaultPasswordIterations,
+                PasswordKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion,
                 PinHash = pinHash,
                 PinSalt = pinSalt,
                 PinIterations = LocalCredentialSecurity.DefaultPinIterations,
+                PinHashVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion,
+                RecoveryKeyVersion = LocalCredentialSecurity.CurrentCredentialFormatVersion,
                 EncryptedDataKey = wrappedByPassword.Ciphertext,
                 DataKeyNonce = wrappedByPassword.Nonce,
                 DataKeyTag = wrappedByPassword.Tag,

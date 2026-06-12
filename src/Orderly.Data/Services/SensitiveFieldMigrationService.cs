@@ -1,7 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Orderly.Core.Services;
 using Orderly.Data.Sqlite;
-using System.Globalization;
 
 namespace Orderly.Data.Services;
 
@@ -149,14 +148,6 @@ public sealed class SensitiveFieldMigrationService
                     continue;
                 }
 
-                if (plain is not null
-                    && decimal.TryParse(plain, NumberStyles.Number, CultureInfo.InvariantCulture, out var plainValue)
-                    && plainValue != 0)
-                {
-                    rows.Add((id, plain, ShouldUpdate: true));
-                    continue;
-                }
-
                 var rewrap = TryDecryptForRewrap(cipher, table, cipherColumn, id, out var decrypted);
                 if (rewrap)
                 {
@@ -224,18 +215,6 @@ public sealed class SensitiveFieldMigrationService
                     }
 
                     continue;
-                }
-
-                if (plain is not null)
-                {
-                    var isClearValue = clearValue == DBNull.Value
-                        ? string.IsNullOrEmpty(plain)
-                        : string.Equals(plain, Convert.ToString(clearValue, CultureInfo.InvariantCulture), StringComparison.Ordinal);
-                    if (!isClearValue)
-                    {
-                        rows.Add((id, plain, ShouldUpdate: true));
-                        continue;
-                    }
                 }
 
                 var rewrap = TryDecryptForRewrap(cipher, table, cipherColumn, id, out var decrypted);
@@ -318,14 +297,11 @@ public sealed class SensitiveFieldMigrationService
     private bool TryDecryptForRewrap(string cipher, string table, string cipherColumn, long rowId, out string value)
     {
         var scopedAssociatedData = BuildAssociatedDataName(table, cipherColumn, rowId);
-        try
+        if (_fieldEncryptionService.UsesAssociatedDataPayload(cipher))
         {
             _fieldEncryptionService.Decrypt(cipher, scopedAssociatedData);
             value = string.Empty;
             return false;
-        }
-        catch (InvalidOperationException)
-        {
         }
 
         value = _fieldEncryptionService.Decrypt(cipher, BuildLegacyAssociatedDataName(table, cipherColumn));

@@ -13,6 +13,7 @@ internal static class OutboundEndpointPolicy
         return new SocketsHttpHandler
         {
             AllowAutoRedirect = false,
+            UseProxy = false,
             ConnectCallback = ConnectWithValidatedAddressAsync
         };
     }
@@ -220,6 +221,7 @@ internal static class OutboundEndpointPolicy
             var bytes = address.GetAddressBytes();
             return address.Equals(IPAddress.IPv6Loopback)
                 || (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80)
+                || (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0xc0)
                 || (bytes[0] & 0xfe) == 0xfc
                 || bytes[0] == 0xff
                 || (bytes[0] == 0x20 && bytes[1] == 0x01 && bytes[2] == 0x0d && bytes[3] == 0xb8);

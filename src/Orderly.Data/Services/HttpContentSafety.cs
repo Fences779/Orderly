@@ -8,7 +8,8 @@ internal static class HttpContentSafety
         HttpContent content,
         long maxBytes,
         string sourceDisplayName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TimeSpan? readTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(content);
 
@@ -17,14 +18,20 @@ internal static class HttpContentSafety
             throw new InvalidOperationException($"{sourceDisplayName} 返回内容过大。");
         }
 
-        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var timeoutCancellation = readTimeout is { } timeout && timeout > TimeSpan.Zero
+            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+            : null;
+        timeoutCancellation?.CancelAfter(readTimeout!.Value);
+        var readCancellationToken = timeoutCancellation?.Token ?? cancellationToken;
+
+        await using var stream = await content.ReadAsStreamAsync(readCancellationToken);
         using var buffer = new MemoryStream();
         var chunk = new byte[8192];
         long totalBytes = 0;
 
         while (true)
         {
-            var read = await stream.ReadAsync(chunk, cancellationToken);
+            var read = await stream.ReadAsync(chunk, readCancellationToken);
             if (read == 0)
             {
                 break;

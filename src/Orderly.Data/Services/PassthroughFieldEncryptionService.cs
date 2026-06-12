@@ -25,4 +25,9 @@ public sealed class PassthroughFieldEncryptionService : IFieldEncryptionService
     {
         return Decrypt(ciphertext);
     }
+
+    public bool UsesAssociatedDataPayload(string ciphertext)
+    {
+        return false;
+    }
 }
