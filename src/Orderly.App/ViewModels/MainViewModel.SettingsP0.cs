@@ -16,8 +16,6 @@ namespace Orderly.App.ViewModels;
 
 public partial class MainViewModel
 {
-    private const string SnSyncEntityType = "string-narration-orders";
-    private const int SnSyncEntityId = 1;
     private static readonly HashSet<string> ImmediateAutoSaveSettingsInputs = new(StringComparer.Ordinal)
     {
         nameof(StartupDefaultSectionInput),
@@ -36,9 +34,6 @@ public partial class MainViewModel
         nameof(BackupDirectoryInput),
         nameof(AutoBackupEnabledInput),
         nameof(AutoBackupFrequencyInput),
-        nameof(SnOrderSyncEnabledInput),
-        nameof(SnSyncModeInput),
-        nameof(SnSyncFrequencyInput),
         nameof(MaskPhoneByDefaultInput),
         nameof(MaskAddressByDefaultInput),
         nameof(IncludeSensitiveInExportInput),
@@ -68,14 +63,21 @@ public partial class MainViewModel
     private bool _hasQueuedSettingsAutoSave;
     private bool _hasAppliedStartupSection;
 
-    public ObservableCollection<string> StartupSectionOptions { get; } = new([SectionWorkbench, SectionFulfillment, SectionException]);
+    public ObservableCollection<string> StartupSectionOptions { get; } = new([
+        SectionWorkbench,
+        SectionOrders,
+        SectionProducts,
+        SectionInventory,
+        SectionCustomers,
+        SectionCashflow,
+        SectionBusinessAdvice,
+        SectionSettings,
+        SectionMe]);
     public ObservableCollection<string> WindowModeOptions { get; } = new(["普通", "最大化"]);
     public ObservableCollection<string> FontPresetOptions { get; } = new(["小", "标准", "大"]);
     public ObservableCollection<string> ThemeModeOptions { get; } = new(["浅色", "深色", "跟随系统"]);
     public ObservableCollection<string> AccentColorOptions { get; } = new(["默认绿", "茶金", "雾蓝"]);
     public ObservableCollection<string> AutoBackupFrequencyOptions { get; } = new(["手动", "每日", "每周"]);
-    public ObservableCollection<string> SnSyncModeOptions { get; } = new(["手动", "定时"]);
-    public ObservableCollection<string> SnSyncFrequencyOptions { get; } = new(["每30分钟", "每1小时", "每6小时", "每日"]);
 
     [ObservableProperty]
     private string startupDefaultSectionInput = SectionWorkbench;
@@ -132,15 +134,6 @@ public partial class MainViewModel
     private int backupRetentionCountInput = 10;
 
     [ObservableProperty]
-    private bool snOrderSyncEnabledInput;
-
-    [ObservableProperty]
-    private string snSyncModeInput = "手动";
-
-    [ObservableProperty]
-    private string snSyncFrequencyInput = "每6小时";
-
-    [ObservableProperty]
     private bool maskPhoneByDefaultInput = true;
 
     [ObservableProperty]
@@ -193,30 +186,6 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private string updateCheckStatusText = "未接入更新服务";
-
-    [ObservableProperty]
-    private string snCloudEnvironmentIdText = "未配置";
-
-    [ObservableProperty]
-    private string snConnectionStatusText = "未检查";
-
-    [ObservableProperty]
-    private string snLastConnectionTimeText = "未检查";
-
-    [ObservableProperty]
-    private string snLastConnectionResultText = "未检查";
-
-    [ObservableProperty]
-    private string snLastSyncTimeText = "未执行";
-
-    [ObservableProperty]
-    private string snLastSyncResultText = "未执行";
-
-    [ObservableProperty]
-    private string snSyncLogSummaryText = "未加载";
-
-    [ObservableProperty]
-    private string snSyncFailureSummaryText = "暂无失败记录";
 
     [ObservableProperty]
     private string exportCapabilityStatusText = "导出订单/客户/操作日志与历史导入待接入。";
@@ -355,51 +324,18 @@ public partial class MainViewModel
             _ = RefreshManagedAccountsAsync();
         }
 
-        if (string.Equals(value, SectionFulfillment, StringComparison.Ordinal))
-        {
-            // 不再自动默认选中第一个卡片
-            // EnsureStringNarrationDetailSelection();
-        }
-
         if (_isApplyingSettingsInputs || !RememberLastSectionInput)
         {
-            if (string.Equals(value, SectionFulfillment, StringComparison.Ordinal) && StringNarrationOrders.Count == 0 && !IsStringNarrationBusy)
-            {
-                _ = LoadStringNarrationOrdersAsync();
-            }
-            else if (string.Equals(value, SectionException, StringComparison.Ordinal) && !IsExceptionOrdersBusy)
-            {
-                _ = LoadExceptionOrdersAsync();
-            }
-
             return;
         }
 
         if (!StartupSectionOptions.Contains(value))
         {
-            if (string.Equals(value, SectionFulfillment, StringComparison.Ordinal) && StringNarrationOrders.Count == 0 && !IsStringNarrationBusy)
-            {
-                _ = LoadStringNarrationOrdersAsync();
-            }
-            else if (string.Equals(value, SectionException, StringComparison.Ordinal) && !IsExceptionOrdersBusy)
-            {
-                _ = LoadExceptionOrdersAsync();
-            }
-
             return;
         }
 
         LastSectionInput = value;
         _ = PersistLastSectionAsync(value);
-
-        if (string.Equals(value, SectionFulfillment, StringComparison.Ordinal) && StringNarrationOrders.Count == 0 && !IsStringNarrationBusy)
-        {
-            _ = LoadStringNarrationOrdersAsync();
-        }
-        else if (string.Equals(value, SectionException, StringComparison.Ordinal) && !IsExceptionOrdersBusy)
-        {
-            _ = LoadExceptionOrdersAsync();
-        }
     }
 
     [RelayCommand(CanExecute = nameof(CanSaveP0Settings))]
@@ -441,7 +377,6 @@ public partial class MainViewModel
 
                 Preferences = normalized;
                 ApplySettingsInputsFromPreferences(normalized);
-                await RefreshSnSyncStatusAsync();
                 RefreshAiSettingsRuntimeStatus();
                 RefreshNotificationSettingsRuntimeStatus();
             },

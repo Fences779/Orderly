@@ -3,8 +3,8 @@
                     xmlns:conv="clr-namespace:Orderly.App.Converters"
                     xmlns:helpers="clr-namespace:Orderly.App.Helpers">
     <conv:EnumLabelConverter x:Key="EnumLabelConverter" />
+    <conv:CommerceEnumLabelConverter x:Key="CommerceEnumLabelConverter" />
     <conv:SectionVisibilityConverter x:Key="SectionVisibilityConverter" />
-    <conv:FulfillmentStatusLabelConverter x:Key="FulfillmentStatusLabelConverter" />
     <conv:TimestampToDateTimeConverter x:Key="TimestampToDateTimeConverter" />
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <!-- Modern DropShadow -->

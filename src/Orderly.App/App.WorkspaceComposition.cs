@@ -29,6 +29,11 @@ public partial class App
         // 生产路径必须为真实 AES-GCM 实现，检测到空操作加密器即拒绝进入写入路径，避免敏感字段明文落盘。
         FieldEncryptionGuard.EnsureProductionGrade(fieldEncryptionService, nameof(InitializeWorkspaceAsync));
 
+        // 启动期接入旧 CRM 数据迁移（Req 3.4–3.10）。必须在敏感字段回填之前执行，因为回填会把旧表的明文列
+        // 清零，而迁移从明文列读取旧 CRM 数据。迁移是 backup-first / 非破坏性 / 幂等的：只读旧表、只写 Commerce
+        // 表，失败不改动旧数据，并已完成则跳过（见 CommerceStartupMigrationService）。
+        await RunCommerceLegacyMigrationAsync(connectionFactory);
+
         await BackfillSensitiveFieldsAsync(connectionFactory);
 
         ICustomerRepository customerRepository = new CustomerRepository(connectionFactory, fieldEncryptionService);
@@ -114,18 +119,58 @@ public partial class App
             _launcherConnectionFactory,
             _sessionContextService);
         IPriceAdjustmentService priceAdjustmentService = new PriceAdjustmentService(priceAdjustmentRepository, activityLogRepository);
-        var stringNarrationGatewayOptions = StringNarrationGatewayOptions.FromEnvironment();
-        var stringNarrationHttpClient = OutboundHttpClientFactory.Create(
-            TimeSpan.FromSeconds(stringNarrationGatewayOptions.TimeoutSeconds));
-        var stringNarrationGatewayClient = new StringNarrationGatewayClient(stringNarrationHttpClient, stringNarrationGatewayOptions);
-        IStringNarrationOrderService stringNarrationOrderService = new StringNarrationGatewayOrderService(stringNarrationGatewayClient);
-        IStringNarrationBusinessService stringNarrationBusinessService = new StringNarrationGatewayBusinessService(stringNarrationGatewayClient);
-        var inventoryGatewayOptions = InventoryGatewayOptions.FromEnvironment();
-        var inventoryHttpClient = OutboundHttpClientFactory.Create(
-            TimeSpan.FromSeconds(inventoryGatewayOptions.TimeoutSeconds));
-        IInventoryWorkspaceService inventoryWorkspaceService = inventoryGatewayOptions.IsConfigured
-            ? new CloudInventoryWorkspaceService(new InventoryGatewayClient(inventoryHttpClient, inventoryGatewayOptions))
-            : new StringNarrationInventoryWorkspaceServiceAdapter(stringNarrationBusinessService);
+
+        // Legacy outbound gateway/remote integration (customer-specific) has been removed.
+        // The remote-backed order/business/inventory services are no longer wired; the
+        // commerce pages are re-sourced through the universal Commerce Service Layer below.
+
+        // --- Commerce Service Layer wiring (Req 7.3, 7.4) ---
+        // The nine-entry shell's business pages obtain data only through these universal services
+        // over the Commerce repositories (the same encrypted SqliteConnectionFactory used by the
+        // P0 path, C-2). No legacy remote service participates.
+        var commerceOrderRepository = new Orderly.Data.Commerce.Repositories.CommerceOrderRepository(connectionFactory);
+        var commerceOrderItemRepository = new Orderly.Data.Commerce.Repositories.OrderItemRepository(connectionFactory);
+        var commerceCustomerRepository = new Orderly.Data.Commerce.Repositories.CommerceCustomerRepository(connectionFactory);
+        var commerceInventoryItemRepository = new Orderly.Data.Commerce.Repositories.InventoryItemRepository(connectionFactory);
+        var commerceInventoryMovementRepository = new Orderly.Data.Commerce.Repositories.InventoryMovementRepository(connectionFactory);
+        var commerceCashFlowRepository = new Orderly.Data.Commerce.Repositories.CashFlowEntryRepository(connectionFactory);
+        var commerceProductRepository = new Orderly.Data.Commerce.Repositories.ProductRepository(connectionFactory);
+        var commerceInsightRepository = new Orderly.Data.Commerce.Repositories.BusinessInsightRepository(connectionFactory);
+        var commerceMetricSnapshotRepository = new Orderly.Data.Commerce.Repositories.BusinessMetricSnapshotRepository(connectionFactory);
+
+        Orderly.Core.Commerce.Services.IDashboardService commerceDashboardService =
+            new Orderly.Data.Commerce.Services.CommerceDashboardService(
+                commerceOrderRepository,
+                commerceCashFlowRepository,
+                commerceInventoryItemRepository,
+                commerceCustomerRepository,
+                commerceMetricSnapshotRepository);
+        Orderly.Core.Commerce.Services.IOrderService commerceOrderService =
+            new Orderly.Data.Commerce.Services.CommerceOrderService(
+                connectionFactory,
+                commerceOrderRepository,
+                commerceOrderItemRepository,
+                commerceInventoryItemRepository,
+                commerceInventoryMovementRepository,
+                commerceCustomerRepository);
+        Orderly.Core.Commerce.Services.IInventoryService commerceInventoryService =
+            new Orderly.Data.Commerce.Services.CommerceInventoryService(
+                commerceInventoryItemRepository,
+                commerceInventoryMovementRepository);
+        Orderly.Core.Commerce.Services.ICustomerService commerceCustomerService =
+            new Orderly.Data.Commerce.Services.CommerceCustomerService(
+                commerceOrderRepository,
+                commerceCustomerRepository);
+        Orderly.Core.Commerce.Services.ICashFlowService commerceCashFlowService =
+            new Orderly.Data.Commerce.Services.CommerceCashFlowService(commerceCashFlowRepository);
+        Orderly.Core.Commerce.Services.IBusinessInsightService commerceBusinessInsightService =
+            new Orderly.Data.Commerce.Services.CommerceBusinessInsightService(
+                commerceInventoryService,
+                commerceCashFlowRepository,
+                reservedProviders: null,
+                insightRepository: commerceInsightRepository);
+        Orderly.Core.Commerce.Services.IProductService commerceProductService =
+            new Orderly.Data.Commerce.Services.CommerceProductService(commerceProductRepository);
 
         var preferences = await settingRepository.GetPreferencesAsync();
         Orderly.App.Helpers.ThemeHelper.ApplyTheme(preferences.ThemeMode);
@@ -148,7 +193,6 @@ public partial class App
             navigationRouteService,
             backupService,
             priceAdjustmentService,
-            stringNarrationOrderService,
             replyTemplateRepository,
             settingRepository,
             syncService,
@@ -156,15 +200,26 @@ public partial class App
             clipboardService,
             databasePath,
             _localAccountManagementService,
-            _sessionContextService,
-            stringNarrationGatewayOptions.Endpoint,
-            stringNarrationGatewayOptions.HasToken,
-            stringNarrationGatewayOptions.TimeoutSeconds,
-            stringNarrationBusinessService,
-            inventoryWorkspaceService);
+            _sessionContextService);
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
+
+        // Attach the dedicated per-page ViewModels backed solely by the Commerce Service Layer
+        // (Req 7.1, 7.3). Settings (设置) and Me (我的) remain served by their existing delimited
+        // MainViewModel partials. Page binding and load-on-navigation are completed by task 19.3.
+        _mainViewModel.AttachCommercePages(
+            new Orderly.App.ViewModels.Pages.WorkbenchPageViewModel(commerceDashboardService),
+            new Orderly.App.ViewModels.Pages.OrdersPageViewModel(commerceOrderService, commerceOrderRepository),
+            new Orderly.App.ViewModels.Pages.ProductsPageViewModel(commerceProductService),
+            new Orderly.App.ViewModels.Pages.InventoryPageViewModel(commerceInventoryService, commerceInventoryItemRepository),
+            new Orderly.App.ViewModels.Pages.CustomersPageViewModel(commerceCustomerService, commerceCustomerRepository),
+            new Orderly.App.ViewModels.Pages.CashflowPageViewModel(commerceCashFlowService, commerceCashFlowRepository),
+            new Orderly.App.ViewModels.Pages.BusinessAdvicePageViewModel(commerceBusinessInsightService));
+
         await _mainViewModel.LoadAsync();
+
+        // Load the initially selected commerce page (load-on-navigation also covers later switches).
+        await _mainViewModel.EnsureCommercePageLoadedAsync(_mainViewModel.SelectedSection);
 
         _floatingViewModel = new FloatingWindowViewModel(orderRepository, replyTemplateRepository, clipboardService);
         await _floatingViewModel.LoadAsync();
@@ -232,5 +287,33 @@ public partial class App
         var fieldEncryptionService = _fieldEncryptionService ?? throw new InvalidOperationException("Field encryption service is not initialized.");
         var sensitiveMigrationService = new SensitiveFieldMigrationService(connectionFactory, fieldEncryptionService);
         await sensitiveMigrationService.BackfillAsync();
+    }
+
+    /// <summary>
+    /// Runs the non-destructive, backup-first, idempotent legacy CRM → Commerce migration at startup
+    /// (Req 3.4–3.10). The migration only reads the legacy tables and writes the Commerce tables, so a
+    /// failure never harms existing data; the failure reason is logged and startup continues so the app
+    /// still opens (the legacy data remains intact and the migration retries on the next launch).
+    /// </summary>
+    private async Task RunCommerceLegacyMigrationAsync(SqliteConnectionFactory connectionFactory)
+    {
+        if (_sessionContextService?.IsSignedIn != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var fieldEncryptionService = _fieldEncryptionService ?? throw new InvalidOperationException("Field encryption service is not initialized.");
+            var migrationService = new CommerceStartupMigrationService(connectionFactory, backup: null, fieldEncryption: fieldEncryptionService);
+            var result = await migrationService.RunAsync();
+            Console.WriteLine($"Commerce legacy migration: {result.OutcomeToken} (records={result.MigratedRecordCount}).");
+        }
+        catch (Exception ex)
+        {
+            // A migration failure must not block sign-in. The legacy data is untouched (the migration
+            // only reads it), so the next launch retries. Surface the reason for diagnosis.
+            Console.Error.WriteLine($"Commerce legacy migration failed (legacy data preserved, will retry): {ex.Message}");
+        }
     }
 }

@@ -17,7 +17,7 @@ public partial class MainViewModel
     public ObservableCollection<ReplyTemplate> ReplyTemplates { get; } = new();
     public ObservableCollection<WorkbenchTaskListItem> WorkbenchTasks { get; } = new();
     public ObservableCollection<SearchResultListItem> SearchResults { get; } = new();
-    public ObservableCollection<string> Sections { get; } = new(new[] { SectionWorkbench, SectionFulfillment, SectionInventory, SectionCashflow, SectionException, SectionSettings, SectionMe });
+    public ObservableCollection<string> Sections { get; } = new(new[] { SectionWorkbench, SectionOrders, SectionProducts, SectionInventory, SectionCustomers, SectionCashflow, SectionBusinessAdvice, SectionSettings, SectionMe });
     public ObservableCollection<SearchFilterOption> SearchFilterOptions { get; } = new();
     public ObservableCollection<QuickFilterOption> QuickFilterOptions { get; } = new();
     public ObservableCollection<CustomerStatus> CustomerStatusOptions { get; } = new(Enum.GetValues<CustomerStatus>());

@@ -13,7 +13,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = viewModel;
         System.Windows.Application.Current.MainWindow = this;
-        viewModel.PropertyChanged += ViewModel_PropertyChanged;
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -26,17 +25,6 @@ public partial class MainWindow : Window
         }
 
         base.OnClosing(e);
-    }
-
-    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(MainViewModel.StringNarrationStatusMessage))
-        {
-            if (DataContext is MainViewModel vm && !string.IsNullOrEmpty(vm.StringNarrationStatusMessage) && vm.StringNarrationStatusMessage.StartsWith("已复制"))
-            {
-                ShowCopyToast(vm.StringNarrationStatusMessage);
-            }
-        }
     }
 
     private void ShowCopyToast(string message)

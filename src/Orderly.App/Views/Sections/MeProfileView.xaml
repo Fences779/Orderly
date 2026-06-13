@@ -291,6 +291,20 @@
                                     </Grid>
                                 </StackPanel>
                             </Border>
+
+                            <!-- 关于 Orderly（品牌与产品定位） -->
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="关于 Orderly" Style="{StaticResource SettingsGroupTitleStyle}" />
+                                    <TextBlock Text="Orderly · 本地优先的 PC 端经营管理系统"
+                                               FontSize="13" FontWeight="Bold"
+                                               Foreground="{DynamicResource HeadingBrush}"
+                                               Margin="0,8,0,6" TextWrapping="Wrap" />
+                                    <TextBlock Text="面向小微商家，覆盖成交销售、订单、库存、客户、现金流、数据分析与经营建议七大能力。所有业务数据均保存在本机，默认不依赖云端。"
+                                               Style="{StaticResource SettingsItemDescStyle}"
+                                               TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,4" />
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>

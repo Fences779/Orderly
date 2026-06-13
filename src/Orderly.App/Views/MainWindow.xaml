@@ -53,6 +53,19 @@
                             <DataTrigger Binding="{Binding SelectedSection}" Value="我的">
                                 <Setter Property="Visibility" Value="Collapsed" />
                             </DataTrigger>
+                            <!-- 订单 / 商品 / 客户 / 经营建议 页面自带页头，折叠共享页头避免重复 -->
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="订单">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="商品">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="客户">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedSection}" Value="经营建议">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </DockPanel.Style>
@@ -63,17 +76,23 @@
             </DockPanel>
             <Sections:WorkbenchView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=工作台}" />
 
+            <!-- 订单 (Orders) -->
+            <Sections:OrdersView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=订单}" />
+
+            <!-- 商品 (Products) -->
+            <Sections:ProductsView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=商品}" />
+
             <!-- 库存管理 -->
             <Sections:InventoryView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=库存管理}" />
+
+            <!-- 客户 (Customers) -->
+            <Sections:CustomersView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=客户}" />
 
             <!-- 现金流 -->
             <Sections:CashflowView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=现金流}" />
 
-            <!-- 订单履约 -->
-            <Sections:FulfillmentView Grid.Row="1" />
-
-            <!-- ==================== 异常处理面板 ==================== -->
-            <Sections:ExceptionView Grid.Row="1" />
+            <!-- 经营建议 (Business Advice) -->
+            <Sections:BusinessAdviceView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=经营建议}" />
 
             <Sections:SettingsView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=设置}" />
 

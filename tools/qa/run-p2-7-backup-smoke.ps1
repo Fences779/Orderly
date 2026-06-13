@@ -47,13 +47,22 @@ function Import-OrderlyAssemblies {
 
 function New-BackupServiceContext {
     $databasePath = Get-DefaultDatabasePath
-    $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
+    $connectionFactory = New-QaConnectionFactory -DatabasePath $databasePath
     $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
     $fieldEncryptionService = $fieldContext.FieldEncryptionService
     $activityRepository = [Orderly.Data.Repositories.ActivityLogRepository]::new($connectionFactory, $fieldEncryptionService)
-    $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory)
+    $syncRecordRepository = [Orderly.Data.Repositories.SyncRecordRepository]::new($connectionFactory, $fieldEncryptionService)
     $syncService = [Orderly.Data.Services.LocalSyncService]::new($syncRecordRepository, $activityRepository)
-    $backupService = [Orderly.Data.Services.LocalBackupService]::new($connectionFactory, $syncService, $syncRecordRepository, $activityRepository)
+    # Pass the QA session context so backup export/restore has the data key it needs for encryption
+    # (the QA session data key, identical to the SQLCipher database key). The launcher factory is not
+    # required for the export/validate flow exercised here, so it is left null.
+    $backupService = [Orderly.Data.Services.LocalBackupService]::new(
+        $connectionFactory,
+        $syncService,
+        $syncRecordRepository,
+        $activityRepository,
+        $null,
+        $fieldContext.SessionContextService)
 
     return [pscustomobject]@{
         SessionContextService = $fieldContext.SessionContextService
@@ -96,7 +105,7 @@ $baselineSyncCount = Get-CountFromStatus -Output $baselineStatus.StdOut -Label '
 Write-Step "Baseline ActivityLogs count: $baselineActivityCount"
 Write-Step "Baseline SyncRecords count: $baselineSyncCount"
 
-Write-Step "Step 3/7: export backup and inspect JSON"
+Write-Step "Step 3/7: export backup and inspect manifest"
 Import-OrderlyAssemblies
 $serviceContext = New-BackupServiceContext
 $runDirectory = New-QaSmokeRunDirectory
@@ -106,20 +115,34 @@ if (-not (Test-Path -LiteralPath $backupPath)) {
     throw "Backup file was not created: $backupPath"
 }
 
-$backupJson = Get-Content -LiteralPath $backupPath -Raw -Encoding utf8 | ConvertFrom-Json
-if ($backupJson.schemaVersion -ne 1) {
-    throw "Unexpected schemaVersion: $($backupJson.schemaVersion)"
+# Backups are encrypted at rest (P0): the on-disk file is an encrypted envelope, not plaintext
+# manifest JSON, so the manifest is inspected through the returned BackupResult.Manifest instead of
+# by parsing the file. The file must therefore NOT expose the plaintext manifest fields.
+$rawBackupText = Get-Content -LiteralPath $backupPath -Raw -Encoding utf8
+$rawBackupProbe = $null
+try { $rawBackupProbe = $rawBackupText | ConvertFrom-Json } catch { $rawBackupProbe = $null }
+if ($null -ne $rawBackupProbe -and $rawBackupProbe.PSObject.Properties.Name -contains 'counts') {
+    throw 'Backup file exposed plaintext manifest counts; expected an encrypted backup at rest.'
 }
 
-if ([string]::IsNullOrWhiteSpace([string]$backupJson.exportedAt)) {
-    throw 'Backup JSON missing exportedAt.'
+$manifest = $exportResult.Manifest
+if ($null -eq $manifest) {
+    throw 'Export did not return a manifest.'
 }
 
-if ($null -eq $backupJson.counts) {
-    throw 'Backup JSON missing counts.'
+if ($manifest.SchemaVersion -ne 1) {
+    throw "Unexpected schemaVersion: $($manifest.SchemaVersion)"
 }
 
-Assert-CountsContain -Counts $backupJson.counts -Keys @(
+if ($null -eq $manifest.ExportedAt) {
+    throw 'Manifest missing exportedAt.'
+}
+
+if ($null -eq $manifest.Counts) {
+    throw 'Manifest missing counts.'
+}
+
+foreach ($countKey in @(
     'Customers',
     'Orders',
     'Deals',
@@ -127,11 +150,14 @@ Assert-CountsContain -Counts $backupJson.counts -Keys @(
     'ActivityLogs',
     'ConversationMessages',
     'AiSuggestions',
-    'OcrResults'
-)
+    'OcrResults')) {
+    if (-not $manifest.Counts.ContainsKey($countKey)) {
+        throw "Backup manifest counts missing key: $countKey"
+    }
+}
 
-if ([string]::IsNullOrWhiteSpace([string]$backupJson.checksum)) {
-    throw 'Backup JSON missing checksum.'
+if ([string]::IsNullOrWhiteSpace([string]$manifest.Checksum)) {
+    throw 'Manifest missing checksum.'
 }
 
 Write-Step "Exported backup: $backupPath"
@@ -169,7 +195,9 @@ if ($syncMetadata.createdBy -ne 'p2.7') {
     throw 'SyncRecord metadata missing createdBy=p2.7.'
 }
 
-if ($syncMetadata.backupPath -ne $backupPath) {
+# Export sanitizes the stored path to the file name only (it must not persist full local paths),
+# so compare against the backup file name rather than its absolute path.
+if ($syncMetadata.backupPath -ne [System.IO.Path]::GetFileName($backupPath)) {
     throw 'SyncRecord metadata backupPath mismatch.'
 }
 

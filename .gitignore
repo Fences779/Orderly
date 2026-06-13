@@ -12,6 +12,15 @@
 [Oo]bj/
 TestResults/
 out/
+# Build-verification output directories (regenerated)
+bin_verify/
+build-verify/
+build-check/
+buildcheck/
+obj-build-verify/
+isolated-build/
+# WPF temp residue (regenerated)
+*_wpftmp*
 
 # Local databases
 *.db
@@ -59,6 +68,7 @@ screenshots/
 
 # Local scratch work
 scratch/
+src/scratch/
 backup/
 orderly-backup-*.json
 

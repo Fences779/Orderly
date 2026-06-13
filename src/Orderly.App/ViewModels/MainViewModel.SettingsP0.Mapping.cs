@@ -11,8 +11,6 @@ public partial class MainViewModel
         var backupRetention = Math.Clamp(BackupRetentionCountInput, 1, 100);
         var retentionDays = Math.Clamp(OperationLogRetentionDaysInput, 7, 3650);
         var autoBackupFrequency = NormalizeOption(AutoBackupFrequencyInput, AutoBackupFrequencyOptions, "手动");
-        var snSyncMode = NormalizeOption(SnSyncModeInput, SnSyncModeOptions, "手动");
-        var snSyncFrequency = NormalizeOption(SnSyncFrequencyInput, SnSyncFrequencyOptions, "每6小时");
         var windowMode = NormalizeOption(DefaultWindowModeInput, WindowModeOptions, "普通");
         var fontPreset = NormalizeOption(FontSizePresetInput, FontPresetOptions, "标准");
         var themeMode = NormalizeOption(ThemeModeInput, ThemeModeOptions, "浅色");
@@ -40,13 +38,6 @@ public partial class MainViewModel
             AutoBackupEnabled = AutoBackupEnabledInput,
             AutoBackupFrequency = autoBackupFrequency,
             BackupRetentionCount = backupRetention,
-            SnOrderSyncEnabled = SnOrderSyncEnabledInput,
-            SnSyncMode = snSyncMode,
-            SnSyncFrequency = snSyncFrequency,
-            SnLastConnectionCheckAt = Preferences.SnLastConnectionCheckAt,
-            SnLastConnectionResult = Preferences.SnLastConnectionResult,
-            SnLastSyncAt = Preferences.SnLastSyncAt,
-            SnLastSyncResult = Preferences.SnLastSyncResult,
             MaskPhoneByDefault = MaskPhoneByDefaultInput,
             MaskAddressByDefault = MaskAddressByDefaultInput,
             IncludeSensitiveInExport = IncludeSensitiveInExportInput,
@@ -97,10 +88,6 @@ public partial class MainViewModel
             AutoBackupEnabledInput = preferences.AutoBackupEnabled;
             AutoBackupFrequencyInput = NormalizeOption(preferences.AutoBackupFrequency, AutoBackupFrequencyOptions, "手动");
             BackupRetentionCountInput = Math.Clamp(preferences.BackupRetentionCount, 1, 100);
-
-            SnOrderSyncEnabledInput = preferences.SnOrderSyncEnabled;
-            SnSyncModeInput = NormalizeOption(preferences.SnSyncMode, SnSyncModeOptions, "手动");
-            SnSyncFrequencyInput = NormalizeOption(preferences.SnSyncFrequency, SnSyncFrequencyOptions, "每6小时");
 
             MaskPhoneByDefaultInput = preferences.MaskPhoneByDefault;
             MaskAddressByDefaultInput = preferences.MaskAddressByDefault;

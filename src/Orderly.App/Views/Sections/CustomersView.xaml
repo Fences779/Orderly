@@ -1,0 +1,68 @@
+<UserControl x:Class="Orderly.App.Views.Sections.CustomersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             AutomationProperties.AutomationId="Page_Customers">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Background="Transparent" DataContext="{Binding CustomersPage}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="客户" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
+                <TextBlock Text="管理客户关系与复购提醒" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}" VerticalAlignment="Center"
+                    Foreground="{DynamicResource BlueTextBrush}" Padding="14,6" />
+        </Grid>
+
+        <!-- 加载中 -->
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock Text="正在加载客户数据…" Foreground="{DynamicResource MutedBrush}" FontSize="15" HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <!-- 加载失败 -->
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock Text="&#xEA39;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="#D12E9F" HorizontalAlignment="Center" />
+            <TextBlock Text="客户数据加载失败" Foreground="{DynamicResource HeadingBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,6,0,0" MaxWidth="420" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
+            <Button Content="重试" Command="{Binding RefreshCommand}" Margin="0,14,0,0" Padding="18,7" HorizontalAlignment="Center"
+                    Foreground="{DynamicResource BlueTextBrush}" />
+        </StackPanel>
+
+        <!-- 空状态 -->
+        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
+            <TextBlock Text="暂无客户数据" Foreground="{DynamicResource MutedBrush}" FontSize="15" Margin="0,14,0,0" HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <!-- 数据 -->
+        <DataGrid Grid.Row="1" ItemsSource="{Binding Customers}" AutoGenerateColumns="False" IsReadOnly="True"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" CanUserAddRows="False"
+                  Background="Transparent" BorderThickness="0"
+                  Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="客户名称" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="电话" Binding="{Binding Phone}" Width="Auto" />
+                <DataGridTextColumn Header="最近成交（天）" Binding="{Binding RecencyDays}" Width="Auto" />
+                <DataGridTextColumn Header="成交次数" Binding="{Binding Frequency}" Width="Auto" />
+                <DataGridTextColumn Header="累计成交额" Binding="{Binding Monetary, StringFormat=¥{0}}" Width="Auto" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

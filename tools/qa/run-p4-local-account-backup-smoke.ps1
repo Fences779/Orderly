@@ -3,56 +3,6 @@ param()
 . (Join-Path $PSScriptRoot 'qa-common.ps1')
 Ensure-PowerShellCore -ScriptPath $PSCommandPath -ScriptArguments $args
 
-function Import-OrderlyAssemblies {
-    $binRoot = Join-RepoPath @('src', 'Orderly.App', 'bin', 'Debug', 'net8.0-windows')
-    $nativeRuntimePath = Join-Path $binRoot 'runtimes\\win-x64\\native'
-    if (Test-Path -LiteralPath $nativeRuntimePath) {
-        $env:PATH = "$nativeRuntimePath;$binRoot;$env:PATH"
-        if (-not ('QaNativeLoader' -as [type])) {
-            Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-
-public static class QaNativeLoader
-{
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern bool SetDllDirectory(string lpPathName);
-
-    [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern IntPtr LoadLibrary(string lpFileName);
-}
-"@
-        }
-
-        [QaNativeLoader]::SetDllDirectory($nativeRuntimePath) | Out-Null
-        $nativeLibrary = Join-Path $nativeRuntimePath 'e_sqlite3.dll'
-        if ([QaNativeLoader]::LoadLibrary($nativeLibrary) -eq [IntPtr]::Zero) {
-            throw "Failed to preload native SQLite library: $nativeLibrary"
-        }
-    }
-
-    $assemblyNames = @(
-        'SQLitePCLRaw.core.dll',
-        'SQLitePCLRaw.provider.e_sqlite3.dll',
-        'SQLitePCLRaw.batteries_v2.dll',
-        'Microsoft.Data.Sqlite.dll',
-        'Orderly.Core.dll',
-        'Orderly.Data.dll',
-        'Orderly.Infrastructure.dll'
-    )
-
-    foreach ($assemblyName in $assemblyNames) {
-        $assemblyPath = Join-Path $binRoot $assemblyName
-        if (-not (Test-Path -LiteralPath $assemblyPath)) {
-            throw "Missing QA dependency assembly: $assemblyPath"
-        }
-
-        [System.Reflection.Assembly]::LoadFrom($assemblyPath) | Out-Null
-    }
-
-    [SQLitePCL.Batteries_V2]::Init()
-}
-
 function Initialize-BusinessDatabase {
     param(
         [Parameter(Mandatory = $true)]
@@ -247,7 +197,7 @@ Assert-NoRunningOrderlyProcess
 Write-Step "Starting P4 launcher + account backup smoke"
 Write-Step "Repo root: $(Get-RepoRoot)"
 
-Import-OrderlyAssemblies
+Import-OrderlyAssembliesForQa
 $runDirectory = New-QaSmokeRunDirectory
 
 $sourceLauncherPath = Join-Path $runDirectory.Path 'source-launcher.db'

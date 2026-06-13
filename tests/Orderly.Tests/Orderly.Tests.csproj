@@ -1,11 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- net8.0-windows + WPF/WinForms so the test project can reference the WPF Orderly.App
+         project and exercise the per-page ViewModels (UI smoke tests, task 19.4). -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- The synchronous property tests (CsCheck Sample) and smoke-style helpers intentionally block
+         on tasks via GetAwaiter().GetResult(); xUnit1031 (no blocking task ops in tests) does not
+         apply to this sync-by-design pattern, so it is suppressed project-wide to keep the test build
+         warning-clean. -->
+    <NoWarn>$(NoWarn);xUnit1031</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +33,14 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Orderly.Core\Orderly.Core.csproj" />
     <ProjectReference Include="..\..\src\Orderly.Data\Orderly.Data.csproj" />
+    <ProjectReference Include="..\..\src\Orderly.App\Orderly.App.csproj" />
+  </ItemGroup>
+
+  <!-- Enabling UseWPF swaps in the WPF implicit-usings set, which omits System.IO and
+       System.Net.Http that the base SDK set (and the existing tests) rely on. Restore them. -->
+  <ItemGroup>
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
   </ItemGroup>
 
 </Project>

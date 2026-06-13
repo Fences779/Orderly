@@ -13,8 +13,22 @@ public sealed class AppSettingRepository : IAppSettingRepository
     private static readonly HashSet<string> AllowedStartupSections = new(StringComparer.Ordinal)
     {
         "工作台",
-        "订单履约",
-        "异常处理"
+        "订单",
+        "商品",
+        "库存管理",
+        "客户",
+        "现金流",
+        "经营建议",
+        "设置",
+        "我的"
+    };
+
+    // Saved startup/last-section values that point at removed pages are remapped to the closest
+    // current page (订单履约 → 订单, 异常处理 → 经营建议) so an upgraded user never starts on a blank page.
+    private static readonly Dictionary<string, string> LegacyStartupSectionMap = new(StringComparer.Ordinal)
+    {
+        ["订单履约"] = "订单",
+        ["异常处理"] = "经营建议"
     };
 
     private static readonly HashSet<string> AllowedWindowModes = new(StringComparer.Ordinal)
@@ -49,20 +63,6 @@ public sealed class AppSettingRepository : IAppSettingRepository
         "手动",
         "每日",
         "每周"
-    };
-
-    private static readonly HashSet<string> AllowedSnSyncModes = new(StringComparer.Ordinal)
-    {
-        "手动",
-        "定时"
-    };
-
-    private static readonly HashSet<string> AllowedSnSyncFrequencies = new(StringComparer.Ordinal)
-    {
-        "每30分钟",
-        "每1小时",
-        "每6小时",
-        "每日"
     };
 
     private static readonly HashSet<string> AllowedAiReplyTones = new(StringComparer.Ordinal)
@@ -106,9 +106,9 @@ public sealed class AppSettingRepository : IAppSettingRepository
             CopyCustomerPreferenceSummaryHotkey = GetHotkey(settings, AppSettingKeys.CopyCustomerPreferenceSummaryHotkey, "Ctrl+Shift+Y"),
             ShowFloatingWindowOnStartup = GetBool(settings, AppSettingKeys.ShowFloatingWindowOnStartup, false),
             StartMinimizedToTray = GetBool(settings, AppSettingKeys.StartMinimizedToTray, false),
-            StartupDefaultSection = GetEnum(settings, AppSettingKeys.StartupDefaultSection, "工作台", AllowedStartupSections),
+            StartupDefaultSection = GetStartupSection(settings, AppSettingKeys.StartupDefaultSection, "工作台"),
             RememberLastSection = GetBool(settings, AppSettingKeys.RememberLastSection, false),
-            LastSection = GetEnum(settings, AppSettingKeys.LastSection, "工作台", AllowedStartupSections),
+            LastSection = GetStartupSection(settings, AppSettingKeys.LastSection, "工作台"),
             StartWithWindows = GetBool(settings, AppSettingKeys.StartWithWindows, false),
             RememberWindowBounds = GetBool(settings, AppSettingKeys.RememberWindowBounds, false),
             DefaultWindowMode = GetEnum(settings, AppSettingKeys.DefaultWindowMode, "普通", AllowedWindowModes),
@@ -122,13 +122,6 @@ public sealed class AppSettingRepository : IAppSettingRepository
             AutoBackupEnabled = GetBool(settings, AppSettingKeys.AutoBackupEnabled, false),
             AutoBackupFrequency = GetEnum(settings, AppSettingKeys.AutoBackupFrequency, "手动", AllowedBackupFrequencies),
             BackupRetentionCount = GetInt(settings, AppSettingKeys.BackupRetentionCount, 10, 1, 100),
-            SnOrderSyncEnabled = GetBool(settings, AppSettingKeys.SnOrderSyncEnabled, false),
-            SnSyncMode = GetEnum(settings, AppSettingKeys.SnSyncMode, "手动", AllowedSnSyncModes),
-            SnSyncFrequency = GetEnum(settings, AppSettingKeys.SnSyncFrequency, "每6小时", AllowedSnSyncFrequencies),
-            SnLastConnectionCheckAt = Get(settings, AppSettingKeys.SnLastConnectionCheckAt, string.Empty),
-            SnLastConnectionResult = Get(settings, AppSettingKeys.SnLastConnectionResult, "未检查"),
-            SnLastSyncAt = Get(settings, AppSettingKeys.SnLastSyncAt, string.Empty),
-            SnLastSyncResult = Get(settings, AppSettingKeys.SnLastSyncResult, "未执行"),
             MaskPhoneByDefault = GetBool(settings, AppSettingKeys.MaskPhoneByDefault, true),
             MaskAddressByDefault = GetBool(settings, AppSettingKeys.MaskAddressByDefault, true),
             IncludeSensitiveInExport = GetBool(settings, AppSettingKeys.IncludeSensitiveInExport, false),
@@ -180,9 +173,9 @@ public sealed class AppSettingRepository : IAppSettingRepository
             [AppSettingKeys.CopyCustomerPreferenceSummaryHotkey] = NormalizeHotkey(preferences.CopyCustomerPreferenceSummaryHotkey, "Ctrl+Shift+Y"),
             [AppSettingKeys.ShowFloatingWindowOnStartup] = ToBoolValue(preferences.ShowFloatingWindowOnStartup),
             [AppSettingKeys.StartMinimizedToTray] = ToBoolValue(preferences.StartMinimizedToTray),
-            [AppSettingKeys.StartupDefaultSection] = NormalizeEnumValue(preferences.StartupDefaultSection, "工作台", AllowedStartupSections),
+            [AppSettingKeys.StartupDefaultSection] = NormalizeStartupSectionValue(preferences.StartupDefaultSection, "工作台"),
             [AppSettingKeys.RememberLastSection] = ToBoolValue(preferences.RememberLastSection),
-            [AppSettingKeys.LastSection] = NormalizeEnumValue(preferences.LastSection, "工作台", AllowedStartupSections),
+            [AppSettingKeys.LastSection] = NormalizeStartupSectionValue(preferences.LastSection, "工作台"),
             [AppSettingKeys.StartWithWindows] = ToBoolValue(preferences.StartWithWindows),
             [AppSettingKeys.RememberWindowBounds] = ToBoolValue(preferences.RememberWindowBounds),
             [AppSettingKeys.DefaultWindowMode] = NormalizeEnumValue(preferences.DefaultWindowMode, "普通", AllowedWindowModes),
@@ -196,13 +189,6 @@ public sealed class AppSettingRepository : IAppSettingRepository
             [AppSettingKeys.AutoBackupEnabled] = ToBoolValue(preferences.AutoBackupEnabled),
             [AppSettingKeys.AutoBackupFrequency] = NormalizeEnumValue(preferences.AutoBackupFrequency, "手动", AllowedBackupFrequencies),
             [AppSettingKeys.BackupRetentionCount] = Math.Clamp(preferences.BackupRetentionCount, 1, 100).ToString(),
-            [AppSettingKeys.SnOrderSyncEnabled] = ToBoolValue(preferences.SnOrderSyncEnabled),
-            [AppSettingKeys.SnSyncMode] = NormalizeEnumValue(preferences.SnSyncMode, "手动", AllowedSnSyncModes),
-            [AppSettingKeys.SnSyncFrequency] = NormalizeEnumValue(preferences.SnSyncFrequency, "每6小时", AllowedSnSyncFrequencies),
-            [AppSettingKeys.SnLastConnectionCheckAt] = preferences.SnLastConnectionCheckAt.Trim(),
-            [AppSettingKeys.SnLastConnectionResult] = preferences.SnLastConnectionResult.Trim(),
-            [AppSettingKeys.SnLastSyncAt] = preferences.SnLastSyncAt.Trim(),
-            [AppSettingKeys.SnLastSyncResult] = preferences.SnLastSyncResult.Trim(),
             [AppSettingKeys.MaskPhoneByDefault] = ToBoolValue(preferences.MaskPhoneByDefault),
             [AppSettingKeys.MaskAddressByDefault] = ToBoolValue(preferences.MaskAddressByDefault),
             [AppSettingKeys.IncludeSensitiveInExport] = ToBoolValue(preferences.IncludeSensitiveInExport),
@@ -323,6 +309,22 @@ public sealed class AppSettingRepository : IAppSettingRepository
     {
         var raw = Get(settings, key, fallback).Trim();
         return allowedValues.Contains(raw) ? raw : fallback;
+    }
+
+    private static string GetStartupSection(IDictionary<string, string> settings, string key, string fallback)
+    {
+        return NormalizeStartupSectionValue(Get(settings, key, fallback), fallback);
+    }
+
+    private static string NormalizeStartupSectionValue(string? value, string fallback)
+    {
+        var normalized = (value ?? string.Empty).Trim();
+        if (LegacyStartupSectionMap.TryGetValue(normalized, out var mapped))
+        {
+            normalized = mapped;
+        }
+
+        return AllowedStartupSections.Contains(normalized) ? normalized : fallback;
     }
 
     private static string GetHotkey(IDictionary<string, string> settings, string key, string fallback)

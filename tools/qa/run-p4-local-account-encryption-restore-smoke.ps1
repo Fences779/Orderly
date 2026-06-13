@@ -308,9 +308,18 @@ $runDirectory = New-QaSmokeRunDirectory
 $sourceLauncherPath = Join-Path $runDirectory.Path 'source-launcher.db'
 $sourceAccountPath = Join-Path $runDirectory.Path 'source-account.db'
 $targetLauncherPath = Join-Path $runDirectory.Path 'target-launcher.db'
-$targetAccountPath = Join-Path $runDirectory.Path 'target-account.db'
+# Security gate (commit 0e4ca39): LocalAuthService.SignInAsync now enforces
+# IsAccountDatabasePathSafe, which requires the account database to live at the canonical
+# app-root location %LocalAppData%\Orderly\accounts\{accountId}\orderly.db. The restore
+# TARGET account database is therefore resolved to that canonical path further below, once
+# the throwaway account id has been generated, so the step-6 re-login is accepted without
+# weakening the product gate. Its canonical directory is removed in the finally block (C-6).
+$targetAccountPath = $null
+$canonicalTargetAccountDir = $null
 $backupPath = Join-Path $runDirectory.Path 'real-encrypted-local-account-backup.json'
+$smokeCompleted = $false
 
+try {
 Write-Step "Starting P4 real encryption restore smoke"
 Write-Step "Repo root: $(Get-RepoRoot)"
 Write-Step "Step 1/8: initialize isolated launcher/account databases"
@@ -320,6 +329,12 @@ Initialize-LauncherDatabase -LauncherConnectionFactory $sourceLauncherFactory
 [void](Initialize-BusinessDatabase -DatabasePath $sourceAccountPath)
 
 $sourceAccountSeed = New-TestLocalAccount -DatabasePath $sourceAccountPath
+# Resolve the restore TARGET account database to the canonical, path-safety-approved
+# location keyed by this throwaway account id (mirrors DatabasePaths.IsExpectedAccountDatabasePath,
+# which LocalAuthService.IsAccountDatabasePathSafe enforces). This call creates the canonical
+# account directory; it is deleted in the finally block so no real user data is touched (C-6).
+$targetAccountPath = [Orderly.Data.Sqlite.DatabasePaths]::GetAccountDatabasePath($sourceAccountSeed.Account.AccountId)
+$canonicalTargetAccountDir = [System.IO.Path]::GetDirectoryName($targetAccountPath)
 $sourceAccountRepository = [Orderly.Data.Repositories.LocalAccountRepository]::new($sourceLauncherFactory)
 [void]$sourceAccountRepository.CreateAsync($sourceAccountSeed.Account).GetAwaiter().GetResult()
 $sourceSessionContext = New-SessionContextService `
@@ -498,3 +513,34 @@ if (-not ([string]$restoredCustomerRow.NameCiphertext).StartsWith('v1:') -or -no
 }
 
 Write-Step "P4 real encryption restore smoke completed"
+$smokeCompleted = $true
+}
+finally {
+    # C-6: remove the throwaway canonical account directory created for the re-login gate so
+    # the smoke never leaves behind (or touches) real user local data under %LocalAppData%.
+    # Pooled SQLite connections hold the orderly.db file handle open, so release the pool
+    # (and collect) before deleting; retry briefly in case the OS lock lingers momentarily.
+    if ($canonicalTargetAccountDir -and (Test-Path -LiteralPath $canonicalTargetAccountDir)) {
+        try { [Microsoft.Data.Sqlite.SqliteConnection]::ClearAllPools() | Out-Null } catch { }
+        [System.GC]::Collect()
+        [System.GC]::WaitForPendingFinalizers()
+        for ($attempt = 0; $attempt -lt 5; $attempt++) {
+            Remove-Item -LiteralPath $canonicalTargetAccountDir -Recurse -Force -ErrorAction SilentlyContinue
+            if (-not (Test-Path -LiteralPath $canonicalTargetAccountDir)) {
+                break
+            }
+            Start-Sleep -Milliseconds 200
+        }
+    }
+
+    # Assert the throwaway account directory was actually removed (no residual temp account dir).
+    # Only fail for cleanup when the smoke itself otherwise succeeded, so a real step failure is not
+    # masked by a cleanup-stage error.
+    if ($canonicalTargetAccountDir -and (Test-Path -LiteralPath $canonicalTargetAccountDir)) {
+        if ($smokeCompleted) {
+            throw "QA 临时账号目录清理失败，仍有残留：$canonicalTargetAccountDir"
+        }
+
+        Write-Warning "QA 临时账号目录清理失败，仍有残留：$canonicalTargetAccountDir"
+    }
+}

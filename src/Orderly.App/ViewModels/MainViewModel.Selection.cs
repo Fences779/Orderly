@@ -46,7 +46,7 @@ public partial class MainViewModel
         {
             var normalized = NormalizeSection(section);
             SelectedSection = normalized;
-            await EnsureBusinessSectionLoadedAsync(normalized);
+            await EnsureCommercePageLoadedAsync(normalized);
         }
     }
 

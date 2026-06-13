@@ -302,6 +302,11 @@ public sealed partial class DatabaseInitializer
 
         await EnsureSchemaAsync(connection, cancellationToken);
         await SeedAsync(connection, cancellationToken);
+
+        // Initialize the Universal_Domain_Model (Commerce) schema in the same per-workspace
+        // database. This is additive and idempotent (Req 3.3) and leaves the legacy CRM tables,
+        // the launcher DB, and the multi-account structure unchanged (Req 1.5, C-2).
+        await CommerceSchemaInitializer.InitializeSchemaAsync(connection, cancellationToken);
     }
 
     private static async Task EnsureSchemaAsync(SqliteConnection connection, CancellationToken cancellationToken)

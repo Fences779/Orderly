@@ -68,13 +68,35 @@
                                    Foreground="{DynamicResource HeadingBrush}"/>
                     </Grid>
                 </Button>
-                <!-- “我的”按钮 -->
-                <Button x:Name="Tab_Me" AutomationProperties.AutomationId="Tab_Me" Content="我的" Tag="&#xE77B;" Style="{StaticResource ProfileMenuGlassButtonStyle}" Command="{Binding SelectSectionCommand}" CommandParameter="我的"/>
+                <!-- “我的”按钮 (developer-only name: Me / Account) — ninth navigation entry -->
+                <Button x:Name="Tab_Me" AutomationProperties.AutomationId="Tab_Me" Content="我的" Tag="&#xE77B;" Command="{Binding SelectSectionCommand}" CommandParameter="我的">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ProfileMenuGlassButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="我的">
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
+
+            <!-- 顶层导航：九个固定入口，按设计顺序排列，全部中文标签 -->
+            <!-- Developer-only annotations (NOT rendered): Workbench / Orders / Products /
+                 Inventory / Customers / Cash Flow / Business Advice / Settings -->
             <StackPanel>
                 <TextBlock Text="Orderly" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource SidebarBrandBrush}" />
                 <TextBlock Text="本地商家工作台" Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,20" />
 
+                <!-- 1. 工作台 (Workbench) -->
                 <Button x:Name="Tab_Dashboard" AutomationProperties.AutomationId="Tab_Dashboard" Content="工作台" Tag="&#xE80F;" Command="{Binding SelectSectionCommand}" CommandParameter="工作台">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
@@ -93,11 +115,13 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button x:Name="Tab_Fulfillment" AutomationProperties.AutomationId="Tab_Fulfillment" Content="订单履约" Tag="&#xE8A1;" Command="{Binding SelectSectionCommand}" CommandParameter="订单履约">
+
+                <!-- 2. 订单 (Orders) -->
+                <Button x:Name="Tab_Orders" AutomationProperties.AutomationId="Tab_Orders" Content="订单" Tag="&#xE8A1;" Command="{Binding SelectSectionCommand}" CommandParameter="订单">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedSection}" Value="订单履约">
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="订单">
                                     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
                                     <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
                                     <Setter Property="FontWeight" Value="SemiBold" />
@@ -111,7 +135,29 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button x:Name="Tab_Inventory" AutomationProperties.AutomationId="Tab_Inventory" Content="库存管理" Tag="&#xE7B8;" Command="{Binding SelectSectionCommand}" CommandParameter="库存管理">
+
+                <!-- 3. 商品 (Products) -->
+                <Button x:Name="Tab_Products" AutomationProperties.AutomationId="Tab_Products" Content="商品" Tag="&#xE719;" Command="{Binding SelectSectionCommand}" CommandParameter="商品">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="商品">
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- 4. 库存 (Inventory) — section key 库存管理 -->
+                <Button x:Name="Tab_Inventory" AutomationProperties.AutomationId="Tab_Inventory" Content="库存" Tag="&#xE7B8;" Command="{Binding SelectSectionCommand}" CommandParameter="库存管理">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                             <Style.Triggers>
@@ -129,6 +175,28 @@
                         </Style>
                     </Button.Style>
                 </Button>
+
+                <!-- 5. 客户 (Customers) -->
+                <Button x:Name="Tab_Customers" AutomationProperties.AutomationId="Tab_Customers" Content="客户" Tag="&#xE77B;" Command="{Binding SelectSectionCommand}" CommandParameter="客户">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="客户">
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- 6. 现金流 (Cash Flow) -->
                 <Button x:Name="Tab_Cashflow" AutomationProperties.AutomationId="Tab_Cashflow" Content="现金流" Tag="&#xE825;" Command="{Binding SelectSectionCommand}" CommandParameter="现金流">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
@@ -147,11 +215,13 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button x:Name="Tab_ExceptionOrders" AutomationProperties.AutomationId="Tab_ExceptionOrders" Content="异常处理" Tag="&#xE7BA;" Command="{Binding SelectSectionCommand}" CommandParameter="异常处理">
+
+                <!-- 7. 经营建议 (Business Advice) -->
+                <Button x:Name="Tab_BusinessAdvice" AutomationProperties.AutomationId="Tab_BusinessAdvice" Content="经营建议" Tag="&#xE9D9;" Command="{Binding SelectSectionCommand}" CommandParameter="经营建议">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedSection}" Value="异常处理">
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="经营建议">
                                     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
                                     <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
                                     <Setter Property="FontWeight" Value="SemiBold" />
@@ -165,6 +235,8 @@
                         </Style>
                     </Button.Style>
                 </Button>
+
+                <!-- 8. 设置 (Settings) -->
                 <Button x:Name="Tab_Settings" AutomationProperties.AutomationId="Tab_Settings" Content="设置" Tag="&#xE713;" Command="{Binding SelectSectionCommand}" CommandParameter="设置">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">

@@ -7,29 +7,42 @@ namespace Orderly.App.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    public const string SectionWorkbench = "工作台";
-    public const string SectionFulfillment = "订单履约";
-    public const string SectionInventory = "库存管理";
-    public const string SectionCashflow = "现金流";
-    public const string SectionException = "异常处理";
-    public const string SectionSettings = "设置";
-    public const string SectionMe = "我的";
+    // Nine top-level navigation entries (Req 6.1 / 17.3). Rendered labels are Chinese-only;
+    // the English names in comments are developer-only annotations and MUST NOT be rendered.
+    public const string SectionWorkbench = "工作台";        // Workbench
+    public const string SectionOrders = "订单";             // Orders
+    public const string SectionProducts = "商品";           // Products
+    public const string SectionInventory = "库存管理";       // Inventory (rendered label: 库存)
+    public const string SectionCustomers = "客户";          // Customers
+    public const string SectionCashflow = "现金流";          // Cash Flow
+    public const string SectionBusinessAdvice = "经营建议";   // Business Advice
+    public const string SectionSettings = "设置";           // Settings
+    public const string SectionMe = "我的";                 // Me / Account
+
+    // Legacy/relocated destinations whose dedicated views were removed. They are NOT valid pages
+    // anymore; saved or stale references to them are remapped to the closest current page so an
+    // upgraded user never lands on a blank main area (订单履约 → 订单, 异常处理 → 经营建议).
+    public const string SectionFulfillment = "订单履约";     // Order Fulfillment (relocated → Orders)
+    public const string SectionException = "异常处理";       // Exception Handling (relocated → Business Advice)
 
     private static readonly HashSet<string> SupportedSections = new(StringComparer.Ordinal)
     {
         SectionWorkbench,
-        SectionFulfillment,
+        SectionOrders,
+        SectionProducts,
         SectionInventory,
+        SectionCustomers,
         SectionCashflow,
-        SectionException,
+        SectionBusinessAdvice,
         SectionSettings,
         SectionMe
     };
 
-    private static readonly HashSet<string> LegacySections = new(StringComparer.Ordinal)
+    // Removed pages whose views no longer exist: map old saved values to the closest current page.
+    private static readonly Dictionary<string, string> RelocatedSections = new(StringComparer.Ordinal)
     {
-        "客户/订单",
-        "话术库"
+        [SectionFulfillment] = SectionOrders,
+        [SectionException] = SectionBusinessAdvice
     };
 
     private readonly ICustomerRepository _customerRepository;
@@ -49,9 +62,6 @@ public partial class MainViewModel : ObservableObject
     private readonly INavigationRouteService _navigationRouteService;
     private readonly IBackupService _backupService;
     private readonly IPriceAdjustmentService _priceAdjustmentService;
-    private readonly IStringNarrationOrderService _stringNarrationOrderService;
-    private readonly IStringNarrationBusinessService _stringNarrationBusinessService;
-    private readonly IInventoryWorkspaceService _inventoryWorkspaceService;
     private readonly IReplyTemplateRepository _replyTemplateRepository;
     private readonly IAppSettingRepository _settingRepository;
     private readonly ISyncService _syncService;
@@ -75,7 +85,6 @@ public partial class MainViewModel : ObservableObject
         IActivityLogService activityLogService,
         IBackupService backupService,
         IPriceAdjustmentService priceAdjustmentService,
-        IStringNarrationOrderService? stringNarrationOrderService,
         IReplyTemplateRepository replyTemplateRepository,
         IAppSettingRepository settingRepository,
         ISyncService syncService,
@@ -83,12 +92,7 @@ public partial class MainViewModel : ObservableObject
         IClipboardService clipboardService,
         string databasePath,
         ILocalAccountManagementService? localAccountManagementService = null,
-        ISessionContextService? sessionContextService = null,
-        string stringNarrationGatewayEndpoint = "",
-        bool isStringNarrationGatewayTokenConfigured = false,
-        int stringNarrationGatewayTimeoutSeconds = 15,
-        IStringNarrationBusinessService? stringNarrationBusinessService = null,
-        IInventoryWorkspaceService? inventoryWorkspaceService = null)
+        ISessionContextService? sessionContextService = null)
         : this(
             customerRepository,
             orderRepository,
@@ -107,7 +111,6 @@ public partial class MainViewModel : ObservableObject
             EmptyNavigationRouteService.Instance,
             backupService,
             priceAdjustmentService,
-            stringNarrationOrderService ?? EmptyStringNarrationOrderService.Instance,
             replyTemplateRepository,
             settingRepository,
             syncService,
@@ -115,12 +118,7 @@ public partial class MainViewModel : ObservableObject
             clipboardService,
             databasePath,
             localAccountManagementService,
-            sessionContextService,
-            stringNarrationGatewayEndpoint,
-            isStringNarrationGatewayTokenConfigured,
-            stringNarrationGatewayTimeoutSeconds,
-            stringNarrationBusinessService,
-            inventoryWorkspaceService)
+            sessionContextService)
     {
     }
 
@@ -142,7 +140,6 @@ public partial class MainViewModel : ObservableObject
         INavigationRouteService navigationRouteService,
         IBackupService backupService,
         IPriceAdjustmentService priceAdjustmentService,
-        IStringNarrationOrderService? stringNarrationOrderService,
         IReplyTemplateRepository replyTemplateRepository,
         IAppSettingRepository settingRepository,
         ISyncService syncService,
@@ -150,12 +147,7 @@ public partial class MainViewModel : ObservableObject
         IClipboardService clipboardService,
         string databasePath,
         ILocalAccountManagementService? localAccountManagementService = null,
-        ISessionContextService? sessionContextService = null,
-        string stringNarrationGatewayEndpoint = "",
-        bool isStringNarrationGatewayTokenConfigured = false,
-        int stringNarrationGatewayTimeoutSeconds = 15,
-        IStringNarrationBusinessService? stringNarrationBusinessService = null,
-        IInventoryWorkspaceService? inventoryWorkspaceService = null)
+        ISessionContextService? sessionContextService = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -174,9 +166,6 @@ public partial class MainViewModel : ObservableObject
         _navigationRouteService = navigationRouteService;
         _backupService = backupService;
         _priceAdjustmentService = priceAdjustmentService;
-        _stringNarrationOrderService = stringNarrationOrderService ?? EmptyStringNarrationOrderService.Instance;
-        _stringNarrationBusinessService = stringNarrationBusinessService ?? EmptyStringNarrationBusinessService.Instance;
-        _inventoryWorkspaceService = inventoryWorkspaceService ?? EmptyInventoryWorkspaceService.Instance;
         _replyTemplateRepository = replyTemplateRepository;
         _settingRepository = settingRepository;
         _syncService = syncService;
@@ -185,10 +174,6 @@ public partial class MainViewModel : ObservableObject
         _localAccountManagementService = localAccountManagementService;
         _sessionContextService = sessionContextService;
         DatabasePath = databasePath;
-        IsStringNarrationGatewayEndpointConfigured = !string.IsNullOrWhiteSpace(stringNarrationGatewayEndpoint);
-        StringNarrationGatewayEndpoint = IsStringNarrationGatewayEndpointConfigured ? stringNarrationGatewayEndpoint : "未配置";
-        IsStringNarrationGatewayTokenConfigured = isStringNarrationGatewayTokenConfigured;
-        StringNarrationGatewayTimeoutSeconds = stringNarrationGatewayTimeoutSeconds;
         InitializeFilterOptions();
     }
 
@@ -205,6 +190,8 @@ public partial class MainViewModel : ObservableObject
             return normalized;
         }
 
-        return LegacySections.Contains(normalized) ? SectionWorkbench : SectionWorkbench;
+        // Relocated pages (订单履约/异常处理) map to their replacement; any other legacy or
+        // unrecognized value falls back to the Workbench so the content area is never blank.
+        return RelocatedSections.TryGetValue(normalized, out var mapped) ? mapped : SectionWorkbench;
     }
 }

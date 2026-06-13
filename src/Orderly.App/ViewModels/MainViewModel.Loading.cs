@@ -49,14 +49,6 @@ public partial class MainViewModel
 
             OnSummaryChanged();
             StatusMessage = $"已加载 {Customers.Count} 个客户、{Orders.Count} 个订单";
-            if (string.Equals(SelectedSection, SectionFulfillment, StringComparison.Ordinal))
-            {
-                await LoadStringNarrationOrdersAsync();
-            }
-            else if (string.Equals(SelectedSection, SectionException, StringComparison.Ordinal))
-            {
-                await LoadExceptionOrdersAsync();
-            }
         }
         catch (Exception ex)
         {

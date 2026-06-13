@@ -3,20 +3,20 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $desktopPath = [Environment]::GetFolderPath('Desktop')
 $wshShell = New-Object -ComObject WScript.Shell
-$devShortcutName = 'SN' + [string][char]0x5F00 + [string][char]0x53D1 + [string][char]0x6A21 + [string][char]0x5F0F + '.lnk'
-$startShortcutName = 'SN' + [string][char]0x542F + [string][char]0x52A8 + '.lnk'
-$devDescription = 'Orderly SN Dev Mode'
-$startDescription = 'Orderly SN Start'
+$devShortcutName = 'Orderly' + [string][char]0x5F00 + [string][char]0x53D1 + [string][char]0x6A21 + [string][char]0x5F0F + '.lnk'
+$startShortcutName = 'Orderly' + [string][char]0x542F + [string][char]0x52A8 + '.lnk'
+$devDescription = 'Orderly Dev Mode'
+$startDescription = 'Orderly Start'
 
 $shortcuts = @(
   @{
     Name = $devShortcutName
-    TargetPath = Join-Path $repoRoot 'dev-watch-sn.bat'
+    TargetPath = Join-Path $repoRoot 'dev-watch.bat'
     Description = $devDescription
   },
   @{
     Name = $startShortcutName
-    TargetPath = Join-Path $repoRoot 'start-sn.bat'
+    TargetPath = Join-Path $repoRoot 'start-orderly.bat'
     Description = $startDescription
   }
 )

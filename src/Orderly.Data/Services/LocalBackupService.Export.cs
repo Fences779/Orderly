@@ -33,6 +33,7 @@ public sealed partial class LocalBackupService
             }
 
             var manifest = await BuildManifestAsync(cancellationToken);
+            await AppendLauncherSnapshotAsync(manifest, cancellationToken);
             manifest.Checksum = ComputeChecksum(manifest);
             StampIntegrityTag(manifest);
 
@@ -165,6 +166,104 @@ public sealed partial class LocalBackupService
         }
 
         return rows;
+    }
+
+    private async Task AppendLauncherSnapshotAsync(BackupManifest manifest, CancellationToken cancellationToken)
+    {
+        if (_launcherConnectionFactory is null)
+        {
+            return;
+        }
+
+        var accountId = _sessionContextService?.Current?.AccountId;
+        if (string.IsNullOrWhiteSpace(accountId))
+        {
+            return;
+        }
+
+        await using var connection = _launcherConnectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT
+                AccountId,
+                Username,
+                DisplayName,
+                PasswordHash,
+                PasswordSalt,
+                PasswordIterations,
+                PinHash,
+                PinSalt,
+                PinIterations,
+                RecoveryKeyHash,
+                RecoveryKeySalt,
+                RecoveryKeyIterations,
+                RecoveryEncryptedDataKey,
+                RecoveryDataKeyNonce,
+                RecoveryDataKeyTag,
+                EncryptedDataKey,
+                DataKeyNonce,
+                DataKeyTag,
+                AdminOwnerAccountId,
+                AdminEncryptedDataKey,
+                AdminDataKeyNonce,
+                AdminDataKeyTag,
+                DatabasePath,
+                Role,
+                IsEnabled,
+                CreatedAt,
+                UpdatedAt,
+                LastLoginAt
+            FROM LocalAccounts
+            WHERE AccountId = $accountId
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$accountId", accountId);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return;
+        }
+
+        var snapshotRows = new List<LauncherAccountBackupRow>
+        {
+            new()
+            {
+                AccountId = reader.GetString(0),
+                Username = reader.GetString(1),
+                DisplayName = reader.GetString(2),
+                PasswordHash = Convert.ToBase64String((byte[])reader[3]),
+                PasswordSalt = Convert.ToBase64String((byte[])reader[4]),
+                PasswordIterations = reader.GetInt32(5),
+                PinHash = Convert.ToBase64String((byte[])reader[6]),
+                PinSalt = Convert.ToBase64String((byte[])reader[7]),
+                PinIterations = reader.GetInt32(8),
+                RecoveryKeyHash = ToBase64Nullable(reader, 9),
+                RecoveryKeySalt = ToBase64Nullable(reader, 10),
+                RecoveryKeyIterations = reader.IsDBNull(11) ? null : reader.GetInt32(11),
+                RecoveryEncryptedDataKey = ToBase64Nullable(reader, 12),
+                RecoveryDataKeyNonce = ToBase64Nullable(reader, 13),
+                RecoveryDataKeyTag = ToBase64Nullable(reader, 14),
+                EncryptedDataKey = Convert.ToBase64String((byte[])reader[15]),
+                DataKeyNonce = Convert.ToBase64String((byte[])reader[16]),
+                DataKeyTag = Convert.ToBase64String((byte[])reader[17]),
+                AdminOwnerAccountId = reader.IsDBNull(18) ? null : reader.GetString(18),
+                AdminEncryptedDataKey = ToBase64Nullable(reader, 19),
+                AdminDataKeyNonce = ToBase64Nullable(reader, 20),
+                AdminDataKeyTag = ToBase64Nullable(reader, 21),
+                DatabasePath = reader.GetString(22),
+                Role = reader.GetInt32(23),
+                IsEnabled = reader.GetInt32(24) == 1,
+                CreatedAt = reader.GetString(25),
+                UpdatedAt = reader.GetString(26),
+                LastLoginAt = reader.IsDBNull(27) ? null : reader.GetString(27)
+            }
+        };
+
+        manifest.Tables[LauncherLocalAccountsTableName] = JsonSerializer.SerializeToElement(snapshotRows, SerializerOptions);
+        manifest.Counts[LauncherLocalAccountsTableName] = snapshotRows.Count;
     }
 
 }

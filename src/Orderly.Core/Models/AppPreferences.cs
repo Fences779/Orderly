@@ -34,14 +34,6 @@ public sealed class AppPreferences
     public string AutoBackupFrequency { get; set; } = "手动";
     public int BackupRetentionCount { get; set; } = 10;
 
-    public bool SnOrderSyncEnabled { get; set; }
-    public string SnSyncMode { get; set; } = "手动";
-    public string SnSyncFrequency { get; set; } = "每6小时";
-    public string SnLastConnectionCheckAt { get; set; } = string.Empty;
-    public string SnLastConnectionResult { get; set; } = "未检查";
-    public string SnLastSyncAt { get; set; } = string.Empty;
-    public string SnLastSyncResult { get; set; } = "未执行";
-
     public bool MaskPhoneByDefault { get; set; } = true;
     public bool MaskAddressByDefault { get; set; } = true;
     public bool IncludeSensitiveInExport { get; set; }

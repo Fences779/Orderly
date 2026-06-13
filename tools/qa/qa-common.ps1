@@ -64,7 +64,7 @@ function Get-ArtifactRoot {
         return [System.IO.Path]::GetFullPath($env:ORDERLY_QA_ARTIFACT_ROOT)
     }
 
-    return Join-Path ([System.IO.Path]::GetTempPath()) 'Orderly-SN\artifacts'
+    return Join-Path ([System.IO.Path]::GetTempPath()) 'Orderly\artifacts'
 }
 
 function Get-QaDatabaseRoot {
@@ -98,7 +98,7 @@ function Get-DefaultDatabasePath {
         return $overridePath
     }
 
-    $root = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Orderly-SN'
+    $root = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Orderly'
     return Join-Path $root 'orderly.db'
 }
 
@@ -137,7 +137,7 @@ public static class QaNativeLoader
         }
 
         [QaNativeLoader]::SetDllDirectory($nativeRuntimePath) | Out-Null
-        $nativeLibrary = Join-Path $nativeRuntimePath 'e_sqlite3.dll'
+        $nativeLibrary = Join-Path $nativeRuntimePath 'e_sqlcipher.dll'
         if ([QaNativeLoader]::LoadLibrary($nativeLibrary) -eq [IntPtr]::Zero) {
             throw "Failed to preload native SQLite library: $nativeLibrary"
         }
@@ -145,9 +145,10 @@ public static class QaNativeLoader
 
     $assemblyNames = @(
         'SQLitePCLRaw.core.dll',
-        'SQLitePCLRaw.provider.e_sqlite3.dll',
+        'SQLitePCLRaw.provider.e_sqlcipher.dll',
         'SQLitePCLRaw.batteries_v2.dll',
         'Microsoft.Data.Sqlite.dll',
+        'System.Security.Cryptography.ProtectedData.dll',
         'Orderly.Core.dll',
         'Orderly.Data.dll',
         'Orderly.Infrastructure.dll'
@@ -160,6 +161,12 @@ public static class QaNativeLoader
     foreach ($assemblyName in $assemblyNames) {
         $assemblyPath = Join-Path $binRoot $assemblyName
         if (-not (Test-Path -LiteralPath $assemblyPath)) {
+            # ProtectedData ships as a transitive dependency; tolerate its absence and fall back to
+            # the framework-provided type when present.
+            if ($assemblyName -eq 'System.Security.Cryptography.ProtectedData.dll') {
+                continue
+            }
+
             throw "Missing QA dependency assembly: $assemblyPath"
         }
 
@@ -182,6 +189,95 @@ function Get-QaEncryptionKeyBytes {
     return $script:QaEncryptionKeyBytes
 }
 
+# --- SQLCipher-compatible QA database access ---------------------------------------------------
+#
+# QA mode runs the product with full SQLCipher whole-database encryption: Orderly.App generates a
+# random per-database "QA session data key", stores it DPAPI-protected, and uses it as the SQLCipher
+# key when it creates/opens the QA database. QA scripts must therefore open that same encrypted
+# database with the same key — a keyless Microsoft.Data.Sqlite connection raises
+# "SQLite Error 26: file is not a database". The helpers below load the product's QA session data
+# key exactly the way the app does (same file-path derivation, same DPAPI entropy) and build a keyed
+# SqliteConnectionFactory, so the harness stays SQLCipher-compatible without weakening encryption and
+# without ever printing the key. The key itself is never written to logs.
+
+function Get-QaIdentityDirectory {
+    $root = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) 'Orderly'
+    return Join-Path $root 'identity'
+}
+
+function Get-QaSessionDataKeyFilePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DatabasePath
+    )
+
+    # Mirrors App.GetQaSessionDataKeyPath: SHA-256 over the upper-cased full database path, hex-lower.
+    $normalized = [System.IO.Path]::GetFullPath($DatabasePath).ToUpperInvariant()
+    $pathBytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+    $hash = [System.Security.Cryptography.SHA256]::HashData($pathBytes)
+    $hex = [System.Convert]::ToHexString($hash).ToLowerInvariant()
+    return Join-Path (Get-QaIdentityDirectory) ("qa-session-data-key-$hex.dpapi")
+}
+
+function Get-QaSessionDataKey {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DatabasePath
+    )
+
+    $keyPath = Get-QaSessionDataKeyFilePath -DatabasePath $DatabasePath
+    if (-not (Test-Path -LiteralPath $keyPath)) {
+        return $null
+    }
+
+    $protected = [System.IO.File]::ReadAllBytes($keyPath)
+    $entropy = [System.Text.Encoding]::UTF8.GetBytes('Orderly.QaSessionDataKey.v1')
+    return [System.Security.Cryptography.ProtectedData]::Unprotect(
+        $protected,
+        $entropy,
+        [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+}
+
+function New-QaConnectionFactory {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DatabasePath
+    )
+
+    $key = Get-QaSessionDataKey -DatabasePath $DatabasePath
+    if ($null -eq $key -or $key.Length -eq 0) {
+        # No QA SQLCipher key present: the database is unencrypted (e.g. created directly by a
+        # script that does not run the app). Fall back to a keyless factory.
+        return [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
+    }
+
+    # The SqliteConnectionFactory invokes the key provider lazily on connection open, which can occur
+    # on a background (thread-pool) thread with no PowerShell runspace. A PowerShell scriptblock cast
+    # to a delegate would fail there ("no Runspace available"), so use a tiny compiled .NET type whose
+    # method we bind as a real delegate. It returns a fresh copy each call (the factory zeroes it).
+    if (-not ('QaSqlCipherKeyProvider' -as [type])) {
+        Add-Type @"
+public sealed class QaSqlCipherKeyProvider
+{
+    private readonly byte[] _key;
+    public QaSqlCipherKeyProvider(byte[] key)
+    {
+        _key = (byte[])key.Clone();
+    }
+
+    public byte[] Provide()
+    {
+        return (byte[])_key.Clone();
+    }
+}
+"@
+    }
+
+    $provider = [QaSqlCipherKeyProvider]::new($key)
+    $keyProvider = [System.Delegate]::CreateDelegate([Func[byte[]]], $provider, 'Provide')
+    return [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath, $keyProvider)
+}
+
 function New-QaFieldEncryptionContext {
     param(
         [Parameter(Mandatory = $true)]
@@ -192,13 +288,23 @@ function New-QaFieldEncryptionContext {
     )
 
     $sessionContextService = [Orderly.Data.Services.SessionContextService]::new()
+
+    # Field encryption in QA mode uses the same key the app's QA session uses (the SQLCipher QA
+    # session data key) so script-side decryption matches app-written ciphertext. When no QA session
+    # key exists yet (unencrypted DB created directly by a script), fall back to the deterministic
+    # seed key for backward compatibility.
+    $dataKey = Get-QaSessionDataKey -DatabasePath $DatabasePath
+    if ($null -eq $dataKey -or $dataKey.Length -eq 0) {
+        $dataKey = Get-QaEncryptionKeyBytes
+    }
+
     $sessionContext = [Orderly.Core.Models.LocalSessionContext]@{
         AccountId   = $AccountId
         Username    = $Username
         DisplayName = $DisplayName
         Role        = [Orderly.Core.Models.LocalAccountRole]::Owner
         DatabasePath = $DatabasePath
-        DataKey     = Get-QaEncryptionKeyBytes
+        DataKey     = $dataKey
         SignedInAt  = [DateTime]::Now
     }
     $sessionContextService.SetCurrent($sessionContext)
@@ -216,7 +322,7 @@ function Invoke-QaCiphertextBackfill {
     )
 
     $fieldContext = New-QaFieldEncryptionContext -DatabasePath $DatabasePath
-    $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($DatabasePath)
+    $connectionFactory = New-QaConnectionFactory -DatabasePath $DatabasePath
     $migrationService = [Orderly.Data.Services.SensitiveFieldMigrationService]::new(
         $connectionFactory,
         $fieldContext.FieldEncryptionService)
@@ -238,7 +344,8 @@ WHERE
  OR (ifnull(MetadataJsonCiphertext, '') <> '' AND MetadataJsonCiphertext NOT LIKE 'v1:%');
 '@
 
-    $connection = [Microsoft.Data.Sqlite.SqliteConnection]::new("Data Source=$DatabasePath;Foreign Keys=True")
+    $connectionFactory = New-QaConnectionFactory -DatabasePath $DatabasePath
+    $connection = $connectionFactory.CreateConnection()
     try {
         $connection.Open()
         $command = $connection.CreateCommand()

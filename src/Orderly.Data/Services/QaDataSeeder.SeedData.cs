@@ -34,7 +34,7 @@ public sealed partial class QaDataSeeder
     private static readonly QaNote[] QaNotes =
     [
         new("p13qa-note-001", $"{QaMarker} 客户-A", $"{QaMarker} 订单-待处理", NoteType.Internal, $"{QaMarker} 模板备注验证：已插入标准报价模板。p13qa-note-keyword", true, -2),
-        new("p13qa-note-002", $"{QaMarker} 客户-A", $"{QaMarker} 订单-需跟进", NoteType.Requirement, $"{QaMarker} 需确认材质、数量和最终交付日期。", false, -1),
+        new("p13qa-note-002", $"{QaMarker} 客户-A", $"{QaMarker} 订单-需跟进", NoteType.Requirement, $"{QaMarker} 需确认规格、数量和最终交付日期。", false, -1),
         new("p13qa-note-003", $"{QaMarker} 客户-B", $"{QaMarker} 订单-已成交", NoteType.Preference, $"{QaMarker} 成交后保持每周一次回访节奏。", false, -1)
     ];
 

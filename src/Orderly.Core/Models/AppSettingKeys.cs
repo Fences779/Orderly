@@ -34,14 +34,6 @@ public static class AppSettingKeys
     public const string AutoBackupFrequency = "AutoBackupFrequency";
     public const string BackupRetentionCount = "BackupRetentionCount";
 
-    public const string SnOrderSyncEnabled = "SnOrderSyncEnabled";
-    public const string SnSyncMode = "SnSyncMode";
-    public const string SnSyncFrequency = "SnSyncFrequency";
-    public const string SnLastConnectionCheckAt = "SnLastConnectionCheckAt";
-    public const string SnLastConnectionResult = "SnLastConnectionResult";
-    public const string SnLastSyncAt = "SnLastSyncAt";
-    public const string SnLastSyncResult = "SnLastSyncResult";
-
     public const string MaskPhoneByDefault = "MaskPhoneByDefault";
     public const string MaskAddressByDefault = "MaskAddressByDefault";
     public const string IncludeSensitiveInExport = "IncludeSensitiveInExport";

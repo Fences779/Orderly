@@ -83,9 +83,28 @@ public sealed partial class LocalBackupService
                 await InsertTableRowsAsync(connection, transaction, tableName, tableElement, cancellationToken);
             }
 
-            await RestoreLauncherSnapshotAsync(validation.Manifest, cancellationToken);
-
+            // Commit the business data first so it is durable before the launcher account row is
+            // rewritten. SQLite cannot span a single atomic transaction across the two separate
+            // database files, so the writes are deliberately ordered to avoid a dangerous half-commit:
+            // the large, more failure-prone business restore is made durable first, and only then is
+            // the single, idempotent launcher account row upserted in its own atomic transaction. If
+            // the business commit fails, the launcher is left completely untouched (no half state).
             await transaction.CommitAsync(cancellationToken);
+
+            try
+            {
+                await RestoreLauncherSnapshotAsync(validation.Manifest, cancellationToken);
+            }
+            catch (Exception launcherEx) when (launcherEx is not OperationCanceledException)
+            {
+                // Business data is already durably restored; only the launcher account row failed to
+                // update. Surface a clear, retry-safe message (the launcher upsert is idempotent) so
+                // the half state is auditable rather than silent.
+                throw new InvalidOperationException(
+                    "业务数据已恢复，但启动器账号快照恢复失败；启动器账号映射可能仍为旧值，请在重新登录前核对。该步骤可安全重试。原因："
+                        + launcherEx.Message,
+                    launcherEx);
+            }
 
             var restoredAt = DateTimeOffset.Now;
             await _activityLogRepository.CreateAsync(new ActivityLog

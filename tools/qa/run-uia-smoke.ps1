@@ -767,54 +767,50 @@ try {
     $report.screenshots.mainWindow = $mainWindowPath
     $report.mainWindowTitle = [string]$window.Current.Name
 
-    Add-LogLine '步骤：切换到工作台 Tab'
+    # The nine current top-level navigation entries (Req 6.1 / 17.3). The legacy 订单履约 / 异常处理
+    # tabs were removed with their views, so the smoke walks only these nine. For the seven Commerce
+    # pages plus the Workbench, navigation is proven by the page's content host (Page_*) appearing
+    # after the click (content area non-empty + correct active page); Settings is proven by its save
+    # button and Me by reaching the page without error.
+    $navTabs = @(
+        [pscustomobject]@{ Key = 'dashboard';      TabId = 'Tab_Dashboard';      Label = '工作台';   ContentId = 'Page_Workbench' }
+        [pscustomobject]@{ Key = 'orders';         TabId = 'Tab_Orders';         Label = '订单';     ContentId = 'Page_Orders' }
+        [pscustomobject]@{ Key = 'products';       TabId = 'Tab_Products';       Label = '商品';     ContentId = 'Page_Products' }
+        [pscustomobject]@{ Key = 'inventory';      TabId = 'Tab_Inventory';      Label = '库存';     ContentId = 'Page_Inventory' }
+        [pscustomobject]@{ Key = 'customers';      TabId = 'Tab_Customers';      Label = '客户';     ContentId = 'Page_Customers' }
+        [pscustomobject]@{ Key = 'cashflow';       TabId = 'Tab_Cashflow';       Label = '现金流';   ContentId = 'Page_Cashflow' }
+        [pscustomobject]@{ Key = 'businessAdvice'; TabId = 'Tab_BusinessAdvice'; Label = '经营建议'; ContentId = 'Page_BusinessAdvice' }
+        [pscustomobject]@{ Key = 'settings';       TabId = 'Tab_Settings';       Label = '设置';     ContentId = 'Btn_SavePreferences' }
+        [pscustomobject]@{ Key = 'me';             TabId = 'Tab_Me';             Label = '我的';     ContentId = '' }
+    )
+
+    $report.checks.navigation = @{}
+    foreach ($tab in $navTabs) {
+        Add-LogLine "步骤：切换到 $($tab.Label) Tab（$($tab.TabId)）"
+        $tabElement = Find-AutomationElement -Root $window -AutomationId $tab.TabId -TimeoutSeconds 5
+        if ($null -eq $tabElement) {
+            throw "未找到 $($tab.Label) Tab：$($tab.TabId)。"
+        }
+
+        Invoke-AutomationClick -Element $tabElement
+        Start-Sleep -Milliseconds 650
+
+        # Content area must be non-empty / the correct page must be active after the switch.
+        if (-not [string]::IsNullOrWhiteSpace($tab.ContentId)) {
+            $content = Find-AutomationElement -Root $window -AutomationId $tab.ContentId -TimeoutSeconds 6
+            if ($null -eq $content) {
+                throw "$($tab.Label) 页内容区为空：未找到 $($tab.ContentId)。"
+            }
+        }
+
+        $report.checks.navigation[$tab.Key] = 'OK'
+    }
+
+    # Keep a direct reference for the closing "return to workbench" step.
     $dashboardTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Dashboard' -TimeoutSeconds 5
     if ($null -eq $dashboardTab) {
         throw "未找到工作台 Tab。"
     }
-
-    Invoke-AutomationClick -Element $dashboardTab
-    Start-Sleep -Milliseconds 600
-    $report.checks.dashboardTab = 'OK'
-
-    Add-LogLine '步骤：切换到订单履约 Tab 并验证关键输入框'
-    $fulfillmentTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Fulfillment' -TimeoutSeconds 5
-    if ($null -eq $fulfillmentTab) {
-        throw "未找到订单履约 Tab。"
-    }
-
-    Invoke-AutomationClick -Element $fulfillmentTab
-    Start-Sleep -Milliseconds 700
-    $fulfillmentSearch = Find-AutomationElement -Root $window -AutomationId 'Input_FulfillmentSearchKeyword' -TimeoutSeconds 5
-    if ($null -eq $fulfillmentSearch) {
-        throw "未找到订单履约搜索框：Input_FulfillmentSearchKeyword。"
-    }
-    Set-AutomationText -Element $fulfillmentSearch -Text '[P1.3_QA]'
-    $report.checks.fulfillmentTab = 'OK'
-
-    Add-LogLine '步骤：切换到异常处理 Tab'
-    $exceptionTab = Find-AutomationElement -Root $window -AutomationId 'Tab_ExceptionOrders' -TimeoutSeconds 5
-    if ($null -eq $exceptionTab) {
-        throw "未找到异常处理 Tab。"
-    }
-
-    Invoke-AutomationClick -Element $exceptionTab
-    Start-Sleep -Milliseconds 600
-    $report.checks.exceptionTab = 'OK'
-
-    Add-LogLine '步骤：切换到设置 Tab 并验证保存按钮'
-    $settingsTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Settings' -TimeoutSeconds 5
-    if ($null -eq $settingsTab) {
-        throw "未找到设置 Tab。"
-    }
-
-    Invoke-AutomationClick -Element $settingsTab
-    Start-Sleep -Milliseconds 700
-    $savePreferences = Find-AutomationElement -Root $window -AutomationId 'Btn_SavePreferences' -TimeoutSeconds 5
-    if ($null -eq $savePreferences) {
-        throw "未找到设置保存按钮：Btn_SavePreferences。"
-    }
-    $report.checks.settingsTab = 'OK'
 
     Add-LogLine '步骤：回到工作台 Tab'
     Invoke-AutomationClick -Element $dashboardTab

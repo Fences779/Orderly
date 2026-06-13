@@ -208,7 +208,7 @@ public sealed class AbusePatternBugConditionTests
         // 任一方法接受委托型参数（如 Action / Func 回调），视为提供可插拔钩子。
         return methods.Any(m => m.GetParameters()
             .Any(p => typeof(Delegate).IsAssignableFrom(p.ParameterType)
-                      || ContainsAnyToken(p.Name, HookTokens)));
+                      || ContainsAnyToken(p.Name ?? string.Empty, HookTokens)));
     }
 
     private static bool HasCrossEventSemantics(Type serviceType)
