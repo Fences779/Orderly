@@ -70,6 +70,18 @@ public partial class MainViewModel : ObservableObject
     private readonly ILocalAccountManagementService? _localAccountManagementService;
     private readonly ISessionContextService? _sessionContextService;
 
+    /// <summary>「我的页」专属 ViewModel（设计 §8.1 / BC-8），经组合暴露给视图绑定。</summary>
+    public MeProfileViewModel MeProfile { get; }
+
+    /// <summary>「设置页」专属 ViewModel（设计 §8.4 / BC-8 / BC-9），经组合暴露给视图绑定。</summary>
+    public SettingsViewModel Settings { get; }
+
+    /// <summary>
+    /// 「和钱相关机密页面」PIN 门禁协调器（任务 19.1 / BC-12，设计 §9.8 / Req 18.1·18.2·18.3·13.3）。
+    /// 经组合暴露给 <c>MainWindow</c> 在现金流 / 经营建议页面宿主上叠加 PIN 验证遮罩与内容渲染门控。
+    /// </summary>
+    public SensitivePageGuardViewModel SensitiveGuard { get; }
+
     public MainViewModel(
         ICustomerRepository customerRepository,
         IOrderRepository orderRepository,
@@ -92,7 +104,8 @@ public partial class MainViewModel : ObservableObject
         IClipboardService clipboardService,
         string databasePath,
         ILocalAccountManagementService? localAccountManagementService = null,
-        ISessionContextService? sessionContextService = null)
+        ISessionContextService? sessionContextService = null,
+        ISensitivePageGuard? sensitivePageGuard = null)
         : this(
             customerRepository,
             orderRepository,
@@ -118,7 +131,8 @@ public partial class MainViewModel : ObservableObject
             clipboardService,
             databasePath,
             localAccountManagementService,
-            sessionContextService)
+            sessionContextService,
+            sensitivePageGuard)
     {
     }
 
@@ -147,7 +161,8 @@ public partial class MainViewModel : ObservableObject
         IClipboardService clipboardService,
         string databasePath,
         ILocalAccountManagementService? localAccountManagementService = null,
-        ISessionContextService? sessionContextService = null)
+        ISessionContextService? sessionContextService = null,
+        ISensitivePageGuard? sensitivePageGuard = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -175,6 +190,37 @@ public partial class MainViewModel : ObservableObject
         _sessionContextService = sessionContextService;
         DatabasePath = databasePath;
         InitializeFilterOptions();
+
+        // 我的页 ViewModel（设计 §8.1 / BC-8）：经组合暴露，命令接线由后续任务完成。
+        // 当前阶段以 MainViewModel 已持有的服务注入；ILocalAuthService / IAvatarStorageService /
+        // IToastService / ICredentialChangeSessionCoordinator / ISecurityAuditService / IEmergencyEnableService 等留待集成任务（21.1）
+        // 完整接线（设计允许部分服务先注入备用：协调器为空时凭证修改命令跳过会话转移；安全审计服务为空时
+        // IsSecurityAuditAvailable=false，账户安全卡显示占位文案，仍正常展示最近登录时间；紧急启用服务为空时
+        // 紧急启用命令不可执行，受限模式只读状态仍随会话权限模式刷新）。
+        MeProfile = new MeProfileViewModel(
+            accountService: localAccountManagementService,
+            sessionContext: sessionContextService,
+            settingRepository: settingRepository,
+            securityAudit: null,
+            emergencyEnable: null);
+
+        // 设置页 ViewModel（设计 §8.4 / BC-8 / BC-9）：经组合暴露，P0 状态与映射（13.1）、自动保存引擎（13.2）、
+        // 命令与状态文案（13.3）、P1/AI 诊断/快捷键与通知（13.4，含运行态热键应用）已迁入「新家」。当前阶段
+        // SettingsView 仍绑定 MainViewModel 既有 Settings* 分部；运行态热键/通知委托接缝经
+        // ConfigureSettingsRuntimeHooks 在集成接线（21.1）时转发注入。搜索（13.5）、离开页闸门（13.6）及
+        // DataContext 改绑由后续任务完成。ISettingsSearchIndex / IToastService 留待集成任务（21.1）注入。
+        Settings = new SettingsViewModel(
+            settingRepository: settingRepository,
+            activityLogService: activityLogService,
+            clipboardService: clipboardService,
+            sessionContextService: sessionContextService,
+            databasePath: databasePath);
+
+        // 机密页面 PIN 门禁协调器（任务 19.1 / BC-12 / 设计 §9.8）：以可空 ISensitivePageGuard 注入并接线。
+        // guard 为空时（DI 完整注册在 21.1 之前）安全降级——门禁不激活、现金流/经营建议照常可进入，
+        // 避免在接线前把机密页面彻底挡死；注入真实 guard（21.1）后门禁自动启用。
+        SensitiveGuard = new SensitivePageGuardViewModel(sensitivePageGuard, sessionContextService);
+        SensitiveGuard.OnSectionChanged(SelectedSection);
     }
 
     private static string NormalizeSection(string? value)

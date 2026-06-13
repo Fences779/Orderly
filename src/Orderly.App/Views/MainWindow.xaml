@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:Sections="clr-namespace:Orderly.App.Views.Sections"
+        xmlns:helpers="clr-namespace:Orderly.App.Helpers"
         Title="Orderly 商家工作台"
         Width="1280"
         Height="820"
@@ -88,16 +89,74 @@
             <!-- 客户 (Customers) -->
             <Sections:CustomersView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=客户}" />
 
-            <!-- 现金流 -->
-            <Sections:CashflowView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=现金流}" />
+            <!-- 现金流 (机密页面：内容仅在通过本会话 PIN 门禁后渲染，Req 18.3 / 13.3 / 任务 19.1) -->
+            <Sections:CashflowView Grid.Row="1" Visibility="{Binding SensitiveGuard.ShowCashflowContent, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-            <!-- 经营建议 (Business Advice) -->
-            <Sections:BusinessAdviceView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=经营建议}" />
+            <!-- 经营建议 (机密页面：内容仅在通过本会话 PIN 门禁后渲染，Req 18.3 / 13.3 / 任务 19.1) -->
+            <Sections:BusinessAdviceView Grid.Row="1" Visibility="{Binding SensitiveGuard.ShowBusinessAdviceContent, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
             <Sections:SettingsView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=设置}" />
 
             <!-- ==================== “我的”板块 (Me/Profile Page) ==================== -->
-            <Sections:MeProfileView Grid.Row="1" />
+            <Sections:MeProfileView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=我的}" />
+
+            <!-- ==================== 机密页面 PIN 门禁遮罩 (任务 19.1·19.2 / BC-12 / 设计 §9.8 / Req 18.1·18.2·18.3·18.4·17.4·13.3) ====================
+                 进入「和钱相关机密页面」（现金流 / 经营建议）前若本会话尚未通过 PIN 门禁，则在内容区叠加本遮罩，
+                 机密页面内容视图保持折叠（不渲染，Req 18.3）。遮罩作为外层访问控制层，不改动机密页面进入后自身的 UI（Req 13.3）。
+                 进入前若会话处于锁定（PendingPinUnlock）由既有应用级会话锁定先行解锁，解锁后本遮罩再校验，二者协同。
+                 遮罩按会话权限模式切换两态（任务 19.2 / Req 18.4·17.4）：
+                   · 普通「PIN 验证态」(IsPinVerificationVisible)：可输入 6 位 PIN 进入。
+                   · 受限「拦截态」(IsBlockedByRestricted)：受限模式恒拒绝机密页面，只读拦截说明、无 PIN 输入 / 进入按钮。
+                 DataContext 设为 SensitiveGuard 协调器，遮罩内绑定相对其属性 / 命令。 -->
+            <Border Grid.Row="1"
+                    DataContext="{Binding SensitiveGuard}"
+                    Visibility="{Binding IsGateVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    Background="{DynamicResource PageBackgroundBrush}">
+                <Border MaxWidth="420" Padding="32,28" VerticalAlignment="Center" HorizontalAlignment="Center"
+                        Background="{DynamicResource SurfaceRaisedBrush}" CornerRadius="14" BorderThickness="0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="24" ShadowDepth="4" Direction="270" Color="#111216" Opacity="0.10" />
+                    </Border.Effect>
+                    <Grid>
+                        <!-- PIN 验证态：普通会话下进入机密页面前输入 6 位 PIN -->
+                        <StackPanel Visibility="{Binding IsPinVerificationVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="36"
+                                       Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="机密页面需要验证" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource HeadingBrush}" Margin="0,14,0,0" HorizontalAlignment="Center" />
+                            <TextBlock HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="13">
+                                <Run Text="进入「" /><Run Text="{Binding PromptTitle, Mode=OneWay}" /><Run Text="」前请输入 6 位 PIN" />
+                            </TextBlock>
+                            <PasswordBox x:Name="Box_SensitiveGatePin"
+                                         Width="200" Height="34" Margin="0,18,0,0" MaxLength="6"
+                                         VerticalContentAlignment="Center"
+                                         helpers:PasswordBoxBinder.BoundPassword="{Binding EnteredPin, Mode=TwoWay}">
+                                <PasswordBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding SubmitPinCommand}" />
+                                </PasswordBox.InputBindings>
+                            </PasswordBox>
+                            <TextBlock Text="{Binding ErrorMessage}" Foreground="#D12E9F" FontSize="12"
+                                       Margin="0,8,0,0" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                                       Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <Button Content="进入" Command="{Binding SubmitPinCommand}"
+                                    Margin="0,18,0,0" Padding="28,8" HorizontalAlignment="Center"
+                                    IsEnabled="{Binding IsNotVerifying}" />
+                        </StackPanel>
+
+                        <!-- 受限拦截态：处于受限权限模式时机密页面恒拒绝进入，只读拦截说明、无 PIN 输入（Req 18.4 / 17.4） -->
+                        <StackPanel Visibility="{Binding IsBlockedByRestricted, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="36"
+                                       Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="受限权限模式" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource HeadingBrush}" Margin="0,14,0,0" HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding RestrictedBlockMessage, Mode=OneWay}"
+                                       HorizontalAlignment="Center" Margin="0,10,0,0" TextWrapping="Wrap" TextAlignment="Center"
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="13" MaxWidth="320" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Border>
 
             <TextBlock Grid.Row="2" Text="{Binding StatusMessage}" Foreground="{DynamicResource MutedBrush}" Margin="0,12,0,0">
                 <TextBlock.Style>
@@ -120,15 +179,15 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-            <!-- 复制成功气泡提示 -->
-            <Popup x:Name="Popup_CopyToast" Placement="Mouse" AllowsTransparency="True" HorizontalOffset="10" VerticalOffset="10">
-                <Border Background="#222224" CornerRadius="8" Padding="12,6" BorderThickness="0">
+            <!-- 通用 Toast 气泡提示（由复制成功提示泛化而来，按 ToastSeverity 着色；复制提示与设置保存提示统一经其呈现，详见 design §5.3 / BC-7） -->
+            <Popup x:Name="Popup_Toast" Placement="Mouse" AllowsTransparency="True" HorizontalOffset="10" VerticalOffset="10">
+                <Border x:Name="Border_Toast" Background="#222224" CornerRadius="8" Padding="12,6" BorderThickness="0">
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="8" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.15"/>
                     </Border.Effect>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
-                        <TextBlock x:Name="Text_CopyToast" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock x:Name="Icon_Toast" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock x:Name="Text_Toast" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
                 </Border>
             </Popup>
