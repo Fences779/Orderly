@@ -112,7 +112,7 @@
                                 </StackPanel>
                             </Border>
 
-                    <Sections:SettingsTabDataSecurity />
+                    <!-- 「数据安全与隐私」(SettingsTabDataSecurity) 已迁出至左导航「安全与日志」分类宿主（任务 17.1，§7.1）。 -->
                     <Sections:SettingsTabDataAudit />
                         </StackPanel>
                     </Grid>

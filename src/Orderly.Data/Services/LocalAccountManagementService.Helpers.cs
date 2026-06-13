@@ -343,6 +343,19 @@ public sealed partial class LocalAccountManagementService
         }
     }
 
+    // BC-6 异步审计写入接缝（持久化防篡改链）同样"尽力而为"：吞掉任何异常，绝不改变账户管理控制流与返回语义。
+    private async Task TryAuditAsync(SecurityAuditEventKind kind, string accountLabel, string detail, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _securityAudit.RecordAsync(kind, accountLabel ?? string.Empty, detail, cancellationToken);
+        }
+        catch
+        {
+            // 审计失败不得影响账户管理分支的原有行为。
+        }
+    }
+
     // 跨事件异常检测埋点为"尽力而为"：绝不改变既有控制流与返回语义，任何异常都被吞掉。
     private void TryObserveAbuse(AbuseSignalKind kind, string? subject)
     {

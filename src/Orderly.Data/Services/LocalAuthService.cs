@@ -221,7 +221,7 @@ public sealed class LocalAuthService : ILocalAuthService
             return LocalSignInResult.Failure("用户名和主密码不能为空。");
         }
 
-        if (IsCredentialAttemptBlocked("signin", normalizedUsername))
+        if (await IsCredentialAttemptBlockedAsync("signin", normalizedUsername, cancellationToken))
         {
             return LocalSignInResult.Failure("认证尝试过于频繁，请稍后再试。");
         }
@@ -229,20 +229,17 @@ public sealed class LocalAuthService : ILocalAuthService
         var account = await _accountRepository.GetByUsernameAsync(normalizedUsername, cancellationToken);
         if (account is null)
         {
-            RecordCredentialFailure("signin", normalizedUsername);
-            return LocalSignInResult.Failure(GenericSignInFailureMessage);
+            return await FailSignInAsync(normalizedUsername, GenericSignInFailureMessage, cancellationToken);
         }
 
         if (!account.IsEnabled)
         {
-            RecordCredentialFailure("signin", normalizedUsername);
-            return LocalSignInResult.Failure(GenericSignInFailureMessage);
+            return await FailSignInAsync(normalizedUsername, GenericSignInFailureMessage, cancellationToken);
         }
 
         if (!LocalCredentialSecurity.VerifyHash(masterPassword, account.PasswordSalt, account.PasswordIterations, account.PasswordHash))
         {
-            RecordCredentialFailure("signin", normalizedUsername);
-            return LocalSignInResult.Failure(GenericSignInFailureMessage);
+            return await FailSignInAsync(normalizedUsername, GenericSignInFailureMessage, cancellationToken);
         }
 
         if (!IsAccountDatabasePathSafe(account))
@@ -264,13 +261,11 @@ public sealed class LocalAuthService : ILocalAuthService
         }
         catch (CryptographicException)
         {
-            RecordCredentialFailure("signin", normalizedUsername);
-            return LocalSignInResult.Failure(GenericSignInFailureMessage);
+            return await FailSignInAsync(normalizedUsername, GenericSignInFailureMessage, cancellationToken);
         }
         catch (InvalidOperationException)
         {
-            RecordCredentialFailure("signin", normalizedUsername);
-            return LocalSignInResult.Failure(GenericSignInFailureMessage);
+            return await FailSignInAsync(normalizedUsername, GenericSignInFailureMessage, cancellationToken);
         }
 
         try
@@ -284,6 +279,8 @@ public sealed class LocalAuthService : ILocalAuthService
             _sessionContextService.SetCurrent(session);
             CryptographicOperations.ZeroMemory(session.DataKey);
             ClearCredentialFailures("signin", normalizedUsername);
+            // 安全审计（BC-6）：登录成功恰好记录一条 LoginSucceeded（仅账号标签与脱敏元数据，绝不含明文凭证）。
+            await TryAuditAsync(SecurityAuditEventKind.LoginSucceeded, normalizedUsername, "signin-success", cancellationToken);
             return LocalSignInResult.Success(session);
         }
         finally
@@ -299,7 +296,7 @@ public sealed class LocalAuthService : ILocalAuthService
             return false;
         }
 
-        if (IsCredentialAttemptBlocked("pin", normalizedAccountId))
+        if (await IsCredentialAttemptBlockedAsync("pin", normalizedAccountId, cancellationToken))
         {
             return false;
         }
@@ -341,7 +338,7 @@ public sealed class LocalAuthService : ILocalAuthService
             return false;
         }
 
-        if (IsCredentialAttemptBlocked("recovery", normalizedAccountId))
+        if (await IsCredentialAttemptBlockedAsync("recovery", normalizedAccountId, cancellationToken))
         {
             return false;
         }
@@ -568,16 +565,26 @@ public sealed class LocalAuthService : ILocalAuthService
         }
     }
 
-    private bool IsCredentialAttemptBlocked(string purpose, string identifier)
+    private async Task<bool> IsCredentialAttemptBlockedAsync(string purpose, string identifier, CancellationToken cancellationToken)
     {
         var blocked = _credentialAttemptTracker.IsBlocked(purpose, identifier);
         if (blocked)
         {
             // 安全敏感事件：账户/凭证因失败锁定被拒绝（防篡改审计，主体以哈希存储）。
             TryAudit(SecurityEventType.AccountLockout, identifier, SecurityEventOutcome.Locked);
+            // 安全审计（BC-6）：账户锁定恰好记录一条 AccountLockedOut（账号标签 + 脱敏元数据，绝不含明文凭证）。
+            await TryAuditAsync(SecurityAuditEventKind.AccountLockedOut, identifier, $"{purpose}-locked", cancellationToken);
         }
 
         return blocked;
+    }
+
+    // 登录失败统一出口：既记既有同步审计（AuthenticationFailure），又恰好记录一条 BC-6 LoginFailed。
+    private async Task<LocalSignInResult> FailSignInAsync(string username, string message, CancellationToken cancellationToken)
+    {
+        RecordCredentialFailure("signin", username);
+        await TryAuditAsync(SecurityAuditEventKind.LoginFailed, username, "signin-failed", cancellationToken);
+        return LocalSignInResult.Failure(message);
     }
 
     private void RecordCredentialResult(string purpose, string identifier, bool success)
@@ -611,6 +618,19 @@ public sealed class LocalAuthService : ILocalAuthService
         catch
         {
             // 审计失败不得影响安全分支的原有行为。
+        }
+    }
+
+    // BC-6 异步审计写入接缝（持久化防篡改链）同样"尽力而为"：吞掉任何异常，绝不改变登录控制流与返回语义。
+    private async Task TryAuditAsync(SecurityAuditEventKind kind, string accountLabel, string detail, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _securityAudit.RecordAsync(kind, accountLabel ?? string.Empty, detail, cancellationToken);
+        }
+        catch
+        {
+            // 审计失败不得影响登录/认证分支的原有行为。
         }
     }
 }

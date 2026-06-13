@@ -1,12 +1,24 @@
+using System;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using Orderly.App.ViewModels;
+using Orderly.Core.Services;
 
 namespace Orderly.App.Views;
 
-public partial class MainWindow : Window
+/// <summary>
+/// 壳层窗口。除导航宿主外，亦实现 <see cref="IToastService"/>（design §5.3 / BC-7，需求 10.7）：
+/// 既有的 <c>Popup_CopyToast</c> 已泛化为通用 Toast（<c>Popup_Toast</c>），复制提示与设置保存结果
+/// 提示统一经此呈现，ViewModel 经服务接缝触发而不直接操作控件（保持 MVVM 纯净度 P5）。
+/// </summary>
+public partial class MainWindow : Window, IToastService
 {
-    private System.Threading.CancellationTokenSource? _copyToastCts;
+    private static readonly TimeSpan DefaultToastDuration = TimeSpan.FromMilliseconds(1500);
+
+    private CancellationTokenSource? _toastCts;
 
     public MainWindow(MainViewModel viewModel)
     {
@@ -15,40 +27,80 @@ public partial class MainWindow : Window
         System.Windows.Application.Current.MainWindow = this;
     }
 
+    /// <summary>
+    /// 当主窗口最小化到托盘（点击关闭按钮被拦截并隐藏）时触发，供壳层接入应用级会话锁定
+    /// 触发点（任务 9.8，需求 18.1/18.2/13.3）。不改动「隐藏到托盘」既有行为本身。
+    /// </summary>
+    public event EventHandler? HiddenToTray;
+
     protected override void OnClosing(CancelEventArgs e)
     {
         if (System.Windows.Application.Current is App { IsExiting: false, IsSwitchingSession: false })
         {
             e.Cancel = true;
             Hide();
+            HiddenToTray?.Invoke(this, EventArgs.Empty);
             return;
         }
 
         base.OnClosing(e);
     }
 
-    private void ShowCopyToast(string message)
+    /// <summary>
+    /// <see cref="IToastService.Show"/> 实现：在 UI 线程封送（Dispatcher）后呈现一条
+    /// 自动消失的轻量提示，按 <paramref name="severity"/> 着色。
+    /// </summary>
+    public void Show(string message, ToastSeverity severity = ToastSeverity.Info, TimeSpan? duration = null)
     {
-        _copyToastCts?.Cancel();
-        _copyToastCts = new System.Threading.CancellationTokenSource();
-        var token = _copyToastCts.Token;
-
-        Text_CopyToast.Text = message;
-        Popup_CopyToast.IsOpen = true;
-
-        System.Threading.Tasks.Task.Delay(1500, token).ContinueWith(t =>
+        if (!Dispatcher.CheckAccess())
         {
-            if (!token.IsCancellationRequested)
+            Dispatcher.Invoke(() => Show(message, severity, duration));
+            return;
+        }
+
+        ShowToastInternal(message ?? string.Empty, severity, duration ?? DefaultToastDuration);
+    }
+
+    private void ShowToastInternal(string message, ToastSeverity severity, TimeSpan duration)
+    {
+        _toastCts?.Cancel();
+        _toastCts = new CancellationTokenSource();
+        var token = _toastCts.Token;
+
+        ApplyToastSeverity(severity);
+        Text_Toast.Text = message;
+        Popup_Toast.IsOpen = true;
+
+        Task.Delay(duration, token).ContinueWith(
+            _ =>
             {
-                Dispatcher.Invoke(() =>
+                if (!token.IsCancellationRequested)
                 {
-                    Popup_CopyToast.IsOpen = false;
-                });
-            }
-        }, token);
+                    Dispatcher.Invoke(() => Popup_Toast.IsOpen = false);
+                }
+            },
+            token,
+            TaskContinuationOptions.OnlyOnRanToCompletion,
+            TaskScheduler.Default);
+    }
+
+    private void ApplyToastSeverity(ToastSeverity severity)
+    {
+        // 不同结果用不同底色 + 图标着色（成功/失败区分，需求 10.7）。
+        (string background, string glyph) = severity switch
+        {
+            ToastSeverity.Success => ("#1E8E3E", "\uE73E"), // 对勾，绿色
+            ToastSeverity.Warning => ("#B7791F", "\uE7BA"), // 警告，琥珀色
+            ToastSeverity.Error => ("#C5221F", "\uE783"),   // 错误，红色
+            _ => ("#222224", "\uE946"),                      // 信息，深色
+        };
+
+        Border_Toast.Background = new SolidColorBrush(
+            (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(background));
+        Icon_Toast.Text = glyph;
     }
 
     // Exposed so extracted section UserControls can surface the shared window-level
-    // copy toast without owning the Popup. Behaviour is identical to the inline path.
-    internal void ShowCopyToastMessage(string message) => ShowCopyToast(message);
+    // toast without owning the Popup. Copy notifications are surfaced as a success toast.
+    internal void ShowCopyToastMessage(string message) => Show(message, ToastSeverity.Success);
 }

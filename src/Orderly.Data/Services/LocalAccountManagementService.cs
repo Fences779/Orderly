@@ -155,6 +155,9 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
             var initializer = new DatabaseInitializer(new SqliteConnectionFactory(member.DatabasePath, () => memberDataKey.ToArray()));
             await initializer.InitializeAsync(cancellationToken);
 
+            // 安全审计（BC-6）：成员创建成功恰好记录一条 MemberCreated（账号标签 + 脱敏元数据，绝不含明文凭证）。
+            await TryAuditAsync(SecurityAuditEventKind.MemberCreated, accountId, "member-created", cancellationToken);
+
             return MapSummary(member);
         }
         finally
@@ -184,6 +187,44 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
         member.IsEnabled = false;
         member.UpdatedAt = DateTime.Now;
         await _accountRepository.UpdateAsync(member, cancellationToken);
+
+        // 安全审计（BC-6）：成员停用成功恰好记录一条 MemberDisabled（账号标签 + 脱敏元数据，绝不含明文凭证）。
+        await TryAuditAsync(SecurityAuditEventKind.MemberDisabled, member.AccountId, "member-disabled", cancellationToken);
+    }
+
+    public async Task DeleteMemberAsync(string memberAccountId, CancellationToken cancellationToken = default)
+    {
+        // 服务层权限双重校验之一：当前会话必须为 Owner；非 Owner 由 RequireOwnerSession 记越权审计并拒绝，不执行任何后端操作。
+        var ownerSession = RequireOwnerSession();
+        var member = await GetAccountRequiredAsync(memberAccountId, cancellationToken);
+
+        // 服务层权限双重校验之二：经成员管理权限矩阵纯函数判定（仅 Owner 且目标非自身）。
+        // 任何人不可删自身（含 Owner 不可删自身）。被拒绝时直接抛出，不执行任何后端操作。
+        if (!MemberManagementPolicy.CanDeleteMember(ownerSession.Role, ownerSession.AccountId, member.AccountId))
+        {
+            throw new InvalidOperationException("当前账号无权删除该成员（不可删除自身）。");
+        }
+
+        if (member.Role != LocalAccountRole.Member)
+        {
+            throw new InvalidOperationException("仅允许删除 Member 账号。");
+        }
+
+        if (!string.Equals(member.AdminOwnerAccountId, ownerSession.AccountId, StringComparison.OrdinalIgnoreCase))
+        {
+            // 跨事件埋点：对不属于当前主账号的账号发起删除操作 = 跨账户操作探测。
+            TryObserveAbuse(AbuseSignalKind.CrossAccountOperationProbe, ownerSession.AccountId);
+            throw new InvalidOperationException("该账号不属于当前主账号，无法删除。");
+        }
+
+        // 删除仅移除登录账号记录（LocalAccount），保留其名下全部历史业务数据：
+        // 不级联删除业务数据工作区（区别于 DeleteAccountAsync）、不匿名化；
+        // 业务数据的来源 / 创建人仍展示该（已删除）账号标签 / 标识用于归属展示（需求 7.10）。
+        await _accountRepository.DeleteAsync(member.AccountId, cancellationToken);
+
+        // 安全审计（BC-6 / 任务 11.5）：删除成功后恰好记录一条 MemberDeleted
+        //（写入加密本地存储、追加式 + 完整性校验保持防篡改、仅账号标签 + 脱敏元数据，绝不记录明文凭证）。
+        await TryAuditAsync(SecurityAuditEventKind.MemberDeleted, member.AccountId, "member-deleted", cancellationToken);
     }
 
     public async Task DeleteAccountAsync(
@@ -220,5 +261,9 @@ public sealed partial class LocalAccountManagementService : ILocalAccountManagem
         var workspaceDirectory = ResolveDeletableAccountWorkspaceDirectory(target.AccountId, target.DatabasePath);
         await _accountRepository.DeleteAsync(target.AccountId, cancellationToken);
         DeleteAccountWorkspace(workspaceDirectory);
+
+        // 安全审计（BC-6）：经 Owner 验证删除成员账号成功后恰好记录一条 MemberDeleted
+        //（账号标签 + 脱敏元数据，绝不记录明文凭证）。
+        await TryAuditAsync(SecurityAuditEventKind.MemberDeleted, target.AccountId, "member-deleted", cancellationToken);
     }
 }

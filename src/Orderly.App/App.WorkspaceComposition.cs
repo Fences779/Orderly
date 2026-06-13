@@ -175,6 +175,35 @@ public partial class App
         var preferences = await settingRepository.GetPreferencesAsync();
         Orderly.App.Helpers.ThemeHelper.ApplyTheme(preferences.ThemeMode);
 
+        // 任务 21.1：装配设置页 / 我的页 / 门禁层所需的服务实例（UI 改动严格限定在两页及共享样式 /
+        // 壳层 Toast / QA 锚点 + 敏感页面门禁访问控制层；登录页与其它页面不受影响）。
+        var sessionContextService = _sessionContextService ?? throw new InvalidOperationException("Session context service is not initialized.");
+        var sessionLockService = _sessionLockService ?? throw new InvalidOperationException("Session lock service is not initialized.");
+        var localAuthService = _localAuthService ?? throw new InvalidOperationException("Local auth service is not initialized.");
+        var securityAuditService = _securityAuditService ?? throw new InvalidOperationException("Security audit service is not initialized.");
+        var localAccountRepository = _localAccountRepository ?? throw new InvalidOperationException("Local account repository is not initialized.");
+
+        // 壳层 Toast 转发器：MainWindow（IToastService 实现）在 MainViewModel 之后创建，故先以转发器作为
+        // 稳定接缝注入子 VM，待 MainWindow 创建后回填其 Target（见下方）。
+        var toastRelay = new Orderly.App.Services.ToastServiceRelay();
+
+        // 头像存储（BC-4）：落 app 数据目录受保护 avatars/ 子目录，仅存相对引用键。
+        IAvatarStorageService avatarStorageService = new Orderly.App.Services.AvatarStorageService();
+
+        // 设置搜索静态索引（BC-9 / §9.4）。
+        ISettingsSearchIndex settingsSearchIndex = new SettingsSearchIndex();
+
+        // 和钱相关机密页面 PIN 门禁（BC-12 / §9.8）：依赖会话上下文 + 本地认证（复用既有 PIN 校验通道）。
+        ISensitivePageGuard sensitivePageGuard = new SensitivePageGuard(sessionContextService, localAuthService);
+
+        // 凭证修改后会话转移协调器（BC-11 / §9.6）：主密码改→强制登出、PIN 改→PendingPinUnlock；成功先记审计。
+        ICredentialChangeSessionCoordinator credentialChangeSessionCoordinator =
+            new CredentialChangeSessionCoordinator(sessionLockService, sessionContextService, securityAuditService);
+
+        // Owner 紧急启用（BC-13 / §9.7）：校验 6 位 PIN → 进入受限权限模式；成功 / 失败均记审计（不含明文 PIN）。
+        IEmergencyEnableService emergencyEnableService =
+            new EmergencyEnableService(localAccountRepository, localAuthService, sessionContextService, securityAuditService);
+
         _mainViewModel = new MainViewModel(
             customerRepository,
             orderRepository,
@@ -200,7 +229,15 @@ public partial class App
             clipboardService,
             databasePath,
             _localAccountManagementService,
-            _sessionContextService);
+            _sessionContextService,
+            sensitivePageGuard,
+            toastRelay,
+            avatarStorageService,
+            localAuthService,
+            securityAuditService,
+            settingsSearchIndex,
+            credentialChangeSessionCoordinator,
+            emergencyEnableService);
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
 
@@ -226,6 +263,10 @@ public partial class App
 
         _mainWindow = new MainWindow(_mainViewModel);
         MainWindow = _mainWindow;
+        // 任务 21.1：MainWindow 实现 IToastService，创建后回填壳层 Toast 转发器目标，使设置页 / 我的页
+        // 子 VM 的 Toast 提示（保存结果 / 头像 / 紧急启用等）经统一壳层 Popup_Toast 呈现。
+        toastRelay.Target = _mainWindow;
+        _mainWindow.HiddenToTray += OnMainWindowHiddenToTray;
         _floatingWindow = new FloatingWindow(_floatingViewModel);
 
         _trayIconService = new TrayIconService();

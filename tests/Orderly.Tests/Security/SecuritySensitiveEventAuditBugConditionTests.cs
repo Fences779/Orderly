@@ -175,14 +175,29 @@ public sealed class SecuritySensitiveEventAuditBugConditionTests
             .FirstOrDefault(t => t.Name.Contains("SecurityAudit", StringComparison.OrdinalIgnoreCase));
 
     private static Type? FindSecurityAuditRecordType()
-        => EnumerateCandidateTypes()
+    {
+        // 候选：名称含 "SecurityAudit" 且为记录/条目/事件/日志语义的模型类型。
+        // 注意：本期（settings-profile-refinement / BC-6）新增了读取投影模型 SecurityAuditEntry，
+        // 它仅承载展示字段（无 Outcome / 完整性哈希），与本测试要断言的"防篡改审计记录模型"不同。
+        // 因此在多个候选并存时，优先选中携带完整性/链式哈希字段的结构化记录模型（SecurityAuditRecord），
+        // 使该缝隙契约断言保持确定性，不被展示用投影模型干扰。
+        var candidates = EnumerateCandidateTypes()
             .Where(t => !t.IsInterface && (t.IsClass || t.IsValueType))
-            .FirstOrDefault(t =>
+            .Where(t =>
                 t.Name.Contains("SecurityAudit", StringComparison.OrdinalIgnoreCase)
                 && (t.Name.Contains("Record", StringComparison.OrdinalIgnoreCase)
                     || t.Name.Contains("Entry", StringComparison.OrdinalIgnoreCase)
                     || t.Name.Contains("Event", StringComparison.OrdinalIgnoreCase)
-                    || t.Name.Contains("Log", StringComparison.OrdinalIgnoreCase)));
+                    || t.Name.Contains("Log", StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+
+        bool HasIntegrityField(Type t) => t
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Any(p => ContainsAnyToken(p.Name, IntegrityTokens));
+
+        // 优先返回带完整性哈希字段的防篡改记录模型；否则回退到任一候选。
+        return candidates.FirstOrDefault(HasIntegrityField) ?? candidates.FirstOrDefault();
+    }
 
     private static IEnumerable<Type> EnumerateCandidateTypes()
     {

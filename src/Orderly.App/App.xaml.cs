@@ -52,11 +52,20 @@ public partial class App : System.Windows.Application
     private ISessionContextService? _sessionContextService;
     private ISessionLockService? _sessionLockService;
     private IFieldEncryptionService? _fieldEncryptionService;
+    // 任务 21.1：共享安全审计服务（带会话加密库 provider）与账号仓储引用，供认证/账户服务、
+    // MeProfileViewModel、凭证修改会话转移协调器、Owner 紧急启用服务复用同一实例 / 同一会话上下文。
+    private ISecurityAuditService? _securityAuditService;
+    private ILocalAccountRepository? _localAccountRepository;
     private LoginView? _loginView;
     private string? _databasePath;
     private string? _preparedDatabasePath;
     private bool _isPinUnlockDialogOpen;
     private QaDataMaintenanceService.QaDataMaintenanceCommand _qaMaintenanceCommand;
+
+    // 任务 9.8：最小化到托盘时锁定的可选「空闲时限」策略。默认 TimeSpan.Zero = 立即锁定。
+    // 大于零时启用「最小化后经过空闲时限再锁定」，到时由 _minimizeToTrayIdleLockTimer 触发锁定。
+    private TimeSpan _minimizeToTrayIdleLockDelay = TimeSpan.Zero;
+    private System.Windows.Threading.DispatcherTimer? _minimizeToTrayIdleLockTimer;
 
     public bool IsExiting { get; private set; }
     public bool IsSwitchingSession { get; private set; }
@@ -300,6 +309,9 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        // 重新打开窗口即取消尚未到时的空闲锁定（任务 9.8：未到时限不锁定）。
+        CancelMinimizeToTrayIdleLock();
+
         _mainWindow.Show();
         _mainWindow.WindowState = WindowState.Normal;
         _mainWindow.Activate();
@@ -365,6 +377,12 @@ public partial class App : System.Windows.Application
         }
 
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+
+        CancelMinimizeToTrayIdleLock();
+        if (_mainWindow is not null)
+        {
+            _mainWindow.HiddenToTray -= OnMainWindowHiddenToTray;
+        }
 
         _loginView?.Close();
         _hotkeyService?.Dispose();

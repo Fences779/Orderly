@@ -29,6 +29,8 @@ public static class AppSettingKeys
     public const string AccentColor = "AccentColor";
     public const string EnableLightAnimation = "EnableLightAnimation";
 
+    public const string AvatarReference = "AvatarReference";
+
     public const string BackupDirectory = "BackupDirectory";
     public const string AutoBackupEnabled = "AutoBackupEnabled";
     public const string AutoBackupFrequency = "AutoBackupFrequency";

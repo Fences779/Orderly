@@ -105,7 +105,14 @@ public partial class MainViewModel : ObservableObject
         string databasePath,
         ILocalAccountManagementService? localAccountManagementService = null,
         ISessionContextService? sessionContextService = null,
-        ISensitivePageGuard? sensitivePageGuard = null)
+        ISensitivePageGuard? sensitivePageGuard = null,
+        IToastService? toastService = null,
+        IAvatarStorageService? avatarStorageService = null,
+        ILocalAuthService? localAuthService = null,
+        ISecurityAuditService? securityAuditService = null,
+        ISettingsSearchIndex? settingsSearchIndex = null,
+        ICredentialChangeSessionCoordinator? credentialChangeSessionCoordinator = null,
+        IEmergencyEnableService? emergencyEnableService = null)
         : this(
             customerRepository,
             orderRepository,
@@ -132,7 +139,14 @@ public partial class MainViewModel : ObservableObject
             databasePath,
             localAccountManagementService,
             sessionContextService,
-            sensitivePageGuard)
+            sensitivePageGuard,
+            toastService,
+            avatarStorageService,
+            localAuthService,
+            securityAuditService,
+            settingsSearchIndex,
+            credentialChangeSessionCoordinator,
+            emergencyEnableService)
     {
     }
 
@@ -162,7 +176,14 @@ public partial class MainViewModel : ObservableObject
         string databasePath,
         ILocalAccountManagementService? localAccountManagementService = null,
         ISessionContextService? sessionContextService = null,
-        ISensitivePageGuard? sensitivePageGuard = null)
+        ISensitivePageGuard? sensitivePageGuard = null,
+        IToastService? toastService = null,
+        IAvatarStorageService? avatarStorageService = null,
+        ILocalAuthService? localAuthService = null,
+        ISecurityAuditService? securityAuditService = null,
+        ISettingsSearchIndex? settingsSearchIndex = null,
+        ICredentialChangeSessionCoordinator? credentialChangeSessionCoordinator = null,
+        IEmergencyEnableService? emergencyEnableService = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -191,34 +212,37 @@ public partial class MainViewModel : ObservableObject
         DatabasePath = databasePath;
         InitializeFilterOptions();
 
-        // 我的页 ViewModel（设计 §8.1 / BC-8）：经组合暴露，命令接线由后续任务完成。
-        // 当前阶段以 MainViewModel 已持有的服务注入；ILocalAuthService / IAvatarStorageService /
-        // IToastService / ICredentialChangeSessionCoordinator / ISecurityAuditService / IEmergencyEnableService 等留待集成任务（21.1）
-        // 完整接线（设计允许部分服务先注入备用：协调器为空时凭证修改命令跳过会话转移；安全审计服务为空时
-        // IsSecurityAuditAvailable=false，账户安全卡显示占位文案，仍正常展示最近登录时间；紧急启用服务为空时
-        // 紧急启用命令不可执行，受限模式只读状态仍随会话权限模式刷新）。
+        // 我的页 ViewModel（设计 §8.1 / BC-8）：集成接线（任务 21.1）已注入完整服务集——
+        // 本地账号管理 / 本地认证 / 头像存储 / 会话上下文 / 壳层 Toast（经转发器）/ 凭证修改会话转移协调器 /
+        // 偏好仓储 / 安全审计 / Owner 紧急启用。注入后：头像命令真正持久化/刷新；安全审计可用
+        // （IsSecurityAuditAvailable=true，账户安全卡按日期范围拉取真实记录）；凭证修改成功后触发会话转移
+        // （主密码→强制登出、PIN→PendingPinUnlock）；紧急启用命令可执行并驱动受限权限模式。
         MeProfile = new MeProfileViewModel(
             accountService: localAccountManagementService,
+            authService: localAuthService,
+            avatarService: avatarStorageService,
             sessionContext: sessionContextService,
+            toast: toastService,
+            credentialSession: credentialChangeSessionCoordinator,
             settingRepository: settingRepository,
-            securityAudit: null,
-            emergencyEnable: null);
+            securityAudit: securityAuditService,
+            emergencyEnable: emergencyEnableService);
 
-        // 设置页 ViewModel（设计 §8.4 / BC-8 / BC-9）：经组合暴露，P0 状态与映射（13.1）、自动保存引擎（13.2）、
-        // 命令与状态文案（13.3）、P1/AI 诊断/快捷键与通知（13.4，含运行态热键应用）已迁入「新家」。当前阶段
-        // SettingsView 仍绑定 MainViewModel 既有 Settings* 分部；运行态热键/通知委托接缝经
-        // ConfigureSettingsRuntimeHooks 在集成接线（21.1）时转发注入。搜索（13.5）、离开页闸门（13.6）及
-        // DataContext 改绑由后续任务完成。ISettingsSearchIndex / IToastService 留待集成任务（21.1）注入。
+        // 设置页 ViewModel（设计 §8.4 / BC-8 / BC-9）：集成接线（任务 21.1）已注入设置搜索索引与壳层 Toast
+        // （经转发器）。注入后：设置项搜索经 ISettingsSearchIndex 真正过滤/排序/超限提示（命中跳转经
+        // SelectedCategoryKey + PendingScrollAnchorId 驱动右内容区定位高亮）；离开页结果提示经 IToastService 呈现。
+        // 运行态热键/通知委托接缝经 ConfigureSettingsRuntimeHooks 在 App 装配处转发注入。
         Settings = new SettingsViewModel(
             settingRepository: settingRepository,
+            searchIndex: settingsSearchIndex,
+            toast: toastService,
             activityLogService: activityLogService,
             clipboardService: clipboardService,
             sessionContextService: sessionContextService,
             databasePath: databasePath);
 
-        // 机密页面 PIN 门禁协调器（任务 19.1 / BC-12 / 设计 §9.8）：以可空 ISensitivePageGuard 注入并接线。
-        // guard 为空时（DI 完整注册在 21.1 之前）安全降级——门禁不激活、现金流/经营建议照常可进入，
-        // 避免在接线前把机密页面彻底挡死；注入真实 guard（21.1）后门禁自动启用。
+        // 机密页面 PIN 门禁协调器（任务 19.1 / BC-12 / 设计 §9.8）：集成接线（任务 21.1）注入真实
+        // ISensitivePageGuard，门禁随之激活——进入现金流 / 经营建议前须经本会话 PIN 验证（受限模式恒拒绝）。
         SensitiveGuard = new SensitivePageGuardViewModel(sensitivePageGuard, sessionContextService);
         SensitiveGuard.OnSectionChanged(SelectedSection);
     }

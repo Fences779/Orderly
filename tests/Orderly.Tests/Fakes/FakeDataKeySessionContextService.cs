@@ -13,6 +13,7 @@ namespace Orderly.Tests.Fakes;
 internal sealed class FakeDataKeySessionContextService : ISessionContextService
 {
     private bool _dataKeyAvailable;
+    private SessionPermissionMode _permissionMode = SessionPermissionMode.Normal;
 
     public FakeDataKeySessionContextService(byte[] dataKey)
     {
@@ -33,6 +34,9 @@ internal sealed class FakeDataKeySessionContextService : ISessionContextService
     public LocalSessionContext? Current { get; private set; }
     public bool IsSignedIn => Current is not null;
     public bool IsDataKeyAvailable => _dataKeyAvailable;
+    public SessionPermissionMode CurrentPermissionMode => _permissionMode;
+
+    public void SetPermissionMode(SessionPermissionMode mode) => _permissionMode = mode;
 
     public void SetCurrent(LocalSessionContext session)
     {

@@ -118,6 +118,7 @@ public sealed class AppSettingRepository : IAppSettingRepository
             ThemeMode = GetEnum(settings, AppSettingKeys.ThemeMode, "浅色", AllowedThemeModes),
             AccentColor = GetAccentColor(settings, AppSettingKeys.AccentColor, "默认绿"),
             EnableLightAnimation = GetBool(settings, AppSettingKeys.EnableLightAnimation, false),
+            AvatarReference = GetNullableString(settings, AppSettingKeys.AvatarReference),
             BackupDirectory = NormalizePath(Get(settings, AppSettingKeys.BackupDirectory, fallbackBackupDirectory), fallbackBackupDirectory),
             AutoBackupEnabled = GetBool(settings, AppSettingKeys.AutoBackupEnabled, false),
             AutoBackupFrequency = GetEnum(settings, AppSettingKeys.AutoBackupFrequency, "手动", AllowedBackupFrequencies),
@@ -185,6 +186,7 @@ public sealed class AppSettingRepository : IAppSettingRepository
             [AppSettingKeys.ThemeMode] = NormalizeEnumValue(preferences.ThemeMode, "浅色", AllowedThemeModes),
             [AppSettingKeys.AccentColor] = NormalizeAccentColor(preferences.AccentColor, "默认绿"),
             [AppSettingKeys.EnableLightAnimation] = ToBoolValue(preferences.EnableLightAnimation),
+            [AppSettingKeys.AvatarReference] = preferences.AvatarReference?.Trim() ?? string.Empty,
             [AppSettingKeys.BackupDirectory] = NormalizePath(preferences.BackupDirectory, BuildDefaultBackupDirectory()),
             [AppSettingKeys.AutoBackupEnabled] = ToBoolValue(preferences.AutoBackupEnabled),
             [AppSettingKeys.AutoBackupFrequency] = NormalizeEnumValue(preferences.AutoBackupFrequency, "手动", AllowedBackupFrequencies),
@@ -286,6 +288,18 @@ public sealed class AppSettingRepository : IAppSettingRepository
     private static string Get(IDictionary<string, string> settings, string key, string fallback)
     {
         return settings.TryGetValue(key, out var value) ? value : fallback;
+    }
+
+    // 读回可空字符串键：缺失或空白（含旧数据未写入该键）一律视为 null，
+    // 与 AvatarReference 的「null 表示使用默认头像」语义保持一致（需求 11.1 / 11.3）。
+    private static string? GetNullableString(IDictionary<string, string> settings, string key)
+    {
+        if (settings.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+        {
+            return value.Trim();
+        }
+
+        return null;
     }
 
     private static bool GetBool(IDictionary<string, string> settings, string key, bool fallback)

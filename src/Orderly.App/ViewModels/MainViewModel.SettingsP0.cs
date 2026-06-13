@@ -319,6 +319,14 @@ public partial class MainViewModel
             return;
         }
 
+        // 离开设置页导航闸门（任务 13.6 / BC-9 / 设计 §9.5 / Req 3.2、3.3、3.8）：
+        // 当旧值为「设置」且新值不为「设置」时，异步 flush 挂起保存并依最近一次结果决定放行/阻止（失败则拉回）。
+        TriggerLeaveSettingsGateIfNeeded(value);
+
+        // 机密页面 PIN 门禁（任务 19.1 / BC-12 / 设计 §9.8 / Req 18.1·18.3·13.3）：
+        // 同步当前 section 给门禁协调器，使其刷新遮罩可见性 / 内容渲染门控并重置瞬时 PIN 输入与提示。
+        SensitiveGuard.OnSectionChanged(value);
+
         if (string.Equals(value, SectionMe, StringComparison.Ordinal))
         {
             _ = RefreshManagedAccountsAsync();

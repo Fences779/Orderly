@@ -300,6 +300,21 @@ public sealed partial class DatabaseInitializer
             );
             """, cancellationToken);
 
+        // 安全审计存储（BC-6 / 任务 11.3）。写入会话数据密钥加密的本账号库（全库 SQLCipher 加密），
+        // 追加式 + 链式完整性哈希保持防篡改；仅保存事件类型 / 时间 / 账号标签 / 脱敏 detail，绝不存明文凭证。
+        // Sequence 为单调递增主键固定记录顺序；PreviousHash/RecordHash 构成防篡改哈希链；全量保留不截断。
+        await ExecuteAsync(connection, """
+            CREATE TABLE IF NOT EXISTS SecurityAuditEntries (
+                Sequence INTEGER PRIMARY KEY,
+                Kind INTEGER NOT NULL,
+                OccurredAt TEXT NOT NULL,
+                AccountLabel TEXT NOT NULL DEFAULT '',
+                Detail TEXT NOT NULL DEFAULT '',
+                PreviousHash TEXT NOT NULL,
+                RecordHash TEXT NOT NULL
+            );
+            """, cancellationToken);
+
         await EnsureSchemaAsync(connection, cancellationToken);
         await SeedAsync(connection, cancellationToken);
 

@@ -156,6 +156,8 @@ public sealed partial class LocalAccountManagementService
             await _accountRepository.UpdateAsync(account, cancellationToken);
             // 安全敏感事件：当前账号主密码变更与数据密钥重封装。
             TryAudit(SecurityEventType.CredentialChange, account.Username, SecurityEventOutcome.Success);
+            // 安全审计（BC-6）：凭证变更恰好记录一条 CredentialChanged（账号标签 + 脱敏元数据，绝不含明文密码）。
+            await TryAuditAsync(SecurityAuditEventKind.CredentialChanged, account.Username, "master-password-changed", cancellationToken);
         }
         finally
         {
@@ -203,6 +205,8 @@ public sealed partial class LocalAccountManagementService
             await _accountRepository.UpdateAsync(account, cancellationToken);
             // 安全敏感事件：当前账号 PIN 变更。
             TryAudit(SecurityEventType.CredentialChange, account.AccountId, SecurityEventOutcome.Success);
+            // 安全审计（BC-6）：凭证变更恰好记录一条 CredentialChanged（账号标签 + 脱敏元数据，绝不含明文 PIN）。
+            await TryAuditAsync(SecurityAuditEventKind.CredentialChanged, account.AccountId, "pin-changed", cancellationToken);
         }
         finally
         {
@@ -251,6 +255,8 @@ public sealed partial class LocalAccountManagementService
             await _accountRepository.UpdateAsync(member, cancellationToken);
             // 安全敏感事件：Owner 重置 Member 主密码与数据密钥重封装。
             TryAudit(SecurityEventType.KeyRewrap, member.AccountId, SecurityEventOutcome.Success);
+            // 安全审计（BC-6）：成员重置主密码恰好记录一条 MemberPasswordReset（账号标签 + 脱敏元数据，绝不含明文密码）。
+            await TryAuditAsync(SecurityAuditEventKind.MemberPasswordReset, member.AccountId, "member-password-reset", cancellationToken);
         }
         finally
         {
@@ -339,6 +345,8 @@ public sealed partial class LocalAccountManagementService
             await _accountRepository.UpdateAsync(member, cancellationToken);
             // 安全敏感事件：经 Owner 验证后重置 Member 主密码与数据密钥重封装。
             TryAudit(SecurityEventType.KeyRewrap, member.AccountId, SecurityEventOutcome.Success);
+            // 安全审计（BC-6）：成员重置主密码恰好记录一条 MemberPasswordReset（账号标签 + 脱敏元数据，绝不含明文密码）。
+            await TryAuditAsync(SecurityAuditEventKind.MemberPasswordReset, member.AccountId, "member-password-reset", cancellationToken);
         }
         finally
         {
@@ -388,6 +396,8 @@ public sealed partial class LocalAccountManagementService
             await _accountRepository.UpdateAsync(member, cancellationToken);
             // 安全敏感事件：Owner 重置 Member PIN。
             TryAudit(SecurityEventType.CredentialChange, member.AccountId, SecurityEventOutcome.Success);
+            // 安全审计（BC-6）：成员重置 PIN 恰好记录一条 MemberPasswordReset（账号标签 + 脱敏元数据，绝不含明文 PIN）。
+            await TryAuditAsync(SecurityAuditEventKind.MemberPasswordReset, member.AccountId, "member-pin-reset", cancellationToken);
         }
         finally
         {
@@ -464,6 +474,8 @@ public sealed partial class LocalAccountManagementService
             await _accountRepository.UpdateAsync(owner, cancellationToken);
             // 安全敏感事件：经恢复密钥重置 Owner 主密码与数据密钥重封装。
             TryAudit(SecurityEventType.KeyRewrap, owner.AccountId, SecurityEventOutcome.Success);
+            // 安全审计（BC-6）：经恢复密钥重置 Owner 主密码属凭证变更，恰好记录一条 CredentialChanged（账号标签 + 脱敏元数据，绝不含明文密码）。
+            await TryAuditAsync(SecurityAuditEventKind.CredentialChanged, owner.AccountId, "owner-recovery-password-reset", cancellationToken);
         }
         finally
         {

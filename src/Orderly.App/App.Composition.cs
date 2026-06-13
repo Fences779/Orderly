@@ -56,8 +56,17 @@ public partial class App
         _fieldEncryptionService = new FieldEncryptionService(_sessionContextService);
         // 启动期 fail-closed 断言：生产路径必须装配真实 AES-GCM 字段加密器，绝不允许空操作加密器静默注入。
         FieldEncryptionGuard.EnsureProductionGrade(_fieldEncryptionService, nameof(EnsureAuthServicesPrepared));
-        _localAuthService = new LocalAuthService(accountRepository, legacyMigrationService, _sessionContextService, credentialAttemptTracker);
-        _localAccountManagementService = new LocalAccountManagementService(accountRepository, _sessionContextService, credentialAttemptTracker);
+
+        // BC-6 / 任务 21.1：共享的安全审计服务实例，经 ISessionContextService 解析会话加密本账号库
+        // （SQLCipher），使 RecordAsync 真正防篡改持久化、QueryAsync 真正读取。该单一实例同时注入
+        // 认证 / 账户服务（登录成功·失败 / 账户锁定 / 凭证变更 / 成员创建·重置·停用·删除审计），
+        // 并在 InitializeWorkspaceAsync 中复用注入 MeProfileViewModel（IsSecurityAuditAvailable=true）
+        // 与凭证修改会话转移协调器 / Owner 紧急启用服务，确保全程同一审计链。
+        _securityAuditService = new SecurityAuditService(_sessionContextService);
+        _localAccountRepository = accountRepository;
+
+        _localAuthService = new LocalAuthService(accountRepository, legacyMigrationService, _sessionContextService, credentialAttemptTracker, _securityAuditService);
+        _localAccountManagementService = new LocalAccountManagementService(accountRepository, _sessionContextService, credentialAttemptTracker, _securityAuditService);
 
         _sessionLockService.LockStateChanged += OnSessionLockStateChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;

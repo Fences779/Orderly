@@ -100,6 +100,10 @@ public partial class MainViewModel
         _trySendDesktopNotification = trySendDesktopNotification;
         OnPropertyChanged(nameof(IsDesktopNotificationTestAvailable));
         RefreshNotificationSettingsRuntimeStatus();
+
+        // 同步将运行态委托接缝转发给已抽出的设置页 ViewModel（任务 13.4，设计 §8.4.1）：
+        // SettingsViewModel 经委托接缝调用 App 壳层能力，无需反向依赖 MainViewModel / App。
+        Settings.ConfigureSettingsRuntimeHooks(tryApplyRuntimeHotkeys, trySendDesktopNotification);
     }
 
     [RelayCommand]

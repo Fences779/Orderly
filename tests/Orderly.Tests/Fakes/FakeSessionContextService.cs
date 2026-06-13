@@ -14,9 +14,11 @@ internal sealed class FakeSessionContextService : ISessionContextService
     public LocalSessionContext? Current => null;
     public bool IsSignedIn => false;
     public bool IsDataKeyAvailable => false;
+    public SessionPermissionMode CurrentPermissionMode => SessionPermissionMode.Normal;
 
     public void SetCurrent(LocalSessionContext session) => SessionChanged?.Invoke(this, EventArgs.Empty);
     public void SuspendDataKey() { }
     public bool TryRestoreDataKey(string accountId) => false;
     public void Clear() { }
+    public void SetPermissionMode(SessionPermissionMode mode) { }
 }

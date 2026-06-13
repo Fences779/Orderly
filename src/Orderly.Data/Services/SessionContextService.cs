@@ -12,6 +12,7 @@ public sealed class SessionContextService : ISessionContextService
 
     private LocalSessionContext? _current;
     private byte[] _protectedDataKey = [];
+    private SessionPermissionMode _permissionMode = SessionPermissionMode.Normal;
 
     public event EventHandler? SessionChanged;
 
@@ -23,6 +24,22 @@ public sealed class SessionContextService : ISessionContextService
         _current?.DataKey is { Length: DataKeyByteLength }
         && _protectedDataKey.Length == 0;
 
+    public SessionPermissionMode CurrentPermissionMode => _permissionMode;
+
+    public bool IsRestrictedPermissionMode =>
+        _permissionMode == SessionPermissionMode.Restricted_Permission;
+
+    public void SetPermissionMode(SessionPermissionMode mode)
+    {
+        if (_permissionMode == mode)
+        {
+            return;
+        }
+
+        _permissionMode = mode;
+        SessionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public void SetCurrent(LocalSessionContext session)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -32,6 +49,7 @@ public sealed class SessionContextService : ISessionContextService
         ClearProtectedDataKey();
 
         _current = CopySession(session, copiedDataKey);
+        _permissionMode = SessionPermissionMode.Normal;
 
         SessionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -113,6 +131,7 @@ public sealed class SessionContextService : ISessionContextService
         ClearCurrentDataKey();
         ClearProtectedDataKey();
         _current = null;
+        _permissionMode = SessionPermissionMode.Normal;
         SessionChanged?.Invoke(this, EventArgs.Empty);
     }
 

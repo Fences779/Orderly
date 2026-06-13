@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
 using Microsoft.Win32;
+using Orderly.App.Session;
 using Orderly.App.ViewModels;
 using Orderly.App.Views;
 using Orderly.Core.Models;
@@ -147,6 +148,12 @@ public partial class App
             _floatingWindow = null;
             _floatingViewModel = null;
 
+            CancelMinimizeToTrayIdleLock();
+            if (_mainWindow is not null)
+            {
+                _mainWindow.HiddenToTray -= OnMainWindowHiddenToTray;
+            }
+
             _mainWindow?.Close();
             _mainWindow = null;
             _mainViewModel = null;
@@ -165,6 +172,77 @@ public partial class App
     private void HandleLockSessionRequested()
     {
         _sessionLockService?.LockManually();
+    }
+
+    /// <summary>
+    /// 任务 9.8：主窗口最小化到托盘时的应用级会话锁定触发点（需求 18.1/18.2/13.3）。
+    /// 依 <see cref="TrayLockTriggerPolicy"/> 决策：默认立即锁定，配置了空闲时限则延时锁定。
+    /// 锁定统一复用既有 <see cref="ISessionLockService.LockManually"/> 进入 PendingPinUnlock，
+    /// 不改动既有解锁交互。
+    /// </summary>
+    private void OnMainWindowHiddenToTray(object? sender, EventArgs e)
+    {
+        var action = TrayLockTriggerPolicy.Evaluate(
+            _sessionContextService?.IsSignedIn == true,
+            _sessionLockService?.State ?? SessionLockState.LoggedOut,
+            _minimizeToTrayIdleLockDelay);
+
+        switch (action)
+        {
+            case TrayLockAction.LockImmediately:
+                CancelMinimizeToTrayIdleLock();
+                _sessionLockService?.LockManually();
+                break;
+
+            case TrayLockAction.LockAfterIdleDelay:
+                StartMinimizeToTrayIdleLock();
+                break;
+
+            case TrayLockAction.None:
+            default:
+                break;
+        }
+    }
+
+    private void StartMinimizeToTrayIdleLock()
+    {
+        CancelMinimizeToTrayIdleLock();
+
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = _minimizeToTrayIdleLockDelay,
+        };
+        timer.Tick += OnMinimizeToTrayIdleLockElapsed;
+        _minimizeToTrayIdleLockTimer = timer;
+        timer.Start();
+    }
+
+    private void OnMinimizeToTrayIdleLockElapsed(object? sender, EventArgs e)
+    {
+        CancelMinimizeToTrayIdleLock();
+
+        // 到时仅在仍处于已登录且未被解除锁定时锁定（用户可能已在期间重新打开窗口）。
+        if (_sessionContextService?.IsSignedIn == true
+            && _sessionLockService?.State == SessionLockState.Unlocked)
+        {
+            _sessionLockService.LockManually();
+        }
+    }
+
+    /// <summary>
+    /// 取消尚未到时的「空闲时限」锁定计时器。在主窗口被重新打开（<see cref="ShowMainWindow"/>）
+    /// 或立即锁定时调用，确保「未到时限不锁定」。
+    /// </summary>
+    private void CancelMinimizeToTrayIdleLock()
+    {
+        if (_minimizeToTrayIdleLockTimer is null)
+        {
+            return;
+        }
+
+        _minimizeToTrayIdleLockTimer.Stop();
+        _minimizeToTrayIdleLockTimer.Tick -= OnMinimizeToTrayIdleLockElapsed;
+        _minimizeToTrayIdleLockTimer = null;
     }
 
     private void HandleLogoutRequested()

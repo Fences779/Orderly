@@ -780,7 +780,7 @@ try {
         [pscustomobject]@{ Key = 'customers';      TabId = 'Tab_Customers';      Label = '客户';     ContentId = 'Page_Customers' }
         [pscustomobject]@{ Key = 'cashflow';       TabId = 'Tab_Cashflow';       Label = '现金流';   ContentId = 'Page_Cashflow' }
         [pscustomobject]@{ Key = 'businessAdvice'; TabId = 'Tab_BusinessAdvice'; Label = '经营建议'; ContentId = 'Page_BusinessAdvice' }
-        [pscustomobject]@{ Key = 'settings';       TabId = 'Tab_Settings';       Label = '设置';     ContentId = 'Btn_SavePreferences' }
+        [pscustomobject]@{ Key = 'settings';       TabId = 'Tab_Settings';       Label = '设置';     ContentId = 'Pane_SettingsContent' }
         [pscustomobject]@{ Key = 'me';             TabId = 'Tab_Me';             Label = '我的';     ContentId = '' }
     )
 

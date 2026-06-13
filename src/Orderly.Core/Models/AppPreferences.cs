@@ -29,6 +29,9 @@ public sealed class AppPreferences
     public string AccentColor { get; set; } = "默认绿";
     public bool EnableLightAnimation { get; set; }
 
+    // 头像文件相对引用/键；null 表示使用默认头像（向后兼容）
+    public string? AvatarReference { get; set; }
+
     public string BackupDirectory { get; set; } = string.Empty;
     public bool AutoBackupEnabled { get; set; }
     public string AutoBackupFrequency { get; set; } = "手动";
