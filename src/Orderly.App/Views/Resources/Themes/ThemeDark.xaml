@@ -1,21 +1,29 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- 深色模式画笔资源 -->
-    <SolidColorBrush x:Key="PrimaryBrush" Color="#3EAB82" />
-    <SolidColorBrush x:Key="PrimaryLightBrush" Color="#1A2F26" />
+    <!-- 主色：墨蓝，四级（默认/悬停/按下/禁用）+ 浅底 -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#3E6FA8" />
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#4A7DB8" />
+    <SolidColorBrush x:Key="PrimaryPressedBrush" Color="#335C8C" />
+    <SolidColorBrush x:Key="PrimaryDisabledBrush" Color="#3A4656" />
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="#1B2A3D" />
     <SolidColorBrush x:Key="HeadingBrush" Color="#F4F4F5" />
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="#A1A1AA" />
     <SolidColorBrush x:Key="CaptionTextBrush" Color="#71717A" />
     <SolidColorBrush x:Key="SurfaceSoftBrush" Color="#1E1E24" />
     <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#27272A" />
+    <!-- 状态：成功（绿）底色 + 可读前景，对比度 ≈ 5.0:1 -->
     <SolidColorBrush x:Key="AccentSoftBrush" Color="#1A2F26" />
     <SolidColorBrush x:Key="AccentTextBrush" Color="#3EAB82" />
+    <!-- 状态：警告（黄）底色 + 可读前景，对比度 ≈ 6.8:1 -->
     <SolidColorBrush x:Key="WarmSoftBrush" Color="#3B2314" />
     <SolidColorBrush x:Key="WarmTextBrush" Color="#F59E0B" />
+    <!-- 状态：信息（蓝）底色 + 可读前景，对比度 ≈ 5.8:1 -->
     <SolidColorBrush x:Key="BlueSoftBrush" Color="#1E293B" />
-    <SolidColorBrush x:Key="BlueTextBrush" Color="#3B82F6" />
+    <SolidColorBrush x:Key="BlueTextBrush" Color="#60A5FA" />
     <SolidColorBrush x:Key="PurpleSoftBrush" Color="#2E1065" />
     <SolidColorBrush x:Key="PurpleTextBrush" Color="#A855F7" />
+    <!-- 状态：错误（红）底色 + 可读前景，对比度 ≈ 5.8:1 -->
     <SolidColorBrush x:Key="DangerSoftBrush" Color="#450A0A" />
     <SolidColorBrush x:Key="DangerBorderBrush" Color="#7F1D1D" />
     <SolidColorBrush x:Key="DangerTextBrush" Color="#F87171" />
@@ -24,6 +32,9 @@
     <SolidColorBrush x:Key="BorderBrushSoft" Color="#3F3F46" />
     <SolidColorBrush x:Key="TimelineBrush" Color="#3F3F46" />
     <SolidColorBrush x:Key="PageBackgroundBrush" Color="#18181B" />
+
+    <!-- 焦点边框画刷（键盘可达性） -->
+    <SolidColorBrush x:Key="UiFocusBrush" Color="#5B9BD5" />
     
     <SolidColorBrush x:Key="PanelBrush" Color="#27272A" />
     <SolidColorBrush x:Key="MutedBrush" Color="#A1A1AA" />

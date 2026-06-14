@@ -1,0 +1,800 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!--
+        ControlStyles.xaml — 基础控件统一样式（commerce-settings-ui-rebuild / 任务 3.1）
+        ============================================================================================
+        作用范围：八个被重建业务页与设置页，经 App.xaml 的 MergedDictionaries 全局合并
+                 （合并入口由任务 3.3 负责，本文件不改 App.xaml）。
+
+        设计依据：design.md §Components and Interfaces「3. 基础控件统一样式」与需求 1.11 / 11.4 / 12.3。
+
+        样式形态决策（具名 Style，非隐式样式）：
+          既有 AppInputStyles.xaml 已对 TextBox / ComboBox / PasswordBox 定义「隐式样式」并经 App.xaml
+          全局通行。若本文件也用隐式样式且在其后合并，将全局覆盖范围外页面（登录页 / 我的页 / 各对话框）
+          的控件外观，违反范围隔离（需求 10.3 / 13.2）。因此本文件统一使用「具名 Style（x:Key）」，
+          仅在被重建页面显式 Style="{StaticResource ...}" 引用时生效，不干扰范围外页面。
+
+        令牌引用约束（需求 1.12，零硬编码视觉字面量）：
+          - 颜色：一律 DynamicResource 引用主题语义画刷（支持亮/暗整体替换切换）。
+          - 圆角：StaticResource 引用 Shape.xaml 的 UiRadius{Sm|Md|Lg}（CornerRadius 类型，可直接用）。
+          - 字号/字重/字体族：StaticResource 引用 Typography.xaml 的 UiFont* / UiFontFamily*。
+          - 间距（Thickness 属性）：WPF 的 Padding/Margin/BorderThickness 为 Thickness 类型，
+            无法直接接收 Double 类型的 UiSpace* 令牌。故下方「派生间距令牌」区块以 Thickness 形式
+            承载，其每个分量严格对齐 Shape.xaml 的 UiSpace* 刻度（4/8/12/16/24/32），并标注映射，
+            供本文件内各样式引用——令牌/样式层承载具体值是标准做法，页面层仍保持零字面量。
+
+        UI 虚拟化（需求 11.4）：列表型控件（DataGrid / ListView）启用 VirtualizingStackPanel
+          回收模式 + 像素滚动，确保大数据量滚动性能。
+
+        焦点可达性（需求 12.3）：所有可获焦控件具备取自 UiFocusBrush 的明确焦点边框
+          （统一 UiFocusVisualStyle + 模板内焦点触发器双重保障）。
+    -->
+
+    <!-- ==================== 派生间距 / 尺寸令牌（对齐 Shape.xaml 的 UiSpace* 刻度） ==================== -->
+
+    <!-- 按钮内边距：水平 UiSpaceMd(16) + 垂直 UiSpaceXs(8) -->
+    <Thickness x:Key="UiPadButton">16,8</Thickness>
+    <!-- 输入框内边距：水平 UiSpaceSm(12) + 垂直 UiSpaceXs(8) -->
+    <Thickness x:Key="UiPadInput">12,8</Thickness>
+    <!-- 表格单元内边距（舒适档）：水平 UiSpaceSm(12) + 垂直 UiSpaceSm(12) -->
+    <Thickness x:Key="UiPadCellComfortable">12,12</Thickness>
+    <!-- 列头内边距：水平 UiSpaceSm(12) + 垂直 UiSpaceXs(8) -->
+    <Thickness x:Key="UiPadColumnHeader">12,8</Thickness>
+    <!-- 徽标内边距：水平 UiSpaceSm(12) + 垂直 UiSpaceXxs(4) -->
+    <Thickness x:Key="UiPadBadge">12,4</Thickness>
+    <!-- 提示条内边距：水平 UiSpaceMd(16) + 垂直 UiSpaceSm(12) -->
+    <Thickness x:Key="UiPadNotice">16,12</Thickness>
+    <!-- Tab 项内边距：水平 UiSpaceMd(16) + 垂直 UiSpaceXs(8) -->
+    <Thickness x:Key="UiPadTabItem">16,8</Thickness>
+    <!-- 复选 / 单选 与文字间距：右 UiSpaceXs(8) -->
+    <Thickness x:Key="UiGapInline">0,0,8,0</Thickness>
+    <!-- 发丝边框 1px -->
+    <Thickness x:Key="UiHairline">1</Thickness>
+    <!-- 焦点边框 2px -->
+    <Thickness x:Key="UiFocusThickness">2</Thickness>
+    <!-- 选中态左侧主色条宽度（3px，介于 UiHairline 与 UiSpaceXxs 之间，强调用） -->
+    <Thickness x:Key="UiSelectedAccentBar">3,0,0,0</Thickness>
+
+    <!-- 舒适档表格行高：≈ 正文(14) + 上下 UiSpaceSm(12)×2 + 边距余量 -->
+    <sys:Double x:Key="UiRowHeightComfortable">44</sys:Double>
+    <!-- 控件统一最小高度（输入/按钮）：UiSpaceXl(32) + 余量 -->
+    <sys:Double x:Key="UiControlMinHeight">36</sys:Double>
+    <!-- 复选 / 单选 勾选框边长：UiSpaceMd(16) + 微调 -->
+    <sys:Double x:Key="UiToggleBoxSize">18</sys:Double>
+
+    <!-- ==================== 统一焦点视觉（取自 UiFocusBrush） ==================== -->
+    <Style x:Key="UiFocusVisualStyle">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border CornerRadius="{StaticResource UiRadiusMd}"
+                            BorderBrush="{DynamicResource UiFocusBrush}"
+                            BorderThickness="{StaticResource UiFocusThickness}"
+                            Margin="-2"
+                            SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+
+    <!-- ==================================================================================== -->
+    <!--  按钮：主 / 次 / 文本                                                                  -->
+    <!-- ==================================================================================== -->
+
+    <!-- 主按钮：主色实底，悬停/按下/禁用使用主色分级 -->
+    <Style x:Key="UiPrimaryButtonStyle" TargetType="Button">
+        <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadButton}" />
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+        <Setter Property="Foreground" Value="{DynamicResource SurfaceRaisedBrush}" />
+        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource UiRadiusMd}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PrimaryPressedBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PrimaryHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PrimaryDisabledBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource SurfaceRaisedBrush}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 次按钮：描边 + 表面底，悬停浅主色底，按下主色浅底 -->
+    <Style x:Key="UiSecondaryButtonStyle" TargetType="Button">
+        <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadButton}" />
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource UiRadiusMd}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource PrimaryPressedBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryPressedBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryDisabledBrush}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 文本按钮：无底无边，仅主色文字，悬停浅主色底 -->
+    <Style x:Key="UiTextButtonStyle" TargetType="Button">
+        <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadInput}" />
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource UiRadiusMd}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryPressedBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryDisabledBrush}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  输入框 TextBox                                                                       -->
+    <!-- ==================================================================================== -->
+    <Style x:Key="UiTextBoxStyle" TargetType="TextBox">
+        <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadInput}" />
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource PrimaryBrush}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource UiRadiusMd}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                            <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource UiFocusBrush}" />
+                            <Setter TargetName="Border" Property="BorderThickness" Value="{StaticResource UiFocusThickness}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource PageBackgroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  下拉框 ComboBox（含 ComboBoxItem）                                                    -->
+    <!-- ==================================================================================== -->
+
+    <!-- ToggleButton 模板：作为 ComboBox 的开合主体 -->
+    <ControlTemplate x:Key="UiComboBoxToggleTemplate" TargetType="ToggleButton">
+        <Border x:Name="Border"
+                Background="{DynamicResource SurfaceSoftBrush}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
+                BorderThickness="{StaticResource UiHairline}"
+                CornerRadius="{StaticResource UiRadiusMd}"
+                SnapsToDevicePixels="True">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Path x:Name="Arrow"
+                      Grid.Column="1"
+                      Margin="{StaticResource UiPadInput}"
+                      VerticalAlignment="Center"
+                      Data="M 0 0 L 4 4 L 8 0 Z"
+                      Fill="{DynamicResource SecondaryTextBrush}" />
+            </Grid>
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource UiFocusBrush}" />
+                <Setter TargetName="Border" Property="BorderThickness" Value="{StaticResource UiFocusThickness}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="Border" Property="Background" Value="{DynamicResource PageBackgroundBrush}" />
+                <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource CaptionTextBrush}" />
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <Style x:Key="UiComboBoxItemStyle" TargetType="ComboBoxItem">
+        <Setter Property="Padding" Value="{StaticResource UiPadInput}" />
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="ItemBorder"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{StaticResource UiRadiusSm}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+                            <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="UiComboBoxStyle" TargetType="ComboBox">
+        <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource UiComboBoxItemStyle}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton x:Name="ToggleButton"
+                                      Template="{StaticResource UiComboBoxToggleTemplate}"
+                                      Focusable="False"
+                                      ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" />
+                        <ContentPresenter x:Name="ContentSite"
+                                          Margin="{StaticResource UiPadInput}"
+                                          VerticalAlignment="Center"
+                                          HorizontalAlignment="Left"
+                                          IsHitTestVisible="False"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
+                        <Popup x:Name="Popup"
+                               Placement="Bottom"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               PopupAnimation="Slide">
+                            <Border x:Name="DropDownBorder"
+                                    MinWidth="{TemplateBinding ActualWidth}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    Margin="0,4,0,0"
+                                    Background="{DynamicResource SurfaceRaisedBrush}"
+                                    BorderBrush="{DynamicResource BorderBrushSoft}"
+                                    BorderThickness="{StaticResource UiHairline}"
+                                    CornerRadius="{StaticResource UiRadiusMd}"
+                                    Padding="{StaticResource UiGapInline}"
+                                    SnapsToDevicePixels="True">
+                                <ScrollViewer>
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  复选框 CheckBox                                                                      -->
+    <!-- ==================================================================================== -->
+    <Style x:Key="UiCheckBoxStyle" TargetType="CheckBox">
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border x:Name="Box"
+                                Width="{StaticResource UiToggleBoxSize}"
+                                Height="{StaticResource UiToggleBoxSize}"
+                                Margin="{StaticResource UiGapInline}"
+                                VerticalAlignment="Center"
+                                Background="{DynamicResource SurfaceSoftBrush}"
+                                BorderBrush="{DynamicResource BorderBrushSoft}"
+                                BorderThickness="{StaticResource UiHairline}"
+                                CornerRadius="{StaticResource UiRadiusSm}"
+                                SnapsToDevicePixels="True">
+                            <Path x:Name="Check"
+                                  Stretch="Uniform"
+                                  Margin="3"
+                                  Data="M 0 4 L 3 7 L 9 0"
+                                  Stroke="{DynamicResource SurfaceRaisedBrush}"
+                                  StrokeThickness="2"
+                                  StrokeEndLineCap="Round"
+                                  StrokeStartLineCap="Round"
+                                  Visibility="Collapsed" />
+                        </Border>
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource PrimaryBrush}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource UiFocusBrush}" />
+                            <Setter TargetName="Box" Property="BorderThickness" Value="{StaticResource UiFocusThickness}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource PageBackgroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  单选框 RadioButton                                                                   -->
+    <!-- ==================================================================================== -->
+    <Style x:Key="UiRadioButtonStyle" TargetType="RadioButton">
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Grid Width="{StaticResource UiToggleBoxSize}"
+                              Height="{StaticResource UiToggleBoxSize}"
+                              Margin="{StaticResource UiGapInline}"
+                              VerticalAlignment="Center">
+                            <Ellipse x:Name="Outer"
+                                     Fill="{DynamicResource SurfaceSoftBrush}"
+                                     Stroke="{DynamicResource BorderBrushSoft}"
+                                     StrokeThickness="1" />
+                            <Ellipse x:Name="Dot"
+                                     Margin="4"
+                                     Fill="{DynamicResource PrimaryBrush}"
+                                     Visibility="Collapsed" />
+                        </Grid>
+                        <ContentPresenter VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Outer" Property="Stroke" Value="{DynamicResource PrimaryHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Outer" Property="Stroke" Value="{DynamicResource PrimaryBrush}" />
+                            <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Outer" Property="Stroke" Value="{DynamicResource UiFocusBrush}" />
+                            <Setter TargetName="Outer" Property="StrokeThickness" Value="2" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Outer" Property="Fill" Value="{DynamicResource PageBackgroundBrush}" />
+                            <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource CaptionTextBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  Tab：TabControl / TabItem（当前 Tab 主色高亮 + 底部主色条）                            -->
+    <!-- ==================================================================================== -->
+    <Style x:Key="UiTabItemStyle" TargetType="TabItem">
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadTabItem}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="Root"
+                            Background="Transparent"
+                            BorderBrush="{DynamicResource BorderBrushSoft}"
+                            BorderThickness="0,0,0,2"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter x:Name="Header"
+                                          ContentSource="Header"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+                            <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="UiTabControlStyle" TargetType="TabControl">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource UiTabItemStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TabPanel Grid.Row="0"
+                                  IsItemsHost="True"
+                                  Background="Transparent"
+                                  Margin="0" />
+                        <Border Grid.Row="1"
+                                Background="{TemplateBinding Background}"
+                                Padding="{StaticResource UiPadCellComfortable}">
+                            <ContentPresenter ContentSource="SelectedContent" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  表格 DataGrid（舒适档行高 + 选中态主色弱底 + 左侧主色条 + UI 虚拟化）                   -->
+    <!-- ==================================================================================== -->
+
+    <!-- 列头 -->
+    <Style x:Key="UiDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
+        <Setter Property="FontSize" Value="{StaticResource UiFontBodySm}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadColumnHeader}" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridColumnHeader">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{DynamicResource BorderBrushSoft}"
+                            BorderThickness="0,0,0,1"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 单元格（舒适内边距 + 焦点态去除默认虚线框，统一焦点由行表达） -->
+    <Style x:Key="UiDataGridCellStyle" TargetType="DataGridCell">
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="{StaticResource UiPadCellComfortable}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridCell">
+                    <Border Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 行（选中态：主色弱底 + 左侧主色条） -->
+    <Style x:Key="UiDataGridRowStyle" TargetType="DataGridRow">
+        <Setter Property="MinHeight" Value="{StaticResource UiRowHeightComfortable}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="{StaticResource UiSelectedAccentBar}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DataGridRow">
+                    <Border x:Name="RowBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <DataGridCellsPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                            <Setter TargetName="RowBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="UiDataGridStyle" TargetType="DataGrid">
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="RowBackground" Value="{DynamicResource SurfaceRaisedBrush}" />
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrushSoft}" />
+        <Setter Property="VerticalGridLinesBrush" Value="Transparent" />
+        <Setter Property="GridLinesVisibility" Value="Horizontal" />
+        <Setter Property="HeadersVisibility" Value="Column" />
+        <Setter Property="AutoGenerateColumns" Value="False" />
+        <Setter Property="CanUserAddRows" Value="False" />
+        <Setter Property="CanUserDeleteRows" Value="False" />
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="SelectionMode" Value="Single" />
+        <Setter Property="SelectionUnit" Value="FullRow" />
+        <Setter Property="RowHeight" Value="{StaticResource UiRowHeightComfortable}" />
+        <Setter Property="ColumnHeaderStyle" Value="{StaticResource UiDataGridColumnHeaderStyle}" />
+        <Setter Property="CellStyle" Value="{StaticResource UiDataGridCellStyle}" />
+        <Setter Property="RowStyle" Value="{StaticResource UiDataGridRowStyle}" />
+        <!-- UI 虚拟化（需求 11.4）：回收容器 + 像素滚动，承载大数据量列表 -->
+        <Setter Property="EnableRowVirtualization" Value="True" />
+        <Setter Property="EnableColumnVirtualization" Value="True" />
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  列表 ListView / ListViewItem（选中态主色弱底 + 左侧主色条 + UI 虚拟化）                 -->
+    <!-- ==================================================================================== -->
+    <Style x:Key="UiListViewItemStyle" TargetType="ListViewItem">
+        <Setter Property="MinHeight" Value="{StaticResource UiRowHeightComfortable}" />
+        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="{StaticResource UiSelectedAccentBar}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadCellComfortable}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListViewItem">
+                    <Border x:Name="ItemBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="UiListViewStyle" TargetType="ListView">
+        <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+        <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource UiListViewItemStyle}" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <!-- UI 虚拟化（需求 11.4）：显式 VirtualizingStackPanel + 回收 + 像素滚动 -->
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel Orientation="Vertical" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  徽标 Badge（胶囊形基样式；状态四态着色由 StatePresenters.xaml / 任务 3.2 承载）         -->
+    <!--  说明：徽标须同时承载文字，不以颜色为唯一信息载体（需求 12.4，由 3.2 模板与页面落实）。   -->
+    <!-- ==================================================================================== -->
+    <Style x:Key="UiBadgeStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="{StaticResource UiRadiusLg}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadBadge}" />
+        <Setter Property="Background" Value="{DynamicResource GreySoftBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <!-- 徽标内文字基样式（前景由具体状态画刷在使用处或 3.2 模板覆盖） -->
+    <Style x:Key="UiBadgeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+        <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ==================================================================================== -->
+    <!--  提示条 NoticeBar（基样式；状态变体与图标由 StatePresenters.xaml / 任务 3.2 承载）        -->
+    <!-- ==================================================================================== -->
+    <Style x:Key="UiNoticeBarStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="{StaticResource UiRadiusMd}" />
+        <Setter Property="Padding" Value="{StaticResource UiPadNotice}" />
+        <Setter Property="Background" Value="{DynamicResource BlueSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+        <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <!-- 提示条内文字基样式 -->
+    <Style x:Key="UiNoticeBarTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource UiFontBodySm}" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+        <Setter Property="Foreground" Value="{DynamicResource BlueTextBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+</ResourceDictionary>

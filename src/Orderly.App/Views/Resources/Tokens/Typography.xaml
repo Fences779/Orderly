@@ -1,0 +1,67 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <!--
+        Typography.xaml — 全局排版令牌（字号阶 / 字重 / 字体族）
+        ============================================================
+        作用范围：commerce-settings-ui-rebuild 视觉重建涉及的八个业务/设置页面，
+        经 App.xaml 的 MergedDictionaries 全局合并（合并入口由任务 2.3 负责，本文件不改 App.xaml）。
+
+        命名约定（设计文档 §Components and Interfaces）：
+          - 字号阶：UiFont{Display|Title|Subtitle|Body|BodySm|Caption}
+          - 字重  ：UiFontWeight{Regular|Medium|SemiBold|Bold}
+          - 字体族：UiFontFamilyCjk（中文：思源黑体→系统中文回退）
+                    UiFontFamilyLatin（英文/数字：Inter→系统回退）
+
+        键名隔离：全部采用全新前缀 UiFont* / UiFontFamily*，
+                  与既有 DesignTokens.xaml 的 Type* / 其它字典键名完全不碰撞
+                  （既有 DesignTokens.xaml 继续供我的页 / 设置页旧路径消费，互不影响）。
+
+        可达性约束（需求 12.5）：
+          - 所有正文字号 ≥ 13px：UiFontBody = 14、UiFontBodySm = 13。
+          - 辅助说明字号 ≥ 12px：UiFontCaption = 12。
+    -->
+
+    <!-- ==================== 字号阶（≥6 级，单位：像素 / 设备无关单位） ==================== -->
+
+    <!-- 标题大：页面级主标题、关键数字（如现金流净额、指标卡核心数值） -->
+    <system:Double x:Key="UiFontDisplay">28</system:Double>
+
+    <!-- 标题：卡片标题、区块主标题 -->
+    <system:Double x:Key="UiFontTitle">20</system:Double>
+
+    <!-- 副标题：分组标题、次级标题 -->
+    <system:Double x:Key="UiFontSubtitle">16</system:Double>
+
+    <!-- 正文：表格单元、表单主文本（≥13px） -->
+    <system:Double x:Key="UiFontBody">14</system:Double>
+
+    <!-- 正文小：密集列表、次要正文（≥13px，满足正文下限） -->
+    <system:Double x:Key="UiFontBodySm">13</system:Double>
+
+    <!-- 辅助：说明文字、脚注、徽标内文案（≥12px，满足辅助说明下限） -->
+    <system:Double x:Key="UiFontCaption">12</system:Double>
+
+    <!-- ==================== 字重 ==================== -->
+
+    <FontWeight x:Key="UiFontWeightRegular">Normal</FontWeight>
+    <FontWeight x:Key="UiFontWeightMedium">Medium</FontWeight>
+    <FontWeight x:Key="UiFontWeightSemiBold">SemiBold</FontWeight>
+    <FontWeight x:Key="UiFontWeightBold">Bold</FontWeight>
+
+    <!-- ==================== 字体族（含回退链） ==================== -->
+
+    <!--
+        中文族：优先思源黑体（Source Han Sans 各命名变体），
+        逐级回退到系统自带中文字体，确保任意 Windows 环境均有可用中文字形。
+    -->
+    <FontFamily x:Key="UiFontFamilyCjk">思源黑体, 思源黑体 CN, Source Han Sans SC, Source Han Sans CN, Source Han Sans, Microsoft YaHei, 微软雅黑, SimSun, sans-serif</FontFamily>
+
+    <!--
+        英文/数字族：优先 Inter，回退到系统英文无衬线字体。
+        用于英文文案与数字（金额、指标）的清晰呈现。
+    -->
+    <FontFamily x:Key="UiFontFamilyLatin">Inter, Segoe UI, Arial, sans-serif</FontFamily>
+
+</ResourceDictionary>

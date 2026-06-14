@@ -6,9 +6,13 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Themes/ThemeLight.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Tokens/Typography.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Tokens/Shape.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/App/AppBaseResources.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/App/AppInputStyles.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/App/AppButtonStyles.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Controls/ControlStyles.xaml" />
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Controls/StatePresenters.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -1,0 +1,48 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <!--
+        Shape.xaml — 全局形状令牌（圆角 / 间距 / 阴影）
+        ========================================================================
+        作用范围：八个被重建业务页与设置页（经 App.xaml 集中合并，由任务 2.3 负责）。
+        命名约定（design.md §令牌词表组织策略）：
+          - 圆角  UiRadius{Sm|Md|Lg}，基础圆角 UiRadiusMd = 4px
+          - 间距  UiSpace{Xxs..Xl}，以 4px 为基础单位（4/8/12/16/24/32）
+          - 阴影  UiElevation{Card|Overlay}，弱阴影用于卡片、强阴影用于浮层
+        键名全部采用 Ui* 前缀，与既有 DesignTokens.xaml 的
+        Radius* / Space* / Elevation*（供我的页/设置页消费）解耦共存，互不碰撞。
+        参见 requirements.md 需求 1.6 / 1.7 / 1.8。
+    -->
+
+    <!-- ==================== 圆角刻度 (Corner Radius Scale) ==================== -->
+    <!-- 三档圆角：小 / 基础(4px) / 大。基础圆角为 4 像素（需求 1.6）。 -->
+    <CornerRadius x:Key="UiRadiusSm">2</CornerRadius>
+    <CornerRadius x:Key="UiRadiusMd">4</CornerRadius>
+    <CornerRadius x:Key="UiRadiusLg">8</CornerRadius>
+
+    <!-- ==================== 间距刻度 (Spacing Scale, 4pt grid) ==================== -->
+    <!-- 标准档，以 4 像素为基础单位，提供 6 级间距（需求 1.7）。 -->
+    <system:Double x:Key="UiSpaceXxs">4</system:Double>
+    <system:Double x:Key="UiSpaceXs">8</system:Double>
+    <system:Double x:Key="UiSpaceSm">12</system:Double>
+    <system:Double x:Key="UiSpaceMd">16</system:Double>
+    <system:Double x:Key="UiSpaceLg">24</system:Double>
+    <system:Double x:Key="UiSpaceXl">32</system:Double>
+
+    <!-- ==================== 阴影 / 高度刻度 (Shadow / Elevation Scale) ==================== -->
+    <!-- 至少两级阴影：卡片弱阴影、浮层强阴影（需求 1.8）。统一方向 270°、低不透明度。 -->
+    <DropShadowEffect x:Key="UiElevationCard"
+                      BlurRadius="16"
+                      ShadowDepth="2"
+                      Direction="270"
+                      Color="#111216"
+                      Opacity="0.06" />
+    <DropShadowEffect x:Key="UiElevationOverlay"
+                      BlurRadius="32"
+                      ShadowDepth="6"
+                      Direction="270"
+                      Color="#111216"
+                      Opacity="0.16" />
+
+</ResourceDictionary>
