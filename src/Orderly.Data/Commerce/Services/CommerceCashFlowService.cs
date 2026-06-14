@@ -85,47 +85,9 @@ public sealed class CommerceCashFlowService : ICashFlowService
             .GetAllAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Only entries occurring within the period contribute; transfers are net-zero and excluded
-        // from every aggregate (Req 4.12).
-        decimal realizedIncome = 0m, realizedExpense = 0m;
-        decimal outstandingReceivable = 0m, outstandingPayable = 0m;
-
-        foreach (CashFlowEntry entry in entries)
-        {
-            if (entry.Direction == CashFlowDirection.Transfer || !period.Contains(entry.OccurredAt))
-            {
-                continue;
-            }
-
-            decimal amount = entry.Amount.Amount;
-            decimal settled = entry.SettledAmount.Amount;
-            // The unsettled remainder never goes below zero even if more was settled than billed.
-            decimal outstanding = Math.Max(amount - settled, 0m);
-
-            if (entry.Direction == CashFlowDirection.Income)
-            {
-                realizedIncome += settled;
-                outstandingReceivable += outstanding;
-            }
-            else // Expense
-            {
-                realizedExpense += settled;
-                outstandingPayable += outstanding;
-            }
-        }
-
-        int healthScore = ComputeHealthScore(realizedIncome, realizedExpense, outstandingReceivable, outstandingPayable);
-
-        return new CashFlowPeriodSummary
-        {
-            Period = period,
-            RealizedIncome = ToMoney(realizedIncome),
-            RealizedExpense = ToMoney(realizedExpense),
-            NetCashFlow = ToMoney(realizedIncome - realizedExpense),
-            OutstandingReceivable = ToMoney(outstandingReceivable),
-            OutstandingPayable = ToMoney(outstandingPayable),
-            HealthScore = healthScore,
-        };
+        // Aggregation (period filter + transfer exclusion + health score) is delegated to the shared
+        // pure calculator so the page can reuse the identical computation without a second read.
+        return CashFlowSummaryCalculator.Compute(entries, period);
     }
 
     /// <inheritdoc />
@@ -233,51 +195,4 @@ public sealed class CommerceCashFlowService : ICashFlowService
             ? CashFlowSettlementStatus.PartiallySettled
             : CashFlowSettlementStatus.Pending;
     }
-
-    /// <summary>
-    /// Computes the deterministic cash-flow health score as an integer in the inclusive range
-    /// [0, 100] (Req 4.12).
-    ///
-    /// <para>The score is the inflow share of total cash demand: <c>inflows / (inflows + outflows)</c>
-    /// scaled to 0..100, where <i>inflows</i> are realized income plus still-outstanding receivables
-    /// (money in hand and money owed to the business) and <i>outflows</i> are realized expense plus
-    /// still-outstanding payables (money already paid and money the business owes). With no activity
-    /// at all the score is the maximum (a business with no obligations is fully healthy). The ratio
-    /// is clamped so the result is always a bounded integer regardless of the input figures.</para>
-    /// </summary>
-    private static int ComputeHealthScore(
-        decimal realizedIncome,
-        decimal realizedExpense,
-        decimal outstandingReceivable,
-        decimal outstandingPayable)
-    {
-        decimal inflows = realizedIncome + outstandingReceivable;
-        decimal outflows = realizedExpense + outstandingPayable;
-        decimal total = inflows + outflows;
-
-        // No cash activity at all is treated as fully healthy (there is nothing owed).
-        if (total <= 0m)
-        {
-            return 100;
-        }
-
-        int score = (int)Math.Round(Clamp01(inflows / total) * 100m, MidpointRounding.AwayFromZero);
-
-        // The health score is an integer in the inclusive range [0, 100] (Req 4.12).
-        return Math.Clamp(score, 0, 100);
-    }
-
-    /// <summary>
-    /// Converts an aggregate decimal to a <see cref="CommerceMoney"/>, rounding to scale 2 and
-    /// clamping into the valid monetary range so a large sum over many entries cannot throw.
-    /// </summary>
-    private static CommerceMoney ToMoney(decimal value)
-    {
-        decimal rounded = Math.Round(value, CommerceMoney.Scale, MidpointRounding.AwayFromZero);
-        decimal clamped = Math.Clamp(rounded, CommerceMoney.MinValue, CommerceMoney.MaxValue);
-        return CommerceMoney.From(clamped);
-    }
-
-    /// <summary>Clamps a ratio to the inclusive range [0, 1].</summary>
-    private static decimal Clamp01(decimal value) => Math.Clamp(value, 0m, 1m);
 }

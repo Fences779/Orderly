@@ -293,36 +293,30 @@ public sealed class CommercePageViewModelTests
     // ----- Cash Flow (现金流) → ICashFlowService (Req 6.7) -----
 
     [Fact]
-    public async Task Cashflow_loads_summary_and_entries_from_cashflow_service()
+    public async Task Cashflow_loads_summary_and_entries_computed_from_entries()
     {
         var entryRepo = new FakeCashFlowEntryRepository();
         entryRepo.Items.Add(new CashFlowEntry
         {
             WorkspaceId = Workspace,
+            Direction = CashFlowDirection.Income,
             Amount = CommerceMoney.From(500m),
+            SettledAmount = CommerceMoney.From(500m),
+            SettlementStatus = CashFlowSettlementStatus.Settled,
             OccurredAt = DateTime.UtcNow.AddDays(-1),
             CategoryName = "收入分类 A"
         });
 
-        var service = new FakeCashFlowService
-        {
-            Summary = new CashFlowPeriodSummary
-            {
-                Period = new DateRange(DateTime.UtcNow.AddDays(-30), DateTime.UtcNow),
-                RealizedIncome = CommerceMoney.From(500m),
-                NetCashFlow = CommerceMoney.From(500m),
-                HealthScore = 80
-            }
-        };
-
-        var vm = new CashflowPageViewModel(service, entryRepo);
+        var vm = new CashflowPageViewModel(new FakeCashFlowService(), entryRepo);
 
         await vm.LoadAsync();
 
-        Assert.Equal(1, service.GetPeriodSummaryCallCount);
+        // The page reads the full entry set exactly once and computes the period summary from that
+        // same set via the shared calculator (no redundant second read, no service round-trip).
         Assert.Equal(1, entryRepo.GetAllCallCount);
-        Assert.Equal(80, vm.HealthScore);
         Assert.Equal("500.00", vm.RealizedIncome);
+        // Fully-settled income with no expense or outstanding obligation scores the maximum.
+        Assert.Equal(100, vm.HealthScore);
         Assert.Single(vm.Entries);
         Assert.True(vm.ShowContent);
     }
@@ -339,10 +333,10 @@ public sealed class CommercePageViewModelTests
     }
 
     [Fact]
-    public async Task Cashflow_service_failure_sets_error_without_throwing()
+    public async Task Cashflow_read_failure_sets_error_without_throwing()
     {
-        var service = new FakeCashFlowService { SummaryException = new InvalidOperationException("cashflow down") };
-        var vm = new CashflowPageViewModel(service, new FakeCashFlowEntryRepository());
+        var entryRepo = new FakeCashFlowEntryRepository { GetAllException = new InvalidOperationException("cashflow down") };
+        var vm = new CashflowPageViewModel(new FakeCashFlowService(), entryRepo);
 
         await vm.LoadAsync();
 

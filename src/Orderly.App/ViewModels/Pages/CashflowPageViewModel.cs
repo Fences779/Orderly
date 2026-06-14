@@ -76,9 +76,17 @@ public sealed partial class CashflowPageViewModel : CommercePageViewModel
         DateTime nowUtc = DateTime.UtcNow;
         var period = new DateRange(nowUtc.AddDays(-SummaryWindowDays), nowUtc);
 
-        CashFlowPeriodSummary summary = await _cashFlowService
-            .GetPeriodSummaryAsync(period, cancellationToken)
+        // The DB read runs off the UI thread: Microsoft.Data.Sqlite's *Async APIs complete
+        // synchronously, so awaiting them inline on the navigation path would block the message pump
+        // and freeze the shell. Task.Run yields the UI thread (loading state renders, navigation stays
+        // responsive); the continuation resumes on the UI thread (ConfigureAwait(true)) where the
+        // ObservableCollection update is safe. The full entry set is read once and reused both for the
+        // period summary (via the shared calculator) and the recent-entries list — no second query.
+        IReadOnlyList<CashFlowEntry> entries = await Task
+            .Run(() => _cashFlowEntryRepository.GetAllAsync(cancellationToken), cancellationToken)
             .ConfigureAwait(true);
+
+        CashFlowPeriodSummary summary = CashFlowSummaryCalculator.Compute(entries, period);
 
         RealizedIncome = summary.RealizedIncome.ToString();
         RealizedExpense = summary.RealizedExpense.ToString();
@@ -86,10 +94,6 @@ public sealed partial class CashflowPageViewModel : CommercePageViewModel
         OutstandingReceivable = summary.OutstandingReceivable.ToString();
         OutstandingPayable = summary.OutstandingPayable.ToString();
         HealthScore = summary.HealthScore;
-
-        IReadOnlyList<CashFlowEntry> entries = await _cashFlowEntryRepository
-            .GetAllAsync(cancellationToken)
-            .ConfigureAwait(true);
 
         Entries.Clear();
         foreach (CashFlowEntry entry in entries

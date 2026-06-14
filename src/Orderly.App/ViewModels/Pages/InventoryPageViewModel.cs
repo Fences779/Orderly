@@ -59,11 +59,24 @@ public sealed partial class InventoryPageViewModel : CommercePageViewModel
     {
         DateTime asOfUtc = DateTime.UtcNow;
 
-        IReadOnlyList<InventoryItem> items = await _inventoryItemRepository
-            .GetAllAsync(cancellationToken)
-            .ConfigureAwait(true);
-        IReadOnlyList<InventoryMetrics> metrics = await _inventoryService
-            .GetAllMetricsAsync(asOfUtc, cancellationToken)
+        // The DB reads run off the UI thread: Microsoft.Data.Sqlite's *Async APIs complete
+        // synchronously, so awaiting them inline on the navigation path would block the message pump
+        // and freeze the shell. Both reads are issued inside a single Task.Run (fewer thread hops);
+        // the continuation resumes on the UI thread (ConfigureAwait(true)) where the
+        // ObservableCollection update is safe.
+        (IReadOnlyList<InventoryItem> items, IReadOnlyList<InventoryMetrics> metrics) = await Task
+            .Run(
+                async () =>
+                {
+                    IReadOnlyList<InventoryItem> loadedItems = await _inventoryItemRepository
+                        .GetAllAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    IReadOnlyList<InventoryMetrics> loadedMetrics = await _inventoryService
+                        .GetAllMetricsAsync(asOfUtc, cancellationToken)
+                        .ConfigureAwait(false);
+                    return (loadedItems, loadedMetrics);
+                },
+                cancellationToken)
             .ConfigureAwait(true);
 
         Dictionary<Guid, InventoryMetrics> metricsById = metrics.ToDictionary(m => m.InventoryItemId);
