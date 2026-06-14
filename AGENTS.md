@@ -24,6 +24,7 @@
 - **Status**: Active by default after every approved code change.
 - **Required Behavior After Modification**:
   - Automatically check for compile or build errors using the most relevant local project command.
+  - 施工完成之后进行编译正确性审核。
   - Automatically launch the most relevant local preview target when a preview entry exists and can be started safely.
   - Return a brief acceptance checklist telling the user what to verify.
 - **Failure Handling**: If build or preview cannot run, Codex must state the real blocker and provide the exact command the user should run locally.
