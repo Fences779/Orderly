@@ -30,6 +30,8 @@ public static class ThemeHelper
         }
     }
 
+    public static event EventHandler? ThemeChanged;
+
     public static void ApplyTheme(string themeMode)
     {
         _currentThemeMode = themeMode;
@@ -40,6 +42,8 @@ public static class ThemeHelper
 
         // 递归寻找包含主题的字典及其父集合并替换
         TryReplaceTheme(app.Resources, targetThemePath);
+
+        ThemeChanged?.Invoke(null, EventArgs.Empty);
     }
 
     private static bool TryReplaceTheme(ResourceDictionary parent, string targetThemePath)

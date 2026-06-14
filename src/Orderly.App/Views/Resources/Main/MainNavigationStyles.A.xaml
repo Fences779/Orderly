@@ -31,35 +31,78 @@
                         </StackPanel>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <!-- Individual colors for each tab item icon based on Content -->
-                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台">
+                        <!-- Individual colors for each tab item icon based on Content AND SelectedState -->
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台"/>
+                                <Condition Binding="{Binding SelectedSection}" Value="工作台"/>
+                            </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#E0F2FE"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#0284C7"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="订单履约">
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="订单"/>
+                                <Condition Binding="{Binding SelectedSection}" Value="订单"/>
+                            </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#DCFCE7"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#16A34A"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="库存管理">
-                            <Setter TargetName="IconBg" Property="Background" Value="#FEF3C7"/>
-                            <Setter TargetName="TabIcon" Property="Foreground" Value="#B45309"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="现金流">
-                            <Setter TargetName="IconBg" Property="Background" Value="#E0E7FF"/>
-                            <Setter TargetName="TabIcon" Property="Foreground" Value="#4F46E5"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="异常处理">
-                            <Setter TargetName="IconBg" Property="Background" Value="#FFE4E6"/>
-                            <Setter TargetName="TabIcon" Property="Foreground" Value="#E11D48"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置">
-                            <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
-                            <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="我的">
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="商品"/>
+                                <Condition Binding="{Binding SelectedSection}" Value="商品"/>
+                            </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#FCE7F3"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#DB2777"/>
-                        </DataTrigger>
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="库存"/>
+                                <Condition Binding="{Binding SelectedSection}" Value="库存管理"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#FEF3C7"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#B45309"/>
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="客户"/>
+                                <Condition Binding="{Binding SelectedSection}" Value="客户"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#CCFBF1"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#0D9488"/>
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="现金流"/>
+                                <Condition Binding="{Binding SelectedSection}" Value="现金流"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#E0E7FF"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#4F46E5"/>
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="经营建议"/>
+                                <Condition Binding="{Binding SelectedSection}" Value="经营建议"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#FFEDD5"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#EA580C"/>
+                        </MultiDataTrigger>
+
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置"/>
+                                <Condition Binding="{Binding SelectedSection}" Value="设置"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
+                        </MultiDataTrigger>
 
                         <!-- Hover State when not selected: subtle background highlight -->
                         <MultiTrigger>

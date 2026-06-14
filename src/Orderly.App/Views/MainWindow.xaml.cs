@@ -103,4 +103,22 @@ public partial class MainWindow : Window, IToastService
     // Exposed so extracted section UserControls can surface the shared window-level
     // toast without owning the Popup. Copy notifications are surfaced as a success toast.
     internal void ShowCopyToastMessage(string message) => Show(message, ToastSeverity.Success);
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        Orderly.App.Helpers.DwmHelper.UpdateTitleBarColor(this);
+        Orderly.App.Helpers.ThemeHelper.ThemeChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        Orderly.App.Helpers.DwmHelper.UpdateTitleBarColor(this);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        Orderly.App.Helpers.ThemeHelper.ThemeChanged -= OnThemeChanged;
+        base.OnClosed(e);
+    }
 }
