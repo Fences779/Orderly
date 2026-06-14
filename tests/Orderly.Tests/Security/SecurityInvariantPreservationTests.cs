@@ -182,14 +182,13 @@ public sealed class SecurityInvariantPreservationTests
     [Fact]
     public void Master_password_policy_input_validation_is_preserved()
     {
-        // 合法强密码：满足全部类别要求且无空白、长度恒 >= 最小长度（区间内）。
-        // 各类别数组下限取 3，加固定后缀 "Aa1!"（4 位），总长 >= 3*3+1+4 = 14 >= MinimumLength(12)。
+        // 合法主密码：满足大小写 + 数字且无空白、长度恒 >= 最小长度（区间内）。
+        // 各类别数组下限取 3，再加固定后缀 "Aa1"（3 位），总长 >= 3*3+3 = 12 >= MinimumLength(8)。
         var strongGen =
             from upper in Gen.Char['A', 'Z'].Array[3, 8]
             from lower in Gen.Char['a', 'z'].Array[3, 8]
             from digit in Gen.Char['0', '9'].Array[3, 8]
-            from special in Gen.OneOfConst('!', '@', '#', '$', '%', '^', '&', '*')
-            select new string(upper) + new string(lower) + new string(digit) + special + "Aa1!";
+            select new string(upper) + new string(lower) + new string(digit) + "Aa1";
 
         strongGen.Sample(password =>
         {
@@ -202,10 +201,15 @@ public sealed class SecurityInvariantPreservationTests
             Assert.Equal(string.Empty, error);
         });
 
+        Assert.True(
+            MasterPasswordPolicy.TryValidate("Abcdef12", out var acceptedWithoutSpecialError),
+            $"符合 8 位+大小写+数字且无特殊字符的主密码被拒绝：{acceptedWithoutSpecialError}");
+        Assert.Equal(string.Empty, acceptedWithoutSpecialError);
+
         // 含空白：必被拒绝（防注入/边界校验保持）。
         var withWhitespaceGen =
             from token in Gen.Char['a', 'z'].Array[1, 10].Select(c => new string(c))
-            select "Aa1!" + token + " " + token;
+            select "Aa1" + token + " " + token;
 
         withWhitespaceGen.Sample(password =>
         {
