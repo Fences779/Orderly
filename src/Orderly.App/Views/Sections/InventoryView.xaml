@@ -2,69 +2,136 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              AutomationProperties.AutomationId="Page_Inventory">
+
+    <!--
+        InventoryView.xaml — 库存页（commerce-settings-ui-rebuild / 任务 7.1）
+        ================================================================================
+        约束遵循：
+          - 仅消费既有绑定（InventoryPage：状态四标志 ShowLoading/HasError/IsEmpty/ShowContent、
+            ErrorMessage、RefreshCommand、Items 集合；行字段 Name/Sku/QuantityAvailable/
+            ReorderThreshold/IsLowStock/CoverageDays/ShouldReorder/SuggestedReorderQuantity）。
+            不新增、不重命名绑定路径；不改代码后置。
+          - 零硬编码视觉字面量：颜色一律 DynamicResource 引用主题语义画刷；字号/字重/字体族/圆角/
+            间距一律 StaticResource 引用全局令牌（Tokens/* 与 Controls/* 经 App.xaml 全局合并）。
+          - 套用统一状态机骨架（加载/空/错误/内容）与既有控件样式。
+          - 列表用已启用 UI 虚拟化的 UiDataGridStyle（需求 11.4）。
+          - 预警高亮（需求 4.4）：基于既有 IsLowStock / ShouldReorder 字段，用 DataTrigger 切换行底色
+            （警告 WarmSoftBrush / 错误 DangerSoftBrush），并以状态徽标承载文字，不以颜色为唯一信息载体。
+        相关需求：4.1 / 4.2 / 4.3 / 4.4 / 4.5 / 4.6 / 4.7。
+    -->
+
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+            <!-- 布尔→可见性转换器（本地声明，避免依赖外壳资源；非视觉字面量） -->
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+            <!--
+                库存行样式：在全局 UiDataGridRowStyle（舒适行高 + 选中态主色弱底/左侧主色条 + 模板）基础上，
+                按既有预警字段切换行底色。两个 DataTrigger 顺序：低库存(警告黄) 在前、建议补货(错误红) 在后，
+                故二者同真时由更严重的「建议补货」错误色覆盖。底色经模板 RowBorder 的 TemplateBinding 生效；
+                选中/悬停态仍由模板触发器直接表达，预警高亮不影响选中可辨识性（需求 4.4 / 4.5）。
+            -->
+            <Style x:Key="InventoryRowStyle" TargetType="DataGridRow" BasedOn="{StaticResource UiDataGridRowStyle}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource WarmSoftBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding ShouldReorder}" Value="True">
+                        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid Background="Transparent" Margin="0,0,0,12" DataContext="{Binding InventoryPage}">
+
+    <Grid DataContext="{Binding InventoryPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,18">
+        <!-- ==================== 页头：标题 + 刷新 ==================== -->
+        <Grid Grid.Row="0" Margin="{StaticResource UiPresenterGapBottomLg}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="库存" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
-                <TextBlock Text="库存数量、补货建议与库存风险" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
+                <TextBlock Text="库存"
+                           FontSize="{StaticResource UiFontDisplay}"
+                           FontWeight="{StaticResource UiFontWeightBold}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           Foreground="{DynamicResource HeadingBrush}"
+                           Margin="{StaticResource UiPresenterGapBottom}" />
+                <TextBlock Text="库存数量、补货建议与库存风险"
+                           FontSize="{StaticResource UiFontCaption}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           Foreground="{DynamicResource SecondaryTextBrush}" />
             </StackPanel>
-            <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}" VerticalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" Padding="14,6" />
+
+            <!-- 刷新即唯一变更命令；AsyncRelayCommand 执行期间自动 CanExecute=false，故加载中自动禁用（需求 4.7） -->
+            <Button Grid.Column="1"
+                    Content="刷新"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    Command="{Binding RefreshCommand}"
+                    VerticalAlignment="Center" />
         </Grid>
 
-        <!-- 加载中 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="正在加载库存数据…" Foreground="{DynamicResource MutedBrush}" FontSize="15" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ==================== 加载中 ==================== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiLoadingStateStyle}"
+                        Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 加载失败 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <!-- ==================== 加载失败：错误提示 + 重试（既有 RefreshCommand） ==================== -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
                     Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xEA39;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="#D12E9F" HorizontalAlignment="Center" />
-            <TextBlock Text="库存数据加载失败" Foreground="{DynamicResource HeadingBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,6,0,0" MaxWidth="420" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
-            <Button Content="重试" Command="{Binding RefreshCommand}" Margin="0,14,0,0" Padding="18,7" HorizontalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" />
+            <ContentControl Style="{StaticResource UiErrorNoticeStyle}"
+                            Content="{Binding ErrorMessage}" />
+            <Button Content="重试"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    Command="{Binding RefreshCommand}"
+                    HorizontalAlignment="Center"
+                    Margin="{StaticResource UiNoticePadding}" />
         </StackPanel>
 
-        <!-- 空状态 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
-            <TextBlock Text="暂无库存数据" Foreground="{DynamicResource MutedBrush}" FontSize="15" Margin="0,14,0,0" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ==================== 空状态 ==================== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiEmptyStateStyle}"
+                        Content="当前没有库存条目"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 数据 -->
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Items}" AutoGenerateColumns="False" IsReadOnly="True"
-                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" CanUserAddRows="False"
-                  Background="Transparent" BorderThickness="0"
+        <!-- ==================== 数据：舒适表格（UI 虚拟化由 UiDataGridStyle 提供） ==================== -->
+        <DataGrid Grid.Row="1"
+                  Style="{StaticResource UiDataGridStyle}"
+                  RowStyle="{StaticResource InventoryRowStyle}"
+                  ItemsSource="{Binding Items}"
                   Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
                 <DataGridTextColumn Header="编码" Binding="{Binding Sku}" Width="Auto" />
                 <DataGridTextColumn Header="可用数量" Binding="{Binding QuantityAvailable}" Width="Auto" />
                 <DataGridTextColumn Header="补货阈值" Binding="{Binding ReorderThreshold}" Width="Auto" />
-                <DataGridCheckBoxColumn Header="低库存" Binding="{Binding IsLowStock}" Width="Auto" />
                 <DataGridTextColumn Header="可用天数" Binding="{Binding CoverageDays, StringFormat={}{0:0.#}}" Width="Auto" />
-                <DataGridCheckBoxColumn Header="建议补货" Binding="{Binding ShouldReorder}" Width="Auto" />
                 <DataGridTextColumn Header="建议补货量" Binding="{Binding SuggestedReorderQuantity}" Width="Auto" />
+
+                <!-- 库存状态：以徽标（底色 + 文字双载体）呈现预警，不以颜色为唯一信息载体（需求 12.4 / 4.4） -->
+                <DataGridTemplateColumn Header="库存状态" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <ContentControl Style="{StaticResource UiBadgeErrorStyle}"
+                                                Content="需补货"
+                                                Margin="{StaticResource UiPresenterGapRight}"
+                                                Visibility="{Binding ShouldReorder, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <ContentControl Style="{StaticResource UiBadgeWarningStyle}"
+                                                Content="低库存"
+                                                Visibility="{Binding IsLowStock, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

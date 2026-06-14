@@ -2,63 +2,128 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              AutomationProperties.AutomationId="Page_Customers">
+    <!--
+        CustomersView — 客户页（commerce-settings-ui-rebuild 任务 8.1）
+        ================================================================================
+        约束遵循：
+          · 仅消费 CustomersPageViewModel 既有绑定（DataContext=CustomersPage）：
+              集合 Customers（CustomerRow: Name / Phone / RecencyDays / Frequency / Monetary）、
+              状态四标志 ShowLoading / HasError / IsEmpty / ShowContent、ErrorMessage、命令 RefreshCommand。
+              不新增、不重命名任何绑定路径；不改代码后置。
+          · 该 VM 未暴露任何搜索 / 筛选属性，故不渲染绑定到空的死控件（遵守"仅消费既有绑定"硬约束）。
+          · 跟进 / 异常徽标：基于既有字段 Frequency（成交次数）以 DataTrigger 在 UiBadge*Style 间切换，
+              徽标同时承载文字，不以颜色为唯一信息载体（需求 5.5 / 12.4）。
+          · 全部视觉值引用 token（颜色 DynamicResource 语义画刷；字号/字重/字体/圆角 StaticResource 令牌）。
+              Margin 为 Thickness 类型无法直接引用 Double 型 UiSpace 令牌，故在下方以 4pt 栅格
+              （4/8/12/16/24/32，对齐 Shape.xaml）派生具名 Thickness 令牌，标记侧只引用具名令牌、零散值字面量。
+          · 列表套用已启用 UI 虚拟化的 UiDataGridStyle；选中态、舒适行高由该样式统一承载。
+          · 状态机骨架：加载 / 错误（含 RefreshCommand 重试）/ 空 / 内容 四态互斥呈现。
+    -->
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- 页面布局间距令牌（UiSpace 4pt 栅格的 Thickness 投影；消费侧仅引用具名令牌） -->
+            <Thickness x:Key="CustHeaderMargin">0,0,0,24</Thickness>   <!-- 标题区下间距 = UiSpaceLg(24) -->
+            <Thickness x:Key="CustSubtitleMargin">0,4,0,0</Thickness>  <!-- 副标题上间距 = UiSpaceXxs(4) -->
+            <Thickness x:Key="CustErrorTitleMargin">0,16,0,0</Thickness> <!-- 错误标题上间距 = UiSpaceMd(16) -->
+            <Thickness x:Key="CustRetryMargin">0,16,0,0</Thickness>   <!-- 重试按钮上间距 = UiSpaceMd(16) -->
         </ResourceDictionary>
     </UserControl.Resources>
+
     <Grid Background="Transparent" DataContext="{Binding CustomersPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,18">
+        <!-- 标题区：标题 + 说明 + 刷新（RefreshCommand 在加载中由命令 CanExecute 自动禁用） -->
+        <Grid Grid.Row="0" Margin="{StaticResource CustHeaderMargin}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="客户" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
-                <TextBlock Text="管理客户关系与复购提醒" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
+                <TextBlock Text="客户"
+                           FontSize="{StaticResource UiFontDisplay}"
+                           FontWeight="{StaticResource UiFontWeightBold}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           Foreground="{DynamicResource HeadingBrush}" />
+                <TextBlock Text="管理客户关系与复购提醒"
+                           Margin="{StaticResource CustSubtitleMargin}"
+                           FontSize="{StaticResource UiFontCaption}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           Foreground="{DynamicResource CaptionTextBrush}" />
             </StackPanel>
-            <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}" VerticalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" Padding="14,6" />
+            <Button Grid.Column="1"
+                    Content="刷新"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    VerticalAlignment="Center" />
         </Grid>
 
         <!-- 加载中 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="正在加载客户数据…" Foreground="{DynamicResource MutedBrush}" FontSize="15" HorizontalAlignment="Center" />
-        </StackPanel>
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiLoadingStateStyle}"
+                        Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 加载失败 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <!-- 加载失败（页面级错误：保留导航与上次状态，绑定既有 RefreshCommand 重试） -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
                     Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xEA39;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="#D12E9F" HorizontalAlignment="Center" />
-            <TextBlock Text="客户数据加载失败" Foreground="{DynamicResource HeadingBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,6,0,0" MaxWidth="420" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
-            <Button Content="重试" Command="{Binding RefreshCommand}" Margin="0,14,0,0" Padding="18,7" HorizontalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" />
+            <TextBlock Text="客户数据加载失败"
+                       HorizontalAlignment="Center"
+                       FontSize="{StaticResource UiFontSubtitle}"
+                       FontWeight="{StaticResource UiFontWeightSemiBold}"
+                       FontFamily="{StaticResource UiFontFamilyCjk}"
+                       Foreground="{DynamicResource HeadingBrush}" />
+            <ContentControl Style="{StaticResource UiErrorNoticeStyle}"
+                            Content="{Binding ErrorMessage}"
+                            Margin="{StaticResource CustErrorTitleMargin}" />
+            <Button Content="重试"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    HorizontalAlignment="Center"
+                    Margin="{StaticResource CustRetryMargin}" />
         </StackPanel>
 
         <!-- 空状态 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
-            <TextBlock Text="暂无客户数据" Foreground="{DynamicResource MutedBrush}" FontSize="15" Margin="0,14,0,0" HorizontalAlignment="Center" />
-        </StackPanel>
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiEmptyStateStyle}"
+                        Content="暂无客户数据，刷新或确认数据来源后再试"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 数据 -->
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Customers}" AutoGenerateColumns="False" IsReadOnly="True"
-                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" CanUserAddRows="False"
-                  Background="Transparent" BorderThickness="0"
+        <!-- 数据：舒适表格密度 + UI 虚拟化 + 选中态（均由 UiDataGridStyle 承载） -->
+        <DataGrid Grid.Row="1"
+                  Style="{StaticResource UiDataGridStyle}"
+                  ItemsSource="{Binding Customers}"
                   Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="客户名称" Binding="{Binding Name}" Width="*" />
                 <DataGridTextColumn Header="电话" Binding="{Binding Phone}" Width="Auto" />
+                <!-- 跟进状态徽标：Frequency=0（从未成交）→ 警告色「待跟进」，否则成功色「正常」 -->
+                <DataGridTemplateColumn Header="跟进状态" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ContentControl Content="正常">
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl" BasedOn="{StaticResource UiBadgeSuccessStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Frequency}" Value="0">
+                                                <Setter Property="Background" Value="{DynamicResource WarmSoftBrush}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource WarmTextBrush}" />
+                                                <Setter Property="Content" Value="待跟进" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ContentControl.Style>
+                            </ContentControl>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn Header="最近成交（天）" Binding="{Binding RecencyDays}" Width="Auto" />
                 <DataGridTextColumn Header="成交次数" Binding="{Binding Frequency}" Width="Auto" />
                 <DataGridTextColumn Header="累计成交额" Binding="{Binding Monetary, StringFormat=¥{0}}" Width="Auto" />

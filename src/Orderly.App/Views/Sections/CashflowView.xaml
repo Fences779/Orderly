@@ -1,129 +1,262 @@
 <UserControl x:Class="Orderly.App.Views.Sections.CashflowView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              AutomationProperties.AutomationId="Page_Cashflow">
+    <!--
+        现金流页（Cashflow_View）— commerce-settings-ui-rebuild 任务 9.1
+        ============================================================================
+        约束：仅消费 CashflowPageViewModel 既有绑定（状态四标志 / ErrorMessage / RefreshCommand、
+              RealizedIncome / RealizedExpense / NetCashFlow / OutstandingReceivable /
+              OutstandingPayable / HealthScore、Entries 集合），不新增/重命名 Binding，不改代码后置。
+        令牌：颜色一律 DynamicResource 主题语义画刷；字号/圆角/字重/字体族以 StaticResource 引用
+              Typography.xaml / Shape.xaml（经 App.xaml 全局合并）；间距以本页派生 Thickness 令牌
+              （对齐 Shape.xaml 的 UiSpace 4pt 栅格）承载，页面层零硬编码视觉字面量。
+        图表：CashflowPageViewModel 未暴露任何图表数据属性/集合，按需求 6.8 条件分支
+              「未暴露则不引入新图表数据来源」，故不预留图表占位、不引入新数据源。
+        着色：顶部收入用成功绿、支出用错误红（语义固定）、净额用主标题中性色（符号由数值字符串承载，
+              不以颜色为唯一信息载体）；行级金额/方向按既有 Direction 字段用 DataTrigger 切换
+              成功绿 / 错误红 / 中性（Income / Expense / Transfer），不新增 VM 计算逻辑。
+    -->
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+                <!-- 仅为复用既有转换器（CommerceEnumLabelConverter / BooleanToVisibilityConverter）；不引入视觉字面量 -->
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainSharedResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <Style x:Key="CashflowMetricCard" TargetType="Border">
-                <Setter Property="Background" Value="#FFFFFF" />
-                <Setter Property="BorderBrush" Value="#E5E7EC" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="12" />
-                <Setter Property="Padding" Value="16,14" />
-                <Setter Property="Width" Value="180" />
-                <Setter Property="Margin" Value="0,0,12,12" />
+            <!-- ===== 本页派生间距令牌（对齐 Shape.xaml 的 UiSpace 4pt 栅格，集中定义、统一引用） ===== -->
+            <!-- 页头与主体间距：底 UiSpaceLg(24) -->
+            <Thickness x:Key="CfPageHeaderGap">0,0,0,24</Thickness>
+            <!-- 指标卡外边距：右 + 底 UiSpaceMd(16) -->
+            <Thickness x:Key="CfCardMargin">0,0,16,16</Thickness>
+            <!-- 指标卡内边距：UiSpaceMd(16) -->
+            <Thickness x:Key="CfCardPadding">16,16,16,16</Thickness>
+            <!-- 指标数值与标题间距：上 UiSpaceXs(8) -->
+            <Thickness x:Key="CfValueGap">0,8,0,0</Thickness>
+            <!-- 区块标题间距：上 UiSpaceLg(24) 底 UiSpaceSm(12) -->
+            <Thickness x:Key="CfSectionTitleGap">0,24,0,12</Thickness>
+            <!-- 错误/空态重试按钮上间距：UiSpaceMd(16) -->
+            <Thickness x:Key="CfRetryGap">0,16,0,0</Thickness>
+
+            <!-- 指标卡最小宽度（4pt 栅格：42×4=168） -->
+            <sys:Double x:Key="CfMetricCardMinWidth">168</sys:Double>
+
+            <!-- ===== 指标卡样式（表面底 + 发丝边 + 基础圆角 + 弱阴影） ===== -->
+            <Style x:Key="CfMetricCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+                <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+                <Setter Property="CornerRadius" Value="{StaticResource UiRadiusMd}" />
+                <Setter Property="Padding" Value="{StaticResource CfCardPadding}" />
+                <Setter Property="Margin" Value="{StaticResource CfCardMargin}" />
+                <Setter Property="MinWidth" Value="{StaticResource CfMetricCardMinWidth}" />
+                <Setter Property="Effect" Value="{StaticResource UiElevationCard}" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
             </Style>
-            <Style x:Key="CashflowMetricCaption" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="11" />
-                <Setter Property="Foreground" Value="#868E96" />
+
+            <!-- 指标标题（辅助字号 + 次文字色） -->
+            <Style x:Key="CfMetricCaptionStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+                <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
             </Style>
-            <Style x:Key="CashflowMetricValue" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="22" />
-                <Setter Property="FontWeight" Value="Bold" />
-                <Setter Property="Foreground" Value="#1D1D1F" />
-                <Setter Property="Margin" Value="0,6,0,0" />
+
+            <!-- 核心数值（收入/支出/净额）：标题大字号阶 + 拉丁数字族 -->
+            <Style x:Key="CfMetricValueCoreStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="{StaticResource UiFontDisplay}" />
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyLatin}" />
+                <Setter Property="FontWeight" Value="{StaticResource UiFontWeightBold}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="Margin" Value="{StaticResource CfValueGap}" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+
+            <!-- 次级数值（应收/应付/健康度）：标题字号阶 + 拉丁数字族 -->
+            <Style x:Key="CfMetricValueSecondaryStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="{StaticResource UiFontTitle}" />
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyLatin}" />
+                <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="Margin" Value="{StaticResource CfValueGap}" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+
+            <!-- 区块标题（副标题字号阶） -->
+            <Style x:Key="CfSectionTitleStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="{StaticResource UiFontSubtitle}" />
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+                <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="Margin" Value="{StaticResource CfSectionTitleGap}" />
+            </Style>
+
+            <!-- 明细「金额」列文本样式：按既有 Direction 字段着色（Income 绿 / Expense 红 / Transfer 中性） -->
+            <Style x:Key="CfAmountCellStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyLatin}" />
+                <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Direction}" Value="Income">
+                        <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Direction}" Value="Expense">
+                        <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- 明细「方向」列文本样式：与金额一致的语义着色，颜色非唯一载体（仍有文字标签） -->
+            <Style x:Key="CfDirectionCellStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+                <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Direction}" Value="Income">
+                        <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Direction}" Value="Expense">
+                        <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                    </DataTrigger>
+                </Style.Triggers>
             </Style>
         </ResourceDictionary>
     </UserControl.Resources>
+
     <Grid Background="Transparent" DataContext="{Binding CashflowPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,18">
+        <!-- ===== 页头 ===== -->
+        <Grid Grid.Row="0" Margin="{StaticResource CfPageHeaderGap}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="现金流" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
-                <TextBlock Text="近 30 天收支、应收应付与现金流健康度" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
+                <TextBlock Text="现金流"
+                           FontSize="{StaticResource UiFontTitle}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           FontWeight="{StaticResource UiFontWeightBold}"
+                           Foreground="{DynamicResource HeadingBrush}" />
+                <TextBlock Text="近 30 天收支、应收应付与现金流健康度"
+                           FontSize="{StaticResource UiFontCaption}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           Margin="{StaticResource UiPresenterGapBottom}" />
             </StackPanel>
-            <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}" VerticalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" Padding="14,6" />
+            <Button Grid.Column="1"
+                    Content="刷新"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource UiTextButtonStyle}"
+                    VerticalAlignment="Center" />
         </Grid>
 
-        <!-- 加载中 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="正在加载现金流数据…" Foreground="{DynamicResource MutedBrush}" FontSize="15" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ===== 加载中（骨架/指示条） ===== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiLoadingStateStyle}"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 加载失败 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <!-- ===== 加载失败（错误提示条 + 重试，绑定既有 RefreshCommand） ===== -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
                     Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xEA39;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="#D12E9F" HorizontalAlignment="Center" />
-            <TextBlock Text="现金流数据加载失败" Foreground="{DynamicResource HeadingBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,6,0,0" MaxWidth="420" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
-            <Button Content="重试" Command="{Binding RefreshCommand}" Margin="0,14,0,0" Padding="18,7" HorizontalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" />
+            <ContentControl Style="{StaticResource UiErrorNoticeStyle}"
+                            Content="{Binding ErrorMessage}" />
+            <Button Content="重试"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    HorizontalAlignment="Center"
+                    Margin="{StaticResource CfRetryGap}" />
         </StackPanel>
 
-        <!-- 空状态 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xE825;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
-            <TextBlock Text="暂无现金流数据" Foreground="{DynamicResource MutedBrush}" FontSize="15" Margin="0,14,0,0" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ===== 空状态 ===== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiEmptyStateStyle}"
+                        Content="暂无现金流数据，录入收支记录后将在此汇总展示"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 数据 -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+        <!-- ===== 内容（概览数字 + 明细表格） ===== -->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
                       Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel>
+                <!-- 概览：收入/支出/净额（核心数字，数字字号阶）+ 应收/应付/健康度 -->
                 <WrapPanel>
-                    <Border Style="{StaticResource CashflowMetricCard}">
+                    <Border Style="{StaticResource CfMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="已实现收入" Style="{StaticResource CashflowMetricCaption}" />
-                            <TextBlock Text="{Binding RealizedIncome, StringFormat=¥{0}}" Style="{StaticResource CashflowMetricValue}" />
+                            <TextBlock Text="已实现收入" Style="{StaticResource CfMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding RealizedIncome, StringFormat=¥{0}}"
+                                       Style="{StaticResource CfMetricValueCoreStyle}"
+                                       Foreground="{DynamicResource AccentTextBrush}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CashflowMetricCard}">
+                    <Border Style="{StaticResource CfMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="已实现支出" Style="{StaticResource CashflowMetricCaption}" />
-                            <TextBlock Text="{Binding RealizedExpense, StringFormat=¥{0}}" Style="{StaticResource CashflowMetricValue}" />
+                            <TextBlock Text="已实现支出" Style="{StaticResource CfMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding RealizedExpense, StringFormat=¥{0}}"
+                                       Style="{StaticResource CfMetricValueCoreStyle}"
+                                       Foreground="{DynamicResource DangerTextBrush}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CashflowMetricCard}">
+                    <Border Style="{StaticResource CfMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="净现金流" Style="{StaticResource CashflowMetricCaption}" />
-                            <TextBlock Text="{Binding NetCashFlow, StringFormat=¥{0}}" Style="{StaticResource CashflowMetricValue}" />
+                            <TextBlock Text="净现金流" Style="{StaticResource CfMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding NetCashFlow, StringFormat=¥{0}}"
+                                       Style="{StaticResource CfMetricValueCoreStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CashflowMetricCard}">
+                    <Border Style="{StaticResource CfMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="应收账款" Style="{StaticResource CashflowMetricCaption}" />
-                            <TextBlock Text="{Binding OutstandingReceivable, StringFormat=¥{0}}" Style="{StaticResource CashflowMetricValue}" />
+                            <TextBlock Text="应收账款" Style="{StaticResource CfMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding OutstandingReceivable, StringFormat=¥{0}}"
+                                       Style="{StaticResource CfMetricValueSecondaryStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CashflowMetricCard}">
+                    <Border Style="{StaticResource CfMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="应付账款" Style="{StaticResource CashflowMetricCaption}" />
-                            <TextBlock Text="{Binding OutstandingPayable, StringFormat=¥{0}}" Style="{StaticResource CashflowMetricValue}" />
+                            <TextBlock Text="应付账款" Style="{StaticResource CfMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding OutstandingPayable, StringFormat=¥{0}}"
+                                       Style="{StaticResource CfMetricValueSecondaryStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CashflowMetricCard}">
+                    <Border Style="{StaticResource CfMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="现金流健康度" Style="{StaticResource CashflowMetricCaption}" />
-                            <TextBlock Text="{Binding HealthScore}" Style="{StaticResource CashflowMetricValue}" />
+                            <TextBlock Text="现金流健康度" Style="{StaticResource CfMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding HealthScore}"
+                                       Style="{StaticResource CfMetricValueSecondaryStyle}" />
                         </StackPanel>
                     </Border>
                 </WrapPanel>
 
-                <TextBlock Text="近 30 天收支明细" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="6,18,0,10" />
-                <DataGrid ItemsSource="{Binding Entries}" AutoGenerateColumns="False" IsReadOnly="True"
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" CanUserAddRows="False"
-                          Background="Transparent" BorderThickness="0">
+                <!-- 明细标题 -->
+                <TextBlock Text="近 30 天收支明细" Style="{StaticResource CfSectionTitleStyle}" />
+
+                <!-- 明细表格（舒适档 + UI 虚拟化，统一 DataGrid 令牌样式） -->
+                <DataGrid ItemsSource="{Binding Entries}" Style="{StaticResource UiDataGridStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="发生时间" Binding="{Binding OccurredAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" Width="*" />
-                        <DataGridTextColumn Header="方向" Binding="{Binding Direction, Converter={StaticResource CommerceEnumLabelConverter}}" Width="Auto" />
-                        <DataGridTextColumn Header="金额" Binding="{Binding Amount, StringFormat=¥{0}}" Width="Auto" />
-                        <DataGridTextColumn Header="结算状态" Binding="{Binding SettlementStatus, Converter={StaticResource CommerceEnumLabelConverter}}" Width="Auto" />
-                        <DataGridTextColumn Header="分类" Binding="{Binding CategoryName}" Width="Auto" />
+                        <DataGridTextColumn Header="发生时间"
+                                            Binding="{Binding OccurredAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                            Width="*" />
+                        <DataGridTextColumn Header="方向"
+                                            Binding="{Binding Direction, Converter={StaticResource CommerceEnumLabelConverter}}"
+                                            ElementStyle="{StaticResource CfDirectionCellStyle}"
+                                            Width="Auto" />
+                        <DataGridTextColumn Header="金额"
+                                            Binding="{Binding Amount, StringFormat=¥{0}}"
+                                            ElementStyle="{StaticResource CfAmountCellStyle}"
+                                            Width="Auto" />
+                        <DataGridTextColumn Header="结算状态"
+                                            Binding="{Binding SettlementStatus, Converter={StaticResource CommerceEnumLabelConverter}}"
+                                            Width="Auto" />
+                        <DataGridTextColumn Header="分类"
+                                            Binding="{Binding CategoryName}"
+                                            Width="Auto" />
                     </DataGrid.Columns>
                 </DataGrid>
             </StackPanel>

@@ -1,141 +1,232 @@
 <UserControl x:Class="Orderly.App.Views.Sections.WorkbenchView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              AutomationProperties.AutomationId="Page_Workbench">
+    <!--
+        数据分析页（Analytics_View / WorkbenchView）— commerce-settings-ui-rebuild 任务 10.1
+        ============================================================================
+        约束：仅消费 WorkbenchPageViewModel 既有绑定（状态四标志 ShowLoading / HasError /
+              IsEmpty / ShowContent、ErrorMessage、RefreshCommand；指标 TotalOrders /
+              CompletedOrders / TotalRevenue / GrossProfit / OutstandingReceivable /
+              NetCashFlow / CustomerCount / LowStockItemCount；Trend 集合行
+              WorkbenchTrendRow{Date / CompletedOrderCount / Revenue / CashInflow / CashOutflow}）。
+              不新增 / 重命名 Binding 路径，不改代码后置。
+        令牌：颜色一律 DynamicResource 主题语义画刷；字号 / 圆角 / 字重 / 字体族以 StaticResource
+              引用 Typography.xaml / Shape.xaml / ControlStyles.xaml（经 App.xaml 全局合并）；
+              间距以本页派生 Thickness 令牌（对齐 Shape.xaml 的 UiSpace 4pt 栅格）承载，
+              页面层零硬编码视觉字面量。
+        指标卡：以指标卡阵列（WrapPanel）呈现既有关键指标；关键数值用数字字号阶
+              UiFontDisplay + 拉丁数字族 UiFontFamilyLatin 突出（需求 7.3 / 7.4）。
+              指标卡套用 SurfaceRaisedBrush + UiRadiusMd + UiElevationCard（参考 CashflowView）。
+        异常/预警着色：WorkbenchPageViewModel 未暴露任何「异常 / 预警」判定字段（指标均为
+              普通数值 / 计数，LowStockItemCount 亦仅为计数而非布尔预警标志），按需求 7.5 的
+              WHEN 条件分支「VM 标注为异常或预警态时才着色」，当前条件不成立，故不臆造着色，
+              不新增 VM 字段或计算逻辑。
+        图表：本特性不引入图表库（需求 13.4）；Trend 为既有数据集合，以既有 DataGrid 列表呈现，
+              不引入新图表控件。
+    -->
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+                <!-- 仅为复用既有转换器 BooleanToVisibilityConverter；不引入视觉字面量 -->
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/Main/MainSharedResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <Style x:Key="WorkbenchMetricCard" TargetType="Border">
-                <Setter Property="Background" Value="#FFFFFF" />
-                <Setter Property="BorderBrush" Value="#E5E7EC" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="12" />
-                <Setter Property="Padding" Value="16,14" />
-                <Setter Property="Width" Value="170" />
-                <Setter Property="Margin" Value="0,0,12,12" />
+            <!-- ===== 本页派生间距令牌（对齐 Shape.xaml 的 UiSpace 4pt 栅格，集中定义、统一引用） ===== -->
+            <!-- 页头与主体间距：底 UiSpaceLg(24) -->
+            <Thickness x:Key="WbPageHeaderGap">0,0,0,24</Thickness>
+            <!-- 指标卡外边距：右 + 底 UiSpaceMd(16) -->
+            <Thickness x:Key="WbCardMargin">0,0,16,16</Thickness>
+            <!-- 指标卡内边距：UiSpaceMd(16) -->
+            <Thickness x:Key="WbCardPadding">16,16,16,16</Thickness>
+            <!-- 指标数值与标题间距：上 UiSpaceXs(8) -->
+            <Thickness x:Key="WbValueGap">0,8,0,0</Thickness>
+            <!-- 区块标题间距：上 UiSpaceLg(24) 底 UiSpaceSm(12) -->
+            <Thickness x:Key="WbSectionTitleGap">0,24,0,12</Thickness>
+            <!-- 错误/空态重试按钮上间距：UiSpaceMd(16) -->
+            <Thickness x:Key="WbRetryGap">0,16,0,0</Thickness>
+
+            <!-- 指标卡最小宽度（4pt 栅格：42×4=168） -->
+            <sys:Double x:Key="WbMetricCardMinWidth">168</sys:Double>
+
+            <!-- ===== 指标卡样式（表面底 + 发丝边 + 基础圆角 + 弱阴影） ===== -->
+            <Style x:Key="WbMetricCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+                <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+                <Setter Property="CornerRadius" Value="{StaticResource UiRadiusMd}" />
+                <Setter Property="Padding" Value="{StaticResource WbCardPadding}" />
+                <Setter Property="Margin" Value="{StaticResource WbCardMargin}" />
+                <Setter Property="MinWidth" Value="{StaticResource WbMetricCardMinWidth}" />
+                <Setter Property="Effect" Value="{StaticResource UiElevationCard}" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
             </Style>
-            <Style x:Key="WorkbenchMetricCaption" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="11" />
-                <Setter Property="Foreground" Value="#868E96" />
+
+            <!-- 指标标题（辅助字号 + 次文字色） -->
+            <Style x:Key="WbMetricCaptionStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+                <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
             </Style>
-            <Style x:Key="WorkbenchMetricValue" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="22" />
-                <Setter Property="FontWeight" Value="Bold" />
-                <Setter Property="Foreground" Value="#1D1D1F" />
-                <Setter Property="Margin" Value="0,6,0,0" />
+
+            <!-- 关键指标数值：标题大字号阶（数字字号阶）+ 拉丁数字族，突出关键数值（需求 7.4） -->
+            <Style x:Key="WbMetricValueStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="{StaticResource UiFontDisplay}" />
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyLatin}" />
+                <Setter Property="FontWeight" Value="{StaticResource UiFontWeightBold}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="Margin" Value="{StaticResource WbValueGap}" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+
+            <!-- 区块标题（副标题字号阶） -->
+            <Style x:Key="WbSectionTitleStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="{StaticResource UiFontSubtitle}" />
+                <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+                <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+                <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                <Setter Property="Margin" Value="{StaticResource WbSectionTitleGap}" />
             </Style>
         </ResourceDictionary>
     </UserControl.Resources>
+
     <Grid Background="Transparent" DataContext="{Binding WorkbenchPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,18">
+        <!-- ===== 页头 ===== -->
+        <Grid Grid.Row="0" Margin="{StaticResource WbPageHeaderGap}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="工作台" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
-                <TextBlock Text="经营概览与近 7 天趋势" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
+                <TextBlock Text="数据分析"
+                           FontSize="{StaticResource UiFontTitle}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           FontWeight="{StaticResource UiFontWeightBold}"
+                           Foreground="{DynamicResource HeadingBrush}" />
+                <TextBlock Text="经营关键指标与近 7 天趋势"
+                           FontSize="{StaticResource UiFontCaption}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           Margin="{StaticResource UiPresenterGapBottom}" />
             </StackPanel>
-            <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}" VerticalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" Padding="14,6" />
+            <Button Grid.Column="1"
+                    Content="刷新"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource UiTextButtonStyle}"
+                    VerticalAlignment="Center" />
         </Grid>
 
-        <!-- 加载中 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="正在加载经营概览…" Foreground="{DynamicResource MutedBrush}" FontSize="15" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ===== 加载中（骨架/指示条） ===== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiLoadingStateStyle}"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 加载失败 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <!-- ===== 加载失败（错误提示条 + 重试，绑定既有 RefreshCommand） ===== -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
                     Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xEA39;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="#D12E9F" HorizontalAlignment="Center" />
-            <TextBlock Text="经营概览加载失败" Foreground="{DynamicResource HeadingBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,6,0,0" MaxWidth="420" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
-            <Button Content="重试" Command="{Binding RefreshCommand}" Margin="0,14,0,0" Padding="18,7" HorizontalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" />
+            <ContentControl Style="{StaticResource UiErrorNoticeStyle}"
+                            Content="{Binding ErrorMessage}" />
+            <Button Content="重试"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    HorizontalAlignment="Center"
+                    Margin="{StaticResource WbRetryGap}" />
         </StackPanel>
 
-        <!-- 空状态 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xE9D2;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
-            <TextBlock Text="暂无经营数据" Foreground="{DynamicResource MutedBrush}" FontSize="15" Margin="0,14,0,0" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ===== 空状态 ===== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiEmptyStateStyle}"
+                        Content="暂无经营数据，待业务数据生成后将在此汇总展示"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 数据 -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+        <!-- ===== 内容（指标卡阵列 + 趋势明细） ===== -->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
                       Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel>
+                <!-- 指标卡阵列：关键指标，数值用数字字号阶突出（需求 7.3 / 7.4） -->
                 <WrapPanel>
-                    <Border Style="{StaticResource WorkbenchMetricCard}">
+                    <Border Style="{StaticResource WbMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="订单总数" Style="{StaticResource WorkbenchMetricCaption}" />
-                            <TextBlock Text="{Binding TotalOrders}" Style="{StaticResource WorkbenchMetricValue}" />
+                            <TextBlock Text="订单总数" Style="{StaticResource WbMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding TotalOrders}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WorkbenchMetricCard}">
+                    <Border Style="{StaticResource WbMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="已完成订单" Style="{StaticResource WorkbenchMetricCaption}" />
-                            <TextBlock Text="{Binding CompletedOrders}" Style="{StaticResource WorkbenchMetricValue}" />
+                            <TextBlock Text="已完成订单" Style="{StaticResource WbMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding CompletedOrders}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WorkbenchMetricCard}">
+                    <Border Style="{StaticResource WbMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="营业额" Style="{StaticResource WorkbenchMetricCaption}" />
-                            <TextBlock Text="{Binding TotalRevenue, StringFormat=¥{0}}" Style="{StaticResource WorkbenchMetricValue}" />
+                            <TextBlock Text="营业额" Style="{StaticResource WbMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding TotalRevenue, StringFormat=¥{0}}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WorkbenchMetricCard}">
+                    <Border Style="{StaticResource WbMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="毛利" Style="{StaticResource WorkbenchMetricCaption}" />
-                            <TextBlock Text="{Binding GrossProfit, StringFormat=¥{0}}" Style="{StaticResource WorkbenchMetricValue}" />
+                            <TextBlock Text="毛利" Style="{StaticResource WbMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding GrossProfit, StringFormat=¥{0}}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WorkbenchMetricCard}">
+                    <Border Style="{StaticResource WbMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="应收账款" Style="{StaticResource WorkbenchMetricCaption}" />
-                            <TextBlock Text="{Binding OutstandingReceivable, StringFormat=¥{0}}" Style="{StaticResource WorkbenchMetricValue}" />
+                            <TextBlock Text="应收账款" Style="{StaticResource WbMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding OutstandingReceivable, StringFormat=¥{0}}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WorkbenchMetricCard}">
+                    <Border Style="{StaticResource WbMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="净现金流" Style="{StaticResource WorkbenchMetricCaption}" />
-                            <TextBlock Text="{Binding NetCashFlow, StringFormat=¥{0}}" Style="{StaticResource WorkbenchMetricValue}" />
+                            <TextBlock Text="净现金流" Style="{StaticResource WbMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding NetCashFlow, StringFormat=¥{0}}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WorkbenchMetricCard}">
+                    <Border Style="{StaticResource WbMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="客户数" Style="{StaticResource WorkbenchMetricCaption}" />
-                            <TextBlock Text="{Binding CustomerCount}" Style="{StaticResource WorkbenchMetricValue}" />
+                            <TextBlock Text="客户数" Style="{StaticResource WbMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding CustomerCount}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WorkbenchMetricCard}">
+                    <Border Style="{StaticResource WbMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="低库存项" Style="{StaticResource WorkbenchMetricCaption}" />
-                            <TextBlock Text="{Binding LowStockItemCount}" Style="{StaticResource WorkbenchMetricValue}" />
+                            <TextBlock Text="低库存项" Style="{StaticResource WbMetricCaptionStyle}" />
+                            <TextBlock Text="{Binding LowStockItemCount}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
                 </WrapPanel>
 
-                <TextBlock Text="近 7 天趋势" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="6,18,0,10" />
-                <DataGrid ItemsSource="{Binding Trend}" AutoGenerateColumns="False" IsReadOnly="True"
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" CanUserAddRows="False"
-                          Background="Transparent" BorderThickness="0">
+                <!-- 趋势标题 -->
+                <TextBlock Text="近 7 天趋势" Style="{StaticResource WbSectionTitleStyle}" />
+
+                <!-- 趋势明细（舒适档 + UI 虚拟化，统一 DataGrid 令牌样式） -->
+                <DataGrid ItemsSource="{Binding Trend}" Style="{StaticResource UiDataGridStyle}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="日期" Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}" Width="*" />
-                        <DataGridTextColumn Header="完成订单" Binding="{Binding CompletedOrderCount}" Width="Auto" />
-                        <DataGridTextColumn Header="营业额" Binding="{Binding Revenue, StringFormat=¥{0}}" Width="Auto" />
-                        <DataGridTextColumn Header="现金流入" Binding="{Binding CashInflow, StringFormat=¥{0}}" Width="Auto" />
-                        <DataGridTextColumn Header="现金流出" Binding="{Binding CashOutflow, StringFormat=¥{0}}" Width="Auto" />
+                        <DataGridTextColumn Header="日期"
+                                            Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}"
+                                            Width="*" />
+                        <DataGridTextColumn Header="完成订单"
+                                            Binding="{Binding CompletedOrderCount}"
+                                            Width="Auto" />
+                        <DataGridTextColumn Header="营业额"
+                                            Binding="{Binding Revenue, StringFormat=¥{0}}"
+                                            Width="Auto" />
+                        <DataGridTextColumn Header="现金流入"
+                                            Binding="{Binding CashInflow, StringFormat=¥{0}}"
+                                            Width="Auto" />
+                        <DataGridTextColumn Header="现金流出"
+                                            Binding="{Binding CashOutflow, StringFormat=¥{0}}"
+                                            Width="Auto" />
                     </DataGrid.Columns>
                 </DataGrid>
             </StackPanel>

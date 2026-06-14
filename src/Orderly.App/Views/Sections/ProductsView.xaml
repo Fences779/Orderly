@@ -2,59 +2,108 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              AutomationProperties.AutomationId="Page_Products">
+    <!--
+        ProductsView.xaml — 成交销售页（commerce-settings-ui-rebuild / 任务 5.1）
+        ===============================================================================
+        - 统一状态机骨架：加载 / 空 / 错误 / 内容，四态由 ShowLoading / IsEmpty / HasError /
+          ShowContent 切换；错误区绑定既有 RefreshCommand 重试。
+        - 顶部概况区承载页头与时间筛选/汇总指标位（结构性区域；当前 ViewModel 仅暴露
+          Products / RefreshCommand / 状态标志，故不臆造新绑定，仅以既有 RefreshCommand 落位刷新动作）。
+        - 主体以 UiDataGridStyle（舒适档行高 + 选中态主色弱底 + 左侧主色条 + UI 虚拟化）展示 Products。
+        - 全部引用令牌：颜色用 DynamicResource 语义画刷；字号/字重/字体族用 Typography 令牌；
+          圆角用 Shape 令牌；间距以本视图内派生的具名 Thickness（对齐 UiSpace 4pt 栅格）承载。
+        - 仅消费 ViewModel 既有绑定，不新增/重命名绑定路径；代码后置文件保持不动。
+        - 令牌/控件样式/状态模板经 App.xaml 全局合并；此处仅合并 MainWindowResources 以取得
+          既有转换器（BooleanToVisibilityConverter / CommerceEnumLabelConverter）。
+    -->
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- 派生间距令牌（Thickness 投影，严格对齐 Shape.xaml 的 UiSpace 4pt 栅格） -->
+            <!-- 概况区下边距：UiSpaceLg(24) -->
+            <Thickness x:Key="UiProductsOverviewGap">0,0,0,24</Thickness>
+            <!-- 概况卡内边距：水平 UiSpaceLg(24) + 垂直 UiSpaceMd(16) -->
+            <Thickness x:Key="UiProductsCardPadding">24,16,24,16</Thickness>
+            <!-- 副标题上间距：UiSpaceXxs(4) -->
+            <Thickness x:Key="UiProductsSubtitleGap">0,4,0,0</Thickness>
+            <!-- 错误区重试按钮上间距：UiSpaceMd(16) -->
+            <Thickness x:Key="UiProductsRetryGap">0,16,0,0</Thickness>
         </ResourceDictionary>
     </UserControl.Resources>
+
     <Grid Background="Transparent" DataContext="{Binding ProductsPage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,18">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="商品" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
-                <TextBlock Text="维护商品目录与定价" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
-            </StackPanel>
-            <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}" VerticalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" Padding="14,6" />
-        </Grid>
+        <!-- ==================== 概况区（页头 + 汇总/筛选位 + 刷新动作） ==================== -->
+        <Border Grid.Row="0"
+                Margin="{StaticResource UiProductsOverviewGap}"
+                Padding="{StaticResource UiProductsCardPadding}"
+                Background="{DynamicResource SurfaceRaisedBrush}"
+                BorderBrush="{DynamicResource BorderBrushSoft}"
+                BorderThickness="{StaticResource UiHairline}"
+                CornerRadius="{StaticResource UiRadiusMd}"
+                SnapsToDevicePixels="True">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="商品"
+                               FontSize="{StaticResource UiFontTitle}"
+                               FontWeight="{StaticResource UiFontWeightBold}"
+                               FontFamily="{StaticResource UiFontFamilyCjk}"
+                               Foreground="{DynamicResource HeadingBrush}" />
+                    <TextBlock Text="维护商品目录与定价"
+                               Margin="{StaticResource UiProductsSubtitleGap}"
+                               FontSize="{StaticResource UiFontCaption}"
+                               FontFamily="{StaticResource UiFontFamilyCjk}"
+                               Foreground="{DynamicResource SecondaryTextBrush}" />
+                </StackPanel>
+                <!-- 刷新：使用既有 RefreshCommand；命令运行期间 CanExecute=false 自动禁用（满足加载中禁用变更命令） -->
+                <Button Grid.Column="1"
+                        Content="刷新"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource UiSecondaryButtonStyle}"
+                        VerticalAlignment="Center" />
+            </Grid>
+        </Border>
 
-        <!-- 加载中 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="正在加载商品数据…" Foreground="{DynamicResource MutedBrush}" FontSize="15" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ==================== 加载中 ==================== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiLoadingStateStyle}"
+                        Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 加载失败 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <!-- ==================== 加载失败（错误提示 + 既有 RefreshCommand 重试） ==================== -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
                     Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xEA39;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="#D12E9F" HorizontalAlignment="Center" />
-            <TextBlock Text="商品数据加载失败" Foreground="{DynamicResource HeadingBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,6,0,0" MaxWidth="420" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
-            <Button Content="重试" Command="{Binding RefreshCommand}" Margin="0,14,0,0" Padding="18,7" HorizontalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" />
+            <ContentControl Style="{StaticResource UiErrorNoticeStyle}"
+                            Content="{Binding ErrorMessage}" />
+            <Button Content="重试"
+                    Command="{Binding RefreshCommand}"
+                    Style="{StaticResource UiPrimaryButtonStyle}"
+                    Margin="{StaticResource UiProductsRetryGap}"
+                    HorizontalAlignment="Center" />
         </StackPanel>
 
-        <!-- 空状态 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xE719;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
-            <TextBlock Text="暂无商品数据" Foreground="{DynamicResource MutedBrush}" FontSize="15" Margin="0,14,0,0" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ==================== 空状态 ==================== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiEmptyStateStyle}"
+                        Content="暂无商品数据，添加商品后将在此展示"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 数据 -->
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Products}" AutoGenerateColumns="False" IsReadOnly="True"
-                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" CanUserAddRows="False"
-                  Background="Transparent" BorderThickness="0"
+        <!-- ==================== 内容（成交列表，舒适档密度 + 选中态 + UI 虚拟化） ==================== -->
+        <DataGrid Grid.Row="1"
+                  Style="{StaticResource UiDataGridStyle}"
+                  ItemsSource="{Binding Products}"
                   Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />

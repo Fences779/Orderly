@@ -2,76 +2,172 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              AutomationProperties.AutomationId="Page_BusinessAdvice">
+
+    <!--
+        BusinessAdviceView.xaml — 经营建议页（commerce-settings-ui-rebuild / 任务 11.1）
+        ================================================================================
+        约束遵循：
+          - 仅消费既有绑定（BusinessAdvicePage：状态四标志 ShowLoading/HasError/IsEmpty/ShowContent、
+            ErrorMessage、RefreshCommand、Insights 集合；行字段 Severity/Title/Message/Category）。
+            VM 未暴露「采纳/忽略/查看详情」等命令，故卡片上不臆造此类按钮（需求 8.5 为条件式：
+            仅当 VM 暴露对应命令时才渲染并绑定，本页条件不成立）。不新增、不重命名绑定路径；不改代码后置。
+          - 零硬编码视觉字面量：颜色一律 DynamicResource 引用主题语义画刷；字号/字重/字体族/圆角/
+            间距一律 StaticResource 引用全局令牌（Tokens/* 与 Controls/* 经 App.xaml 全局合并）。
+          - 套用统一状态机骨架（加载/空/错误/内容）与既有控件 / 状态呈现样式。
+          - 建议卡片列表用 ListView + UiListViewStyle（含 UI 虚拟化，需求 11.4）。
+          - 分级标注（需求 8.4）：按既有 Severity 字段，用 DataTrigger 切换
+              · 卡片左侧状态色强调条（AdviceInsightItemStyle：BorderBrush 取状态前景色）
+              · 状态色徽标（AdviceSeverityBadgeStyle：底+前景成对状态色 + 文字标签，不以颜色为唯一信息载体）
+        相关需求：8.1 / 8.2 / 8.3 / 8.4 / 8.5 / 8.6 / 8.7。
+    -->
+
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+            <!-- 布尔→可见性转换器（本地声明，避免依赖外壳资源；非视觉字面量） -->
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+            <!--
+                建议卡片容器样式：在全局 UiListViewItemStyle（舒适行高 + 选中态主色弱底/左侧主色条 + 模板）
+                基础上，按既有 Severity 字段切换左侧强调条颜色（容器 BorderBrush，由模板左侧 3px 边框承载）。
+                未选中时呈现状态色强调条；选中时由模板 IsSelected 触发器以主色覆盖，二者互不破坏。
+                状态色取自状态前景画刷：信息蓝 / 警告黄 / 错误红，分别对应 Info / Warning / Critical。
+            -->
+            <Style x:Key="AdviceInsightItemStyle" TargetType="ListViewItem" BasedOn="{StaticResource UiListViewItemStyle}">
+                <!-- 默认（Info）：信息蓝强调条 -->
+                <Setter Property="BorderBrush" Value="{DynamicResource BlueTextBrush}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                        <Setter Property="BorderBrush" Value="{DynamicResource WarmTextBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Severity}" Value="Critical">
+                        <Setter Property="BorderBrush" Value="{DynamicResource DangerTextBrush}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <!--
+                建议严重度徽标样式：在全局胶囊徽标基样式（圆点 + 文字双载体）基础上，
+                按既有 Severity 字段切换「底色 + 前景色 + 文字标签」。默认 Info（信息蓝/提示），
+                Warning（警告黄/关注）、Critical（错误红/紧急）。文字标签确保不以颜色为唯一信息载体（需求 12.4）。
+            -->
+            <Style x:Key="AdviceSeverityBadgeStyle" TargetType="ContentControl" BasedOn="{StaticResource UiStatusBadgeBaseStyle}">
+                <Setter Property="Background" Value="{DynamicResource BlueSoftBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource BlueTextBrush}" />
+                <Setter Property="Content" Value="提示" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                        <Setter Property="Background" Value="{DynamicResource WarmSoftBrush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource WarmTextBrush}" />
+                        <Setter Property="Content" Value="关注" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Severity}" Value="Critical">
+                        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                        <Setter Property="Content" Value="紧急" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid Background="Transparent" DataContext="{Binding BusinessAdvicePage}">
+
+    <Grid DataContext="{Binding BusinessAdvicePage}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,18">
+        <!-- ==================== 页头：标题 + 刷新 ==================== -->
+        <Grid Grid.Row="0" Margin="{StaticResource UiPresenterGapBottomLg}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="经营建议" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
-                <TextBlock Text="基于本地数据生成的经营洞察" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
+                <TextBlock Text="经营建议"
+                           FontSize="{StaticResource UiFontDisplay}"
+                           FontWeight="{StaticResource UiFontWeightBold}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           Foreground="{DynamicResource HeadingBrush}"
+                           Margin="{StaticResource UiPresenterGapBottom}" />
+                <TextBlock Text="基于本地数据生成的经营洞察，按严重度分级"
+                           FontSize="{StaticResource UiFontCaption}"
+                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                           Foreground="{DynamicResource SecondaryTextBrush}" />
             </StackPanel>
-            <Button Grid.Column="1" Content="刷新" Command="{Binding RefreshCommand}" VerticalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" Padding="14,6" />
+
+            <!-- 刷新即唯一变更命令；AsyncRelayCommand 执行期间自动 CanExecute=false，故加载中自动禁用（需求 8.7） -->
+            <Button Grid.Column="1"
+                    Content="刷新"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    Command="{Binding RefreshCommand}"
+                    VerticalAlignment="Center" />
         </Grid>
 
-        <!-- 加载中 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="正在生成经营建议…" Foreground="{DynamicResource MutedBrush}" FontSize="15" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ==================== 加载中 ==================== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiLoadingStateStyle}"
+                        Visibility="{Binding ShowLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 加载失败 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <!-- ==================== 加载失败：错误提示 + 重试（既有 RefreshCommand） ==================== -->
+        <StackPanel Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
                     Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xEA39;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="#D12E9F" HorizontalAlignment="Center" />
-            <TextBlock Text="经营建议生成失败" Foreground="{DynamicResource HeadingBrush}" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,0" HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MutedBrush}" FontSize="12" Margin="0,6,0,0" MaxWidth="420" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
-            <Button Content="重试" Command="{Binding RefreshCommand}" Margin="0,14,0,0" Padding="18,7" HorizontalAlignment="Center"
-                    Foreground="{DynamicResource BlueTextBrush}" />
+            <ContentControl Style="{StaticResource UiErrorNoticeStyle}"
+                            Content="{Binding ErrorMessage}" />
+            <Button Content="重试"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    Command="{Binding RefreshCommand}"
+                    HorizontalAlignment="Center"
+                    Margin="{StaticResource UiNoticePadding}" />
         </StackPanel>
 
-        <!-- 空状态 -->
-        <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="42" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
-            <TextBlock Text="暂无经营建议" Foreground="{DynamicResource MutedBrush}" FontSize="15" Margin="0,14,0,0" HorizontalAlignment="Center" />
-        </StackPanel>
+        <!-- ==================== 空状态 ==================== -->
+        <ContentControl Grid.Row="1"
+                        Style="{StaticResource UiEmptyStateStyle}"
+                        Content="暂无经营建议"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- 数据 -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                      Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
-            <ItemsControl ItemsSource="{Binding Insights}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Background="#FFFFFF" BorderBrush="#E5E7EC" BorderThickness="1" CornerRadius="12" Padding="16,14" Margin="0,0,0,12">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <Border CornerRadius="6" Padding="8,2" Background="#F2EEFC" Margin="0,0,10,0">
-                                        <TextBlock Text="{Binding Severity, Converter={StaticResource CommerceEnumLabelConverter}}" FontSize="11" Foreground="#7A3EDB" FontWeight="SemiBold" />
-                                    </Border>
-                                    <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <TextBlock Text="{Binding Message}" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="13" Margin="0,8,0,0" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding Category}" Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="0,6,0,0" />
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+        <!-- ==================== 数据：建议卡片列表（UI 虚拟化由 UiListViewStyle 提供） ==================== -->
+        <ListView Grid.Row="1"
+                  Style="{StaticResource UiListViewStyle}"
+                  ItemContainerStyle="{StaticResource AdviceInsightItemStyle}"
+                  ItemsSource="{Binding Insights}"
+                  Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <!-- 卡片头：严重度徽标 + 标题 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="{StaticResource UiPresenterGapBottom}">
+                            <ContentControl Style="{StaticResource AdviceSeverityBadgeStyle}"
+                                            Margin="{StaticResource UiPresenterGapRight}" />
+                            <TextBlock Text="{Binding Title}"
+                                       FontSize="{StaticResource UiFontSubtitle}"
+                                       FontWeight="{StaticResource UiFontWeightSemiBold}"
+                                       FontFamily="{StaticResource UiFontFamilyCjk}"
+                                       Foreground="{DynamicResource HeadingBrush}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- 建议正文 -->
+                        <TextBlock Text="{Binding Message}"
+                                   FontSize="{StaticResource UiFontBodySm}"
+                                   FontFamily="{StaticResource UiFontFamilyCjk}"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   TextWrapping="Wrap" />
+
+                        <!-- 分类（次要） -->
+                        <TextBlock Text="{Binding Category}"
+                                   FontSize="{StaticResource UiFontCaption}"
+                                   FontFamily="{StaticResource UiFontFamilyCjk}"
+                                   Foreground="{DynamicResource CaptionTextBrush}"
+                                   Margin="{StaticResource UiFieldErrorMargin}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </Grid>
 </UserControl>
