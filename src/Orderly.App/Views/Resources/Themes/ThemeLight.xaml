@@ -11,6 +11,7 @@
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="#86868B" />
     <SolidColorBrush x:Key="CaptionTextBrush" Color="#A0A5AF" />
     <SolidColorBrush x:Key="SurfaceSoftBrush" Color="#F7F7F9" />
+    <SolidColorBrush x:Key="SidebarHoverBrush" Color="#ECECEF" />
     <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#FFFFFF" />
     <!-- 状态：成功（绿）底色 + 可读前景，对比度 ≈ 5.7:1 -->
     <SolidColorBrush x:Key="AccentSoftBrush" Color="#E7F4EC" />

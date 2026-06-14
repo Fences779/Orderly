@@ -31,6 +31,12 @@
                         </StackPanel>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <!-- Common Hover Trigger (Placed first so MultiDataTriggers can override its background) -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SidebarHoverBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
+                        </Trigger>
+
                         <!-- Individual colors for each tab item icon based on Content AND SelectedState / HoverState -->
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -39,6 +45,7 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#E0F2FE"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#0284C7"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -56,6 +63,7 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#DCFCE7"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#16A34A"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -73,6 +81,7 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#FCE7F3"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#DB2777"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -90,6 +99,7 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#FEF3C7"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#B45309"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -107,6 +117,7 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#CCFBF1"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#0D9488"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -124,6 +135,7 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#E0E7FF"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#4F46E5"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -141,6 +153,7 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#FFEDD5"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#EA580C"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -158,6 +171,7 @@
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}"/>
                         </MultiDataTrigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -167,15 +181,6 @@
                             <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
                         </MultiDataTrigger>
-
-                        <!-- Hover State when not selected: subtle background highlight -->
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsMouseOver" Value="True"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource SurfaceSoftBrush}"/>
-                            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
-                        </MultiTrigger>
 
                         <!-- Hover Animation: Icon scales up slightly -->
                         <Trigger Property="IsMouseOver" Value="True">
