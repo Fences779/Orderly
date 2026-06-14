@@ -83,8 +83,6 @@
 
                     <views:LoginCreateAccountPanel x:Name="CreateManagedAccountPanel" />
 
-                    <views:LoginToastOverlay x:Name="ToastOverlay" Panel.ZIndex="40" />
-
                 </Grid>
 
                     <Grid HorizontalAlignment="Stretch"
@@ -229,6 +227,23 @@
                     </Grid>
 
                     <TextBlock x:Name="TxtError" Grid.Column="1" Foreground="#FF3B30" FontSize="13" FontWeight="SemiBold" Visibility="Collapsed" TextWrapping="Wrap" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,20" />
+
+                    <!-- 右侧遮罩：Toast 出现时叠加在右侧内容上方 -->
+                    <Grid x:Name="RightPaneOverlay"
+                          Grid.Column="1"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Panel.ZIndex="48"
+                          Visibility="Collapsed"
+                          IsHitTestVisible="False">
+                        <Border Background="#B2F7F7FA"
+                                CornerRadius="0,24,24,0" />
+                    </Grid>
+
+                    <!-- Toast 通知层：必须在 MainCardContent 最顶层，ColumnSpan=2 确保覆盖全宽 -->
+                    <views:LoginToastOverlay x:Name="ToastOverlay"
+                                            Grid.ColumnSpan="2"
+                                            Panel.ZIndex="50" />
                 </Grid>
         </Border>
         </Border>

@@ -98,7 +98,6 @@
                            VerticalAlignment="Center" />
                 </Border>
                 <TextBlock Text="Orderly" FontSize="29" FontWeight="Bold" Foreground="#1D1D1F" HorizontalAlignment="Center" />
-                <TextBlock Text="String Narration" FontSize="11" Foreground="#7D8390" HorizontalAlignment="Center" Margin="0,10,0,0" Opacity="0.82" />
             </StackPanel>
         </Grid>
     </Border>
