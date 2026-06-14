@@ -31,11 +31,19 @@
                         </StackPanel>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <!-- Individual colors for each tab item icon based on Content AND SelectedState -->
+                        <!-- Individual colors for each tab item icon based on Content AND SelectedState / HoverState -->
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台"/>
                                 <Condition Binding="{Binding SelectedSection}" Value="工作台"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#E0F2FE"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#0284C7"/>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#E0F2FE"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#0284C7"/>
@@ -49,11 +57,27 @@
                             <Setter TargetName="IconBg" Property="Background" Value="#DCFCE7"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#16A34A"/>
                         </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="订单"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#DCFCE7"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#16A34A"/>
+                        </MultiDataTrigger>
 
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="商品"/>
                                 <Condition Binding="{Binding SelectedSection}" Value="商品"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#FCE7F3"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#DB2777"/>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="商品"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#FCE7F3"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#DB2777"/>
@@ -67,11 +91,27 @@
                             <Setter TargetName="IconBg" Property="Background" Value="#FEF3C7"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#B45309"/>
                         </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="库存"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#FEF3C7"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#B45309"/>
+                        </MultiDataTrigger>
 
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="客户"/>
                                 <Condition Binding="{Binding SelectedSection}" Value="客户"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#CCFBF1"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#0D9488"/>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="客户"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#CCFBF1"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#0D9488"/>
@@ -85,6 +125,14 @@
                             <Setter TargetName="IconBg" Property="Background" Value="#E0E7FF"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#4F46E5"/>
                         </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="现金流"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#E0E7FF"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#4F46E5"/>
+                        </MultiDataTrigger>
 
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -94,11 +142,27 @@
                             <Setter TargetName="IconBg" Property="Background" Value="#FFEDD5"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#EA580C"/>
                         </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="经营建议"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#FFEDD5"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#EA580C"/>
+                        </MultiDataTrigger>
 
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置"/>
                                 <Condition Binding="{Binding SelectedSection}" Value="设置"/>
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
+                            <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
                             <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
