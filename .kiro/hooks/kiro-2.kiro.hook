@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "name": "Kiro等待我回答",
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "curl \"https://api.day.app/QhHvaqemaX28Xta5D4CrYA/Kiro等待你回答/回来点选项或继续任务\""
+  }
+}

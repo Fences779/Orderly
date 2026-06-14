@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "name": "Bark - Kiro手动通知测试",
+  "description": "手动触发 Bark 推送，测试 Kiro Hook 到手机通知链路。",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "curl \"https://api.day.app/QhHvaqemaX28Xta5D4CrYA/Kiro测试/Hook手动触发成功\""
+  }
+}

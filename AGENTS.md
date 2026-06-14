@@ -36,71 +36,10 @@
   - Do not proactively widen the refactor surface just because a broader cleanup may be technically beneficial.
 - **Escalation Note**: The user may explicitly approve broader scope or higher reasoning depth before Codex continues.
 
-### 0. UI Modification Ban
-- **Status**: Strict default restriction.
-- **Constraint**: **DO NOT** modify any UI-related content by default. Codex is strictly forbidden from changing layout, styles, bindings, visuals, interaction flow, UI-adjacent logic, or UI interfaces/APIs unless the user explicitly and unambiguously requests that exact UI change.
-- **Scope**: This applies to all UI surfaces, UI code, and UI interfaces in the repo, not just the pages listed below.
-- **Priority**: This is a top-level rule. It overrides any general implementation, cleanup, refactor, or optimization request whenever the change would touch UI code.
+全程和我交流必须使用简体中文，注意是简体中文，全程简体中文
 
-### 1. Login Page (登录页)
-- **Status**: Completed by the USER.
-- **Constraint**: **DO NOT** modify, refactor, or touch any code, layout, styles, or logic related to the Login Page (登录页).
-- **Related Files**:
-  - `src/Orderly.App/Views/LoginView.xaml`
-  - `src/Orderly.App/Views/LoginView.xaml.cs`
-  - `src/Orderly.App/ViewModels/LoginViewModel.cs`
-  - Any other files or views directly impacting the Login Page UI/UX, unless explicitly requested by the user.
+如果有问题，一个一个问我，然后给出选项让我选择答案
 
-### 2. Settings Page (设置页)
-- **Status**: Closed / accepted by the USER.
-- **Constraint**: **DO NOT** modify, refactor, polish, restructure, or touch any settings page code, layout, styles, bindings, commands, persistence logic, or related runtime behavior unless the user explicitly asks for a settings-page change.
-- **Related Files**:
-  - `src/Orderly.App/Views/MainWindow.xaml` settings section only
-  - `src/Orderly.App/Views/MainWindow.xaml.cs`
-  - `src/Orderly.App/ViewModels/MainViewModel.SettingsP0.cs`
-  - `src/Orderly.App/ViewModels/MainViewModel.SettingsP1.cs`
-  - `src/Orderly.Core/Models/AppPreferences.cs`
-  - `src/Orderly.Core/Models/AppSettingKeys.cs`
-  - `src/Orderly.Core/Repositories/IAppSettingRepository.cs`
-  - `src/Orderly.Data/Repositories/AppSettingRepository.cs`
-  - `miniprogram/pages/settings/settings.js`
-  - `miniprogram/pages/settings/settings.wxml`
-  - `miniprogram/pages/settings/settings.wxss`
-  - `miniprogram/pages/settings/settings.json`
-  - Any other files or views directly impacting Settings Page UI/UX, settings persistence, settings commands, or settings runtime behavior, unless explicitly requested by the user.
+每一次大的更新完文件，类似版本换代或者说有新功能加入时，必须即时修改README.md中关于文件状态的部分，其他部分不要动
 
-### 3. Order Fulfillment Page (订单履约页)
-- **Status**: Closed / accepted by the USER.
-- **Constraint**: **DO NOT** modify, refactor, polish, restructure, or touch any order fulfillment page code, layout, styles, bindings, commands, interaction flow, page state, or related runtime behavior unless the user explicitly asks for an order-fulfillment-page change.
-- **Related Files**:
-  - `src/Orderly.App/Views/MainWindow.xaml` order fulfillment section only
-  - `src/Orderly.App/Views/MainWindow.xaml.cs` fulfillment-page handlers only
-  - `src/Orderly.App/ViewModels/MainViewModel.StringNarrationOrders.cs`
-  - `src/Orderly.App/ViewModels/MainViewModel.StringNarrationOrders.Bindings.cs`
-  - `src/Orderly.App/Converters/FulfillmentStatusLabelConverter.cs`
-  - `src/Orderly.App/Views/Resources/MainWindowResources.xaml` fulfillment-related resources only
-  - Any other files or views directly impacting Order Fulfillment Page UI/UX, bindings, commands, page state, or fulfillment-page runtime behavior, unless explicitly requested by the user.
-
-### 4. Order Fulfillment Backend Fields (订单履约后端字段)
-- **Status**: Completed by the USER.
-- **Constraint**: **DO NOT** modify, refactor, rename, remove, or otherwise touch any completed backend fields for order fulfillment unless the user explicitly asks for that area.
-- **Related Files**:
-  - Any backend models, DTOs, entities, mappings, services, repositories, migrations, or API contracts directly related to order fulfillment backend fields.
-
-### 5. Exception Handling Page (异常处理页 / 标记异常处理页)
-- **Status**: Temporarily complete.
-- **Constraint**: **DO NOT** modify, refactor, polish, restructure, or touch any exception-handling-page code, layout, styles, bindings, commands, interaction flow, page state, or related runtime behavior unless the user explicitly asks for that area.
-- **Note**: This page is temporarily considered closed for normal implementation work.
-
-## CURRENT WORK IN PROGRESS
-
-### 0. Current Delivery Scope
-- **Status**: All major areas except the Workbench are considered complete for now.
-- **Constraint**: Unless the user explicitly says otherwise, default active scope is the Workbench only.
-
-### 1. Home Page / MainWindow Refactoring (首页重构)
-- **Status**: Pending refactoring. This is the next target.
-- **Related Files**:
-  - `src/Orderly.App/Views/MainWindow.xaml`
-  - `src/Orderly.App/Views/MainWindow.xaml.cs`
-  - `src/Orderly.App/ViewModels/MainViewModel.cs`
+如果是多个任务，每个任务完成的时候复核一遍，确认无误后进行Git commit，但是不要push

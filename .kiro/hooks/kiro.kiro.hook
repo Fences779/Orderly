@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "enabled": true,
+  "name": "Kiro貌似停了",
+  "description": "Kiro 一轮任务完成后推送到手机",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "curl \"https://api.day.app/QhHvaqemaX28Xta5D4CrYA/Kiro停下来了/回来看看Kiro是否需要处理\""
+  }
+}
