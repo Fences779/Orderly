@@ -1,253 +1,347 @@
 <UserControl x:Class="Orderly.App.Views.Sections.SettingsTabHotkeys"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <!--
+        热键子 Tab（commerce-settings-ui-rebuild / 任务 14.1）
+        ============================================================================
+        统一「标签-控件-说明」三段式行；热键输入框校验失败时以错误状态色在行级呈现既有校验结果
+        （Validation.ErrorTemplate 消费 WPF 既有校验，不新增校验逻辑）。
+        全部引用全局令牌，零硬编码视觉字面量；仅消费 MainViewModel 既有绑定与既有 LostFocus 钩子。
+    -->
     <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
+        <!-- ===== 派生 Thickness 布局令牌（对齐 Shape.xaml 的 UiSpace 4pt 栅格） ===== -->
+        <Thickness x:Key="SettingsScrollPadding">0,24,0,24</Thickness>
+        <Thickness x:Key="SettingsContentMargin">0,0,24,0</Thickness>
+        <Thickness x:Key="SettingsCardPadding">24</Thickness>
+        <Thickness x:Key="SettingsCardSpacing">0,16,0,0</Thickness>
+        <Thickness x:Key="SettingsGroupTitleMargin">0,0,0,16</Thickness>
+        <Thickness x:Key="SettingsHintMargin">0,4,0,12</Thickness>
+        <Thickness x:Key="SettingsRowPadding">0,12,0,12</Thickness>
+        <Thickness x:Key="SettingsRowDescMargin">0,4,0,0</Thickness>
+        <Thickness x:Key="SettingsControlLeftMargin">16,0,0,0</Thickness>
+        <Thickness x:Key="SettingsSeparatorThickness">0,0,0,1</Thickness>
+        <Thickness x:Key="SettingsZeroThickness">0</Thickness>
+
+        <!-- ===== 控件尺寸令牌 ===== -->
+        <sys:Double x:Key="SettingsControlMinWidthWide">160</sys:Double>
+
+        <!-- ===== 卡片容器 ===== -->
+        <Style x:Key="SettingsGroupCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+            <Setter Property="CornerRadius" Value="{StaticResource UiRadiusLg}" />
+            <Setter Property="Padding" Value="{StaticResource SettingsCardPadding}" />
+            <Setter Property="Effect" Value="{StaticResource UiElevationCard}" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+        </Style>
+
+        <!-- ===== 分组标题 / 提示 ===== -->
+        <Style x:Key="SettingsGroupTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource UiFontSubtitle}" />
+            <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+            <Setter Property="Margin" Value="{StaticResource SettingsGroupTitleMargin}" />
+        </Style>
+        <Style x:Key="SettingsHintStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="{StaticResource SettingsHintMargin}" />
+        </Style>
+
+        <!-- ===== 行容器 ===== -->
+        <Style x:Key="SettingsRowStyle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="{StaticResource SettingsSeparatorThickness}" />
+            <Setter Property="Padding" Value="{StaticResource SettingsRowPadding}" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+        </Style>
+        <Style x:Key="SettingsRowLastStyle" TargetType="Border" BasedOn="{StaticResource SettingsRowStyle}">
+            <Setter Property="BorderThickness" Value="{StaticResource SettingsZeroThickness}" />
+        </Style>
+
+        <!-- ===== 标签 / 说明 ===== -->
+        <Style x:Key="SettingsRowLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+            <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="SettingsRowDescStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="{StaticResource SettingsRowDescMargin}" />
+        </Style>
+
+        <!-- ===== 行级校验错误模板（消费 WPF 既有校验结果，以错误状态色呈现，不新增校验逻辑） ===== -->
+        <ControlTemplate x:Key="SettingsFieldErrorTemplate">
+            <StackPanel>
+                <Border BorderBrush="{DynamicResource DangerTextBrush}"
+                        BorderThickness="{StaticResource UiFocusThickness}"
+                        CornerRadius="{StaticResource UiRadiusMd}"
+                        SnapsToDevicePixels="True">
+                    <AdornedElementPlaceholder x:Name="ErrorAdorner" />
+                </Border>
+                <ContentControl Style="{StaticResource UiFieldErrorStyle}"
+                                HorizontalAlignment="Right"
+                                Content="{Binding ElementName=ErrorAdorner, Path=AdornedElement.(Validation.Errors)[0].ErrorContent}" />
+            </StackPanel>
+        </ControlTemplate>
+
+        <!-- ===== 行内热键输入框 ===== -->
+        <Style x:Key="SettingsRowTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource UiTextBoxStyle}">
+            <Setter Property="Margin" Value="{StaticResource SettingsControlLeftMargin}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="MinWidth" Value="{StaticResource SettingsControlMinWidthWide}" />
+            <Setter Property="Validation.ErrorTemplate" Value="{StaticResource SettingsFieldErrorTemplate}" />
+        </Style>
     </UserControl.Resources>
-                    <ScrollViewer Style="{StaticResource SettingsScrollViewerStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1*" />
-                                <ColumnDefinition Width="10*" MaxWidth="900" MinWidth="450" />
-                                <ColumnDefinition Width="1*" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="1" Margin="0,0,24,0" HorizontalAlignment="Stretch">
-                            <!-- 全局快捷键绑定卡片 -->
-                            <Border Style="{StaticResource SettingsGroupCardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="全局热键与快捷键绑定" Style="{StaticResource SettingsGroupTitleStyle}" />
-                                    <TextBlock Text="在第三方软件界面内按下以下按键亦可触发对应操作" Style="{StaticResource SettingsHintStyle}" Margin="0,4,0,12" />
 
-                                    <!-- 1. 主窗口 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="显示/隐藏主窗口" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="激活并让工作台恢复至屏幕最前" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding MainWindowHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_MainWindowHotkey" />
-                                        </Grid>
-                                    </Border>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource SettingsScrollPadding}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="10*" MaxWidth="900" MinWidth="450" />
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="1" Margin="{StaticResource SettingsContentMargin}" HorizontalAlignment="Stretch">
 
-                                    <!-- 2. 悬浮窗 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="显示/隐藏桌面悬浮窗" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="呼出右上角的悬浮按钮面板" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding FloatingWindowHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_FloatingWindowHotkey" />
-                                        </Grid>
-                                    </Border>
+                <!-- 全局快捷键绑定卡片 -->
+                <Border Style="{StaticResource SettingsGroupCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="全局热键与快捷键绑定" Style="{StaticResource SettingsGroupTitleStyle}" />
+                        <TextBlock Text="在第三方软件界面内按下以下按键亦可触发对应操作" Style="{StaticResource SettingsHintStyle}" />
 
-                                    <!-- 3. 全局搜索 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="全局客户与订单搜索" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="一键聚焦搜索文本框" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding GlobalSearchHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_GlobalSearchHotkey" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- 4. 工作台 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="导航至今日工作台" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="快速切换至今日待办面板" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding TodayWorkbenchHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_TodayWorkbenchHotkey" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- 5. 一键复制摘要 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="一键复制订单摘要" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="复制当前选中的订单核心规格" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding CopyOrderSummaryHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_CopyOrderSummaryHotkey" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- 6. 待制作工单 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="打开待制作工单" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="快速查看已生成未开工的待确认工单" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding OpenProductionSheetHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_OpenProductionSheetHotkey" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- 7. 标记异常 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="标记当前订单异常" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="将处理卡壳的订单快速进行挂起预警" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding MarkOrderExceptionHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_MarkOrderExceptionHotkey" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- 8. 快速推进履约 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="快速推进订单履约" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="对选中订单流转到下一个工序阶段" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding AdvanceFulfillmentHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_AdvanceFulfillmentHotkey" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- 9. 客户档案 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="快速打开客户档案" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="呼出高亮客户的跟进日志与联系明细" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding OpenCustomerProfileHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_OpenCustomerProfileHotkey" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- 10. 创建跟进备忘 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="快速新建客户跟进备忘" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="激活当前客户的备忘输入焦点" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding NewCustomerNoteHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_NewCustomerNoteHotkey" />
-                                        </Grid>
-                                    </Border>
-
-                                    <!-- 11. 复制客户偏好 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="复制客户偏好摘要" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="导出该客户的常用规格、口味及过往成交总结" Style="{StaticResource SettingsItemDescStyle}" />
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}" Width="160"
-                                                     Text="{Binding CopyCustomerPreferenceSummaryHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
-                                                     LostFocus="SettingsTextInput_LostFocus"
-                                                     AutomationProperties.AutomationId="Txt_CopyCustomerPreferenceSummaryHotkey" />
-                                        </Grid>
-                                    </Border>
+                        <!-- 1. 主窗口 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="显示/隐藏主窗口" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="激活并让工作台恢复至屏幕最前" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                            </Border>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding MainWindowHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_MainWindowHotkey" />
+                            </Grid>
+                        </Border>
 
-                            <!-- 快捷键保存与校验结果卡片 -->
-                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="0,16,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="快捷键绑定状态与自检" Style="{StaticResource SettingsGroupTitleStyle}" />
-
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
-                                        <Grid>
-                                            <StackPanel>
-                                                <TextBlock Text="快捷键校验结果" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="{Binding HotkeyValidationStatusText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-
-                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
-                                        <Grid>
-                                            <StackPanel>
-                                                <TextBlock Text="热键冲突检测" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="{Binding HotkeyRuntimeStatusText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
+                        <!-- 2. 悬浮窗 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="显示/隐藏桌面悬浮窗" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="呼出右上角的悬浮按钮面板" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                            </Border>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding FloatingWindowHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_FloatingWindowHotkey" />
+                            </Grid>
+                        </Border>
 
-                        </StackPanel>
-                    </Grid>
-                </ScrollViewer>
+                        <!-- 3. 全局搜索 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="全局客户与订单搜索" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="一键聚焦搜索文本框" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding GlobalSearchHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_GlobalSearchHotkey" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 4. 工作台 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="导航至今日工作台" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="快速切换至今日待办面板" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding TodayWorkbenchHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_TodayWorkbenchHotkey" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 5. 一键复制摘要 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="一键复制订单摘要" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="复制当前选中的订单核心规格" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding CopyOrderSummaryHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_CopyOrderSummaryHotkey" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 6. 待制作工单 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="打开待制作工单" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="快速查看已生成未开工的待确认工单" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding OpenProductionSheetHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_OpenProductionSheetHotkey" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 7. 标记异常 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="标记当前订单异常" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="将处理卡壳的订单快速进行挂起预警" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding MarkOrderExceptionHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_MarkOrderExceptionHotkey" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 8. 快速推进履约 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="快速推进订单履约" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="对选中订单流转到下一个工序阶段" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding AdvanceFulfillmentHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_AdvanceFulfillmentHotkey" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 9. 客户档案 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="快速打开客户档案" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="呼出高亮客户的跟进日志与联系明细" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding OpenCustomerProfileHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_OpenCustomerProfileHotkey" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 10. 创建跟进备忘 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="快速新建客户跟进备忘" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="激活当前客户的备忘输入焦点" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding NewCustomerNoteHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_NewCustomerNoteHotkey" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 11. 复制客户偏好 -->
+                        <Border Style="{StaticResource SettingsRowLastStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="复制客户偏好摘要" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="导出该客户的常用规格、口味及过往成交总结" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         Text="{Binding CopyCustomerPreferenceSummaryHotkeyInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_CopyCustomerPreferenceSummaryHotkey" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- 快捷键状态与自检卡片 -->
+                <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
+                    <StackPanel>
+                        <TextBlock Text="快捷键绑定状态与自检" Style="{StaticResource SettingsGroupTitleStyle}" />
+
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <StackPanel>
+                                <TextBlock Text="快捷键校验结果" Style="{StaticResource SettingsRowLabelStyle}" />
+                                <TextBlock Text="{Binding HotkeyValidationStatusText}" Style="{StaticResource SettingsRowDescStyle}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsRowLastStyle}">
+                            <StackPanel>
+                                <TextBlock Text="热键冲突检测" Style="{StaticResource SettingsRowLabelStyle}" />
+                                <TextBlock Text="{Binding HotkeyRuntimeStatusText}" Style="{StaticResource SettingsRowDescStyle}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
 </UserControl>

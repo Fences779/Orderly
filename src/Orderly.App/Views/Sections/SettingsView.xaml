@@ -1,40 +1,155 @@
 <UserControl x:Class="Orderly.App.Views.Sections.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:Sections="clr-namespace:Orderly.App.Views.Sections"
              xmlns:conv="clr-namespace:Orderly.App.Converters"
-             xmlns:helpers="clr-namespace:Orderly.App.Helpers">
+             xmlns:helpers="clr-namespace:Orderly.App.Helpers"
+             AutomationProperties.AutomationId="Page_Settings">
     <!--
-        设置页信息架构重构（任务 17.1，设计 §4.2 / §7.1）：
-        以「左侧竖向导航 (ListBox 六分类) + 右侧内容区 (ContentControl/分区 ScrollViewer)」替换原顶部 TabControl。
+        SettingsView.xaml — 设置页主框架（commerce-settings-ui-rebuild / 任务 13.1）
+        ===============================================================================
+        信息架构（保留现有结构，需求 9.3）：
+          「左侧竖向分类导航 (ListBox 六分类) + 右侧内容区」——以 SettingsTab* 各子 View 作为
+          内容区承载；右内容区可见性由 Settings.SelectedCategoryKey 经字符串相等转换器驱动切换。
+          子 View 仍由任务 14.x 重建，本任务不改子 View，仅重建主框架视觉与承载方式。
 
-        · 左导航 / 搜索框子树 DataContext 绑定 {Binding Settings}（MainViewModel.Settings → SettingsViewModel），
-          承载 SelectedCategoryKey（默认「外观与启动」）与 SettingsSearchQuery。
-        · 右内容区按选中分类显示对应内容，可见性由 Settings.SelectedCategoryKey 经字符串相等转换器驱动。
-        · 稳定锚点：Nav_SettingsCategories（左导航）、Box_SettingsSearch（搜索框）、Pane_SettingsContent（右内容区根）。
+        当前 Tab 高亮（需求 9.5）：导航项选中态使用主色弱底 + 左侧主色条 + 主色文字明确高亮。
+        滚动位置保留（需求 9.5）：ViewModel 暴露的滚动定位字段为 Settings.PendingScrollAnchorId
+          （锚点式），经既有 helpers:ScrollToAnchorBehavior.AnchorId 双向绑定保留切换/命中跳转定位，
+          维持原有契约不变。
 
-        说明（任务 17.3 已完成宿主归类）：SettingsTab* 子控件已按 §7.1 完成六大分类宿主归类——
-        其中 SettingsTabDataAudit 拆分为「数据校验与导入恢复」(留在数据与备份) 与「系统日志记录」
-        (已迁入安全与日志宿主 SettingsTabDataSecurity)。子控件设计令牌经共享卡片样式与本视图的
-        DesignTokens.xaml 一致应用（柔和阴影 + 大圆角 + 充裕留白，Req 15.1），画刷统一 DynamicResource
-        以保证深浅色主题切换无异常（Req 15.2）。
-        DataContext 边界：子控件仍继承 MainViewModel 的 DataContext，其绑定路径整体相对化到
-        SettingsViewModel 的切换与服务 DI 接线统一由任务 21.1「注册服务并接线 DataContext」处理，
-        以避免与本任务（聚焦令牌/归类/注释清理）的回归风险叠加。
-        搜索命中跳转与超限提示见任务 17.2。
+        令牌引用（需求 9.1，零硬编码视觉字面量）：
+          - 颜色：一律 DynamicResource 语义画刷（支持亮/暗整体替换即时切换）。
+          - 字号/字重/字体族：StaticResource 引用 Typography 令牌（UiFont* / UiFontFamily*）。
+          - 圆角：StaticResource 引用 Shape 令牌（UiRadius*）；阴影用 UiElevationOverlay。
+          - 间距（Thickness）：以本视图内派生的具名 Thickness（对齐 UiSpace 4pt 栅格）承载，
+            消费侧引用具名令牌而非散落魔法数值（与 ControlStyles/StatePresenters 同一做法）。
+          - 搜索框复用全局 UiTextBoxStyle；导航项样式于本视图内以令牌定义。
+          令牌 / 控件样式 / 状态模板均由 App.xaml 全局合并，故本视图无需再合并样式字典。
+
+        绑定契约（需求 9.2 / 10.4 / 10.5 / 10.6）：仅消费既有绑定，不新增/重命名路径；
+          稳定锚点保持不变：Nav_SettingsCategories、Box_SettingsSearch、List_SettingsSearchResults、
+          Text_SearchResultsTruncated、Pane_SettingsContent；代码后置文件保持不动。
     -->
     <UserControl.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
-                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/DesignTokens.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-            <!-- 复用字符串相等→可见性转换器，按分类 key 切换右内容区。 -->
-            <conv:SectionVisibilityConverter x:Key="CategoryVisibilityConverter" />
-            <!-- 搜索结果列表仅在有命中时显示（Req 2.7）；超限提示由布尔→可见性驱动（Req 2.8）。 -->
-            <conv:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
-            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-        </ResourceDictionary>
+        <!-- 复用字符串相等→可见性转换器，按分类 key 切换右内容区。 -->
+        <conv:SectionVisibilityConverter x:Key="CategoryVisibilityConverter" />
+        <!-- 搜索结果数量→可见性（驱动 Popup.IsOpen，空结果不弹出）。 -->
+        <conv:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
+        <!-- ==================== 派生间距令牌（Thickness 投影，对齐 UiSpace 4pt 栅格） ==================== -->
+        <!-- 左导航外边距：左 UiSpaceMd(16) / 上 UiSpaceLg(24) / 右 UiSpaceXs(8) / 下 UiSpaceMd(16) -->
+        <Thickness x:Key="UiSettingsLeftPaneMargin">16,24,8,16</Thickness>
+        <!-- 搜索框下间距：UiSpaceMd(16) -->
+        <Thickness x:Key="UiSettingsSearchGap">0,0,0,16</Thickness>
+        <!-- 右内容区外边距：左 UiSpaceXs(8) / 上 UiSpaceSm(12) / 右 UiSpaceSm(12) / 下 UiSpaceSm(12) -->
+        <Thickness x:Key="UiSettingsContentMargin">8,12,12,12</Thickness>
+        <!-- 搜索结果浮层上间距：UiSpaceXxs(4) -->
+        <Thickness x:Key="UiSettingsPopupMargin">0,4,0,0</Thickness>
+        <!-- 搜索结果浮层内边距：UiSpaceXxs(4) -->
+        <Thickness x:Key="UiSettingsPopupPadding">4</Thickness>
+        <!-- 搜索结果项内边距：水平 UiSpaceSm(12) + 垂直 UiSpaceXs(8) -->
+        <Thickness x:Key="UiSettingsResultPadding">12,8</Thickness>
+        <!-- 结果项分类副文上间距：UiSpaceXxs(4) -->
+        <Thickness x:Key="UiSettingsResultCategoryGap">0,4,0,0</Thickness>
+        <!-- 超限提示边距：水平 UiSpaceSm(12) + 垂直 UiSpaceXs(8) -->
+        <Thickness x:Key="UiSettingsTruncatedMargin">12,8,12,8</Thickness>
+        <!-- 安全与日志内容右间距：UiSpaceLg(24) -->
+        <Thickness x:Key="UiSettingsSecurityPanelMargin">0,0,24,0</Thickness>
+        <!-- 导航项内边距：水平 / 垂直 UiSpaceSm(12) -->
+        <Thickness x:Key="UiSettingsNavItemPadding">12,12</Thickness>
+        <!-- 导航项上间距：UiSpaceXxs(4) -->
+        <Thickness x:Key="UiSettingsNavItemMargin">0,4,0,0</Thickness>
+        <!-- 导航图标右间距：UiSpaceSm(12) -->
+        <Thickness x:Key="UiSettingsNavIconGap">0,0,12,0</Thickness>
+
+        <!-- 导航图标字形尺寸（对齐 UiSpaceLg 24，用于图标列对齐） -->
+        <sys:Double x:Key="UiSettingsNavIconSize">24</sys:Double>
+
+        <!-- ==================== 左侧分类导航项样式（当前 Tab 高亮：主色弱底 + 左侧主色条） ==================== -->
+        <Style x:Key="UiSettingsNavItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+            <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+            <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
+            <Setter Property="Padding" Value="{StaticResource UiSettingsNavItemPadding}" />
+            <Setter Property="Margin" Value="{StaticResource UiSettingsNavItemMargin}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="NavBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="{StaticResource UiSelectedAccentBar}"
+                                CornerRadius="{StaticResource UiRadiusMd}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                                <Setter TargetName="NavBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+                                <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                    <Condition Property="IsSelected" Value="False" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="UiSettingsNavListStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource UiSettingsNavItemStyle}" />
+        </Style>
+
+        <!-- 搜索结果项按钮（左对齐铺满，令牌内边距，主色浅底悬停反馈） -->
+        <Style x:Key="UiSettingsSearchResultButtonStyle" TargetType="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="{StaticResource UiSettingsResultPadding}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource UiFocusVisualStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ResultBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{StaticResource UiRadiusSm}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Stretch" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ResultBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource PageBackgroundBrush}">
@@ -43,22 +158,21 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- ==================== 左侧：搜索框 + 竖向导航 ==================== -->
-        <DockPanel Grid.Column="0" Margin="16,20,8,16" DataContext="{Binding Settings}">
+        <!-- ==================== 左侧：搜索框 + 竖向分类导航 ==================== -->
+        <DockPanel Grid.Column="0" Margin="{StaticResource UiSettingsLeftPaneMargin}" DataContext="{Binding Settings}">
             <TextBox x:Name="Box_SettingsSearch"
                      DockPanel.Dock="Top"
                      AutomationProperties.AutomationId="Box_SettingsSearch"
-                     Style="{StaticResource RefineSearchBoxStyle}"
-                     Margin="2,0,2,14"
+                     Style="{StaticResource UiTextBoxStyle}"
+                     Margin="{StaticResource UiSettingsSearchGap}"
                      Text="{Binding SettingsSearchQuery, UpdateSourceTrigger=PropertyChanged}" />
 
             <!--
-                搜索结果下拉（任务 17.2，Req 2.3 / 2.7 / 2.8）：
-                · 仅当 SearchResults 有命中时显示（CountToVisibilityConverter，空结果不显示列表）。
-                · 每条命中项显示「标题 + 分类」，点击经 ActivateSearchResultCommand 触发命中跳转
-                  （设 SelectedCategoryKey + PendingScrollAnchorId，由右内容区附加行为定位高亮）。
-                · 超限（命中 > 12）时显示「结果较多，请输入更精确的关键词」提示。
-                以 Popup 叠加于搜索框下方，避免挤占左导航布局。
+                搜索结果浮层（需求 9.2，仅消费既有绑定）：
+                · 仅当 SearchResults 有命中时弹出（CountToVisibilityConverter→bool，空结果不弹出）。
+                · 每条命中项显示「标题 + 分类」，点击经既有 ActivateSearchResultCommand 触发命中跳转
+                  （设 SelectedCategoryKey + PendingScrollAnchorId，由右内容区附加行为定位）。
+                · 超限时显示提示，可见性由 IsSearchResultsTruncated 驱动。
             -->
             <Popup DockPanel.Dock="Top"
                    PlacementTarget="{Binding ElementName=Box_SettingsSearch}"
@@ -69,14 +183,12 @@
                    IsOpen="{Binding SearchResults.Count, Converter={StaticResource CountToVisibilityConverter}, Mode=OneWay, FallbackValue=False}">
                 <Border Background="{DynamicResource SurfaceRaisedBrush}"
                         BorderBrush="{DynamicResource BorderBrushSoft}"
-                        BorderThickness="1"
-                        CornerRadius="{StaticResource RadiusMd}"
-                        Margin="0,4,0,0"
-                        Padding="4"
-                        MaxHeight="420">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.10" Direction="270" />
-                    </Border.Effect>
+                        BorderThickness="{StaticResource UiHairline}"
+                        CornerRadius="{StaticResource UiRadiusMd}"
+                        Margin="{StaticResource UiSettingsPopupMargin}"
+                        Padding="{StaticResource UiSettingsPopupPadding}"
+                        MaxHeight="420"
+                        Effect="{StaticResource UiElevationOverlay}">
                     <StackPanel>
                         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360">
                             <ItemsControl x:Name="List_SettingsSearchResults"
@@ -86,19 +198,17 @@
                                     <DataTemplate>
                                         <Button Command="{Binding DataContext.ActivateSearchResultCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}"
-                                                HorizontalContentAlignment="Stretch"
-                                                Cursor="Hand"
-                                                BorderThickness="0"
-                                                Background="Transparent"
-                                                Padding="10,8">
+                                                Style="{StaticResource UiSettingsSearchResultButtonStyle}">
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Title}"
                                                            Foreground="{DynamicResource HeadingBrush}"
-                                                           FontSize="13" />
+                                                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                                                           FontSize="{StaticResource UiFontBodySm}" />
                                                 <TextBlock Text="{Binding CategoryKey}"
                                                            Foreground="{DynamicResource SecondaryTextBrush}"
-                                                           FontSize="11"
-                                                           Margin="0,2,0,0" />
+                                                           FontFamily="{StaticResource UiFontFamilyCjk}"
+                                                           FontSize="{StaticResource UiFontCaption}"
+                                                           Margin="{StaticResource UiSettingsResultCategoryGap}" />
                                             </StackPanel>
                                         </Button>
                                     </DataTemplate>
@@ -106,14 +216,15 @@
                             </ItemsControl>
                         </ScrollViewer>
 
-                        <!-- 超限提示（Req 2.8）：命中超过 12 条上限时显示。 -->
+                        <!-- 超限提示（命中超过上限时显示）。 -->
                         <TextBlock x:Name="Text_SearchResultsTruncated"
                                    AutomationProperties.AutomationId="Text_SearchResultsTruncated"
                                    Text="结果较多，请输入更精确的关键词"
                                    Foreground="{DynamicResource SecondaryTextBrush}"
-                                   FontSize="11"
+                                   FontFamily="{StaticResource UiFontFamilyCjk}"
+                                   FontSize="{StaticResource UiFontCaption}"
                                    TextWrapping="Wrap"
-                                   Margin="10,6,10,8"
+                                   Margin="{StaticResource UiSettingsTruncatedMargin}"
                                    Visibility="{Binding IsSearchResultsTruncated, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </StackPanel>
                 </Border>
@@ -121,65 +232,65 @@
 
             <ListBox x:Name="Nav_SettingsCategories"
                      AutomationProperties.AutomationId="Nav_SettingsCategories"
-                     Style="{StaticResource RefineNavListStyle}"
+                     Style="{StaticResource UiSettingsNavListStyle}"
                      SelectedValuePath="Tag"
                      SelectedValue="{Binding SelectedCategoryKey, Mode=TwoWay}">
                 <ListBoxItem Tag="外观与启动">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="26" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="外观与启动" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="数据与备份">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="26" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="数据与备份" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="安全与日志">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="26" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="安全与日志" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="AI 助手">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="26" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="AI 助手" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="通知提醒">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="26" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="通知提醒" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="快捷键">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="26" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="快捷键" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
             </ListBox>
         </DockPanel>
 
-        <!-- ==================== 右侧：分类内容区 ==================== -->
+        <!-- ==================== 右侧：分类内容区（承载 SettingsTab* 子 View） ==================== -->
         <Border Grid.Column="1"
                 x:Name="Pane_SettingsContent"
                 AutomationProperties.AutomationId="Pane_SettingsContent"
                 helpers:ScrollToAnchorBehavior.AnchorId="{Binding Settings.PendingScrollAnchorId, Mode=TwoWay}"
-                Margin="8,12,12,12">
+                Margin="{StaticResource UiSettingsContentMargin}">
             <Grid>
                 <!-- 外观与启动 -->
                 <Sections:SettingsTabAppearance
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=外观与启动}" />
 
-                <!-- 数据与备份（本地备份策略 + 数据校验与导入恢复；「系统日志记录」已按 §7.1 迁至「安全与日志」） -->
+                <!-- 数据与备份 -->
                 <Sections:SettingsTabData
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=数据与备份}" />
 
-                <!-- 安全与日志（数据安全与隐私 + 本地数据库维护 + 系统日志记录；裸 StackPanel，于此包裹滚动与居中容器） -->
-                <ScrollViewer Style="{StaticResource SettingsScrollViewerStyle}"
+                <!-- 安全与日志（子 View 为裸 StackPanel，于此包裹滚动与居中容器） -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=安全与日志}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -187,7 +298,7 @@
                             <ColumnDefinition Width="10*" MaxWidth="900" MinWidth="450" />
                             <ColumnDefinition Width="1*" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="1" Margin="0,0,24,0" HorizontalAlignment="Stretch">
+                        <StackPanel Grid.Column="1" Margin="{StaticResource UiSettingsSecurityPanelMargin}" HorizontalAlignment="Stretch">
                             <Sections:SettingsTabDataSecurity />
                         </StackPanel>
                     </Grid>

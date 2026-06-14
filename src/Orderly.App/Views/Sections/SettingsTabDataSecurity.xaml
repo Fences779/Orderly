@@ -6,6 +6,11 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- ===== 派生 Thickness 布局令牌（分量对齐 Shape.xaml 的 4pt 栅格 4/8/12/16/24/32，消除散落 Margin/Padding 字面量，Req 9.1/1.12） ===== -->
+            <Thickness x:Key="SettingsCardSpacing">0,16,0,0</Thickness>            <!-- 上 UiSpaceMd(16)，卡片顶部间距 -->
+            <Thickness x:Key="SettingsRowDescMargin">0,4,0,0</Thickness>           <!-- 上 UiSpaceXxs(4)，说明文字间距 -->
+            <Thickness x:Key="SettingsInlineLabelMargin">8,0,0,0</Thickness>        <!-- 左 UiSpaceXs(8)，行内单位标签间隔 -->
         </ResourceDictionary>
     </UserControl.Resources>
     <!--
@@ -14,7 +19,7 @@
         （「系统日志记录」原属 SettingsTabDataAudit，按 §7.1 迁入此处的安全与日志宿主）。
     -->
     <StackPanel>
-                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="0,16,0,0">
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
                                 <StackPanel>
                                     <TextBlock Text="数据安全与隐私" Style="{StaticResource SettingsGroupTitleStyle}" />
 
@@ -89,7 +94,7 @@
                             </Border>
 
                             <!-- 数据库维护卡片 -->
-                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="0,16,0,0">
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
                                 <StackPanel>
                                     <TextBlock Text="本地数据库维护" Style="{StaticResource SettingsGroupTitleStyle}" />
 
@@ -139,7 +144,7 @@
                                         <Grid>
                                             <StackPanel>
                                                 <TextBlock Text="校验日志详情" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="{Binding DatabaseHealthDetailText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                                <TextBlock Text="{Binding DatabaseHealthDetailText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" Margin="{StaticResource SettingsRowDescMargin}" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -147,7 +152,7 @@
                             </Border>
 
                             <!-- 系统日志记录卡片（任务 17.3：自 SettingsTabDataAudit 按 §7.1 迁入「安全与日志」宿主） -->
-                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="0,16,0,0">
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
                                 <StackPanel>
                                     <TextBlock Text="系统日志记录" Style="{StaticResource SettingsGroupTitleStyle}" />
 
@@ -177,7 +182,7 @@
                                                 <TextBlock Text="日志自动清理周期" Style="{StaticResource SettingsItemTitleStyle}" />
                                                 <TextBlock Text="自动清理设定天数前的旧审计日志" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
-                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBox Style="{StaticResource SettingsRowTextBoxStyle}" Width="80" Text="{Binding OperationLogRetentionDaysInput, UpdateSourceTrigger=PropertyChanged}" LostFocus="SettingsTextInput_LostFocus" AutomationProperties.AutomationId="Txt_OperationLogRetentionDays" /><TextBlock Text="&#x5929;" Margin="8,0,0,0" VerticalAlignment="Center" Style="{StaticResource SettingsItemTitleStyle}" Foreground="{DynamicResource SecondaryTextBrush}" /></StackPanel>
+                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBox Style="{StaticResource SettingsRowTextBoxStyle}" Width="80" Text="{Binding OperationLogRetentionDaysInput, UpdateSourceTrigger=PropertyChanged}" LostFocus="SettingsTextInput_LostFocus" AutomationProperties.AutomationId="Txt_OperationLogRetentionDays" /><TextBlock Text="&#x5929;" Margin="{StaticResource SettingsInlineLabelMargin}" VerticalAlignment="Center" Style="{StaticResource SettingsItemTitleStyle}" Foreground="{DynamicResource SecondaryTextBrush}" /></StackPanel>
                                         </Grid>
                                     </Border>
 

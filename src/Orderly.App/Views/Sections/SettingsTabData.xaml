@@ -7,6 +7,10 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- ===== 派生 Thickness 布局令牌（分量对齐 Shape.xaml 的 4pt 栅格 4/8/12/16/24/32，消除散落 Margin/Padding 字面量，Req 9.1/1.12） ===== -->
+            <Thickness x:Key="SettingsContentMargin">0,0,24,0</Thickness>          <!-- 右 UiSpaceLg(24)，内容列与右轨间隔 -->
+            <Thickness x:Key="SettingsPrimaryButtonPadding">16,0,16,0</Thickness>   <!-- 左右 UiSpaceMd(16)，主操作按钮内边距 -->
         </ResourceDictionary>
     </UserControl.Resources>
                     <ScrollViewer Style="{StaticResource SettingsScrollViewerStyle}">
@@ -16,7 +20,7 @@
                                 <ColumnDefinition Width="10*" MaxWidth="900" MinWidth="450" />
                                 <ColumnDefinition Width="1*" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="1" Margin="0,0,24,0" HorizontalAlignment="Stretch">
+                            <StackPanel Grid.Column="1" Margin="{StaticResource SettingsContentMargin}" HorizontalAlignment="Stretch">
                             <!-- 数据备份卡片 -->
                             <Border Style="{StaticResource SettingsGroupCardStyle}">
                                 <StackPanel>
@@ -104,7 +108,7 @@
                                                 <TextBlock Text="手动导出备份" Style="{StaticResource SettingsItemTitleStyle}" />
                                                 <TextBlock Text="立即将全部订单与客户数据导出为本地备份文件" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="导出备份" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="34" Padding="14,0"
+                                            <Button Grid.Column="1" Content="导出备份" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="34" Padding="{StaticResource SettingsPrimaryButtonPadding}"
                                                     Command="{Binding ExportBackupCommand}"
                                                     AutomationProperties.AutomationId="Btn_ExportBackup" />
                                         </Grid>
