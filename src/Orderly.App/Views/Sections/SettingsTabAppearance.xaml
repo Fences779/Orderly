@@ -1,7 +1,8 @@
 <UserControl x:Class="Orderly.App.Views.Sections.SettingsTabAppearance"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:sys="clr-namespace:System;assembly=mscorlib">
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:helpers="clr-namespace:Orderly.App.Helpers">
     <!--
         外观子 Tab（commerce-settings-ui-rebuild / 任务 14.1）
         ============================================================================
@@ -91,6 +92,53 @@
             <Setter Property="Margin" Value="{StaticResource SettingsControlLeftMargin}" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+
+        <!-- ===== 选择默认启动页按钮样式 ===== -->
+        <Style x:Key="SettingsChooseStartupButtonStyle" TargetType="Button">
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="MinWidth" Value="140"/>
+            <Setter Property="Padding" Value="16,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder" 
+                                Background="{DynamicResource SurfaceSoftBrush}" 
+                                BorderBrush="{DynamicResource BorderBrushSoft}" 
+                                BorderThickness="{StaticResource UiHairline}" 
+                                CornerRadius="{StaticResource UiRadiusMd}"
+                                Padding="{TemplateBinding Padding}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="&#xE7E6;" 
+                                           FontFamily="Segoe MDL2 Assets" 
+                                           FontSize="13" 
+                                           Foreground="{DynamicResource PrimaryBrush}" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0" />
+                                <ContentPresenter VerticalAlignment="Center" 
+                                                  HorizontalAlignment="Center" />
+                                <TextBlock Text="&#xE70F;" 
+                                           FontFamily="Segoe MDL2 Assets" 
+                                           FontSize="10" 
+                                           Foreground="{DynamicResource MutedBrush}" 
+                                           VerticalAlignment="Center" 
+                                           Margin="8,0,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource BorderBrushSoft}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
@@ -193,11 +241,11 @@
                                     <TextBlock Text="默认启动页" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="打开应用时默认聚焦的板块" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <ComboBox Grid.Column="1"
-                                          Style="{StaticResource SettingsRowComboBoxStyle}"
-                                          ItemsSource="{Binding StartupSectionOptions}"
-                                          SelectedItem="{Binding StartupDefaultSectionInput}"
-                                          AutomationProperties.AutomationId="List_StartupDefaultSection" />
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource SettingsChooseStartupButtonStyle}"
+                                        Content="{Binding StartupDefaultSectionInput}"
+                                        AutomationProperties.AutomationId="List_StartupDefaultSection"
+                                        Click="Btn_ChooseStartupDefaultSection_Click" />
                             </Grid>
                         </Border>
 

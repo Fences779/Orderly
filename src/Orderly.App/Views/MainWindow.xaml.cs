@@ -121,4 +121,40 @@ public partial class MainWindow : Window, IToastService
         Orderly.App.Helpers.ThemeHelper.ThemeChanged -= OnThemeChanged;
         base.OnClosed(e);
     }
+
+    private void Window_OnButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (Orderly.App.Helpers.SettingsHelper.GetIsSelectingStartupSection(this))
+        {
+            if (e.OriginalSource is DependencyObject dep)
+            {
+                System.Windows.Controls.Button? button = null;
+                DependencyObject? current = dep;
+                while (current != null)
+                {
+                    if (current is System.Windows.Controls.Button b)
+                    {
+                        button = b;
+                        break;
+                    }
+                    current = VisualTreeHelper.GetParent(current);
+                }
+
+                if (button != null)
+                {
+                    if (button.CommandParameter is string sectionName)
+                    {
+                        var mainVM = DataContext as MainViewModel;
+                        if (mainVM != null && mainVM.Settings.StartupSectionOptions.Contains(sectionName))
+                        {
+                            mainVM.Settings.StartupDefaultSectionInput = sectionName;
+                            Orderly.App.Helpers.SettingsHelper.SetIsSelectingStartupSection(this, false);
+                            Show($"已成功将“{sectionName}”设定为默认启动页", ToastSeverity.Success);
+                            e.Handled = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

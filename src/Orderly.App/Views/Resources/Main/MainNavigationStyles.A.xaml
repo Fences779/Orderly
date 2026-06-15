@@ -299,6 +299,17 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding (helpers:SettingsHelper.IsSelectingStartupSection), RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Profile Menu Button Style (Left sidebar bottom) -->

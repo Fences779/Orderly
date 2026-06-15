@@ -367,6 +367,20 @@
                 AutomationProperties.AutomationId="Pane_SettingsContent"
                 helpers:ScrollToAnchorBehavior.AnchorId="{Binding Settings.PendingScrollAnchorId, Mode=TwoWay}"
                 Margin="{StaticResource UiSettingsContentMargin}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding (helpers:SettingsHelper.IsSelectingStartupSection), RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="16" KernelType="Box"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="Opacity" Value="0.45"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid>
                 <!-- 外观与启动 -->
                 <Sections:SettingsTabAppearance
@@ -402,6 +416,36 @@
                 <!-- 快捷键 -->
                 <Sections:SettingsTabHotkeys
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=快捷键}" />
+            </Grid>
+        </Border>
+
+        <!-- 选择默认启动页时的提示遮罩层 -->
+        <Border Grid.Column="1"
+                Margin="{StaticResource UiSettingsContentMargin}"
+                Background="Transparent"
+                Panel.ZIndex="99"
+                IsHitTestVisible="True"
+                MouseLeftButtonDown="OnMaskClick"
+                Visibility="{Binding (helpers:SettingsHelper.IsSelectingStartupSection), RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <!-- 精美微暗遮罩面 -->
+                <Border Background="{DynamicResource PageBackgroundBrush}" Opacity="0.1" CornerRadius="{StaticResource UiRadiusLg}"/>
+                
+                <!-- 提示文案，靠左侧，带轻微下沉投影 -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="24,0,0,0">
+                    <TextBlock Text="请选择您想要默认打开的页面"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource HeadingBrush}">
+                        <TextBlock.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Color="#000000" Opacity="0.15"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock Text="点击左侧导航栏的任意标签进行设定"
+                               FontSize="13"
+                               Foreground="{DynamicResource MutedBrush}"
+                               Margin="0,4,0,0" />
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>
