@@ -11,7 +11,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="#1D1D1F"/>
         <Setter Property="Padding" Value="12,10"/>
-        <Setter Property="Margin" Value="2,18,2,4"/>
+        <Setter Property="Margin" Value="2,6,2,4"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
