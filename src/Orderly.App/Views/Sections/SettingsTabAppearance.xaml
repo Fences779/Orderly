@@ -193,10 +193,12 @@
                                     <TextBlock Text="默认启动页" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="打开应用时默认聚焦的板块" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <ComboBox Grid.Column="1" Style="{StaticResource SettingsRowComboBoxStyle}"
-                                          ItemsSource="{Binding StartupSectionOptions}"
-                                          SelectedItem="{Binding StartupDefaultSectionInput}"
-                                          AutomationProperties.AutomationId="List_StartupDefaultSection" />
+                                <ListBox Grid.Column="1"
+                                         Style="{DynamicResource SettingsSegmentedControlStyle}"
+                                         ItemContainerStyle="{DynamicResource SettingsSegmentedItemStyle}"
+                                         ItemsSource="{Binding StartupSectionOptions}"
+                                         SelectedItem="{Binding StartupDefaultSectionInput}"
+                                         AutomationProperties.AutomationId="List_StartupDefaultSection" />
                             </Grid>
                         </Border>
 
@@ -211,10 +213,12 @@
                                     <TextBlock Text="默认窗口模式" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="启动应用时的窗口状态" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <ComboBox Grid.Column="1" Style="{StaticResource SettingsRowComboBoxStyle}"
-                                          ItemsSource="{Binding WindowModeOptions}"
-                                          SelectedItem="{Binding DefaultWindowModeInput}"
-                                          AutomationProperties.AutomationId="List_DefaultWindowMode" />
+                                <ListBox Grid.Column="1"
+                                         Style="{DynamicResource SettingsSegmentedControlStyle}"
+                                         ItemContainerStyle="{DynamicResource SettingsSegmentedItemStyle}"
+                                         ItemsSource="{Binding WindowModeOptions}"
+                                         SelectedItem="{Binding DefaultWindowModeInput}"
+                                         AutomationProperties.AutomationId="List_DefaultWindowMode" />
                             </Grid>
                         </Border>
 
