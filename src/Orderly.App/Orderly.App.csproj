@@ -27,4 +27,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- 排除 WPF 编译临时项目文件 -->
+    <Watch Remove="**\*_wpftmp.csproj" />
+    <!-- 排除构建输出和临时生成目录 -->
+    <Watch Remove="obj\**\*" />
+    <Watch Remove="bin\**\*" />
+  </ItemGroup>
 </Project>

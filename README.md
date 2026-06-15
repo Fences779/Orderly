@@ -89,9 +89,13 @@ git status --short
 ## 文件状态
 
 - `start-qa.bat` (新增)：提供以管理员（Owner）角色免登录直接启动应用的开发/QA模式脚本。
-- `dev-watch-qa.bat` (新增)：提供具备热重载（dotnet watch）能力的管理员免密登录启动脚本。
-- `AGENTS.md` (已修改)：在验收工作流中强制加入运行 UIA 自动点击测试进行管理员登录后实战验收的要求。
+- `dev-watch-qa.bat` (新增)：提供具备热更新（dotnet watch）能力的管理员免密登录启动脚本。
+- `AGENTS.md` (已修改)：在验收工作流中强制加入运行 UIA 自动点击测试进行管理员登录后实战验收的要求；追加关于防范 WPF 项目在 `dotnet watch` 模式下因临时文件监视导致挂起（pause）的开发规约。
+- `tools/qa/qa-common.ps1` (已修改)：修改 `Assert-NoRunningOrderlyProcess`，增加进程缓冲等待和强杀兜底机制，解决测试时的竞态条件。
 - `tools/qa/run-p1-write-smoke.ps1` (已修改)：修复在 SQLCipher 加密库下直连报错的 bug，改用 `New-QaConnectionFactory` 以便带密码连接数据库。
+- `tools/qa/run-uia-smoke.ps1` (已修改)：为 `Save-WindowScreenshot` 里的 `CopyFromScreen` 增加 try-catch，避免在无 GUI 交互后台会话中运行时因截图失败而中断测试；同时将寻找 Tab 的超时等待时间延长至 15 秒以降低后台启动竞态失败率。
+- `src/Orderly.App/ViewModels/SensitivePageGuardViewModel.cs` (已修改)：为 QA 模式的伪造内存账号放行敏感财务页面的 PIN 码解锁，以支持 UIA 冒烟与本地自动免密调试。
 - `src/Orderly.App/Helpers/FontSizeHelper.cs` (新增)：全局字号缩放管理器，提供内存资源字典覆盖与热更新机制。
 - `src/Orderly.App/Views/Sections/SettingsTabAppearance.xaml` (已修改)：字号调节组件从三档分段按钮重构为精致的连续滑动条（Slider），支持实时缩放比例指示与视觉无延迟更新。
 - `src/Orderly.App/ViewModels/MainViewModel.SettingsP0.cs` & `SettingsViewModel.cs` (已修改)：字号配置参数调整为 double 比例类型，新增拖动防抖延迟 500 毫秒后自动保存机制。
+- `src/Orderly.App/Orderly.App.csproj` (已修改)：在配置中排除 `dotnet watch` 针对 `*_wpftmp.csproj` 临时文件与 `bin/obj` 目录的监视，解决热重载频繁闪退挂起问题。
