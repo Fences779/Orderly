@@ -458,11 +458,11 @@
                     <TextBlock Grid.Column="0"
                                Text="&#xE72B;" 
                                FontFamily="Segoe MDL2 Assets" 
-                               FontSize="56" 
+                               FontSize="28" 
                                FontWeight="Bold"
-                               Foreground="{DynamicResource PrimaryBrush}" 
+                               Foreground="{DynamicResource HeadingBrush}" 
                                VerticalAlignment="Center" 
-                               Margin="0,0,108,0">
+                               Margin="0,0,136,0">
                         <TextBlock.RenderTransform>
                             <TranslateTransform x:Name="ArrowTranslate" X="0" Y="0" />
                         </TextBlock.RenderTransform>
@@ -479,14 +479,14 @@
                             </EventTrigger>
                         </TextBlock.Triggers>
                         <TextBlock.Effect>
-                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Color="{DynamicResource PrimaryColor}" Opacity="0.25"/>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1.5" Color="#000000" Opacity="0.15"/>
                         </TextBlock.Effect>
                     </TextBlock>
 
                     <!-- 大幅提升字号的提示文本 -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="请选择您想要默认打开的页面"
-                                   FontSize="60"
+                                   FontSize="40"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource HeadingBrush}">
                             <TextBlock.Effect>
@@ -494,9 +494,9 @@
                             </TextBlock.Effect>
                         </TextBlock>
                         <TextBlock Text="点击左侧导航栏的任意标签进行设定"
-                                   FontSize="26"
+                                   FontSize="20"
                                    Foreground="{DynamicResource MutedBrush}"
-                                   Margin="0,18,0,0" />
+                                   Margin="0,14,0,0" />
                     </StackPanel>
                 </Grid>
             </Grid>
