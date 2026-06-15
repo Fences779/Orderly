@@ -450,17 +450,17 @@
                 <!-- 提示文案，靠左侧，带轻微下沉投影，加上偏移量使其在右侧面板的左边缘对齐 -->
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="244,0,0,0">
                     <TextBlock Text="请选择您想要默认打开的页面"
-                               FontSize="16"
-                               FontWeight="SemiBold"
+                               FontSize="32"
+                               FontWeight="Bold"
                                Foreground="{DynamicResource HeadingBrush}">
                         <TextBlock.Effect>
-                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Color="#000000" Opacity="0.15"/>
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Color="#000000" Opacity="0.15"/>
                         </TextBlock.Effect>
                     </TextBlock>
                     <TextBlock Text="点击左侧导航栏的任意标签进行设定"
-                               FontSize="13"
+                               FontSize="18"
                                Foreground="{DynamicResource MutedBrush}"
-                               Margin="0,4,0,0" />
+                               Margin="0,12,0,0" />
                 </StackPanel>
             </Grid>
         </Border>

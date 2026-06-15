@@ -98,7 +98,7 @@
         <Style x:Key="SettingsChooseStartupButtonStyle" TargetType="Button">
             <Setter Property="MinHeight" Value="34"/>
             <Setter Property="MinWidth" Value="140"/>
-            <Setter Property="Padding" Value="16,6"/>
+            <Setter Property="Padding" Value="12,5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
@@ -111,20 +111,25 @@
                                 CornerRadius="{StaticResource UiRadiusMd}"
                                 Padding="{TemplateBinding Padding}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="&#xE7E6;" 
-                                           FontFamily="Segoe MDL2 Assets" 
-                                           FontSize="13" 
-                                           Foreground="{DynamicResource PrimaryBrush}" 
-                                           VerticalAlignment="Center" 
-                                           Margin="0,0,8,0" />
+                                <!-- 精致图标背景块 -->
+                                <Border x:Name="IconBg" Width="26" Height="26" CornerRadius="6" Background="#F0F1F3" Margin="0,0,8,0">
+                                    <TextBlock x:Name="TabIcon" 
+                                               FontFamily="Segoe MDL2 Assets" 
+                                               FontSize="12" 
+                                               Foreground="#8B8D94" 
+                                               HorizontalAlignment="Center" 
+                                               VerticalAlignment="Center" />
+                                </Border>
+                                <!-- 当前选项文本 -->
                                 <ContentPresenter VerticalAlignment="Center" 
-                                                  HorizontalAlignment="Center" />
+                                                  HorizontalAlignment="Center" 
+                                                  Margin="0,0,4,0" />
+                                <!-- 右侧编辑小图标 -->
                                 <TextBlock Text="&#xE70F;" 
                                            FontFamily="Segoe MDL2 Assets" 
                                            FontSize="10" 
                                            Foreground="{DynamicResource MutedBrush}" 
-                                           VerticalAlignment="Center" 
-                                           Margin="8,0,0,0" />
+                                           VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -135,6 +140,48 @@
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource BorderBrushSoft}"/>
                             </Trigger>
+                            
+                            <!-- 动态页面图标与配色映射（与侧边栏高亮呼应，设计精细化） -->
+                            <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台">
+                                <Setter TargetName="TabIcon" Property="Text" Value="&#xE80F;"/>
+                                <Setter TargetName="IconBg" Property="Background" Value="#E0F2FE"/>
+                                <Setter TargetName="TabIcon" Property="Foreground" Value="#0284C7"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="订单">
+                                <Setter TargetName="TabIcon" Property="Text" Value="&#xE8A1;"/>
+                                <Setter TargetName="IconBg" Property="Background" Value="#DCFCE7"/>
+                                <Setter TargetName="TabIcon" Property="Foreground" Value="#16A34A"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="商品">
+                                <Setter TargetName="TabIcon" Property="Text" Value="&#xE719;"/>
+                                <Setter TargetName="IconBg" Property="Background" Value="#FCE7F3"/>
+                                <Setter TargetName="TabIcon" Property="Foreground" Value="#DB2777"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="库存管理">
+                                <Setter TargetName="TabIcon" Property="Text" Value="&#xE7B8;"/>
+                                <Setter TargetName="IconBg" Property="Background" Value="#FEF3C7"/>
+                                <Setter TargetName="TabIcon" Property="Foreground" Value="#B45309"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="客户">
+                                <Setter TargetName="TabIcon" Property="Text" Value="&#xE77B;"/>
+                                <Setter TargetName="IconBg" Property="Background" Value="#CCFBF1"/>
+                                <Setter TargetName="TabIcon" Property="Foreground" Value="#0D9488"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="现金流">
+                                <Setter TargetName="TabIcon" Property="Text" Value="&#xE825;"/>
+                                <Setter TargetName="IconBg" Property="Background" Value="#E0E7FF"/>
+                                <Setter TargetName="TabIcon" Property="Foreground" Value="#4F46E5"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="经营建议">
+                                <Setter TargetName="TabIcon" Property="Text" Value="&#xE9D9;"/>
+                                <Setter TargetName="IconBg" Property="Background" Value="#FFEDD5"/>
+                                <Setter TargetName="TabIcon" Property="Foreground" Value="#EA580C"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置">
+                                <Setter TargetName="TabIcon" Property="Text" Value="&#xE713;"/>
+                                <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
+                                <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
+                            </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
