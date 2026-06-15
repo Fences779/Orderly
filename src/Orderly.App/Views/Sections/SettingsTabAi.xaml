@@ -116,7 +116,7 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource SettingsScrollPadding}">
+    <ScrollViewer Style="{StaticResource SettingsScrollViewerStyle}" Padding="{StaticResource SettingsScrollPadding}">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1*" />

@@ -68,6 +68,83 @@
         <!-- 导航图标字形尺寸（对齐 UiSpaceLg 24，用于图标列对齐） -->
         <sys:Double x:Key="UiSettingsNavIconSize">24</sys:Double>
 
+        <!-- 搜索框与指示器微调令牌（避免硬编码字面量） -->
+        <sys:Double x:Key="UiSettingsSearchIconFontSize">13</sys:Double>
+        <Thickness x:Key="UiSettingsSearchIconMargin">10,0,0,0</Thickness>
+        <Thickness x:Key="UiSettingsSearchPlaceholderMargin">32,0,8,0</Thickness>
+        <Thickness x:Key="UiSettingsAccentBarMargin">4,0,0,0</Thickness>
+        <Thickness x:Key="UiSettingsNavPresenterMargin">10,0,0,0</Thickness>
+        <CornerRadius x:Key="UiSettingsAccentBarRadius">1.75</CornerRadius>
+
+        <!-- 搜索框自定义水印与图标样式 -->
+        <Style x:Key="SettingsSearchTextBoxStyle" TargetType="TextBox">
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
+            <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
+            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource PrimaryBrush}" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="{StaticResource UiSettingsSearchPlaceholderMargin}" />
+            <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+            <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{StaticResource UiRadiusMd}"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <!-- 搜索图标 -->
+                                <TextBlock Text="&#xE721;" 
+                                           FontFamily="Segoe MDL2 Assets" 
+                                           FontSize="{StaticResource UiSettingsSearchIconFontSize}" 
+                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                           HorizontalAlignment="Left" 
+                                           VerticalAlignment="Center" 
+                                           Margin="{StaticResource UiSettingsSearchIconMargin}"
+                                           IsHitTestVisible="False"/>
+                                
+                                <!-- 水印提示文字 -->
+                                <TextBlock x:Name="PlaceholderText"
+                                           Text="搜索系统设置..."
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontFamily="{TemplateBinding FontFamily}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           VerticalAlignment="Center"
+                                           Margin="{StaticResource UiSettingsSearchPlaceholderMargin}"
+                                           IsHitTestVisible="False"
+                                           Visibility="Collapsed"/>
+                                
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter TargetName="PlaceholderText" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="Text" Value="{x:Null}">
+                                <Setter TargetName="PlaceholderText" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource UiFocusBrush}" />
+                                <Setter TargetName="Border" Property="BorderThickness" Value="{StaticResource UiFocusThickness}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- ==================== 左侧分类导航项样式（当前 Tab 高亮：主色弱底 + 左侧主色条） ==================== -->
         <Style x:Key="UiSettingsNavItemStyle" TargetType="ListBoxItem">
             <Setter Property="Background" Value="Transparent" />
@@ -83,19 +160,29 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="NavBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="Transparent"
-                                BorderThickness="{StaticResource UiSelectedAccentBar}"
-                                CornerRadius="{StaticResource UiRadiusMd}"
-                                Padding="{TemplateBinding Padding}"
-                                SnapsToDevicePixels="True">
-                            <ContentPresenter VerticalAlignment="Center" />
-                        </Border>
+                        <Grid x:Name="NavGrid">
+                            <Border x:Name="NavBorder"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="{StaticResource UiRadiusMd}"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter VerticalAlignment="Center" Margin="{StaticResource UiSettingsNavPresenterMargin}" />
+                            </Border>
+                            <!-- 左侧独立指示胶囊 -->
+                            <Border x:Name="AccentBar"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Width="3.5"
+                                    Height="16"
+                                    CornerRadius="{StaticResource UiSettingsAccentBarRadius}"
+                                    Background="Transparent"
+                                    Margin="{StaticResource UiSettingsAccentBarMargin}"
+                                    SnapsToDevicePixels="True"/>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="NavBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}" />
-                                <Setter TargetName="NavBorder" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                                <Setter TargetName="AccentBar" Property="Background" Value="{DynamicResource PrimaryBrush}" />
                                 <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
                                 <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
                             </Trigger>
@@ -163,7 +250,7 @@
             <TextBox x:Name="Box_SettingsSearch"
                      DockPanel.Dock="Top"
                      AutomationProperties.AutomationId="Box_SettingsSearch"
-                     Style="{StaticResource UiTextBoxStyle}"
+                     Style="{StaticResource SettingsSearchTextBoxStyle}"
                      Margin="{StaticResource UiSettingsSearchGap}"
                      Text="{Binding SettingsSearchQuery, UpdateSourceTrigger=PropertyChanged}" />
 
@@ -290,7 +377,7 @@
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=数据与备份}" />
 
                 <!-- 安全与日志（子 View 为裸 StackPanel，于此包裹滚动与居中容器） -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                <ScrollViewer Style="{StaticResource SettingsScrollViewerStyle}"
                               Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=安全与日志}">
                     <Grid>
                         <Grid.ColumnDefinitions>
