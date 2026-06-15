@@ -123,6 +123,48 @@ public sealed class SessionLockTriggerTests
         Assert.Equal(TrayLockAction.LockAfterIdleDelay, action);
     }
 
+    // ---- (4.1) PIN 解锁提示时机：可立即弹，也可延后到再次打开主窗口 ----
+
+    [Fact]
+    public void Pending_pin_unlock_prompts_immediately_by_default()
+    {
+        var action = PinUnlockPromptPolicy.EvaluateOnLock(
+            SessionLockState.PendingPinUnlock,
+            deferUntilMainWindowOpen: false);
+
+        Assert.Equal(PinUnlockPromptAction.PromptImmediately, action);
+        Assert.False(PinUnlockPromptPolicy.ShouldRequirePinBeforeShowingMainWindow(
+            SessionLockState.PendingPinUnlock,
+            deferUntilMainWindowOpen: false));
+    }
+
+    [Fact]
+    public void Pending_pin_unlock_can_be_deferred_until_main_window_reopens()
+    {
+        var action = PinUnlockPromptPolicy.EvaluateOnLock(
+            SessionLockState.PendingPinUnlock,
+            deferUntilMainWindowOpen: true);
+
+        Assert.Equal(PinUnlockPromptAction.DeferUntilMainWindowOpen, action);
+        Assert.True(PinUnlockPromptPolicy.ShouldRequirePinBeforeShowingMainWindow(
+            SessionLockState.PendingPinUnlock,
+            deferUntilMainWindowOpen: true));
+    }
+
+    [Fact]
+    public void Non_pending_states_never_schedule_pin_prompt()
+    {
+        Assert.Equal(
+            PinUnlockPromptAction.None,
+            PinUnlockPromptPolicy.EvaluateOnLock(
+                SessionLockState.Unlocked,
+                deferUntilMainWindowOpen: true));
+
+        Assert.False(PinUnlockPromptPolicy.ShouldRequirePinBeforeShowingMainWindow(
+            SessionLockState.Unlocked,
+            deferUntilMainWindowOpen: true));
+    }
+
     // ---- (5) 系统睡眠 / 恢复后锁定（复用既有 LockBySystemResume） ----
 
     [Fact]

@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows;
 using System.IO;
 using Microsoft.Win32;
+using Orderly.App.Session;
 using Orderly.Core.Models;
 using Orderly.App.ViewModels;
 using Orderly.App.Views;
@@ -60,6 +61,7 @@ public partial class App : System.Windows.Application
     private string? _databasePath;
     private string? _preparedDatabasePath;
     private bool _isPinUnlockDialogOpen;
+    private bool _deferPinUnlockUntilMainWindowOpen;
     private QaDataMaintenanceService.QaDataMaintenanceCommand _qaMaintenanceCommand;
 
     // 任务 9.8：最小化到托盘时锁定的可选「空闲时限」策略。默认 TimeSpan.Zero = 立即锁定。
@@ -302,7 +304,7 @@ public partial class App : System.Windows.Application
         _loginView.Activate();
     }
 
-    private void ShowMainWindow()
+    private async void ShowMainWindow()
     {
         if (_mainWindow is null)
         {
@@ -311,6 +313,17 @@ public partial class App : System.Windows.Application
 
         // 重新打开窗口即取消尚未到时的空闲锁定（任务 9.8：未到时限不锁定）。
         CancelMinimizeToTrayIdleLock();
+
+        if (PinUnlockPromptPolicy.ShouldRequirePinBeforeShowingMainWindow(
+                _sessionLockService?.State ?? SessionLockState.LoggedOut,
+                _deferPinUnlockUntilMainWindowOpen))
+        {
+            await RequirePinUnlockAsync();
+            if (_mainWindow is null || _sessionLockService?.State != SessionLockState.Unlocked)
+            {
+                return;
+            }
+        }
 
         _mainWindow.Show();
         _mainWindow.WindowState = WindowState.Normal;

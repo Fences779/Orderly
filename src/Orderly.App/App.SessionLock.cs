@@ -29,19 +29,28 @@ public partial class App
 
         if (_sessionContextService?.IsSignedIn == true)
         {
+            PrepareDeferredPinUnlock();
             _sessionLockService?.LockBySystemResume();
         }
     }
 
     private void OnSessionLockStateChanged(object? sender, SessionLockState state)
     {
-        if (state != SessionLockState.PendingPinUnlock)
+        var action = PinUnlockPromptPolicy.EvaluateOnLock(state, _deferPinUnlockUntilMainWindowOpen);
+        if (action == PinUnlockPromptAction.None)
         {
             if (state == SessionLockState.Unlocked && _mainWindow is not null)
             {
                 _mainWindow.IsEnabled = true;
             }
 
+            _deferPinUnlockUntilMainWindowOpen = false;
+            return;
+        }
+
+        if (action == PinUnlockPromptAction.DeferUntilMainWindowOpen)
+        {
+            HideMainWindowUntilPinRequested();
             return;
         }
 
@@ -63,11 +72,12 @@ public partial class App
         }
 
         _isPinUnlockDialogOpen = true;
+        _deferPinUnlockUntilMainWindowOpen = false;
         try
         {
-            if (_mainWindow is not null)
+            if (_mainWindow is { IsVisible: true } visibleMainWindow)
             {
-                _mainWindow.IsEnabled = false;
+                visibleMainWindow.IsEnabled = false;
             }
 
             while (_sessionLockService?.IsPinRequired == true)
@@ -78,10 +88,11 @@ public partial class App
                     break;
                 }
 
-                var dialog = new PinUnlockView(session.DisplayName, session.Username)
+                var dialog = new PinUnlockView(session.DisplayName, session.Username);
+                if (_mainWindow is { IsVisible: true } mainWindow)
                 {
-                    Owner = _mainWindow
-                };
+                    dialog.Owner = mainWindow;
+                }
 
                 var result = dialog.ShowDialog();
                 if (result != true)
@@ -97,12 +108,23 @@ public partial class App
                     break;
                 }
 
-                System.Windows.MessageBox.Show(
-                    _mainWindow,
-                    "PIN 错误，请重试。",
-                    "Orderly",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                if (_mainWindow is { IsVisible: true } owner)
+                {
+                    System.Windows.MessageBox.Show(
+                        owner,
+                        "PIN 错误，请重试。",
+                        "Orderly",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(
+                        "PIN 错误，请重试。",
+                        "Orderly",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                }
             }
         }
         finally
@@ -191,6 +213,7 @@ public partial class App
         {
             case TrayLockAction.LockImmediately:
                 CancelMinimizeToTrayIdleLock();
+                PrepareDeferredPinUnlock();
                 _sessionLockService?.LockManually();
                 break;
 
@@ -225,6 +248,7 @@ public partial class App
         if (_sessionContextService?.IsSignedIn == true
             && _sessionLockService?.State == SessionLockState.Unlocked)
         {
+            PrepareDeferredPinUnlock();
             _sessionLockService.LockManually();
         }
     }
@@ -248,5 +272,21 @@ public partial class App
     private void HandleLogoutRequested()
     {
         _ = LogoutToLoginAsync();
+    }
+
+    private void PrepareDeferredPinUnlock()
+    {
+        _deferPinUnlockUntilMainWindowOpen = true;
+    }
+
+    private void HideMainWindowUntilPinRequested()
+    {
+        if (_mainWindow is null || !_mainWindow.IsVisible)
+        {
+            return;
+        }
+
+        _mainWindow.IsEnabled = true;
+        _mainWindow.Hide();
     }
 }
