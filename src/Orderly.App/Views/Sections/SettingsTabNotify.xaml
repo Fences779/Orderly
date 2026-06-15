@@ -74,13 +74,6 @@
             <Setter Property="Margin" Value="{StaticResource SettingsRowDescMargin}" />
         </Style>
 
-        <!-- ===== 行内开关 ===== -->
-        <Style x:Key="SettingsRowCheckBoxStyle" TargetType="CheckBox" BasedOn="{StaticResource UiCheckBoxStyle}">
-            <Setter Property="Margin" Value="{StaticResource SettingsControlLeftMargin}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="HorizontalAlignment" Value="Right" />
-        </Style>
-
         <!-- ===== 行级校验错误模板（消费 WPF 既有校验结果，以错误状态色呈现，不新增校验逻辑） ===== -->
         <ControlTemplate x:Key="SettingsFieldErrorTemplate">
             <StackPanel>
@@ -136,7 +129,7 @@
                                     <TextBlock Text="有新订单拉取成功时提醒" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="在桌面右下角推送新拉取到的订单气泡消息" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding NotifyNewOrderInput}"
                                           AutomationProperties.AutomationId="Chk_NotifyNewOrder" />
                             </Grid>
@@ -153,7 +146,7 @@
                                     <TextBlock Text="发现异常订单时提醒" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="订单被标记为异常、缺货或支付异常时进行提醒" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding NotifyExceptionOrderInput}"
                                           AutomationProperties.AutomationId="Chk_NotifyExceptionOrder" />
                             </Grid>
@@ -170,7 +163,7 @@
                                     <TextBlock Text="待办任务超期未处理提醒" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="超过设定时限仍未流转状态时触发预警" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding NotifyOverdueUnhandledInput}"
                                           AutomationProperties.AutomationId="Chk_NotifyOverdueUnhandled" />
                             </Grid>
@@ -187,7 +180,7 @@
                                     <TextBlock Text="网关同步失败提醒" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="自动后台同步连接超时或网关授权过期时报错提醒" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding NotifySyncFailedInput}"
                                           AutomationProperties.AutomationId="Chk_NotifySyncFailed" />
                             </Grid>
@@ -261,7 +254,7 @@
                                     <TextBlock Text="收货联系地址缺失提醒" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="导入订单如无详细地址则立刻弹出提示" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding NotifyMissingAddressInput}"
                                           AutomationProperties.AutomationId="Chk_NotifyMissingAddress" />
                             </Grid>
@@ -297,7 +290,7 @@
                                     <TextBlock Text="仅推送高优先级待办" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="仅对标红或最高优先级的事务触发气泡弹框" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding NotifyHighPriorityOnlyInput}"
                                           AutomationProperties.AutomationId="Chk_NotifyHighPriorityOnly" />
                             </Grid>

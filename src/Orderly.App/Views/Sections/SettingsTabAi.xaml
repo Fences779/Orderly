@@ -78,13 +78,6 @@
             <Setter Property="Margin" Value="{StaticResource SettingsRowDescMargin}" />
         </Style>
 
-        <!-- ===== 行内开关（套用统一 CheckBox 令牌样式，禁用态沿用样式既有视觉） ===== -->
-        <Style x:Key="SettingsRowCheckBoxStyle" TargetType="CheckBox" BasedOn="{StaticResource UiCheckBoxStyle}">
-            <Setter Property="Margin" Value="{StaticResource SettingsControlLeftMargin}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="HorizontalAlignment" Value="Right" />
-        </Style>
-
         <!-- ===== 行级校验错误模板（消费 WPF 既有校验结果，以错误状态色呈现，不新增校验逻辑） ===== -->
         <ControlTemplate x:Key="SettingsFieldErrorTemplate">
             <StackPanel>
@@ -141,7 +134,7 @@
                                     <TextBlock Text="开启 AI 话术推荐" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="根据当前客户与订单上下文提供智能快捷回复话术建议" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding EnableAiAssistantInput}"
                                           AutomationProperties.AutomationId="Chk_EnableAiAssistant" />
                             </Grid>
@@ -158,7 +151,7 @@
                                     <TextBlock Text="允许读取订单上下文" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="允许 AI 助手获取当前编辑中或高亮选中的订单数据" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding AllowAiOrderContextInput}"
                                           AutomationProperties.AutomationId="Chk_AllowAiOrderContext" />
                             </Grid>
@@ -175,7 +168,7 @@
                                     <TextBlock Text="分析客户历史行为画像" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="授权 AI 助手分析该客户的历史备忘以提供个性化话术" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding AllowAiCustomerProfileContextInput}"
                                           AutomationProperties.AutomationId="Chk_AllowAiCustomerProfileContext" />
                             </Grid>
@@ -237,7 +230,7 @@
                                     <TextBlock Text="自动上下文数据脱敏" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="在大数据传输至外部大模型 API 前进行本地脱敏规避风险" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding AiAutoRedactBeforeSendInput}"
                                           AutomationProperties.AutomationId="Chk_AiAutoRedactBeforeSend" />
                             </Grid>
@@ -254,7 +247,7 @@
                                     <TextBlock Text="自动遮蔽联系电话" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="向 AI 上下文推送数据时自动隐去电话号码" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding AiBlockPhoneInput}"
                                           AutomationProperties.AutomationId="Chk_AiBlockPhone" />
                             </Grid>
@@ -271,7 +264,7 @@
                                     <TextBlock Text="自动遮蔽收货地址" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="向 AI 上下文推送数据时自动隐藏具体物理门牌号" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding AiBlockFullAddressInput}"
                                           AutomationProperties.AutomationId="Chk_AiBlockFullAddress" />
                             </Grid>
@@ -288,7 +281,7 @@
                                     <TextBlock Text="自动遮蔽支付交易单号" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="在 AI 通信报文中自动遮蔽第三方平台的流水与交易ID" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding AiBlockPaymentTransactionIdInput}"
                                           AutomationProperties.AutomationId="Chk_AiBlockPaymentTransactionId" />
                             </Grid>
@@ -348,7 +341,7 @@
                                     <TextBlock Text="自动填充生成订单摘要" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="允许 AI 助手对长对话生成一键订单概要填充" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding AiAutoGenerateOrderSummaryInput}"
                                           AutomationProperties.AutomationId="Chk_AiAutoGenerateOrderSummary" />
                             </Grid>

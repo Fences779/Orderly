@@ -87,13 +87,6 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <!-- ===== 行内开关（套用统一 CheckBox 令牌样式） ===== -->
-        <Style x:Key="SettingsRowCheckBoxStyle" TargetType="CheckBox" BasedOn="{StaticResource UiCheckBoxStyle}">
-            <Setter Property="Margin" Value="{StaticResource SettingsControlLeftMargin}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="HorizontalAlignment" Value="Right" />
-        </Style>
-
         <!-- ===== 选择默认启动页按钮样式 ===== -->
         <Style x:Key="SettingsChooseStartupButtonStyle" TargetType="Button">
             <Setter Property="MinHeight" Value="34"/>
@@ -324,7 +317,7 @@
                                     <TextBlock Text="记住上次停留页" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="启动时恢复至上次关闭前的导航页面" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding RememberLastSectionInput}"
                                           AutomationProperties.AutomationId="Chk_RememberLastSection" />
                             </Grid>
@@ -341,7 +334,7 @@
                                     <TextBlock Text="随系统开机启动" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="在系统登录后自动后台启动工作台" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding StartWithWindowsInput}"
                                           AutomationProperties.AutomationId="Chk_StartWithWindows" />
                             </Grid>
@@ -358,7 +351,7 @@
                                     <TextBlock Text="启动时显示悬浮窗" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="应用开启后自动在桌面右上角显示快捷悬浮工具栏" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding ShowFloatingWindowOnStartupInput}"
                                           AutomationProperties.AutomationId="Chk_ShowFloatingWindow" />
                             </Grid>
@@ -375,7 +368,7 @@
                                     <TextBlock Text="启动最小化至托盘" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="开启后自动隐藏在后台，双击右下角图标打开" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding StartMinimizedToTrayInput}"
                                           AutomationProperties.AutomationId="Chk_StartMinimizedToTray" />
                             </Grid>
@@ -392,7 +385,7 @@
                                     <TextBlock Text="记住窗口位置" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="自动记录并恢复上次关闭时的窗口几何大小与位置" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding RememberWindowBoundsInput}"
                                           AutomationProperties.AutomationId="Chk_RememberWindowBounds" />
                             </Grid>
