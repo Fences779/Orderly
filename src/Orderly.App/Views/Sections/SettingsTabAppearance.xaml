@@ -94,7 +94,7 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer Style="{StaticResource SettingsScrollViewerStyle}" Padding="{StaticResource SettingsScrollPadding}">
+    <ScrollViewer Style="{DynamicResource SettingsScrollViewerStyle}" Padding="{StaticResource SettingsScrollPadding}">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1*" />
@@ -120,8 +120,8 @@
                                     <TextBlock Text="应用外观主题设定" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
                                 <ListBox Grid.Column="1"
-                                         Style="{StaticResource SettingsSegmentedControlStyle}"
-                                         ItemContainerStyle="{StaticResource SettingsSegmentedItemStyle}"
+                                         Style="{DynamicResource SettingsSegmentedControlStyle}"
+                                         ItemContainerStyle="{DynamicResource SettingsSegmentedItemStyle}"
                                          ItemsSource="{Binding ThemeModeOptions}"
                                          SelectedItem="{Binding ThemeModeInput}"
                                          AutomationProperties.AutomationId="List_ThemeMode" />
@@ -159,12 +159,12 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"
                                             Margin="{StaticResource SettingsControlLeftMargin}">
-                                    <ListBox Style="{StaticResource SettingsColorSwatchListStyle}"
-                                             ItemContainerStyle="{StaticResource SettingsColorSwatchItemStyle}"
+                                    <ListBox Style="{DynamicResource SettingsColorSwatchListStyle}"
+                                             ItemContainerStyle="{DynamicResource SettingsColorSwatchItemStyle}"
                                              ItemsSource="{Binding AccentColorOptions}"
                                              SelectedItem="{Binding AccentColorInput}"
                                              AutomationProperties.AutomationId="List_AccentColor" />
-                                    <Button Style="{StaticResource SettingsRowCustomColorButtonStyle}"
+                                    <Button Style="{DynamicResource SettingsRowCustomColorButtonStyle}"
                                             Margin="{StaticResource SettingsInlineButtonMargin}"
                                             ToolTip="自定义强调色..."
                                             Command="{Binding ChooseCustomAccentColorCommand}"

@@ -377,7 +377,7 @@
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=数据与备份}" />
 
                 <!-- 安全与日志（子 View 为裸 StackPanel，于此包裹滚动与居中容器） -->
-                <ScrollViewer Style="{StaticResource SettingsScrollViewerStyle}"
+                <ScrollViewer Style="{DynamicResource SettingsScrollViewerStyle}"
                               Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=安全与日志}">
                     <Grid>
                         <Grid.ColumnDefinitions>
