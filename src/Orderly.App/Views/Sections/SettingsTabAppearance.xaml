@@ -97,8 +97,8 @@
         <!-- ===== 选择默认启动页按钮样式 ===== -->
         <Style x:Key="SettingsChooseStartupButtonStyle" TargetType="Button">
             <Setter Property="MinHeight" Value="34"/>
-            <Setter Property="MinWidth" Value="140"/>
-            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="MinWidth" Value="132"/>
+            <Setter Property="Padding" Value="16,4"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
@@ -106,81 +106,82 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="ButtonBorder" 
                                 Background="{DynamicResource SurfaceSoftBrush}" 
-                                BorderBrush="{DynamicResource BorderBrushSoft}" 
-                                BorderThickness="{StaticResource UiHairline}" 
-                                CornerRadius="{StaticResource UiRadiusMd}"
+                                BorderThickness="0" 
+                                CornerRadius="17"
                                 Padding="{TemplateBinding Padding}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <!-- 精致图标背景块 -->
-                                <Border x:Name="IconBg" Width="26" Height="26" CornerRadius="6" Background="#F0F1F3" Margin="0,0,8,0">
-                                    <TextBlock x:Name="TabIcon" 
-                                               FontFamily="Segoe MDL2 Assets" 
-                                               FontSize="12" 
-                                               Foreground="#8B8D94" 
-                                               HorizontalAlignment="Center" 
-                                               VerticalAlignment="Center" />
-                                </Border>
+                                <!-- 精致图标 -->
+                                <TextBlock x:Name="TabIcon" 
+                                           FontFamily="Segoe MDL2 Assets" 
+                                           FontSize="13" 
+                                           Margin="0,0,8,0"
+                                           VerticalAlignment="Center" />
                                 <!-- 当前选项文本 -->
-                                <ContentPresenter VerticalAlignment="Center" 
+                                <ContentPresenter x:Name="ButtonContent"
+                                                  VerticalAlignment="Center" 
                                                   HorizontalAlignment="Center" 
-                                                  Margin="0,0,4,0" />
+                                                  Margin="0,0,8,0" />
                                 <!-- 右侧编辑小图标 -->
-                                <TextBlock Text="&#xE70F;" 
+                                <TextBlock x:Name="EditIcon"
+                                           Text="&#xE70F;" 
                                            FontFamily="Segoe MDL2 Assets" 
                                            FontSize="10" 
-                                           Foreground="{DynamicResource MutedBrush}" 
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource PrimaryHoverBrush}"/>
+                                <Setter TargetName="ButtonBorder" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Color="#000000" Opacity="0.08"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.9"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource BorderBrushSoft}"/>
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.8"/>
                             </Trigger>
                             
                             <!-- 动态页面图标与配色映射（与侧边栏高亮呼应，设计精细化） -->
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE80F;"/>
-                                <Setter TargetName="IconBg" Property="Background" Value="#E0F2FE"/>
-                                <Setter TargetName="TabIcon" Property="Foreground" Value="#0284C7"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#E0F2FE"/>
+                                <Setter Property="Foreground" Value="#0284C7"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="订单">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE8A1;"/>
-                                <Setter TargetName="IconBg" Property="Background" Value="#DCFCE7"/>
-                                <Setter TargetName="TabIcon" Property="Foreground" Value="#16A34A"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#DCFCE7"/>
+                                <Setter Property="Foreground" Value="#16A34A"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="商品">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE719;"/>
-                                <Setter TargetName="IconBg" Property="Background" Value="#FCE7F3"/>
-                                <Setter TargetName="TabIcon" Property="Foreground" Value="#DB2777"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FCE7F3"/>
+                                <Setter Property="Foreground" Value="#DB2777"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="库存管理">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE7B8;"/>
-                                <Setter TargetName="IconBg" Property="Background" Value="#FEF3C7"/>
-                                <Setter TargetName="TabIcon" Property="Foreground" Value="#B45309"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FEF3C7"/>
+                                <Setter Property="Foreground" Value="#B45309"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="客户">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE77B;"/>
-                                <Setter TargetName="IconBg" Property="Background" Value="#CCFBF1"/>
-                                <Setter TargetName="TabIcon" Property="Foreground" Value="#0D9488"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#CCFBF1"/>
+                                <Setter Property="Foreground" Value="#0D9488"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="现金流">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE825;"/>
-                                <Setter TargetName="IconBg" Property="Background" Value="#E0E7FF"/>
-                                <Setter TargetName="TabIcon" Property="Foreground" Value="#4F46E5"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#E0E7FF"/>
+                                <Setter Property="Foreground" Value="#4F46E5"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="经营建议">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE9D9;"/>
-                                <Setter TargetName="IconBg" Property="Background" Value="#FFEDD5"/>
-                                <Setter TargetName="TabIcon" Property="Foreground" Value="#EA580C"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFEDD5"/>
+                                <Setter Property="Foreground" Value="#EA580C"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE713;"/>
-                                <Setter TargetName="IconBg" Property="Background" Value="#F3E8FF"/>
-                                <Setter TargetName="TabIcon" Property="Foreground" Value="#9333EA"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#F3E8FF"/>
+                                <Setter Property="Foreground" Value="#9333EA"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
