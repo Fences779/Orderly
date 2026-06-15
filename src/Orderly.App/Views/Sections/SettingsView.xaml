@@ -447,21 +447,58 @@
                 <!-- 精美微暗遮罩面 -->
                 <Border Background="{DynamicResource PageBackgroundBrush}" Opacity="0.1" CornerRadius="{StaticResource UiRadiusLg}"/>
                 
-                <!-- 提示文案，靠左侧，带轻微下沉投影，加上偏移量使其在右侧面板的左边缘对齐 -->
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="244,0,0,0">
-                    <TextBlock Text="请选择您想要默认打开的页面"
-                               FontSize="32"
+                <!-- 提示文案与缓动指引箭头 -->
+                <Grid VerticalAlignment="Center" HorizontalAlignment="Left" Margin="80,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- 指向左侧主导航栏的呼吸箭头 -->
+                    <TextBlock Grid.Column="0"
+                               Text="&#xE72B;" 
+                               FontFamily="Segoe MDL2 Assets" 
+                               FontSize="56" 
                                FontWeight="Bold"
-                               Foreground="{DynamicResource HeadingBrush}">
+                               Foreground="{DynamicResource PrimaryBrush}" 
+                               VerticalAlignment="Center" 
+                               Margin="0,0,108,0">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform x:Name="ArrowTranslate" X="0" Y="0" />
+                        </TextBlock.RenderTransform>
+                        <TextBlock.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetName="ArrowTranslate"
+                                                         Storyboard.TargetProperty="X"
+                                                         From="0" To="-20" Duration="0:0:0.8"
+                                                         DecelerationRatio="0.6" AccelerationRatio="0.4"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </TextBlock.Triggers>
                         <TextBlock.Effect>
-                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Color="#000000" Opacity="0.15"/>
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Color="{DynamicResource PrimaryColor}" Opacity="0.25"/>
                         </TextBlock.Effect>
                     </TextBlock>
-                    <TextBlock Text="点击左侧导航栏的任意标签进行设定"
-                               FontSize="18"
-                               Foreground="{DynamicResource MutedBrush}"
-                               Margin="0,12,0,0" />
-                </StackPanel>
+
+                    <!-- 大幅提升字号的提示文本 -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="请选择您想要默认打开的页面"
+                                   FontSize="60"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource HeadingBrush}">
+                            <TextBlock.Effect>
+                                <DropShadowEffect BlurRadius="16" ShadowDepth="2" Color="#000000" Opacity="0.18"/>
+                            </TextBlock.Effect>
+                        </TextBlock>
+                        <TextBlock Text="点击左侧导航栏的任意标签进行设定"
+                                   FontSize="26"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   Margin="0,18,0,0" />
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Border>
     </Grid>

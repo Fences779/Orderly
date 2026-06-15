@@ -380,8 +380,25 @@ public partial class App : System.Windows.Application
         return true;
     }
 
-    private void ExitApplication()
+    private void ExitApplicationFromTray()
     {
+        // 托盘菜单来自 WinForms 通知图标，统一切回 WPF Dispatcher 做真实退出，
+        // 并在清理完成后补最终进程终止兜底，避免仅隐藏窗口后进程残留。
+        _ = Dispatcher.InvokeAsync(() => ExitApplication(forceProcessTermination: true));
+    }
+
+    private void ExitApplication(bool forceProcessTermination = false)
+    {
+        if (IsExiting)
+        {
+            if (forceProcessTermination)
+            {
+                Environment.Exit(0);
+            }
+
+            return;
+        }
+
         IsExiting = true;
         Orderly.App.Helpers.ThemeHelper.Shutdown();
         if (_sessionLockService is not null)
@@ -403,5 +420,10 @@ public partial class App : System.Windows.Application
         _floatingWindow?.Close();
         _mainWindow?.Close();
         Shutdown();
+
+        if (forceProcessTermination)
+        {
+            Environment.Exit(0);
+        }
     }
 }

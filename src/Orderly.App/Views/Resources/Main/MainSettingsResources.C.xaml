@@ -29,7 +29,7 @@
                             <Border x:Name="PART_Slider" 
                                     Background="{DynamicResource SurfaceRaisedBrush}" 
                                     BorderBrush="{DynamicResource BorderBrushSoft}"
-                                    BorderThickness="1"
+                                    BorderThickness="0"
                                     CornerRadius="8" 
                                     Height="28" 
                                     HorizontalAlignment="Left"

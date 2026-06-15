@@ -272,7 +272,7 @@ public partial class App
         _trayIconService = new TrayIconService();
         _trayIconService.OpenMainRequested += (_, _) => ShowMainWindow();
         _trayIconService.ToggleFloatingRequested += (_, _) => ToggleFloatingWindow();
-        _trayIconService.ExitRequested += (_, _) => ExitApplication();
+        _trayIconService.ExitRequested += (_, _) => ExitApplicationFromTray();
 
         _hotkeyService = new GlobalHotkeyService();
         _hotkeyService.HotkeyPressed += (_, hotkey) =>
