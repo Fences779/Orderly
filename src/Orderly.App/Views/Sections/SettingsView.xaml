@@ -247,6 +247,21 @@
 
         <!-- ==================== 左侧：搜索框 + 竖向分类导航 ==================== -->
         <DockPanel Grid.Column="0" Margin="{StaticResource UiSettingsLeftPaneMargin}" DataContext="{Binding Settings}">
+            <DockPanel.Style>
+                <Style TargetType="DockPanel">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding (helpers:SettingsHelper.IsSelectingStartupSection), RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <BlurEffect Radius="16" KernelType="Box"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="Opacity" Value="0.45"/>
+                            <Setter Property="IsEnabled" Value="False"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DockPanel.Style>
             <TextBox x:Name="Box_SettingsSearch"
                      DockPanel.Dock="Top"
                      AutomationProperties.AutomationId="Box_SettingsSearch"
@@ -420,8 +435,9 @@
         </Border>
 
         <!-- 选择默认启动页时的提示遮罩层 -->
-        <Border Grid.Column="1"
-                Margin="{StaticResource UiSettingsContentMargin}"
+        <Border Grid.Column="0"
+                Grid.ColumnSpan="2"
+                Margin="0"
                 Background="Transparent"
                 Panel.ZIndex="99"
                 IsHitTestVisible="True"
@@ -431,8 +447,8 @@
                 <!-- 精美微暗遮罩面 -->
                 <Border Background="{DynamicResource PageBackgroundBrush}" Opacity="0.1" CornerRadius="{StaticResource UiRadiusLg}"/>
                 
-                <!-- 提示文案，靠左侧，带轻微下沉投影 -->
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="24,0,0,0">
+                <!-- 提示文案，靠左侧，带轻微下沉投影，加上偏移量使其在右侧面板的左边缘对齐 -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Margin="244,0,0,0">
                     <TextBlock Text="请选择您想要默认打开的页面"
                                FontSize="16"
                                FontWeight="SemiBold"

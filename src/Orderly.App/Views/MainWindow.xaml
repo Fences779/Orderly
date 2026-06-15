@@ -9,7 +9,7 @@
         MinWidth="1140"
         MinHeight="800"
         Background="{DynamicResource PageBackgroundBrush}"
-        Button.Click="Window_OnButtonClick">
+        PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

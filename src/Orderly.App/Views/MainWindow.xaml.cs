@@ -122,7 +122,7 @@ public partial class MainWindow : Window, IToastService
         base.OnClosed(e);
     }
 
-    private void Window_OnButtonClick(object sender, RoutedEventArgs e)
+    private void Window_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (Orderly.App.Helpers.SettingsHelper.GetIsSelectingStartupSection(this))
         {
