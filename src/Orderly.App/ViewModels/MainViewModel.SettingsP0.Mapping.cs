@@ -12,7 +12,7 @@ public partial class MainViewModel
         var retentionDays = Math.Clamp(OperationLogRetentionDaysInput, 7, 3650);
         var autoBackupFrequency = NormalizeOption(AutoBackupFrequencyInput, AutoBackupFrequencyOptions, "手动");
         var windowMode = NormalizeOption(DefaultWindowModeInput, WindowModeOptions, "普通");
-        var fontPreset = NormalizeOption(FontSizePresetInput, FontPresetOptions, "标准");
+        var fontPreset = FontSizePresetInput.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
         var themeMode = NormalizeOption(ThemeModeInput, ThemeModeOptions, "浅色");
         var accentColor = NormalizeOption(AccentColorInput, AccentColorOptions, "默认绿");
 
@@ -64,7 +64,18 @@ public partial class MainViewModel
             RememberWindowBoundsInput = preferences.RememberWindowBounds;
             DefaultWindowModeInput = NormalizeOption(preferences.DefaultWindowMode, WindowModeOptions, "普通");
             SidebarDefaultExpandedInput = preferences.SidebarDefaultExpanded;
-            FontSizePresetInput = NormalizeOption(preferences.FontSizePreset, FontPresetOptions, "标准");
+            var fontPresetStr = preferences.FontSizePreset;
+            if (string.Equals(fontPresetStr, "小", StringComparison.Ordinal)) FontSizePresetInput = 0.8;
+            else if (string.Equals(fontPresetStr, "标准", StringComparison.Ordinal)) FontSizePresetInput = 1.0;
+            else if (string.Equals(fontPresetStr, "大", StringComparison.Ordinal)) FontSizePresetInput = 1.2;
+            else if (double.TryParse(fontPresetStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsedVal))
+            {
+                FontSizePresetInput = Math.Clamp(parsedVal, 0.8, 1.3);
+            }
+            else
+            {
+                FontSizePresetInput = 1.0;
+            }
             ShowWindowsScaleHintInput = preferences.ShowWindowsScaleHint;
             ThemeModeInput = NormalizeOption(preferences.ThemeMode, ThemeModeOptions, "浅色");
 

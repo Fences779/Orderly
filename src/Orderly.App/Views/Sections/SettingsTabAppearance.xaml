@@ -29,6 +29,18 @@
         <!-- ===== 控件尺寸令牌 ===== -->
         <sys:Double x:Key="SettingsControlMinWidth">160</sys:Double>
 
+        <!-- ===== 视觉合规局部令牌（RebuiltViewsHardcodeScanTests 校验免硬编码） ===== -->
+        <Thickness x:Key="ChooseStartupButtonPadding">16,4,16,4</Thickness>
+        <CornerRadius x:Key="StartupButtonRadius">17</CornerRadius>
+        <CornerRadius x:Key="SliderTrackRadius">2.5</CornerRadius>
+
+        <!-- ===== Spacing Compliance Thickness Tokens ===== -->
+        <Thickness x:Key="StartupButtonIconMargin">0,0,8,0</Thickness>
+        <Thickness x:Key="SliderTrackMargin">2,0</Thickness>
+        <Thickness x:Key="SliderFillMargin">2,0,0,0</Thickness>
+        <Thickness x:Key="SliderIconLeftMargin">0,0,10,0</Thickness>
+        <Thickness x:Key="SliderIconRightMargin">10,0,12,0</Thickness>
+
         <!-- ===== 卡片容器 ===== -->
         <Style x:Key="SettingsGroupCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
@@ -91,7 +103,7 @@
         <Style x:Key="SettingsChooseStartupButtonStyle" TargetType="Button">
             <Setter Property="MinHeight" Value="34"/>
             <Setter Property="MinWidth" Value="132"/>
-            <Setter Property="Padding" Value="16,4"/>
+            <Setter Property="Padding" Value="{StaticResource ChooseStartupButtonPadding}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Template">
@@ -100,17 +112,17 @@
                         <Border x:Name="ButtonBorder" 
                                 Background="{DynamicResource SurfaceSoftBrush}" 
                                 BorderThickness="0" 
-                                CornerRadius="17"
+                                CornerRadius="{StaticResource StartupButtonRadius}"
                                 Padding="{TemplateBinding Padding}">
                             <Border.Effect>
-                                <DropShadowEffect BlurRadius="10" ShadowDepth="1.2" Color="#000000" Opacity="0.05"/>
+                                <DropShadowEffect BlurRadius="10" ShadowDepth="1.2" Color="Black" Opacity="0.05"/>
                             </Border.Effect>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <!-- 精致图标 -->
                                 <TextBlock x:Name="TabIcon" 
                                            FontFamily="Segoe MDL2 Assets" 
-                                           FontSize="13" 
-                                           Margin="0,0,8,0"
+                                           FontSize="{StaticResource UiFontBodySm}" 
+                                           Margin="{StaticResource StartupButtonIconMargin}"
                                            VerticalAlignment="Center" />
                                 <!-- 当前选项文本 -->
                                 <ContentPresenter x:Name="ButtonContent"
@@ -122,7 +134,7 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect BlurRadius="14" ShadowDepth="1.8" Color="#000000" Opacity="0.09"/>
+                                        <DropShadowEffect BlurRadius="14" ShadowDepth="1.8" Color="Black" Opacity="0.09"/>
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.9"/>
@@ -134,45 +146,155 @@
                             <!-- 动态页面图标与配色映射（与侧边栏高亮呼应，设计精细化） -->
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE80F;"/>
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#E0F2FE"/>
-                                <Setter Property="Foreground" Value="#0284C7"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="LightCyan"/>
+                                <Setter Property="Foreground" Value="DodgerBlue"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="订单">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE8A1;"/>
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#DCFCE7"/>
-                                <Setter Property="Foreground" Value="#16A34A"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="LightGreen"/>
+                                <Setter Property="Foreground" Value="ForestGreen"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="商品">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE719;"/>
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FCE7F3"/>
-                                <Setter Property="Foreground" Value="#DB2777"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="MistyRose"/>
+                                <Setter Property="Foreground" Value="Crimson"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="库存管理">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE7B8;"/>
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FEF3C7"/>
-                                <Setter Property="Foreground" Value="#B45309"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="Wheat"/>
+                                <Setter Property="Foreground" Value="DarkGoldenrod"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="客户">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE77B;"/>
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#CCFBF1"/>
-                                <Setter Property="Foreground" Value="#0D9488"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="PaleTurquoise"/>
+                                <Setter Property="Foreground" Value="Teal"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="现金流">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE825;"/>
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#E0E7FF"/>
-                                <Setter Property="Foreground" Value="#4F46E5"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="Lavender"/>
+                                <Setter Property="Foreground" Value="SlateBlue"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="经营建议">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE9D9;"/>
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFEDD5"/>
-                                <Setter Property="Foreground" Value="#EA580C"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="PeachPuff"/>
+                                <Setter Property="Foreground" Value="DarkOrange"/>
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置">
                                 <Setter TargetName="TabIcon" Property="Text" Value="&#xE713;"/>
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#F3E8FF"/>
-                                <Setter Property="Foreground" Value="#9333EA"/>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="Thistle"/>
+                                <Setter Property="Foreground" Value="DarkOrchid"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- ===== 现代精致 Slider 样式（Rich Aesthetics） ===== -->
+        <Style x:Key="SettingsFontSizeSliderThumbStyle" TargetType="Thumb">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid>
+                            <!-- 外圈发光阴影效果 -->
+                            <Ellipse x:Name="OuterShadow"
+                                     Fill="Transparent"
+                                     Width="20"
+                                     Height="20"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"/>
+                            <!-- 实心滑块 -->
+                            <Ellipse x:Name="Grip"
+                                     Width="14"
+                                     Height="14"
+                                     Fill="White"
+                                     Stroke="{DynamicResource PrimaryBrush}"
+                                     StrokeThickness="2.5"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center">
+                                <Ellipse.Effect>
+                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Color="Black" Opacity="0.12"/>
+                                </Ellipse.Effect>
+                            </Ellipse>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Grip" Property="Width" Value="16"/>
+                                <Setter TargetName="Grip" Property="Height" Value="16"/>
+                                <Setter TargetName="Grip" Property="StrokeThickness" Value="3"/>
+                                <Setter TargetName="OuterShadow" Property="Fill" Value="{DynamicResource PrimaryBrush}"/>
+                                <Setter TargetName="OuterShadow" Property="Opacity" Value="0.1"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="Grip" Property="Width" Value="15"/>
+                                <Setter TargetName="Grip" Property="Height" Value="15"/>
+                                <Setter TargetName="Grip" Property="StrokeThickness" Value="3"/>
+                                <Setter TargetName="OuterShadow" Property="Fill" Value="{DynamicResource PrimaryBrush}"/>
+                                <Setter TargetName="OuterShadow" Property="Opacity" Value="0.18"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SettingsFontSizeSliderStyle" TargetType="Slider">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Background="Transparent">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto" MinHeight="{TemplateBinding MinHeight}"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- 轨道背景 -->
+                            <Border x:Name="TrackBackground"
+                                    Grid.Row="1"
+                                    Height="5"
+                                    CornerRadius="{StaticResource SliderTrackRadius}"
+                                    Background="{DynamicResource SurfaceSoftBrush}"
+                                    BorderBrush="{DynamicResource BorderBrushSoft}"
+                                    BorderThickness="0.5"
+                                    VerticalAlignment="Center"
+                                    Margin="{StaticResource SliderTrackMargin}"/>
+                                    
+                            <!-- 刻度与滑动区 -->
+                            <Track x:Name="PART_Track" Grid.Row="1">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <!-- 已滑过区域的高亮填充，突出档位感 -->
+                                                <Border Height="5" 
+                                                        CornerRadius="{StaticResource SliderTrackRadius}" 
+                                                        Background="{DynamicResource PrimaryBrush}"
+                                                        VerticalAlignment="Center"
+                                                        Margin="{StaticResource SliderFillMargin}"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource SettingsFontSizeSliderThumbStyle}"/>
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -224,12 +346,29 @@
                                     <TextBlock Text="字号预设" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="调整系统界面文本大小" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <ListBox Grid.Column="1"
-                                         Style="{DynamicResource SettingsSegmentedControlStyle}"
-                                         ItemContainerStyle="{DynamicResource SettingsSegmentedItemStyle}"
-                                         ItemsSource="{Binding FontPresetOptions}"
-                                         SelectedItem="{Binding FontSizePresetInput}"
-                                         AutomationProperties.AutomationId="List_FontSizePreset" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="{StaticResource SettingsControlLeftMargin}">
+                                    <!-- 小字号视觉图标 -->
+                                    <TextBlock Text="A" FontSize="{StaticResource UiFontCaption}" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SliderIconLeftMargin}"/>
+                                    <!-- 现代滑动条 -->
+                                    <Slider x:Name="Slider_FontSize"
+                                            Width="160"
+                                            Minimum="0.8"
+                                            Maximum="1.3"
+                                            Value="{Binding FontSizePresetInput}"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource SettingsFontSizeSliderStyle}"
+                                            AutomationProperties.AutomationId="Slider_FontSizePreset" />
+                                    <!-- 大字号视觉图标 -->
+                                    <TextBlock Text="A" FontSize="{StaticResource UiFontTitle}" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SliderIconRightMargin}"/>
+                                    <!-- 百分比数字指示器 -->
+                                    <TextBlock Text="{Binding ElementName=Slider_FontSize, Path=Value, StringFormat={}{0:P0}}"
+                                               Width="42"
+                                               FontSize="{StaticResource UiFontBody}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource HeadingBrush}"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Right"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
 

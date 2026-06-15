@@ -113,7 +113,7 @@ public sealed class AppSettingRepository : IAppSettingRepository
             RememberWindowBounds = GetBool(settings, AppSettingKeys.RememberWindowBounds, false),
             DefaultWindowMode = GetEnum(settings, AppSettingKeys.DefaultWindowMode, "普通", AllowedWindowModes),
             SidebarDefaultExpanded = GetBool(settings, AppSettingKeys.SidebarDefaultExpanded, true),
-            FontSizePreset = GetEnum(settings, AppSettingKeys.FontSizePreset, "标准", AllowedFontPresets),
+            FontSizePreset = GetFontSizePreset(settings, AppSettingKeys.FontSizePreset, "标准"),
             ShowWindowsScaleHint = GetBool(settings, AppSettingKeys.ShowWindowsScaleHint, true),
             ThemeMode = GetEnum(settings, AppSettingKeys.ThemeMode, "浅色", AllowedThemeModes),
             AccentColor = GetAccentColor(settings, AppSettingKeys.AccentColor, "默认绿"),
@@ -181,7 +181,7 @@ public sealed class AppSettingRepository : IAppSettingRepository
             [AppSettingKeys.RememberWindowBounds] = ToBoolValue(preferences.RememberWindowBounds),
             [AppSettingKeys.DefaultWindowMode] = NormalizeEnumValue(preferences.DefaultWindowMode, "普通", AllowedWindowModes),
             [AppSettingKeys.SidebarDefaultExpanded] = ToBoolValue(preferences.SidebarDefaultExpanded),
-            [AppSettingKeys.FontSizePreset] = NormalizeEnumValue(preferences.FontSizePreset, "标准", AllowedFontPresets),
+            [AppSettingKeys.FontSizePreset] = NormalizeFontSizePreset(preferences.FontSizePreset, "标准"),
             [AppSettingKeys.ShowWindowsScaleHint] = ToBoolValue(preferences.ShowWindowsScaleHint),
             [AppSettingKeys.ThemeMode] = NormalizeEnumValue(preferences.ThemeMode, "浅色", AllowedThemeModes),
             [AppSettingKeys.AccentColor] = NormalizeAccentColor(preferences.AccentColor, "默认绿"),
@@ -323,6 +323,34 @@ public sealed class AppSettingRepository : IAppSettingRepository
     {
         var raw = Get(settings, key, fallback).Trim();
         return allowedValues.Contains(raw) ? raw : fallback;
+    }
+
+    private static string GetFontSizePreset(IDictionary<string, string> settings, string key, string fallback)
+    {
+        var raw = Get(settings, key, fallback).Trim();
+        if (AllowedFontPresets.Contains(raw))
+        {
+            return raw;
+        }
+        if (double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var scale) && scale >= 0.8 && scale <= 1.3)
+        {
+            return raw;
+        }
+        return fallback;
+    }
+
+    private static string NormalizeFontSizePreset(string? value, string fallback)
+    {
+        var raw = (value ?? string.Empty).Trim();
+        if (AllowedFontPresets.Contains(raw))
+        {
+            return raw;
+        }
+        if (double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var scale) && scale >= 0.8 && scale <= 1.3)
+        {
+            return raw;
+        }
+        return fallback;
     }
 
     private static string GetStartupSection(IDictionary<string, string> settings, string key, string fallback)

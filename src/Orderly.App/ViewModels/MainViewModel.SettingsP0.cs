@@ -26,7 +26,6 @@ public partial class MainViewModel
         nameof(RememberWindowBoundsInput),
         nameof(DefaultWindowModeInput),
         nameof(SidebarDefaultExpandedInput),
-        nameof(FontSizePresetInput),
         nameof(ShowWindowsScaleHintInput),
         nameof(ThemeModeInput),
         nameof(AccentColorInput),
@@ -107,7 +106,7 @@ public partial class MainViewModel
     private bool sidebarDefaultExpandedInput = true;
 
     [ObservableProperty]
-    private string fontSizePresetInput = "标准";
+    private double fontSizePresetInput = 1.0;
 
     [ObservableProperty]
     private bool showWindowsScaleHintInput = true;
@@ -431,6 +430,34 @@ public partial class MainViewModel
         Orderly.App.Helpers.ThemeHelper.ApplyTheme(value);
         OnPropertyChanged(nameof(CurrentThemeLabel));
         OnPropertyChanged(nameof(CurrentThemeIcon));
+    }
+
+    private System.Threading.CancellationTokenSource? _fontSizeSaveCts;
+
+    partial void OnFontSizePresetInputChanged(double value)
+    {
+        Orderly.App.Helpers.FontSizeHelper.ApplyFontScale(value);
+
+        _fontSizeSaveCts?.Cancel();
+        _fontSizeSaveCts = new System.Threading.CancellationTokenSource();
+        var token = _fontSizeSaveCts.Token;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(500, token);
+                if (token.IsCancellationRequested) return;
+
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    _ = SaveP0SettingsAsync();
+                });
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        });
     }
 
     [RelayCommand]

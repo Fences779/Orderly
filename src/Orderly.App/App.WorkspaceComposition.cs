@@ -174,6 +174,7 @@ public partial class App
 
         var preferences = await settingRepository.GetPreferencesAsync();
         Orderly.App.Helpers.ThemeHelper.ApplyTheme(preferences.ThemeMode);
+        Orderly.App.Helpers.FontSizeHelper.ApplyFontScale(preferences.FontSizePreset);
 
         // 任务 21.1：装配设置页 / 我的页 / 门禁层所需的服务实例（UI 改动严格限定在两页及共享样式 /
         // 壳层 Toast / QA 锚点 + 敏感页面门禁访问控制层；登录页与其它页面不受影响）。
