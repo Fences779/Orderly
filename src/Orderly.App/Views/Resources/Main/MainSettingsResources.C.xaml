@@ -28,13 +28,15 @@
                             <!-- Animated Slider Background -->
                             <Border x:Name="PART_Slider" 
                                     Background="{DynamicResource SurfaceRaisedBrush}" 
+                                    BorderBrush="{DynamicResource BorderBrushSoft}"
+                                    BorderThickness="1"
                                     CornerRadius="8" 
                                     Height="28" 
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
                                     Visibility="Collapsed">
                                 <Border.Effect>
-                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Direction="270" Color="#000000" Opacity="0.08"/>
+                                    <DropShadowEffect BlurRadius="8" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
                                 </Border.Effect>
                                 <Border.RenderTransform>
                                     <TranslateTransform x:Name="PART_SliderTransform"/>
