@@ -139,10 +139,12 @@
                                     <TextBlock Text="字号预设" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="调整系统界面文本大小" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <ComboBox Grid.Column="1" Style="{StaticResource SettingsRowComboBoxStyle}"
-                                          ItemsSource="{Binding FontPresetOptions}"
-                                          SelectedItem="{Binding FontSizePresetInput}"
-                                          AutomationProperties.AutomationId="List_FontSizePreset" />
+                                <ListBox Grid.Column="1"
+                                         Style="{DynamicResource SettingsSegmentedControlStyle}"
+                                         ItemContainerStyle="{DynamicResource SettingsSegmentedItemStyle}"
+                                         ItemsSource="{Binding FontPresetOptions}"
+                                         SelectedItem="{Binding FontSizePresetInput}"
+                                         AutomationProperties.AutomationId="List_FontSizePreset" />
                             </Grid>
                         </Border>
 
