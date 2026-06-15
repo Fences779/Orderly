@@ -109,6 +109,9 @@
                                 BorderThickness="0" 
                                 CornerRadius="17"
                                 Padding="{TemplateBinding Padding}">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="10" ShadowDepth="1.2" Color="#000000" Opacity="0.05"/>
+                            </Border.Effect>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <!-- 精致图标 -->
                                 <TextBlock x:Name="TabIcon" 
@@ -133,7 +136,7 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect BlurRadius="8" ShadowDepth="1" Color="#000000" Opacity="0.08"/>
+                                        <DropShadowEffect BlurRadius="14" ShadowDepth="1.8" Color="#000000" Opacity="0.09"/>
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.9"/>
