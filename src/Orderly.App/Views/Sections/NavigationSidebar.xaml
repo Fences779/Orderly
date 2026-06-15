@@ -14,60 +14,6 @@
         <DockPanel>
             <!-- 底部控制区域 -->
             <StackPanel DockPanel.Dock="Bottom">
-                <!-- 快捷主题切换按钮 -->
-                <Button x:Name="Btn_ThemeToggle"
-                        Command="{Binding ToggleThemeCommand}"
-                        ToolTip="切换深色/浅色模式"
-                        Margin="0,0,0,8">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Cursor" Value="Hand" />
-                            <Setter Property="HorizontalAlignment" Value="Stretch" />
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="Padding" Value="12,10" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="ThemeToggleBorder"
-                                                Background="{TemplateBinding Background}"
-                                                CornerRadius="10"
-                                                Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                              VerticalAlignment="Center" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="ThemeToggleBorder" Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
-                                            </Trigger>
-                                            <Trigger Property="IsPressed" Value="True">
-                                                <Setter TargetName="ThemeToggleBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" 
-                                   Text="{Binding CurrentThemeIcon}" 
-                                   FontFamily="Segoe MDL2 Assets" 
-                                   FontSize="15" 
-                                   VerticalAlignment="Center" 
-                                   Margin="2,0,10,0"
-                                   Foreground="{DynamicResource HeadingBrush}"/>
-                        <TextBlock Grid.Column="1" 
-                                   Text="{Binding CurrentThemeLabel}" 
-                                   VerticalAlignment="Center"
-                                   Foreground="{DynamicResource HeadingBrush}"/>
-                    </Grid>
-                </Button>
                 <!-- “我的”按钮 (developer-only name: Me / Account) — ninth navigation entry -->
                 <Button x:Name="Tab_Me" AutomationProperties.AutomationId="Tab_Me" Content="我的" Tag="&#xE77B;" Command="{Binding SelectSectionCommand}" CommandParameter="我的">
                     <Button.Style>
