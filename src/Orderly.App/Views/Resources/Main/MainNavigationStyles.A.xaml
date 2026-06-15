@@ -116,7 +116,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="工作台"/>
-                                <Condition Binding="{Binding SelectedSection}" Value="工作台"/>
+                                <Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="工作台"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconHighlightBg" Property="Background" Value="#E0F2FE"/>
                             <Setter TargetName="TabIconHighlight" Property="Foreground" Value="#0284C7"/>
@@ -137,7 +137,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="订单"/>
-                                <Condition Binding="{Binding SelectedSection}" Value="订单"/>
+                                <Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="订单"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconHighlightBg" Property="Background" Value="#DCFCE7"/>
                             <Setter TargetName="TabIconHighlight" Property="Foreground" Value="#16A34A"/>
@@ -158,7 +158,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="商品"/>
-                                <Condition Binding="{Binding SelectedSection}" Value="商品"/>
+                                <Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="商品"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconHighlightBg" Property="Background" Value="#FCE7F3"/>
                             <Setter TargetName="TabIconHighlight" Property="Foreground" Value="#DB2777"/>
@@ -179,7 +179,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="库存"/>
-                                <Condition Binding="{Binding SelectedSection}" Value="库存管理"/>
+                                <Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="库存管理"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconHighlightBg" Property="Background" Value="#FEF3C7"/>
                             <Setter TargetName="TabIconHighlight" Property="Foreground" Value="#B45309"/>
@@ -200,7 +200,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="客户"/>
-                                <Condition Binding="{Binding SelectedSection}" Value="客户"/>
+                                <Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="客户"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconHighlightBg" Property="Background" Value="#CCFBF1"/>
                             <Setter TargetName="TabIconHighlight" Property="Foreground" Value="#0D9488"/>
@@ -221,7 +221,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="现金流"/>
-                                <Condition Binding="{Binding SelectedSection}" Value="现金流"/>
+                                <Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="现金流"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconHighlightBg" Property="Background" Value="#E0E7FF"/>
                             <Setter TargetName="TabIconHighlight" Property="Foreground" Value="#4F46E5"/>
@@ -242,7 +242,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="经营建议"/>
-                                <Condition Binding="{Binding SelectedSection}" Value="经营建议"/>
+                                <Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="经营建议"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconHighlightBg" Property="Background" Value="#FFEDD5"/>
                             <Setter TargetName="TabIconHighlight" Property="Foreground" Value="#EA580C"/>
@@ -263,7 +263,7 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="设置"/>
-                                <Condition Binding="{Binding SelectedSection}" Value="设置"/>
+                                <Condition Binding="{Binding DataContext.SelectedSection, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="设置"/>
                             </MultiDataTrigger.Conditions>
                             <Setter TargetName="IconHighlightBg" Property="Background" Value="#F3E8FF"/>
                             <Setter TargetName="TabIconHighlight" Property="Foreground" Value="#9333EA"/>
