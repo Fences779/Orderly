@@ -379,7 +379,6 @@
         <!-- ==================== 右侧：分类内容区（承载 SettingsTab* 子 View） ==================== -->
         <ContentControl Grid.Column="1"
                 x:Name="Pane_SettingsContent"
-                AutomationProperties.AutomationId="Pane_SettingsContent"
                 helpers:ScrollToAnchorBehavior.AnchorId="{Binding Settings.PendingScrollAnchorId, Mode=TwoWay}"
                 Margin="{StaticResource UiSettingsContentMargin}">
             <ContentControl.Style>
@@ -396,7 +395,7 @@
                     </Style.Triggers>
                 </Style>
             </ContentControl.Style>
-            <Grid>
+            <Grid AutomationProperties.AutomationId="Pane_SettingsContent">
                 <!-- 外观与启动 -->
                 <Sections:SettingsTabAppearance
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=外观与启动}" />
