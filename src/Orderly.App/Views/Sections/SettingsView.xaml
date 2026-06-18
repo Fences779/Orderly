@@ -76,6 +76,13 @@
         <Thickness x:Key="UiSettingsNavPresenterMargin">10,0,0,0</Thickness>
         <CornerRadius x:Key="UiSettingsAccentBarRadius">1.75</CornerRadius>
 
+        <!-- 选择默认启动页提示遮罩微调令牌 -->
+        <Thickness x:Key="UiSettingsPromptContentMargin">80,0,0,0</Thickness>
+        <Thickness x:Key="UiSettingsPromptArrowMargin">0,0,122,0</Thickness>
+        <Thickness x:Key="UiSettingsPromptSubtitleMargin">0,14,0,0</Thickness>
+        <sys:Double x:Key="UiSettingsPromptTitleFontSize">40</sys:Double>
+        <sys:Double x:Key="UiSettingsPromptSubtitleFontSize">20</sys:Double>
+
         <!-- 搜索框自定义水印与图标样式 -->
         <Style x:Key="SettingsSearchTextBoxStyle" TargetType="TextBox">
             <Setter Property="MinHeight" Value="36" />
@@ -377,12 +384,15 @@
         </DockPanel>
 
         <!-- ==================== 右侧：分类内容区（承载 SettingsTab* 子 View） ==================== -->
-        <ContentControl Grid.Column="1"
+        <ScrollViewer Grid.Column="1"
                 x:Name="Pane_SettingsContent"
+                AutomationProperties.AutomationId="Pane_SettingsContent"
+                VerticalScrollBarVisibility="Disabled"
+                HorizontalScrollBarVisibility="Disabled"
                 helpers:ScrollToAnchorBehavior.AnchorId="{Binding Settings.PendingScrollAnchorId, Mode=TwoWay}"
                 Margin="{StaticResource UiSettingsContentMargin}">
-            <ContentControl.Style>
-                <Style TargetType="ContentControl">
+            <ScrollViewer.Style>
+                <Style TargetType="ScrollViewer">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding (helpers:SettingsHelper.IsSelectingStartupSection), RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
                             <Setter Property="Effect">
@@ -394,8 +404,8 @@
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
-            </ContentControl.Style>
-            <Grid AutomationProperties.AutomationId="Pane_SettingsContent">
+            </ScrollViewer.Style>
+            <Grid>
                 <!-- 外观与启动 -->
                 <Sections:SettingsTabAppearance
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=外观与启动}" />
@@ -431,7 +441,7 @@
                 <Sections:SettingsTabHotkeys
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=快捷键}" />
             </Grid>
-        </ContentControl>
+        </ScrollViewer>
 
         <!-- 选择默认启动页时的提示遮罩层 -->
         <Border Grid.Column="0"
@@ -446,7 +456,7 @@
                 <Border Background="{DynamicResource PageBackgroundBrush}" Opacity="0.1" CornerRadius="{StaticResource UiRadiusLg}"/>
                 
                 <!-- 提示文案与缓动指引箭头 -->
-                <Grid VerticalAlignment="Center" HorizontalAlignment="Left" Margin="80,0,0,0">
+                <Grid VerticalAlignment="Center" HorizontalAlignment="Left" Margin="{StaticResource UiSettingsPromptContentMargin}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -461,7 +471,7 @@
                           StrokeEndLineCap="Round" 
                           StrokeLineJoin="Round"
                           VerticalAlignment="Center" 
-                          Margin="0,0,122,0">
+                          Margin="{StaticResource UiSettingsPromptArrowMargin}">
                         <Path.RenderTransform>
                             <TranslateTransform x:Name="ArrowTranslate" X="0" Y="0" />
                         </Path.RenderTransform>
@@ -478,24 +488,24 @@
                             </EventTrigger>
                         </Path.Triggers>
                         <Path.Effect>
-                            <DropShadowEffect BlurRadius="8" ShadowDepth="1.5" Color="#000000" Opacity="0.12"/>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1.5" Color="Black" Opacity="0.12"/>
                         </Path.Effect>
                     </Path>
 
                     <!-- 大幅提升字号的提示文本 -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="请选择您想要默认打开的页面"
-                                   FontSize="40"
+                                   FontSize="{StaticResource UiSettingsPromptTitleFontSize}"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource HeadingBrush}">
                             <TextBlock.Effect>
-                                <DropShadowEffect BlurRadius="16" ShadowDepth="2" Color="#000000" Opacity="0.18"/>
+                                <DropShadowEffect BlurRadius="16" ShadowDepth="2" Color="Black" Opacity="0.18"/>
                             </TextBlock.Effect>
                         </TextBlock>
                         <TextBlock Text="点击左侧导航栏的任意标签进行设定"
-                                   FontSize="20"
+                                   FontSize="{StaticResource UiSettingsPromptSubtitleFontSize}"
                                    Foreground="{DynamicResource MutedBrush}"
-                                   Margin="0,14,0,0" />
+                                   Margin="{StaticResource UiSettingsPromptSubtitleMargin}" />
                     </StackPanel>
                 </Grid>
             </Grid>
