@@ -96,14 +96,14 @@
     <!-- 弹窗字段标签 -->
     <Style x:Key="DialogFieldLabelStyle" TargetType="TextBlock">
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13}" />
         <Setter Property="Foreground" Value="#1F2329" />
         <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
 
     <!-- 弹窗标题 -->
     <Style x:Key="DialogSectionTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize15}" />
         <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="#17211D" />
         <Setter Property="Margin" Value="0,0,0,18" />
@@ -113,7 +113,7 @@
     <Style x:Key="ChipButtonStyle" TargetType="Button">
         <Setter Property="MinHeight" Value="28" />
         <Setter Property="Padding" Value="12,4" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize12}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Background" Value="#F0EDE5" />

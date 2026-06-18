@@ -33,7 +33,7 @@
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center" />
                     </Border>
-                    <TextBlock Text="悬浮助手" FontSize="22" FontWeight="Bold" VerticalAlignment="Center" />
+                    <TextBlock Text="悬浮助手" FontSize="{DynamicResource UiFontSize22}" FontWeight="Bold" VerticalAlignment="Center" />
                 </DockPanel>
                 <TextBox Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" Margin="0,12,0,12" Padding="10,8" />
                 <TextBlock Text="最近订单" FontWeight="SemiBold" />

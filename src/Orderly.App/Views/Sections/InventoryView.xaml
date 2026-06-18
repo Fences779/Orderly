@@ -58,13 +58,13 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="库存"
-                           FontSize="{StaticResource UiFontDisplay}"
+                           FontSize="{DynamicResource UiFontDisplay}"
                            FontWeight="{StaticResource UiFontWeightBold}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            Foreground="{DynamicResource HeadingBrush}"
                            Margin="{StaticResource UiPresenterGapBottom}" />
                 <TextBlock Text="库存数量、补货建议与库存风险"
-                           FontSize="{StaticResource UiFontCaption}"
+                           FontSize="{DynamicResource UiFontCaption}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            Foreground="{DynamicResource SecondaryTextBrush}" />
             </StackPanel>

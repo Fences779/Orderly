@@ -54,7 +54,7 @@
 
         <!-- ===== 分组标题（副标题字号阶） ===== -->
         <Style x:Key="SettingsGroupTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource UiFontSubtitle}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontSubtitle}" />
             <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
@@ -76,7 +76,7 @@
 
         <!-- ===== 标签（标题段） ===== -->
         <Style x:Key="SettingsRowLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
             <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
@@ -85,7 +85,7 @@
 
         <!-- ===== 说明（辅助段） ===== -->
         <Style x:Key="SettingsRowDescStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
@@ -121,7 +121,7 @@
                                 <!-- 精致图标 -->
                                 <TextBlock x:Name="TabIcon" 
                                            FontFamily="Segoe MDL2 Assets" 
-                                           FontSize="{StaticResource UiFontBodySm}" 
+                                           FontSize="{DynamicResource UiFontBodySm}"
                                            Margin="{StaticResource StartupButtonIconMargin}"
                                            VerticalAlignment="Center" />
                                 <!-- 当前选项文本 -->
@@ -348,7 +348,7 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="{StaticResource SettingsControlLeftMargin}">
                                     <!-- 小字号视觉图标 -->
-                                    <TextBlock Text="A" FontSize="{StaticResource UiFontCaption}" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SliderIconLeftMargin}"/>
+                                    <TextBlock Text="A" FontSize="{DynamicResource UiFontCaption}" FontWeight="Medium" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SliderIconLeftMargin}"/>
                                     <!-- 现代滑动条 -->
                                     <Slider x:Name="Slider_FontSize"
                                             Width="160"
@@ -359,11 +359,11 @@
                                             Style="{StaticResource SettingsFontSizeSliderStyle}"
                                             AutomationProperties.AutomationId="Slider_FontSizePreset" />
                                     <!-- 大字号视觉图标 -->
-                                    <TextBlock Text="A" FontSize="{StaticResource UiFontTitle}" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SliderIconRightMargin}"/>
+                                    <TextBlock Text="A" FontSize="{DynamicResource UiFontTitle}" FontWeight="Bold" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SliderIconRightMargin}"/>
                                     <!-- 百分比数字指示器 -->
                                     <TextBlock Text="{Binding ElementName=Slider_FontSize, Path=Value, StringFormat={}{0:P0}}"
                                                Width="42"
-                                               FontSize="{StaticResource UiFontBody}"
+                                               FontSize="{DynamicResource UiFontBody}"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource HeadingBrush}"
                                                VerticalAlignment="Center"

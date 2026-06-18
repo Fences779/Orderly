@@ -65,14 +65,14 @@
 
             <!-- 指标标题（辅助字号 + 次文字色） -->
             <Style x:Key="WbMetricCaptionStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
                 <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
                 <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
             </Style>
 
             <!-- 关键指标数值：标题大字号阶（数字字号阶）+ 拉丁数字族，突出关键数值（需求 7.4） -->
             <Style x:Key="WbMetricValueStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="{StaticResource UiFontDisplay}" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontDisplay}" />
                 <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyLatin}" />
                 <Setter Property="FontWeight" Value="{StaticResource UiFontWeightBold}" />
                 <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
@@ -82,7 +82,7 @@
 
             <!-- 区块标题（副标题字号阶） -->
             <Style x:Key="WbSectionTitleStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="{StaticResource UiFontSubtitle}" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontSubtitle}" />
                 <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
                 <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
                 <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
@@ -105,12 +105,12 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="数据分析"
-                           FontSize="{StaticResource UiFontTitle}"
+                           FontSize="{DynamicResource UiFontTitle}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            FontWeight="{StaticResource UiFontWeightBold}"
                            Foreground="{DynamicResource HeadingBrush}" />
                 <TextBlock Text="经营关键指标与近 7 天趋势"
-                           FontSize="{StaticResource UiFontCaption}"
+                           FontSize="{DynamicResource UiFontCaption}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            Margin="{StaticResource UiPresenterGapBottom}" />

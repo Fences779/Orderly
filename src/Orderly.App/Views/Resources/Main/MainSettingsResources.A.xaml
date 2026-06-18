@@ -24,7 +24,7 @@
                         </Grid.ColumnDefinitions>
                         <DockPanel Grid.Column="0" Margin="16,16,16,24">
                             <StackPanel DockPanel.Dock="Top" Margin="6,0,0,16">
-                                <TextBlock Text="设置" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}"/>
+                                <TextBlock Text="设置" FontSize="{DynamicResource UiFontSize26}" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}"/>
                             </StackPanel>
                             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel IsItemsHost="True"/>
@@ -45,7 +45,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
         <Setter Property="FontWeight" Value="Medium"/>
-        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13_5}"/>
         <Setter Property="Padding" Value="14,12"/>
         <Setter Property="Margin" Value="2,5"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -165,7 +165,7 @@
 
     <!-- Settings: hint/note text -->
     <Style x:Key="SettingsHintStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize12}"/>
         <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="Margin" Value="0,6,0,0"/>
@@ -173,7 +173,7 @@
 
     <!-- Settings: section sub-header inside a tab -->
     <Style x:Key="SettingsSectionSubHeader" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
         <Setter Property="Margin" Value="0,24,0,12"/>
@@ -185,7 +185,7 @@
         <Setter Property="MinWidth" Value="80"/>
         <Setter Property="Padding" Value="16,0"/>
         <Setter Property="Margin" Value="0,0,8,0"/>
-        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize12_5}"/>
     </Style>
 
     <Style x:Key="SettingsPanelStyle" TargetType="Border">
@@ -198,14 +198,14 @@
     </Style>
 
     <Style x:Key="SettingsFieldLabelStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
         <Setter Property="Margin" Value="0,0,0,6"/>
     </Style>
 
     <Style x:Key="SettingsFieldCaptionStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize12}"/>
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="LineHeight" Value="18"/>
@@ -225,7 +225,7 @@
 
     <Style x:Key="SettingsCheckBoxStyle" TargetType="CheckBox">
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13}"/>
         <Setter Property="Margin" Value="0,0,0,10"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
         <Setter Property="TextBlock.TextWrapping" Value="Wrap"/>

@@ -33,7 +33,7 @@
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="新增客户" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="填写客户基本信息，保存后可在客户列表中查看" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="填写客户基本信息，保存后可在客户列表中查看" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource UiFontSize12}" />
             </StackPanel>
         </Border>
 

@@ -32,7 +32,7 @@
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="延期跟进" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="重新安排这次跟进的时间" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="重新安排这次跟进的时间" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource UiFontSize12}" />
             </StackPanel>
         </Border>
 

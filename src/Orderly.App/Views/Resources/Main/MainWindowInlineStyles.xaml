@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
             <Style x:Key="FulfillmentInputTextBoxStyle" TargetType="TextBox">
                 <Setter Property="Height" Value="36" />
-                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontSize12}" />
                 <Setter Property="Background" Value="#F7F7F9" />
                 <Setter Property="BorderBrush" Value="#DFE3EA" />
                 <Setter Property="BorderThickness" Value="1" />
@@ -164,7 +164,7 @@
             <!-- ComboBox Main Style -->
             <Style x:Key="FulfillmentInputComboBoxStyle" TargetType="ComboBox">
                 <Setter Property="Height" Value="36" />
-                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontSize12}" />
                 <Setter Property="Background" Value="#F7F7F9" />
                 <Setter Property="BorderBrush" Value="#DFE3EA" />
                 <Setter Property="BorderThickness" Value="1" />

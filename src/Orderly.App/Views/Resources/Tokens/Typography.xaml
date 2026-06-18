@@ -43,6 +43,22 @@
     <!-- 辅助：说明文字、脚注、徽标内文案（≥12px，满足辅助说明下限） -->
     <system:Double x:Key="UiFontCaption">12</system:Double>
 
+    <!-- 登录后工作区历史字号的动态缩放基线；保持 100% 下既有视觉尺寸不变。 -->
+    <system:Double x:Key="UiFontSize11">11</system:Double>
+    <system:Double x:Key="UiFontSize12">12</system:Double>
+    <system:Double x:Key="UiFontSize12_5">12.5</system:Double>
+    <system:Double x:Key="UiFontSize13">13</system:Double>
+    <system:Double x:Key="UiFontSize13_5">13.5</system:Double>
+    <system:Double x:Key="UiFontSize14">14</system:Double>
+    <system:Double x:Key="UiFontSize15">15</system:Double>
+    <system:Double x:Key="UiFontSize16">16</system:Double>
+    <system:Double x:Key="UiFontSize18">18</system:Double>
+    <system:Double x:Key="UiFontSize22">22</system:Double>
+    <system:Double x:Key="UiFontSize24">24</system:Double>
+    <system:Double x:Key="UiFontSize26">26</system:Double>
+    <system:Double x:Key="UiFontSize29">29</system:Double>
+    <system:Double x:Key="UiFontSize30">30</system:Double>
+
     <!-- ==================== 字重 ==================== -->
 
     <FontWeight x:Key="UiFontWeightRegular">Normal</FontWeight>

@@ -47,13 +47,13 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="客户"
-                           FontSize="{StaticResource UiFontDisplay}"
+                           FontSize="{DynamicResource UiFontDisplay}"
                            FontWeight="{StaticResource UiFontWeightBold}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            Foreground="{DynamicResource HeadingBrush}" />
                 <TextBlock Text="管理客户关系与复购提醒"
                            Margin="{StaticResource CustSubtitleMargin}"
-                           FontSize="{StaticResource UiFontCaption}"
+                           FontSize="{DynamicResource UiFontCaption}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            Foreground="{DynamicResource CaptionTextBrush}" />
             </StackPanel>
@@ -76,7 +76,7 @@
                     Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}">
             <TextBlock Text="客户数据加载失败"
                        HorizontalAlignment="Center"
-                       FontSize="{StaticResource UiFontSubtitle}"
+                       FontSize="{DynamicResource UiFontSubtitle}"
                        FontWeight="{StaticResource UiFontWeightSemiBold}"
                        FontFamily="{StaticResource UiFontFamilyCjk}"
                        Foreground="{DynamicResource HeadingBrush}" />

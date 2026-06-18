@@ -300,7 +300,10 @@ public partial class App
 
         Console.WriteLine("MainWindow showing");
         var startMinimizedToTray = preferences.StartMinimizedToTray;
-        _mainWindow.WindowState = startMinimizedToTray ? WindowState.Minimized : WindowState.Normal;
+        var defaultWindowState = string.Equals(preferences.DefaultWindowMode, "最大化", StringComparison.Ordinal)
+            ? WindowState.Maximized
+            : WindowState.Normal;
+        _mainWindow.WindowState = startMinimizedToTray ? WindowState.Minimized : defaultWindowState;
         _mainWindow.ShowInTaskbar = !startMinimizedToTray;
         _mainWindow.Opacity = 1;
         _mainWindow.Show();

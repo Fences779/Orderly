@@ -63,7 +63,7 @@
                                         <Grid>
                                             <!-- 占位首字（AvatarImageSource 为 null 时可见） -->
                                             <TextBlock Text="{Binding AvatarPlaceholderInitial}"
-                                                       FontSize="30" FontWeight="SemiBold" Foreground="#FFFFFF"
+                                                       FontSize="{DynamicResource UiFontSize30}" FontWeight="SemiBold" Foreground="#FFFFFF"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
@@ -80,7 +80,7 @@
                                             <Image Source="{Binding AvatarImageSource}" Stretch="UniformToFill" />
                                             <!-- hover 遮罩「更换」提示 -->
                                             <Border x:Name="HoverOverlay" Background="#80000000" Visibility="Collapsed">
-                                                <TextBlock Text="更换" Foreground="#FFFFFF" FontSize="12" FontWeight="SemiBold"
+                                                <TextBlock Text="更换" Foreground="#FFFFFF" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
                                         </Grid>
@@ -97,7 +97,7 @@
                         <!-- 显示名 + 角色徽章 -->
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Text="{Binding CurrentAccountDisplayName}"
-                                       FontSize="{StaticResource TypeTitleFontSize}"
+                                       FontSize="{DynamicResource UiFontSize18}"
                                        FontWeight="{StaticResource TypeTitleFontWeight}"
                                        Foreground="{DynamicResource HeadingBrush}"
                                        TextTrimming="CharacterEllipsis" />
@@ -112,7 +112,7 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <TextBlock Text="{Binding RoleBadgeText}" FontWeight="SemiBold" FontSize="11">
+                                <TextBlock Text="{Binding RoleBadgeText}" FontWeight="SemiBold" FontSize="{DynamicResource UiFontSize11}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
@@ -130,7 +130,7 @@
                                  链接型按钮采用内联无边框模板（下划线文字），避免引入额外资源依赖。 -->
                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                 <Button Content="更换头像" Command="{Binding ChangeAvatarCommand}" Cursor="Hand"
-                                        Foreground="{DynamicResource PrimaryBrush}" FontSize="12">
+                                        Foreground="{DynamicResource PrimaryBrush}" FontSize="{DynamicResource UiFontSize12}">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
                                             <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
@@ -138,7 +138,7 @@
                                         </ControlTemplate>
                                     </Button.Template>
                                 </Button>
-                                <TextBlock Text="·" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12" Margin="8,0" VerticalAlignment="Center">
+                                <TextBlock Text="·" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="{DynamicResource UiFontSize12}" Margin="8,0" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <!-- 无头像引用时连同分隔点一并隐藏（与「移除头像」同步） -->
@@ -152,7 +152,7 @@
                                     </TextBlock.Style>
                                 </TextBlock>
                                 <Button Content="移除头像" Command="{Binding RemoveAvatarCommand}" Cursor="Hand"
-                                        Foreground="{DynamicResource DangerTextBrush}" FontSize="12">
+                                        Foreground="{DynamicResource DangerTextBrush}" FontSize="{DynamicResource UiFontSize12}">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
                                             <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
@@ -175,7 +175,7 @@
 
                             <!-- 就地反馈（任务 18.4 / Req 6.6）：AvatarStatus 非空时显示，如「图片无效或过大」。
                                  拒绝 / 失败用警示色，其余用次要文字色。 -->
-                            <TextBlock Text="{Binding AvatarStatus}" FontSize="12" Margin="0,6,0,0"
+                            <TextBlock Text="{Binding AvatarStatus}" FontSize="{DynamicResource UiFontSize12}" Margin="0,6,0,0"
                                        TextWrapping="Wrap">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -221,9 +221,9 @@
                         <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="18"
                                    Foreground="{DynamicResource WarmTextBrush}" VerticalAlignment="Center" Margin="0,0,12,0" />
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="受限权限模式已启用" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource WarmTextBrush}" />
+                            <TextBlock Text="受限权限模式已启用" FontSize="{DynamicResource UiFontSize13}" FontWeight="Bold" Foreground="{DynamicResource WarmTextBrush}" />
                             <TextBlock Text="{x:Static vm:MeProfileViewModel.RestrictedModeNotice}"
-                                       FontSize="12" Foreground="{DynamicResource WarmTextBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
+                                       FontSize="{DynamicResource UiFontSize12}" Foreground="{DynamicResource WarmTextBrush}" Margin="0,3,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -258,7 +258,7 @@
                                 CornerRadius="{StaticResource RadiusSm}" Padding="14" Margin="0,0,0,18"
                                 Visibility="{Binding CanCreateMember, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel>
-                                <TextBlock Text="新建店员账号" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,10" />
+                                <TextBlock Text="新建店员账号" FontSize="{DynamicResource UiFontSize13}" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,10" />
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -271,24 +271,24 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="用户名" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                        <TextBlock Text="用户名" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                         <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Text="{Binding NewMemberUsername, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="显示姓名" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                        <TextBlock Text="显示姓名" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                         <TextBox Style="{StaticResource FulfillmentInputTextBoxStyle}" Height="30" Text="{Binding NewMemberDisplayName, UpdateSourceTrigger=PropertyChanged}" />
                                     </StackPanel>
 
                                     <!-- 主密码：经 PasswordBoxBinder 绑定 NewMemberPassword（MVVM 附加行为，§8.3） -->
                                     <StackPanel Grid.Column="4">
-                                        <TextBlock Text="主密码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                        <TextBlock Text="主密码" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                         <PasswordBox Height="30" helpers:PasswordBoxBinder.BoundPassword="{Binding NewMemberPassword, Mode=TwoWay}" />
                                     </StackPanel>
 
                                     <!-- PIN：经 PasswordBoxBinder 绑定 NewMemberPin -->
                                     <StackPanel Grid.Column="6">
-                                        <TextBlock Text="PIN 码 (6位)" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                        <TextBlock Text="PIN 码 (6位)" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                         <PasswordBox Height="30" MaxLength="6" helpers:PasswordBoxBinder.BoundPassword="{Binding NewMemberPin, Mode=TwoWay}" />
                                     </StackPanel>
                                 </Grid>
@@ -305,7 +305,7 @@
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        VerticalAlignment="Center" Margin="12,0,0,0" IsHitTestVisible="False" />
                             <TextBlock Text="搜索成员（用户名 / 显示名）" Foreground="{DynamicResource SecondaryTextBrush}"
-                                       FontSize="12" VerticalAlignment="Center" Margin="34,0,0,0" IsHitTestVisible="False">
+                                       FontSize="{DynamicResource UiFontSize12}" VerticalAlignment="Center" Margin="34,0,0,0" IsHitTestVisible="False">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -320,7 +320,7 @@
                         </Grid>
 
                         <!-- 店员列表 -->
-                        <TextBlock Text="已创建成员" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,10" />
+                        <TextBlock Text="已创建成员" FontSize="{DynamicResource UiFontSize13}" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,10" />
 
                         <!-- 空状态提示（Req 7.3）：过滤后列表为空时显示 -->
                         <Border Visibility="{Binding IsMemberListEmpty, Converter={StaticResource BooleanToVisibilityConverter}}"
@@ -329,7 +329,7 @@
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="22"
                                            Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,6" />
-                                <TextBlock Text="没有匹配的成员账号" FontSize="12"
+                                <TextBlock Text="没有匹配的成员账号" FontSize="{DynamicResource UiFontSize12}"
                                            Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" />
                             </StackPanel>
                         </Border>
@@ -392,8 +392,8 @@
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource HeadingBrush}" />
-                                                <TextBlock Text="{Binding Username, StringFormat=({0})}" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="6,1,0,0" />
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="{DynamicResource UiFontSize13}" Foreground="{DynamicResource HeadingBrush}" />
+                                                <TextBlock Text="{Binding Username, StringFormat=({0})}" FontSize="{DynamicResource UiFontSize12}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="6,1,0,0" />
                                             </StackPanel>
                                         </StackPanel>
 
@@ -409,7 +409,7 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <TextBlock FontSize="11" FontWeight="SemiBold">
+                                            <TextBlock FontSize="{DynamicResource UiFontSize11}" FontWeight="SemiBold">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Text" Value="已禁用" />
@@ -435,9 +435,9 @@
                                 Visibility="{Binding CanOperateMember, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                    <TextBlock Text="选中成员控制：" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                                    <TextBlock Text="{Binding SelectedManagedAccount.DisplayName}" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
-                                    <TextBlock Text="{Binding SelectedManagedAccount.Username, StringFormat=({0})}" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="4,1,0,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="选中成员控制：" FontSize="{DynamicResource UiFontSize12}" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding SelectedManagedAccount.DisplayName}" FontWeight="Bold" FontSize="{DynamicResource UiFontSize13}" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding SelectedManagedAccount.Username, StringFormat=({0})}" FontSize="{DynamicResource UiFontSize12}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="4,1,0,0" VerticalAlignment="Center" />
                                 </StackPanel>
 
                                 <Grid>
@@ -449,7 +449,7 @@
 
                                     <!-- 重置主密码：经 PasswordBoxBinder 绑定 ResetMemberPasswordInput -->
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="重置该店员主密码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                        <TextBlock Text="重置该店员主密码" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -463,7 +463,7 @@
 
                                     <!-- 重置 PIN：经 PasswordBoxBinder 绑定 ResetMemberPinInput -->
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="重置店员 PIN 码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                        <TextBlock Text="重置店员 PIN 码" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -517,10 +517,10 @@
 
                             <!-- ───────────── 修改主密码 ───────────── -->
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="修改账户主密码" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,12" />
+                                <TextBlock Text="修改账户主密码" FontSize="{DynamicResource UiFontSize13}" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,12" />
 
                                 <!-- 当前主密码 -->
-                                <TextBlock Text="当前密码验证" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="当前密码验证" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -559,7 +559,7 @@
                                 </Grid>
 
                                 <!-- 新主密码 -->
-                                <TextBlock Text="输入新主密码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="输入新主密码" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                 <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -603,8 +603,8 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="新密码强度" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="1" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center">
+                                    <TextBlock Grid.Column="0" Text="新密码强度" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" FontSize="{DynamicResource UiFontSize11}" FontWeight="SemiBold" VerticalAlignment="Center">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Text" Value="" />
@@ -658,7 +658,7 @@
                                 </ProgressBar>
 
                                 <!-- 确认新主密码 -->
-                                <TextBlock Text="确认新主密码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="确认新主密码" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                 <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -697,7 +697,7 @@
                                 </Grid>
 
                                 <!-- 主密码实时校验文案（含强度偏弱警告，Req 8.1 / 8.10） -->
-                                <TextBlock Text="{Binding MasterPasswordValidation.Message}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding MasterPasswordValidation.Message}" FontSize="{DynamicResource UiFontSize11}" TextWrapping="Wrap" Margin="0,0,0,12">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
@@ -715,10 +715,10 @@
 
                             <!-- ───────────── 修改 PIN 码 ───────────── -->
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="修改安全 PIN 码" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,12" />
+                                <TextBlock Text="修改安全 PIN 码" FontSize="{DynamicResource UiFontSize13}" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" Margin="0,0,0,12" />
 
                                 <!-- 当前 PIN -->
-                                <TextBlock Text="当前 PIN 验证" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="当前 PIN 验证" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -757,7 +757,7 @@
                                 </Grid>
 
                                 <!-- 新 PIN -->
-                                <TextBlock Text="输入新 PIN 码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="输入新 PIN 码" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -796,7 +796,7 @@
                                 </Grid>
 
                                 <!-- 确认新 PIN -->
-                                <TextBlock Text="确认新 PIN 码" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="确认新 PIN 码" FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4" />
                                 <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -835,7 +835,7 @@
                                 </Grid>
 
                                 <!-- PIN 实时校验文案（Req 8.3） -->
-                                <TextBlock Text="{Binding PinValidation.Message}" FontSize="11" TextWrapping="Wrap"
+                                <TextBlock Text="{Binding PinValidation.Message}" FontSize="{DynamicResource UiFontSize11}" TextWrapping="Wrap"
                                            Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,12" />
 
                                 <Button Content="确认修改 PIN 码" Command="{Binding ChangeCurrentPinCommand}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="32" Padding="14,0" HorizontalAlignment="Left" />
@@ -865,8 +865,8 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="16"
                                            Foreground="{DynamicResource PrimaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
-                                <TextBlock Text="最近登录时间：" FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
-                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center">
+                                <TextBlock Text="最近登录时间：" FontSize="{DynamicResource UiFontSize13}" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                                <TextBlock FontSize="{DynamicResource UiFontSize13}" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="{Binding CurrentAccountLastLoginAt, StringFormat='yyyy-MM-dd HH:mm:ss'}" />
@@ -908,10 +908,10 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="起始" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"
+                                <TextBlock Grid.Column="0" Text="起始" FontSize="{DynamicResource UiFontSize12}" Foreground="{DynamicResource SecondaryTextBrush}"
                                            VerticalAlignment="Center" Margin="0,0,8,0" />
                                 <DatePicker Grid.Column="1" SelectedDate="{Binding AuditRangeStart, Mode=TwoWay}" VerticalContentAlignment="Center" />
-                                <TextBlock Grid.Column="2" Text="结束" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}"
+                                <TextBlock Grid.Column="2" Text="结束" FontSize="{DynamicResource UiFontSize12}" Foreground="{DynamicResource SecondaryTextBrush}"
                                            VerticalAlignment="Center" Margin="12,0,8,0" />
                                 <DatePicker Grid.Column="3" SelectedDate="{Binding AuditRangeEnd, Mode=TwoWay}" VerticalContentAlignment="Center" />
                                 <Button Grid.Column="4" Content="应用" Command="{Binding ApplyAuditDateRangeCommand}"
@@ -929,7 +929,7 @@
                                 <StackPanel HorizontalAlignment="Center">
                                     <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="22"
                                                Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" Margin="0,0,0,6" />
-                                    <TextBlock Text="{Binding AuditStatus}" FontSize="12"
+                                    <TextBlock Text="{Binding AuditStatus}" FontSize="{DynamicResource UiFontSize12}"
                                                Foreground="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </Border>
@@ -941,7 +941,7 @@
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                     <TextBlock Text="&#xE783;" FontFamily="Segoe MDL2 Assets" FontSize="16"
                                                Foreground="{DynamicResource DangerTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <TextBlock Text="安全记录读取失败" FontSize="13" FontWeight="SemiBold"
+                                    <TextBlock Text="安全记录读取失败" FontSize="{DynamicResource UiFontSize13}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource DangerTextBrush}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Border>
@@ -988,14 +988,14 @@
                                                 <Border Grid.Column="0" Background="{DynamicResource AccentSoftBrush}"
                                                         CornerRadius="{StaticResource RadiusSm}" Padding="8,3" VerticalAlignment="Center" Margin="0,0,10,0">
                                                     <TextBlock Text="{Binding Kind, Converter={StaticResource SecurityAuditKindLabelConverter}}"
-                                                               FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryBrush}" />
+                                                               FontSize="{DynamicResource UiFontSize11}" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryBrush}" />
                                                 </Border>
 
                                                 <!-- 详情 + 账号标签 -->
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Detail}" FontSize="13"
+                                                    <TextBlock Text="{Binding Detail}" FontSize="{DynamicResource UiFontSize13}"
                                                                Foreground="{DynamicResource HeadingBrush}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding AccountLabel}" FontSize="11"
+                                                    <TextBlock Text="{Binding AccountLabel}" FontSize="{DynamicResource UiFontSize11}"
                                                                Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,2,0,0"
                                                                TextTrimming="CharacterEllipsis" />
                                                 </StackPanel>
@@ -1003,7 +1003,7 @@
                                                 <!-- 发生时间（格式化） -->
                                                 <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0"
                                                            Text="{Binding OccurredAt, StringFormat='yyyy-MM-dd HH:mm:ss'}"
-                                                           FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                                           FontSize="{DynamicResource UiFontSize11}" Foreground="{DynamicResource SecondaryTextBrush}" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -1063,7 +1063,7 @@
                     <StackPanel>
                         <TextBlock Text="关于 Orderly" Style="{StaticResource SettingsGroupTitleStyle}" />
                         <TextBlock Text="Orderly · 本地优先的 PC 端经营管理系统"
-                                   FontSize="13" FontWeight="Bold"
+                                   FontSize="{DynamicResource UiFontSize13}" FontWeight="Bold"
                                    Foreground="{DynamicResource HeadingBrush}"
                                    Margin="0,8,0,6" TextWrapping="Wrap" />
                         <TextBlock Text="面向小微商家，覆盖成交销售、订单、库存、客户、现金流、数据分析与经营建议七大能力。所有业务数据均保存在本机，默认不依赖云端。"

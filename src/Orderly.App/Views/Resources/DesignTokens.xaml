@@ -79,7 +79,7 @@
     <Style x:Key="RefineNavItemStyle" TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
-        <Setter Property="FontSize" Value="{StaticResource TypeItemTitleFontSize}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13_5}" />
         <Setter Property="FontWeight" Value="{StaticResource TypeItemTitleFontWeight}" />
         <Setter Property="Padding" Value="14,11" />
         <Setter Property="Margin" Value="2,3" />
@@ -121,7 +121,7 @@
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="FontSize" Value="{StaticResource TypeBodyFontSize}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13}" />
         <Setter Property="Height" Value="38" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Padding" Value="12,0" />

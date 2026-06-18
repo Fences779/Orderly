@@ -131,13 +131,13 @@
                 <TextBlock Text="订单"
                            Foreground="{DynamicResource HeadingBrush}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
-                           FontSize="{StaticResource UiFontDisplay}"
+                           FontSize="{DynamicResource UiFontDisplay}"
                            FontWeight="{StaticResource UiFontWeightBold}"
                            Margin="{StaticResource UiPresenterGapBottom}" />
                 <TextBlock Text="集中查看与管理全部订单"
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
-                           FontSize="{StaticResource UiFontBodySm}" />
+                           FontSize="{DynamicResource UiFontBodySm}" />
             </StackPanel>
             <Button Grid.Column="1"
                     Content="刷新"

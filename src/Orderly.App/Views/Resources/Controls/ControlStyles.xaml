@@ -88,7 +88,7 @@
     <Style x:Key="UiPrimaryButtonStyle" TargetType="Button">
         <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
         <Setter Property="Padding" Value="{StaticResource UiPadButton}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
         <Setter Property="Foreground" Value="{DynamicResource SurfaceRaisedBrush}" />
@@ -134,7 +134,7 @@
     <Style x:Key="UiSecondaryButtonStyle" TargetType="Button">
         <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
         <Setter Property="Padding" Value="{StaticResource UiPadButton}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
         <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
@@ -182,7 +182,7 @@
     <Style x:Key="UiTextButtonStyle" TargetType="Button">
         <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
         <Setter Property="Padding" Value="{StaticResource UiPadInput}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
         <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
@@ -226,7 +226,7 @@
     <Style x:Key="UiTextBoxStyle" TargetType="TextBox">
         <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
         <Setter Property="Padding" Value="{StaticResource UiPadInput}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
         <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
@@ -309,7 +309,7 @@
 
     <Style x:Key="UiComboBoxItemStyle" TargetType="ComboBoxItem">
         <Setter Property="Padding" Value="{StaticResource UiPadInput}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
         <Setter Property="Background" Value="Transparent" />
@@ -347,7 +347,7 @@
 
     <Style x:Key="UiComboBoxStyle" TargetType="ComboBox">
         <Setter Property="MinHeight" Value="{StaticResource UiControlMinHeight}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
         <Setter Property="Background" Value="{DynamicResource SurfaceSoftBrush}" />
@@ -411,7 +411,7 @@
     <!--  复选框 CheckBox                                                                      -->
     <!-- ==================================================================================== -->
     <Style x:Key="UiCheckBoxStyle" TargetType="CheckBox">
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -470,7 +470,7 @@
     <!--  单选框 RadioButton                                                                   -->
     <!-- ==================================================================================== -->
     <Style x:Key="UiRadioButtonStyle" TargetType="RadioButton">
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -522,7 +522,7 @@
     <!--  Tab：TabControl / TabItem（当前 Tab 主色高亮 + 底部主色条）                            -->
     <!-- ==================================================================================== -->
     <Style x:Key="UiTabItemStyle" TargetType="TabItem">
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
@@ -598,7 +598,7 @@
 
     <!-- 列头 -->
     <Style x:Key="UiDataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
-        <Setter Property="FontSize" Value="{StaticResource UiFontBodySm}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBodySm}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
@@ -624,7 +624,7 @@
 
     <!-- 单元格（舒适内边距 + 焦点态去除默认虚线框，统一焦点由行表达） -->
     <Style x:Key="UiDataGridCellStyle" TargetType="DataGridCell">
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
         <Setter Property="Background" Value="Transparent" />
@@ -708,7 +708,7 @@
     <!-- ==================================================================================== -->
     <Style x:Key="UiListViewItemStyle" TargetType="ListViewItem">
         <Setter Property="MinHeight" Value="{StaticResource UiRowHeightComfortable}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
         <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
@@ -778,7 +778,7 @@
 
     <!-- 徽标内文字基样式（前景由具体状态画刷在使用处或 3.2 模板覆盖） -->
     <Style x:Key="UiBadgeTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
         <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
@@ -799,7 +799,7 @@
 
     <!-- 提示条内文字基样式 -->
     <Style x:Key="UiNoticeBarTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="{StaticResource UiFontBodySm}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBodySm}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource BlueTextBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />

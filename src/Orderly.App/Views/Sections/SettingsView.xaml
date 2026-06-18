@@ -93,7 +93,7 @@
             <Setter Property="CaretBrush" Value="{DynamicResource PrimaryBrush}" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Padding" Value="{StaticResource UiSettingsSearchPlaceholderMargin}" />
-            <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -156,7 +156,7 @@
         <Style x:Key="UiSettingsNavItemStyle" TargetType="ListBoxItem">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
-            <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
             <Setter Property="Padding" Value="{StaticResource UiSettingsNavItemPadding}" />
@@ -312,11 +312,11 @@
                                                 <TextBlock Text="{Binding Title}"
                                                            Foreground="{DynamicResource HeadingBrush}"
                                                            FontFamily="{StaticResource UiFontFamilyCjk}"
-                                                           FontSize="{StaticResource UiFontBodySm}" />
+                                                           FontSize="{DynamicResource UiFontBodySm}" />
                                                 <TextBlock Text="{Binding CategoryKey}"
                                                            Foreground="{DynamicResource SecondaryTextBrush}"
                                                            FontFamily="{StaticResource UiFontFamilyCjk}"
-                                                           FontSize="{StaticResource UiFontCaption}"
+                                                           FontSize="{DynamicResource UiFontCaption}"
                                                            Margin="{StaticResource UiSettingsResultCategoryGap}" />
                                             </StackPanel>
                                         </Button>
@@ -331,7 +331,7 @@
                                    Text="结果较多，请输入更精确的关键词"
                                    Foreground="{DynamicResource SecondaryTextBrush}"
                                    FontFamily="{StaticResource UiFontFamilyCjk}"
-                                   FontSize="{StaticResource UiFontCaption}"
+                                   FontSize="{DynamicResource UiFontCaption}"
                                    TextWrapping="Wrap"
                                    Margin="{StaticResource UiSettingsTruncatedMargin}"
                                    Visibility="{Binding IsSearchResultsTruncated, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -346,37 +346,37 @@
                      SelectedValue="{Binding SelectedCategoryKey, Mode=TwoWay}">
                 <ListBoxItem Tag="外观与启动">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="外观与启动" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="数据与备份">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="数据与备份" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="安全与日志">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="安全与日志" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="AI 助手">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="AI 助手" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="通知提醒">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE715;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="通知提醒" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>
                 <ListBoxItem Tag="快捷键">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets" FontSize="{StaticResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
+                        <TextBlock Text="&#xE765;" FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource UiFontSubtitle}" Width="{StaticResource UiSettingsNavIconSize}" Margin="{StaticResource UiSettingsNavIconGap}" VerticalAlignment="Center" />
                         <TextBlock Text="快捷键" VerticalAlignment="Center" />
                     </StackPanel>
                 </ListBoxItem>

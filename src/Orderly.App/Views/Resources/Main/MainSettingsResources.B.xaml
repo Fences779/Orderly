@@ -38,21 +38,21 @@
 
     <!-- Page title inside settings content area -->
     <Style x:Key="SettingsPageTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="24"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize24}"/>
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
     </Style>
 
     <!-- Page description -->
     <Style x:Key="SettingsPageDescStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13}"/>
         <Setter Property="Foreground" Value="#9CA3AF"/>
         <Setter Property="Margin" Value="0,4,0,24"/>
     </Style>
 
     <!-- Group title inside a card -->
     <Style x:Key="SettingsGroupTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize15}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
         <Setter Property="Margin" Value="0,12,0,4"/>
@@ -74,14 +74,14 @@
 
     <!-- Setting item title -->
     <Style x:Key="SettingsItemTitleStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13_5}"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}"/>
     </Style>
 
     <!-- Setting item description -->
     <Style x:Key="SettingsItemDescStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize12}"/>
         <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="Margin" Value="0,3,0,0"/>
@@ -101,7 +101,7 @@
     <Style x:Key="SettingsRowComboBoxStyle" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
         <Setter Property="Height" Value="36"/>
         <Setter Property="MinWidth" Value="140"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
@@ -109,7 +109,7 @@
     <Style x:Key="SettingsRowTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
         <Setter Property="Height" Value="36"/>
         <Setter Property="MinWidth" Value="60"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize13}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Padding" Value="8,0"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -193,7 +193,7 @@
 
     <!-- Status / read-only text in settings -->
     <Style x:Key="SettingsStatusTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize12}"/>
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="LineHeight" Value="18"/>
@@ -205,7 +205,7 @@
         <Setter Property="MinWidth" Value="72"/>
         <Setter Property="Padding" Value="14,0"/>
         <Setter Property="Margin" Value="8,0,0,0"/>
-        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize12_5}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 

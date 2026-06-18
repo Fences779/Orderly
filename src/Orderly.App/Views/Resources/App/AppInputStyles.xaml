@@ -3,7 +3,7 @@
     <!-- 全局 TextBox 基础样式：现代扁平化 Apple 风格 -->
     <Style TargetType="TextBox">
         <Setter Property="Height" Value="42" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize14}" />
         <Setter Property="Background" Value="#F7F7F9" />
         <Setter Property="BorderBrush" Value="#DFE3EA" />
         <Setter Property="BorderThickness" Value="1" />
@@ -73,7 +73,7 @@
 
     <Style TargetType="PasswordBox">
         <Setter Property="Height" Value="42" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize14}" />
         <Setter Property="Background" Value="#F7F7F9" />
         <Setter Property="BorderBrush" Value="#DFE3EA" />
         <Setter Property="BorderThickness" Value="1" />
@@ -144,7 +144,7 @@
     <!-- 全局 ComboBox 基础样式 -->
     <Style TargetType="ComboBox">
         <Setter Property="Height" Value="42" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize14}" />
         <Setter Property="Background" Value="#F7F7F9" />
         <Setter Property="BorderBrush" Value="#DFE3EA" />
         <Setter Property="BorderThickness" Value="1" />

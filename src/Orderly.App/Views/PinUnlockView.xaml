@@ -53,11 +53,11 @@
                 <TextBlock Text="🔒" FontSize="26" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="#FFFFFF" />
             </Border>
             
-            <TextBlock Text="会话已锁定" FontSize="22" FontWeight="Bold" Foreground="#1D1D1F" HorizontalAlignment="Center" />
-            <TextBlock x:Name="TxtAccount" Margin="0,6,0,32" Foreground="#86868B" FontSize="13" TextWrapping="Wrap" HorizontalAlignment="Center" />
+            <TextBlock Text="会话已锁定" FontSize="{DynamicResource UiFontSize22}" FontWeight="Bold" Foreground="#1D1D1F" HorizontalAlignment="Center" />
+            <TextBlock x:Name="TxtAccount" Margin="0,6,0,32" Foreground="#86868B" FontSize="{DynamicResource UiFontSize13}" TextWrapping="Wrap" HorizontalAlignment="Center" />
             
             <Border Width="280" Background="#F5F5F7" CornerRadius="12" BorderThickness="1" BorderBrush="Transparent" Margin="0,0,0,16">
-                <PasswordBox x:Name="TxtPin" Height="52" FontSize="24" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" KeyDown="TxtPin_KeyDown" MaxLength="6" />
+                <PasswordBox x:Name="TxtPin" Height="52" FontSize="{DynamicResource UiFontSize24}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" KeyDown="TxtPin_KeyDown" MaxLength="6" />
             </Border>
             
             <TextBlock x:Name="TxtError" Foreground="#FF3B30" Margin="0,0,0,16" Visibility="Collapsed" TextWrapping="Wrap" HorizontalAlignment="Center" />

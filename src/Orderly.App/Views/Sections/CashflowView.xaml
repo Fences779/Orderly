@@ -57,14 +57,14 @@
 
             <!-- 指标标题（辅助字号 + 次文字色） -->
             <Style x:Key="CfMetricCaptionStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
                 <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
                 <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
             </Style>
 
             <!-- 核心数值（收入/支出/净额）：标题大字号阶 + 拉丁数字族 -->
             <Style x:Key="CfMetricValueCoreStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="{StaticResource UiFontDisplay}" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontDisplay}" />
                 <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyLatin}" />
                 <Setter Property="FontWeight" Value="{StaticResource UiFontWeightBold}" />
                 <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
@@ -74,7 +74,7 @@
 
             <!-- 次级数值（应收/应付/健康度）：标题字号阶 + 拉丁数字族 -->
             <Style x:Key="CfMetricValueSecondaryStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="{StaticResource UiFontTitle}" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontTitle}" />
                 <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyLatin}" />
                 <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
                 <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
@@ -84,7 +84,7 @@
 
             <!-- 区块标题（副标题字号阶） -->
             <Style x:Key="CfSectionTitleStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="{StaticResource UiFontSubtitle}" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontSubtitle}" />
                 <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
                 <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
                 <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
@@ -137,12 +137,12 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="现金流"
-                           FontSize="{StaticResource UiFontTitle}"
+                           FontSize="{DynamicResource UiFontTitle}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            FontWeight="{StaticResource UiFontWeightBold}"
                            Foreground="{DynamicResource HeadingBrush}" />
                 <TextBlock Text="近 30 天收支、应收应付与现金流健康度"
-                           FontSize="{StaticResource UiFontCaption}"
+                           FontSize="{DynamicResource UiFontCaption}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            Margin="{StaticResource UiPresenterGapBottom}" />

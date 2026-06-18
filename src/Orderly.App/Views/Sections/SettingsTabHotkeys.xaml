@@ -39,14 +39,14 @@
 
         <!-- ===== 分组标题 / 提示 ===== -->
         <Style x:Key="SettingsGroupTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource UiFontSubtitle}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontSubtitle}" />
             <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
             <Setter Property="Margin" Value="{StaticResource SettingsGroupTitleMargin}" />
         </Style>
         <Style x:Key="SettingsHintStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
@@ -66,14 +66,14 @@
 
         <!-- ===== 标签 / 说明 ===== -->
         <Style x:Key="SettingsRowLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource UiFontBody}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
             <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
         <Style x:Key="SettingsRowDescStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+            <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
             <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />

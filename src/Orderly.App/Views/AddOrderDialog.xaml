@@ -32,7 +32,7 @@
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="创建订单" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="关联客户、填写订单基本信息后保存" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="关联客户、填写订单基本信息后保存" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource UiFontSize12}" />
             </StackPanel>
         </Border>
 

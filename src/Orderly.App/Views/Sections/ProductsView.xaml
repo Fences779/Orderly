@@ -56,13 +56,13 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="商品"
-                               FontSize="{StaticResource UiFontTitle}"
+                               FontSize="{DynamicResource UiFontTitle}"
                                FontWeight="{StaticResource UiFontWeightBold}"
                                FontFamily="{StaticResource UiFontFamilyCjk}"
                                Foreground="{DynamicResource HeadingBrush}" />
                     <TextBlock Text="维护商品目录与定价"
                                Margin="{StaticResource UiProductsSubtitleGap}"
-                               FontSize="{StaticResource UiFontCaption}"
+                               FontSize="{DynamicResource UiFontCaption}"
                                FontFamily="{StaticResource UiFontFamilyCjk}"
                                Foreground="{DynamicResource SecondaryTextBrush}" />
                 </StackPanel>

@@ -61,8 +61,8 @@
                                 
                                 <!-- 用户名称与状态文本 -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock x:Name="NameText" Text="{Binding CurrentAccountDisplayName, FallbackValue=商家用户}" FontSize="13" FontWeight="SemiBold" Foreground="#1D1D1F"/>
-                                    <TextBlock x:Name="RoleText" Text="系统店员" FontSize="11" Foreground="#86868B" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="NameText" Text="{Binding CurrentAccountDisplayName, FallbackValue=商家用户}" FontSize="{DynamicResource UiFontSize13}" FontWeight="SemiBold" Foreground="#1D1D1F"/>
+                                    <TextBlock x:Name="RoleText" Text="系统店员" FontSize="{DynamicResource UiFontSize11}" Foreground="#86868B" Margin="0,2,0,0"/>
                                 </StackPanel>
                                 
                                 <!-- 右侧跳转小箭头 -->

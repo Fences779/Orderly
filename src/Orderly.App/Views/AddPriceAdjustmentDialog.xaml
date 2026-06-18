@@ -32,7 +32,7 @@
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="新增改价" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="记录本次价格调整和调整原因" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="记录本次价格调整和调整原因" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource UiFontSize12}" />
             </StackPanel>
         </Border>
 

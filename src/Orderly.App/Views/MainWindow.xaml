@@ -72,7 +72,7 @@
                     </Style>
                 </DockPanel.Style>
                 <StackPanel DockPanel.Dock="Left">
-                    <TextBlock Text="{Binding SelectedSection}" FontSize="29" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
+                    <TextBlock Text="{Binding SelectedSection}" FontSize="{DynamicResource UiFontSize29}" FontWeight="Bold" Foreground="{DynamicResource HeadingBrush}" />
                     <TextBlock Text="客户、订单、跟进和快捷回复集中处理" Style="{StaticResource CaptionTextStyle}" Margin="0,5,0,0" />
                 </StackPanel>
             </DockPanel>
@@ -123,10 +123,10 @@
                         <StackPanel Visibility="{Binding IsPinVerificationVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="36"
                                        Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" />
-                            <TextBlock Text="机密页面需要验证" FontSize="18" FontWeight="SemiBold"
+                            <TextBlock Text="机密页面需要验证" FontSize="{DynamicResource UiFontSize18}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource HeadingBrush}" Margin="0,14,0,0" HorizontalAlignment="Center" />
                             <TextBlock HorizontalAlignment="Center" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"
-                                       Foreground="{DynamicResource MutedBrush}" FontSize="13">
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource UiFontSize13}">
                                 <Run Text="进入「" /><Run Text="{Binding PromptTitle, Mode=OneWay}" /><Run Text="」前请输入 6 位 PIN" />
                             </TextBlock>
                             <PasswordBox x:Name="Box_SensitiveGatePin"
@@ -137,7 +137,7 @@
                                     <KeyBinding Key="Enter" Command="{Binding SubmitPinCommand}" />
                                 </PasswordBox.InputBindings>
                             </PasswordBox>
-                            <TextBlock Text="{Binding ErrorMessage}" Foreground="#D12E9F" FontSize="12"
+                            <TextBlock Text="{Binding ErrorMessage}" Foreground="#D12E9F" FontSize="{DynamicResource UiFontSize12}"
                                        Margin="0,8,0,0" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
                                        Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             <Button Content="进入" Command="{Binding SubmitPinCommand}"
@@ -149,11 +149,11 @@
                         <StackPanel Visibility="{Binding IsBlockedByRestricted, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="36"
                                        Foreground="{DynamicResource HeadingBrush}" HorizontalAlignment="Center" />
-                            <TextBlock Text="受限权限模式" FontSize="18" FontWeight="SemiBold"
+                            <TextBlock Text="受限权限模式" FontSize="{DynamicResource UiFontSize18}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource HeadingBrush}" Margin="0,14,0,0" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding RestrictedBlockMessage, Mode=OneWay}"
                                        HorizontalAlignment="Center" Margin="0,10,0,0" TextWrapping="Wrap" TextAlignment="Center"
-                                       Foreground="{DynamicResource MutedBrush}" FontSize="13" MaxWidth="320" />
+                                       Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource UiFontSize13}" MaxWidth="320" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -188,7 +188,7 @@
                     </Border.Effect>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock x:Name="Icon_Toast" Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" Foreground="White" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
-                        <TextBlock x:Name="Text_Toast" Foreground="White" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock x:Name="Text_Toast" Foreground="White" FontSize="{DynamicResource UiFontSize11}" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
                 </Border>
             </Popup>

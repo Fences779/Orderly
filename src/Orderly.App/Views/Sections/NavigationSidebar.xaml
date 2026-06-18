@@ -39,7 +39,7 @@
             <!-- Developer-only annotations (NOT rendered): Workbench / Orders / Products /
                  Inventory / Customers / Cash Flow / Business Advice / Settings -->
             <StackPanel>
-                <TextBlock Text="Orderly" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource SidebarBrandBrush}" />
+                <TextBlock Text="Orderly" FontSize="{DynamicResource UiFontSize26}" FontWeight="Bold" Foreground="{DynamicResource SidebarBrandBrush}" />
                 <TextBlock Text="本地商家工作台" Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,20" />
 
                 <!-- 1. 工作台 (Workbench) -->

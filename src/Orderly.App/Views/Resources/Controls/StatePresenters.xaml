@@ -63,7 +63,7 @@
 
     <Style x:Key="UiStatusBadgeBaseStyle" TargetType="ContentControl">
         <Setter Property="Template" Value="{StaticResource UiStatusBadgeTemplate}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
         <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="HorizontalAlignment" Value="Left" />
@@ -149,7 +149,7 @@
             <TextBlock Text="加载中…"
                        HorizontalAlignment="Center"
                        Foreground="{DynamicResource SecondaryTextBrush}"
-                       FontSize="{StaticResource UiFontCaption}"
+                       FontSize="{DynamicResource UiFontCaption}"
                        FontFamily="{StaticResource UiFontFamilyCjk}" />
         </StackPanel>
     </ControlTemplate>
@@ -176,7 +176,7 @@
     <Style x:Key="UiEmptyStateGlyphStyle" TargetType="TextBlock">
         <Setter Property="Text" Value="□" />
         <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontDisplay}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontDisplay}" />
         <Setter Property="Foreground" Value="{DynamicResource CaptionTextBrush}" />
         <Setter Property="Margin" Value="{StaticResource UiPresenterGapBottomLg}" />
     </Style>
@@ -184,7 +184,7 @@
     <Style x:Key="UiEmptyStateTitleStyle" TargetType="TextBlock">
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="TextAlignment" Value="Center" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontSubtitle}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSubtitle}" />
         <Setter Property="FontWeight" Value="{StaticResource UiFontWeightMedium}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
@@ -195,7 +195,7 @@
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="TextAlignment" Value="Center" />
         <Setter Property="TextWrapping" Value="Wrap" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
     </Style>
@@ -211,7 +211,7 @@
 
     <Style x:Key="UiEmptyStateStyle" TargetType="ContentControl">
         <Setter Property="Template" Value="{StaticResource UiEmptyStateTemplate}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
@@ -236,7 +236,7 @@
                 <TextBlock Text="⚠"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource DangerTextBrush}"
-                           FontSize="{StaticResource UiFontSubtitle}"
+                           FontSize="{DynamicResource UiFontSubtitle}"
                            Margin="{StaticResource UiPresenterGapRight}" />
                 <ContentPresenter VerticalAlignment="Center"
                                   TextElement.Foreground="{DynamicResource DangerTextBrush}" />
@@ -246,7 +246,7 @@
 
     <Style x:Key="UiErrorNoticeStyle" TargetType="ContentControl">
         <Setter Property="Template" Value="{StaticResource UiErrorNoticeTemplate}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontBodySm}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontBodySm}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
@@ -265,7 +265,7 @@
             <TextBlock Text="⚠"
                        VerticalAlignment="Center"
                        Foreground="{DynamicResource DangerTextBrush}"
-                       FontSize="{StaticResource UiFontCaption}"
+                       FontSize="{DynamicResource UiFontCaption}"
                        Margin="{StaticResource UiPresenterGapRight}" />
             <ContentPresenter VerticalAlignment="Center"
                               TextElement.Foreground="{DynamicResource DangerTextBrush}" />
@@ -274,14 +274,14 @@
 
     <Style x:Key="UiFieldErrorStyle" TargetType="ContentControl">
         <Setter Property="Template" Value="{StaticResource UiFieldErrorTemplate}" />
-        <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
 
     <!-- 行级错误纯文本样式（无图标场景，直接套用于 TextBlock） -->
     <Style x:Key="UiFieldErrorTextStyle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="{StaticResource UiFontCaption}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontCaption}" />
         <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
         <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />

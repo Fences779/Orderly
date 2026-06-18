@@ -53,7 +53,7 @@
     <Style x:Key="SettingsSegmentedItemStyle" TargetType="ListBoxItem">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
-        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize12_5}"/>
         <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="Padding" Value="14,0"/>
         <Setter Property="Margin" Value="1,0"/>

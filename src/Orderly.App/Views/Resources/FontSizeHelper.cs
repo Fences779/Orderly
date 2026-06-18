@@ -10,13 +10,29 @@ public static class FontSizeHelper
 {
     private static double _currentScale = 1.0;
 
-    // 默认基准字号定义
-    private const double BaseDisplay = 28;
-    private const double BaseTitle = 20;
-    private const double BaseSubtitle = 16;
-    private const double BaseBody = 14;
-    private const double BaseBodySm = 13;
-    private const double BaseCaption = 12;
+    private static readonly (string Key, double BaseSize, double MinimumSize)[] ScaledFontSizes =
+    [
+        ("UiFontDisplay", 28, 0),
+        ("UiFontTitle", 20, 0),
+        ("UiFontSubtitle", 16, 0),
+        ("UiFontBody", 14, 13),
+        ("UiFontBodySm", 13, 13),
+        ("UiFontCaption", 12, 12),
+        ("UiFontSize11", 11, 0),
+        ("UiFontSize12", 12, 0),
+        ("UiFontSize12_5", 12.5, 0),
+        ("UiFontSize13", 13, 0),
+        ("UiFontSize13_5", 13.5, 0),
+        ("UiFontSize14", 14, 0),
+        ("UiFontSize15", 15, 0),
+        ("UiFontSize16", 16, 0),
+        ("UiFontSize18", 18, 0),
+        ("UiFontSize22", 22, 0),
+        ("UiFontSize24", 24, 0),
+        ("UiFontSize26", 26, 0),
+        ("UiFontSize29", 29, 0),
+        ("UiFontSize30", 30, 0),
+    ];
 
     public static double CurrentScale => _currentScale;
 
@@ -58,25 +74,14 @@ public static class FontSizeHelper
         var app = System.Windows.Application.Current;
         if (app == null) return;
 
-        // 计算新字号
-        double fontDisplay = Math.Round(BaseDisplay * scaleFactor);
-        double fontTitle = Math.Round(BaseTitle * scaleFactor);
-        double fontSubtitle = Math.Round(BaseSubtitle * scaleFactor);
-        
-        // 满足可达性约束：正文字号 >= 13px，说明字号 >= 12px
-        double fontBody = Math.Max(13, Math.Round(BaseBody * scaleFactor));
-        double fontBodySm = Math.Max(13, Math.Round(BaseBodySm * scaleFactor));
-        double fontCaption = Math.Max(12, Math.Round(BaseCaption * scaleFactor));
-
         var newDict = new ResourceDictionary();
         // 添加专门的元标识，供查找定位
         newDict.Add("FontSizeScaleFactor", scaleFactor);
-        newDict.Add("UiFontDisplay", fontDisplay);
-        newDict.Add("UiFontTitle", fontTitle);
-        newDict.Add("UiFontSubtitle", fontSubtitle);
-        newDict.Add("UiFontBody", fontBody);
-        newDict.Add("UiFontBodySm", fontBodySm);
-        newDict.Add("UiFontCaption", fontCaption);
+        foreach (var (key, baseSize, minimumSize) in ScaledFontSizes)
+        {
+            var scaledSize = Math.Round(baseSize * scaleFactor, 2, MidpointRounding.AwayFromZero);
+            newDict.Add(key, Math.Max(minimumSize, scaledSize));
+        }
 
         var mergedDicts = app.Resources.MergedDictionaries;
 

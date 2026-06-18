@@ -84,13 +84,13 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="经营建议"
-                           FontSize="{StaticResource UiFontDisplay}"
+                           FontSize="{DynamicResource UiFontDisplay}"
                            FontWeight="{StaticResource UiFontWeightBold}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            Foreground="{DynamicResource HeadingBrush}"
                            Margin="{StaticResource UiPresenterGapBottom}" />
                 <TextBlock Text="基于本地数据生成的经营洞察，按严重度分级"
-                           FontSize="{StaticResource UiFontCaption}"
+                           FontSize="{DynamicResource UiFontCaption}"
                            FontFamily="{StaticResource UiFontFamilyCjk}"
                            Foreground="{DynamicResource SecondaryTextBrush}" />
             </StackPanel>
@@ -143,7 +143,7 @@
                             <ContentControl Style="{StaticResource AdviceSeverityBadgeStyle}"
                                             Margin="{StaticResource UiPresenterGapRight}" />
                             <TextBlock Text="{Binding Title}"
-                                       FontSize="{StaticResource UiFontSubtitle}"
+                                       FontSize="{DynamicResource UiFontSubtitle}"
                                        FontWeight="{StaticResource UiFontWeightSemiBold}"
                                        FontFamily="{StaticResource UiFontFamilyCjk}"
                                        Foreground="{DynamicResource HeadingBrush}"
@@ -153,14 +153,14 @@
 
                         <!-- 建议正文 -->
                         <TextBlock Text="{Binding Message}"
-                                   FontSize="{StaticResource UiFontBodySm}"
+                                   FontSize="{DynamicResource UiFontBodySm}"
                                    FontFamily="{StaticResource UiFontFamilyCjk}"
                                    Foreground="{DynamicResource SecondaryTextBrush}"
                                    TextWrapping="Wrap" />
 
                         <!-- 分类（次要） -->
                         <TextBlock Text="{Binding Category}"
-                                   FontSize="{StaticResource UiFontCaption}"
+                                   FontSize="{DynamicResource UiFontCaption}"
                                    FontFamily="{StaticResource UiFontFamilyCjk}"
                                    Foreground="{DynamicResource CaptionTextBrush}"
                                    Margin="{StaticResource UiFieldErrorMargin}"

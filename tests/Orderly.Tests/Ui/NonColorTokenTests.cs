@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Xunit;
 
@@ -228,6 +229,47 @@ public sealed class NonColorTokenTests
 
         Assert.True(offenders.Count == 0,
             $"新令牌键应统一使用 'Ui' 前缀以与既有键名隔离，违例键：{string.Join(", ", offenders)}");
+    }
+
+    [Fact]
+    public void Font_size_tokens_are_consumed_as_dynamic_resources()
+    {
+        var repositoryRoot = ResolveRepositoryRoot();
+        var appRoot = Path.Combine(repositoryRoot, "src", "Orderly.App");
+        var staticReference = new Regex(
+            @"\{StaticResource\s+UiFont(?:Display|Title|Subtitle|Body|BodySm|Caption|Size[0-9_]+)\}",
+            RegexOptions.CultureInvariant);
+
+        var offenders = Directory.EnumerateFiles(appRoot, "*.xaml", SearchOption.AllDirectories)
+            .SelectMany(path => File.ReadLines(path)
+                .Select((line, index) => (Path: path, Line: line, Number: index + 1)))
+            .Where(item => staticReference.IsMatch(item.Line))
+            .Select(item => $"{Path.GetRelativePath(repositoryRoot, item.Path)}:{item.Number}")
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            $"字号令牌必须使用 DynamicResource 才能实时刷新：{string.Join(", ", offenders)}");
+    }
+
+    [Fact]
+    public void Runtime_scaler_covers_every_typography_size_token()
+    {
+        var tokens = LoadKeyedElements(TypographyPath)
+            .Where(kv => kv.Value.LocalName == "Double"
+                         && (kv.Key.StartsWith("UiFontSize", StringComparison.Ordinal)
+                             || FontSizeKeys().Any(item => string.Equals((string)item[0], kv.Key, StringComparison.Ordinal))))
+            .Select(kv => kv.Key)
+            .ToList();
+        var helperPath = Path.Combine(
+            ResolveRepositoryRoot(), "src", "Orderly.App", "Views", "Resources", "FontSizeHelper.cs");
+        var helperSource = File.ReadAllText(helperPath);
+
+        var missing = tokens
+            .Where(key => !helperSource.Contains($"\"{key}\"", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.True(missing.Count == 0,
+            $"FontSizeHelper 未覆盖以下字号令牌：{string.Join(", ", missing)}");
     }
 
     // ==================== 辅助方法 ====================

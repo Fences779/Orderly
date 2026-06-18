@@ -32,7 +32,7 @@
                 Padding="22,18,22,16">
             <StackPanel>
                 <TextBlock Text="新增跟进" Style="{StaticResource DialogSectionTitleStyle}" Margin="0" />
-                <TextBlock Text="设置跟进任务的标题、时间和内容" Foreground="{DynamicResource MutedBrush}" FontSize="12" />
+                <TextBlock Text="设置跟进任务的标题、时间和内容" Foreground="{DynamicResource MutedBrush}" FontSize="{DynamicResource UiFontSize12}" />
             </StackPanel>
         </Border>
 
