@@ -1,4 +1,4 @@
-﻿Set-StrictMode -Version 3.0
+Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 $script:QaEncryptionKeyBytes = $null
 
@@ -363,6 +363,19 @@ function Get-RunningOrderlyProcesses {
 
 function Assert-NoRunningOrderlyProcess {
     $running = @(Get-RunningOrderlyProcesses)
+    if ($running.Count -gt 0) {
+        Start-Sleep -Seconds 2
+        $running = @(Get-RunningOrderlyProcesses)
+    }
+    if ($running.Count -gt 0) {
+        foreach ($p in $running) {
+            try {
+                Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            } catch {}
+        }
+        Start-Sleep -Milliseconds 500
+        $running = @(Get-RunningOrderlyProcesses)
+    }
     if ($running.Count -gt 0) {
         $processIds = ($running | Select-Object -ExpandProperty Id) -join ', '
         throw "Detected running Orderly.App process(es): $processIds. Close them before running QA tools."

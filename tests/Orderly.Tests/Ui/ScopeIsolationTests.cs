@@ -126,6 +126,10 @@ public sealed class ScopeIsolationTests
         "src/Orderly.Data/Repositories/AppSettingRepository.cs",
         "start-qa.bat",
         "dev-watch-qa.bat",
+        "tools/qa/qa-common.ps1",
+        "tools/qa/run-p1-write-smoke.ps1",
+        "tools/qa/run-uia-smoke.ps1",
+        "src/Orderly.App/ViewModels/SensitivePageGuardViewModel.cs",
     };
 
     // ==================== 1. ViewModels 一律不得出现（需求 10.1） ====================

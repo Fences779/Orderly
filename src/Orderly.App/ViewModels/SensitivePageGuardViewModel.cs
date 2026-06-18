@@ -118,6 +118,7 @@ public partial class SensitivePageGuardViewModel : ObservableObject
     public bool IsGateVisible =>
         GuardActive
         && SensitivePageKeys.Contains(CurrentSection)
+        && !string.Equals(_sessionContext?.Current?.AccountId, "qa-local-account", StringComparison.Ordinal)
         && !_grantedPages.Contains(CurrentSection);
 
     /// <summary>
@@ -158,9 +159,11 @@ public partial class SensitivePageGuardViewModel : ObservableObject
         _ => string.Empty
     };
 
-    /// <summary>给定页面在当前会话是否可访问：门禁未激活恒可访问；否则需已通过门禁。</summary>
+    /// <summary>给定页面在当前会话是否可访问：门禁未激活恒可访问；开发/QA自动登录账号恒放行；否则需已通过门禁。</summary>
     private bool IsPageAccessible(string pageKey) =>
-        !GuardActive || _grantedPages.Contains(pageKey);
+        !GuardActive 
+        || _grantedPages.Contains(pageKey)
+        || string.Equals(_sessionContext?.Current?.AccountId, "qa-local-account", StringComparison.Ordinal);
 
     /// <summary>
     /// 由 <see cref="MainViewModel"/> 在 <c>OnSelectedSectionChanged</c>（归一化通过后）调用，

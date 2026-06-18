@@ -41,7 +41,7 @@ function Assert-True {
 
 function New-P1WriteContext {
     $databasePath = Get-DefaultDatabasePath
-    $connectionFactory = [Orderly.Data.Sqlite.SqliteConnectionFactory]::new($databasePath)
+    $connectionFactory = New-QaConnectionFactory -DatabasePath $databasePath
     $fieldContext = New-QaFieldEncryptionContext -DatabasePath $databasePath
     $fieldEncryptionService = $fieldContext.FieldEncryptionService
 

@@ -377,13 +377,13 @@
         </DockPanel>
 
         <!-- ==================== 右侧：分类内容区（承载 SettingsTab* 子 View） ==================== -->
-        <Border Grid.Column="1"
+        <ContentControl Grid.Column="1"
                 x:Name="Pane_SettingsContent"
                 AutomationProperties.AutomationId="Pane_SettingsContent"
                 helpers:ScrollToAnchorBehavior.AnchorId="{Binding Settings.PendingScrollAnchorId, Mode=TwoWay}"
                 Margin="{StaticResource UiSettingsContentMargin}">
-            <Border.Style>
-                <Style TargetType="Border">
+            <ContentControl.Style>
+                <Style TargetType="ContentControl">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding (helpers:SettingsHelper.IsSelectingStartupSection), RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
                             <Setter Property="Effect">
@@ -395,7 +395,7 @@
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
-            </Border.Style>
+            </ContentControl.Style>
             <Grid>
                 <!-- 外观与启动 -->
                 <Sections:SettingsTabAppearance
@@ -432,7 +432,7 @@
                 <Sections:SettingsTabHotkeys
                     Visibility="{Binding Settings.SelectedCategoryKey, Converter={StaticResource CategoryVisibilityConverter}, ConverterParameter=快捷键}" />
             </Grid>
-        </Border>
+        </ContentControl>
 
         <!-- 选择默认启动页时的提示遮罩层 -->
         <Border Grid.Column="0"
@@ -441,7 +441,6 @@
                 Background="Transparent"
                 Panel.ZIndex="99"
                 IsHitTestVisible="True"
-                MouseLeftButtonDown="OnMaskClick"
                 Visibility="{Binding (helpers:SettingsHelper.IsSelectingStartupSection), RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Grid>
                 <!-- 精美微暗遮罩面 -->

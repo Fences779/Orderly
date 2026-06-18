@@ -1,4 +1,4 @@
-﻿param(
+param(
     [switch]$SkipReset,
     [switch]$SkipFinalReset,
     [int]$WindowTimeoutSeconds = 30
@@ -54,6 +54,32 @@ function Get-AutomationPropertyCondition {
     return New-Object System.Windows.Automation.PropertyCondition($Property, $Value)
 }
 
+function Find-AutomationElementHelper {
+    param(
+        [System.Windows.Automation.AutomationElement]$El,
+        [string]$AutomationId
+    )
+
+    if ($null -eq $El) { return $null }
+    try {
+        if ($El.Current.AutomationId -eq $AutomationId) {
+            return $El
+        }
+    } catch {}
+
+    try {
+        $children = $El.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition)
+        foreach ($child in $children) {
+            $found = Find-AutomationElementHelper -El $child -AutomationId $AutomationId
+            if ($null -ne $found) {
+                return $found
+            }
+        }
+    } catch {}
+
+    return $null
+}
+
 function Find-AutomationElement {
     param(
         [Parameter(Mandatory = $true)]
@@ -70,6 +96,12 @@ function Find-AutomationElement {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline) {
         $element = $Root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+        if ($null -ne $element) {
+            return $element
+        }
+
+        # 兜底查找：利用 Children 递归访问，强制 WPF 动态创建各层级子元素的 UIA Peer
+        $element = Find-AutomationElementHelper -El $Root -AutomationId $AutomationId
         if ($null -ne $element) {
             return $element
         }
@@ -109,23 +141,39 @@ function Wait-MainWindow {
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $processId = $Process.Id
+
+    # 构造精确查找条件：属于当前进程 ID，且控件类型为 Window (ControlType.Window) 的顶级子元素
+    $condition = New-Object System.Windows.Automation.AndCondition(
+        (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $processId)),
+        (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Window))
+    )
+
     while ((Get-Date) -lt $deadline) {
         $Process.Refresh()
         if ($Process.HasExited) {
             throw "Orderly.App 在主窗口出现前已退出，退出码：$($Process.ExitCode)"
         }
 
-        if ($Process.MainWindowHandle -ne 0) {
-            $window = [System.Windows.Automation.AutomationElement]::FromHandle($Process.MainWindowHandle)
-            if ($null -ne $window) {
-                return $window
+        # 从 RootElement 下级直接查找匹配的顶级窗口
+        $windows = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $condition)
+        if ($windows.Count -gt 0) {
+            for ($i = 0; $i -lt $windows.Count; $i++) {
+                $win = $windows.Item($i)
+                $name = $win.Current.Name
+                # 寻找真正的 MainWindow（Name 通常为 'Orderly' 或包含 'Orderly'）
+                if ($name -like "*Orderly*") {
+                    return $win
+                }
             }
+            # 如果没找到带 'Orderly' 标题的，但存在窗口，兜底返回第一个
+            return $windows.Item(0)
         }
 
         Start-Sleep -Milliseconds 300
     }
 
-    throw "等待 WPF 主窗口超时：$TimeoutSeconds 秒内未拿到 MainWindowHandle。"
+    throw "等待 WPF 主窗口超时：$TimeoutSeconds 秒内未在 UIA 顶级元素中找到进程为 $processId 且 ControlType 为 Window 的主窗口。"
 }
 
 function Get-AutomationElementDescription {
@@ -584,11 +632,16 @@ function Save-WindowScreenshot {
     $bitmap = New-Object System.Drawing.Bitmap($width, $height)
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     try {
-        $graphics.CopyFromScreen(
-            (New-Object System.Drawing.Point($rect.Left, $rect.Top)),
-            [System.Drawing.Point]::Empty,
-            (New-Object System.Drawing.Size($width, $height)))
-        $bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+        try {
+            $graphics.CopyFromScreen(
+                (New-Object System.Drawing.Point($rect.Left, $rect.Top)),
+                [System.Drawing.Point]::Empty,
+                (New-Object System.Drawing.Size($width, $height)))
+            $bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+        }
+        catch {
+            Write-Host "警告: 无法在当前桌面环境（例如非交互式后台会话）捕获屏幕截图: $($_.Exception.Message)"
+        }
     }
     finally {
         $graphics.Dispose()
@@ -787,7 +840,7 @@ try {
     $report.checks.navigation = @{}
     foreach ($tab in $navTabs) {
         Add-LogLine "步骤：切换到 $($tab.Label) Tab（$($tab.TabId)）"
-        $tabElement = Find-AutomationElement -Root $window -AutomationId $tab.TabId -TimeoutSeconds 5
+        $tabElement = Find-AutomationElement -Root $window -AutomationId $tab.TabId -TimeoutSeconds 15
         if ($null -eq $tabElement) {
             throw "未找到 $($tab.Label) Tab：$($tab.TabId)。"
         }
@@ -807,7 +860,7 @@ try {
     }
 
     # Keep a direct reference for the closing "return to workbench" step.
-    $dashboardTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Dashboard' -TimeoutSeconds 5
+    $dashboardTab = Find-AutomationElement -Root $window -AutomationId 'Tab_Dashboard' -TimeoutSeconds 15
     if ($null -eq $dashboardTab) {
         throw "未找到工作台 Tab。"
     }

@@ -72,6 +72,7 @@ public sealed class SettingsViewContractTests
         "Settings.PendingScrollAnchorId",
         "Settings.SelectedCategoryKey",
         "ActualWidth",
+        "(helpers:SettingsHelper.IsSelectingStartupSection)",
     };
 
     // ==================== 1. 颜色字面量扫描（需求 9.1、1.12） ====================

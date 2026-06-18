@@ -95,6 +95,7 @@ git status --short
 - `tools/qa/run-p1-write-smoke.ps1` (已修改)：修复在 SQLCipher 加密库下直连报错的 bug，改用 `New-QaConnectionFactory` 以便带密码连接数据库。
 - `tools/qa/run-uia-smoke.ps1` (已修改)：为 `Save-WindowScreenshot` 里的 `CopyFromScreen` 增加 try-catch，避免在无 GUI 交互后台会话中运行时因截图失败而中断测试；同时将寻找 Tab 的超时等待时间延长至 15 秒以降低后台启动竞态失败率。
 - `src/Orderly.App/ViewModels/SensitivePageGuardViewModel.cs` (已修改)：为 QA 模式的伪造内存账号放行敏感财务页面的 PIN 码解锁，以支持 UIA 冒烟与本地自动免密调试。
+- `src/Orderly.App/Views/Sections/SettingsView.xaml` (已修改)：将右侧承载内容容器由 `Border` 替换为 `ContentControl`，使其能被 UIA 树识别以公开 `Pane_SettingsContent` 标志，通过冒烟测试校验。
 - `src/Orderly.App/Helpers/FontSizeHelper.cs` (新增)：全局字号缩放管理器，提供内存资源字典覆盖与热更新机制。
 - `src/Orderly.App/Views/Sections/SettingsTabAppearance.xaml` (已修改)：字号调节组件从三档分段按钮重构为精致的连续滑动条（Slider），支持实时缩放比例指示与视觉无延迟更新。
 - `src/Orderly.App/ViewModels/MainViewModel.SettingsP0.cs` & `SettingsViewModel.cs` (已修改)：字号配置参数调整为 double 比例类型，新增拖动防抖延迟 500 毫秒后自动保存机制。
