@@ -14,6 +14,14 @@ public partial class PinUnlockView : Window
 
     public string EnteredPin { get; private set; } = string.Empty;
 
+    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            DragMove();
+        }
+    }
+
     private void BtnUnlock_Click(object sender, RoutedEventArgs e)
     {
         SubmitUnlock();

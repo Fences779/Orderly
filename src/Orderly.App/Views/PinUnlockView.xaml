@@ -9,7 +9,8 @@
         AllowsTransparency="True"
         Background="Transparent"
         ResizeMode="NoResize"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
     <Window.Resources>
         <ResourceDictionary>
