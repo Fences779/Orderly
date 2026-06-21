@@ -127,6 +127,10 @@ internal static class ChatCompletionSuggestionSupport
         builder.AppendLine($"预算：{BuildValue(request.OrderBudgetText)}");
         builder.AppendLine($"状态：{BuildValue(request.OrderStatusText)}");
         builder.AppendLine($"备注：{BuildValue(request.OrderRemark)}");
+        if (request.AutoGenerateOrderSummary)
+        {
+            builder.AppendLine("请先在回复中自然概括订单要点，再提出下一步确认问题。");
+        }
         builder.AppendLine();
         builder.AppendLine($"当前最近一条客户消息：{BuildValue(request.FocusMessage)}");
         builder.AppendLine("最近沟通记录（最多 5 条）：");
@@ -144,6 +148,8 @@ internal static class ChatCompletionSuggestionSupport
         }
 
         builder.AppendLine();
+        builder.AppendLine($"回复语气：{BuildValue(request.ReplyTone)}");
+        builder.AppendLine($"回复长度：{BuildValue(request.ReplyLength)}");
         builder.Append("只输出一条可直接编辑的中文回复建议，不要解释，不要 JSON，不要假装已经发送。");
         return LimitPromptText(builder.ToString(), MaxPromptCharacters);
     }

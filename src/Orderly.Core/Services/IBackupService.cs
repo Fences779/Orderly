@@ -8,6 +8,7 @@ public interface IBackupService
         string outputPath,
         string createdBy = "p2.7",
         bool tagForQaScope = false,
+        bool includeSensitivePlaintext = false,
         CancellationToken cancellationToken = default);
 
     Task<BackupValidationResult> ValidateAsync(

@@ -19,6 +19,35 @@ namespace Orderly.App;
 
 public partial class App
 {
+    private static void LogNonCriticalWorkspaceStartupFailure(string step, Exception ex)
+    {
+        Console.Error.WriteLine($"Non-critical workspace startup step failed ({step}): {ex}");
+    }
+
+    private void TryRunNonCriticalWorkspaceStartupStep(string step, Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception ex)
+        {
+            LogNonCriticalWorkspaceStartupFailure(step, ex);
+        }
+    }
+
+    private async Task TryRunNonCriticalWorkspaceStartupStepAsync(string step, Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            LogNonCriticalWorkspaceStartupFailure(step, ex);
+        }
+    }
+
     private async Task InitializeWorkspaceAsync(string databasePath)
     {
         databasePath = await EnsureDatabasePreparedAsync(databasePath);
@@ -44,11 +73,12 @@ public partial class App
         IConversationMessageRepository conversationMessageRepository = new ConversationMessageRepository(connectionFactory, fieldEncryptionService);
         IOcrResultRepository ocrResultRepository = new OcrResultRepository(connectionFactory, fieldEncryptionService);
         IAiSuggestionRepository aiSuggestionRepository = new AiSuggestionRepository(connectionFactory, fieldEncryptionService);
-        IActivityLogRepository activityLogRepository = new ActivityLogRepository(connectionFactory, fieldEncryptionService);
+        IActivityLogRepository rawActivityLogRepository = new ActivityLogRepository(connectionFactory, fieldEncryptionService);
         ISyncRecordRepository syncRecordRepository = new SyncRecordRepository(connectionFactory, fieldEncryptionService);
         IPriceAdjustmentRepository priceAdjustmentRepository = new PriceAdjustmentRepository(connectionFactory, fieldEncryptionService);
         IReplyTemplateRepository replyTemplateRepository = new ReplyTemplateRepository(connectionFactory, fieldEncryptionService);
         IAppSettingRepository settingRepository = new AppSettingRepository(connectionFactory);
+        IActivityLogRepository activityLogRepository = new SettingsAwareActivityLogRepository(rawActivityLogRepository, settingRepository);
         IClipboardService clipboardService = new DesktopClipboardService();
         ISyncService syncService = new LocalSyncService(syncRecordRepository, activityLogRepository);
         var aiProviderOptions = AiProviderOptions.FromEnvironment();
@@ -174,6 +204,7 @@ public partial class App
 
         var preferences = await settingRepository.GetPreferencesAsync();
         Orderly.App.Helpers.ThemeHelper.ApplyTheme(preferences.ThemeMode);
+        Orderly.App.Helpers.ThemeHelper.ApplyAccentColor(preferences.AccentColor);
         Orderly.App.Helpers.FontSizeHelper.ApplyFontScale(preferences.FontSizePreset);
 
         // 任务 21.1：装配设置页 / 我的页 / 门禁层所需的服务实例（UI 改动严格限定在两页及共享样式 /
@@ -238,7 +269,8 @@ public partial class App
             securityAuditService,
             settingsSearchIndex,
             credentialChangeSessionCoordinator,
-            emergencyEnableService);
+            emergencyEnableService,
+            commerceOrderRepository);
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
 
@@ -260,7 +292,9 @@ public partial class App
         await _mainViewModel.EnsureCommercePageLoadedAsync(_mainViewModel.SelectedSection);
 
         _floatingViewModel = new FloatingWindowViewModel(orderRepository, replyTemplateRepository, clipboardService);
-        await _floatingViewModel.LoadAsync();
+        await TryRunNonCriticalWorkspaceStartupStepAsync(
+            "floating window view-model load",
+            () => _floatingViewModel.LoadAsync());
 
         _mainWindow = new MainWindow(_mainViewModel);
         MainWindow = _mainWindow;
@@ -268,57 +302,120 @@ public partial class App
         // 子 VM 的 Toast 提示（保存结果 / 头像 / 紧急启用等）经统一壳层 Popup_Toast 呈现。
         toastRelay.Target = _mainWindow;
         _mainWindow.HiddenToTray += OnMainWindowHiddenToTray;
-        _floatingWindow = new FloatingWindow(_floatingViewModel);
-
-        _trayIconService = new TrayIconService();
-        _trayIconService.OpenMainRequested += (_, _) => ShowMainWindow();
-        _trayIconService.ToggleFloatingRequested += (_, _) => ToggleFloatingWindow();
-        _trayIconService.ExitRequested += (_, _) => ExitApplicationFromTray();
-
-        _hotkeyService = new GlobalHotkeyService();
-        _hotkeyService.HotkeyPressed += (_, hotkey) =>
-        {
-            if (string.Equals(hotkey, _registeredMainHotkey, StringComparison.OrdinalIgnoreCase))
+        TryRunNonCriticalWorkspaceStartupStep(
+            "floating window construction",
+            () =>
             {
-                ShowMainWindow();
-            }
-            else if (string.Equals(hotkey, _registeredFloatingHotkey, StringComparison.OrdinalIgnoreCase))
+                _floatingWindow = new FloatingWindow(
+                    _floatingViewModel,
+                    preferences,
+                    settingRepository,
+                    ShowMainWindow,
+                    NavigateFromFloatingWindow);
+            });
+
+        TryRunNonCriticalWorkspaceStartupStep(
+            "tray icon service setup",
+            () =>
             {
-                ToggleFloatingWindow();
-            }
-        };
-        _mainViewModel.ConfigureSettingsRuntimeHooks(
-            TryApplyRuntimeHotkeys,
-            TrySendDesktopNotification);
+                _trayIconService = new TrayIconService();
+                _trayIconService.OpenMainRequested += (_, _) => ShowMainWindow();
+                _trayIconService.ToggleFloatingRequested += (_, _) => ToggleFloatingWindow();
+                _trayIconService.ExitRequested += (_, _) => ExitApplicationFromTray();
+            });
+
+        TryRunNonCriticalWorkspaceStartupStep(
+            "global hotkey service setup",
+            () =>
+            {
+                _hotkeyService = new GlobalHotkeyService();
+                _hotkeyService.HotkeyPressed += (_, hotkey) =>
+                {
+                    var matched = _registeredHotkeys.FirstOrDefault(item => string.Equals(item.Value, hotkey, StringComparison.OrdinalIgnoreCase));
+                    switch (matched.Key)
+                    {
+                        case MainHotkeyId:
+                            ShowMainWindow();
+                            break;
+                        case FloatingHotkeyId:
+                            ToggleFloatingWindow();
+                            break;
+                        case GlobalSearchHotkeyId:
+                            ShowMainWindow();
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.GlobalSearch);
+                            break;
+                        case TodayWorkbenchHotkeyId:
+                            ShowMainWindow();
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.TodayWorkbench);
+                            break;
+                        case CopyOrderSummaryHotkeyId:
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.CopyOrderSummary);
+                            break;
+                        case OpenProductionSheetHotkeyId:
+                            ShowMainWindow();
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.OpenProductionSheet);
+                            break;
+                        case MarkOrderExceptionHotkeyId:
+                            ShowMainWindow();
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.MarkOrderException);
+                            break;
+                        case AdvanceFulfillmentHotkeyId:
+                            ShowMainWindow();
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.AdvanceFulfillment);
+                            break;
+                        case OpenCustomerProfileHotkeyId:
+                            ShowMainWindow();
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.OpenCustomerProfile);
+                            break;
+                        case NewCustomerNoteHotkeyId:
+                            ShowMainWindow();
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.NewCustomerNote);
+                            break;
+                        case CopyCustomerPreferenceSummaryHotkeyId:
+                            _mainViewModel?.HandleRuntimeHotkeyAction(RuntimeHotkeyAction.CopyCustomerPreferenceSummary);
+                            break;
+                    }
+                };
+            });
+        TryRunNonCriticalWorkspaceStartupStep(
+            "settings runtime hook setup",
+            () => _mainViewModel.ConfigureSettingsRuntimeHooks(
+                TryApplyRuntimeHotkeys,
+                TrySendDesktopNotification));
 
         _mainWindow.SourceInitialized += (_, _) =>
         {
-            _hotkeyService.Attach(_mainWindow);
-            _isHotkeyAttached = true;
-            _ = TryApplyRuntimeHotkeys(preferences.MainHotkey, preferences.FloatingHotkey);
+            TryRunNonCriticalWorkspaceStartupStep(
+                "main window source initialization",
+                () =>
+                {
+                    _hotkeyService?.Attach(_mainWindow);
+                    _isHotkeyAttached = _hotkeyService is not null;
+                    if (_isHotkeyAttached)
+                    {
+                        _ = TryApplyRuntimeHotkeys(preferences);
+                    }
+                });
         };
 
         Console.WriteLine("MainWindow showing");
-        var startMinimizedToTray = preferences.StartMinimizedToTray;
         var defaultWindowState = string.Equals(preferences.DefaultWindowMode, "最大化", StringComparison.Ordinal)
             ? WindowState.Maximized
             : WindowState.Normal;
-        _mainWindow.WindowState = startMinimizedToTray ? WindowState.Minimized : defaultWindowState;
-        _mainWindow.ShowInTaskbar = !startMinimizedToTray;
+        TryRunNonCriticalWorkspaceStartupStep(
+            "window bounds restore",
+            () => ApplyWindowBounds(_mainWindow, preferences));
+        _mainWindow.WindowState = defaultWindowState;
+        _mainWindow.ShowInTaskbar = true;
         _mainWindow.Opacity = 1;
         _mainWindow.Show();
-        if (startMinimizedToTray)
-        {
-            _mainWindow.Hide();
-        }
-        else
-        {
-            _mainWindow.Activate();
-        }
+        _mainWindow.Activate();
 
-        if (preferences.ShowFloatingWindowOnStartup)
+        if (preferences.ShowFloatingWindowOnStartup && _floatingWindow is not null)
         {
-            _floatingWindow.Show();
+            TryRunNonCriticalWorkspaceStartupStep(
+                "floating window startup show",
+                () => _floatingWindow.Show());
         }
     }
 

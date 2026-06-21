@@ -39,6 +39,7 @@ public partial class MainViewModel
             ReplaceCollection(WorkbenchTasks, workbenchTasks.Select(task => new WorkbenchTaskListItem(task)));
             await RefreshSearchResultsAsync(updateStatus: false, cancellationToken);
             ApplyFilters();
+            await ApplyRuntimeSettingsAsync(Preferences, Preferences);
 
             SelectedOrderItem = Orders.FirstOrDefault();
             SelectedWorkbenchTask = WorkbenchTasks.FirstOrDefault();

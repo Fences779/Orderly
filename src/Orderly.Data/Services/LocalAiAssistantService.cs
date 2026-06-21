@@ -64,9 +64,18 @@ public sealed class LocalAiAssistantService : IAiAssistantService
 
     public async Task<AiSuggestion> GenerateReplySuggestionAsync(int customerId, int? orderId = null, int? messageId = null, CancellationToken cancellationToken = default)
     {
+        var preferences = await _settingRepository.GetPreferencesAsync(cancellationToken);
+        if (!preferences.AiAssistantEnabled)
+        {
+            throw new InvalidOperationException("AI 助手已在设置中关闭。");
+        }
+
         var request = await BuildRequestAsync(customerId, orderId, messageId, cancellationToken);
-        var providerRequest = await BuildProviderRequestAsync(request, cancellationToken);
-        var execution = await ExecuteProviderAsync(providerRequest.Request, providerRequest.RedactedBeforeSend, cancellationToken);
+        ApplyReplyPreferences(request, preferences);
+        var runtimeOptions = _providerOptions.WithPreferences(preferences);
+        var primaryProvider = BuildRuntimePrimaryProvider(runtimeOptions);
+        var providerRequest = BuildProviderRequest(request, preferences, primaryProvider.Name);
+        var execution = await ExecuteProviderAsync(primaryProvider, runtimeOptions, providerRequest.Request, providerRequest.RedactedBeforeSend, cancellationToken);
 
         var suggestion = new AiSuggestion
         {
@@ -197,34 +206,50 @@ public sealed class LocalAiAssistantService : IAiAssistantService
     }
 
     private async Task<ProviderExecution> ExecuteProviderAsync(
+        IAiSuggestionProvider primaryProvider,
+        AiProviderOptions runtimeOptions,
         AiSuggestionRequest request,
         bool redactedBeforeSend,
         CancellationToken cancellationToken)
     {
         try
         {
-            var primaryResult = await _primaryProvider.GenerateAsync(request, cancellationToken);
+            var primaryResult = await primaryProvider.GenerateAsync(request, cancellationToken);
             EnsureSuggestionText(primaryResult);
-            return new ProviderExecution(primaryResult, false, null, redactedBeforeSend);
+            return new ProviderExecution(primaryResult, false, null, redactedBeforeSend, runtimeOptions);
         }
         catch (Exception ex) when (ShouldFallback())
         {
             var fallbackResult = await _fallbackProvider.GenerateAsync(request, cancellationToken);
             EnsureSuggestionText(fallbackResult);
-            return new ProviderExecution(fallbackResult, true, SummarizeProviderError(ex), redactedBeforeSend);
+            return new ProviderExecution(fallbackResult, true, SummarizeProviderError(ex), redactedBeforeSend, runtimeOptions);
         }
     }
 
-    private async Task<ProviderRequest> BuildProviderRequestAsync(AiSuggestionRequest request, CancellationToken cancellationToken)
+    private ProviderRequest BuildProviderRequest(AiSuggestionRequest request, AppPreferences preferences, string primaryProviderName)
     {
-        if (IsLocalProvider(_primaryProvider.Name))
-        {
-            return new ProviderRequest(request, false);
-        }
+        var providerRequest = ApplyContextPolicy(request, preferences, out _);
+        var shouldRedact = preferences.AiAutoRedactBeforeSend
+            || preferences.AiBlockPhone
+            || preferences.AiBlockFullAddress
+            || preferences.AiBlockPaymentTransactionId;
+        return shouldRedact
+            ? new ProviderRequest(RedactRequest(providerRequest, preferences), true)
+            : new ProviderRequest(providerRequest, false);
+    }
 
-        var preferences = await _settingRepository.GetPreferencesAsync(cancellationToken);
-        var providerRequest = ApplyRemoteContextPolicy(request, preferences, out _);
-        return new ProviderRequest(RedactRequest(providerRequest, BuildMandatoryRemoteRedactionPreferences()), true);
+    private IAiSuggestionProvider BuildRuntimePrimaryProvider(AiProviderOptions runtimeOptions)
+    {
+        return IsLocalProvider(_primaryProvider.Name)
+            ? _primaryProvider
+            : AiSuggestionProviderFactory.CreatePrimaryProvider(runtimeOptions, _fallbackProvider);
+    }
+
+    private static void ApplyReplyPreferences(AiSuggestionRequest request, AppPreferences preferences)
+    {
+        request.ReplyTone = preferences.AiReplyTone;
+        request.ReplyLength = preferences.AiReplyLength;
+        request.AutoGenerateOrderSummary = preferences.AiAutoGenerateOrderSummary;
     }
 
     private async Task<AiSuggestion> UpdateAsync(AiSuggestion suggestion, CancellationToken cancellationToken)
@@ -322,7 +347,7 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         return normalized.Length <= limit ? normalized : $"{normalized[..limit]}...";
     }
 
-    private static AiSuggestionRequest ApplyRemoteContextPolicy(
+    private static AiSuggestionRequest ApplyContextPolicy(
         AiSuggestionRequest request,
         AppPreferences preferences,
         out bool reducedContext)
@@ -349,18 +374,10 @@ public sealed class LocalAiAssistantService : IAiAssistantService
             OrderStatusText = allowOrderContext ? request.OrderStatusText : string.Empty,
             OrderRemark = allowOrderContext ? request.OrderRemark : string.Empty,
             FocusMessage = allowCustomerContext ? request.FocusMessage : string.Empty,
-            RecentMessages = allowCustomerContext ? request.RecentMessages : Array.Empty<AiSuggestionContextMessage>()
-        };
-    }
-
-    private static AppPreferences BuildMandatoryRemoteRedactionPreferences()
-    {
-        return new AppPreferences
-        {
-            AiAutoRedactBeforeSend = true,
-            AiBlockPhone = true,
-            AiBlockFullAddress = true,
-            AiBlockPaymentTransactionId = true
+            RecentMessages = allowCustomerContext ? request.RecentMessages : Array.Empty<AiSuggestionContextMessage>(),
+            ReplyTone = request.ReplyTone,
+            ReplyLength = request.ReplyLength,
+            AutoGenerateOrderSummary = request.AutoGenerateOrderSummary
         };
     }
 
@@ -387,7 +404,10 @@ public sealed class LocalAiAssistantService : IAiAssistantService
                     Content = RedactText(message.Content, preferences),
                     MessageTime = message.MessageTime
                 })
-                .ToList()
+                .ToList(),
+            ReplyTone = request.ReplyTone,
+            ReplyLength = request.ReplyLength,
+            AutoGenerateOrderSummary = request.AutoGenerateOrderSummary
         };
     }
 
@@ -444,8 +464,8 @@ public sealed class LocalAiAssistantService : IAiAssistantService
             ["usedFallback"] = execution.UsedFallback,
             ["createdBy"] = "p2.4",
             ["contextMessageCount"] = request.RecentMessages.Count,
-            ["timeoutSeconds"] = _providerOptions.TimeoutSeconds,
-            ["requestedProvider"] = _providerOptions.RequestedProvider,
+            ["timeoutSeconds"] = execution.RuntimeOptions.TimeoutSeconds,
+            ["requestedProvider"] = execution.RuntimeOptions.RequestedProvider,
             ["redactedBeforeSend"] = execution.RedactedBeforeSend
         };
 
@@ -627,7 +647,8 @@ public sealed class LocalAiAssistantService : IAiAssistantService
         AiSuggestionProviderResult Result,
         bool UsedFallback,
         string? ErrorSummary,
-        bool RedactedBeforeSend);
+        bool RedactedBeforeSend,
+        AiProviderOptions RuntimeOptions);
 
     private sealed record ProviderRequest(
         AiSuggestionRequest Request,

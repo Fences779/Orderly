@@ -129,6 +129,7 @@ public sealed partial class DatabaseInitializer
             [AppSettingKeys.NewCustomerNoteHotkey] = "Ctrl+Shift+M",
             [AppSettingKeys.CopyCustomerPreferenceSummaryHotkey] = "Ctrl+Shift+Y",
             [AppSettingKeys.ShowFloatingWindowOnStartup] = "false",
+            [AppSettingKeys.FloatingBallOpacity] = "0.82",
             [AppSettingKeys.StartMinimizedToTray] = "false",
             [AppSettingKeys.StartupDefaultSection] = "工作台",
             [AppSettingKeys.RememberLastSection] = "false",

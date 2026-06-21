@@ -76,7 +76,7 @@ public partial class SettingsViewModel
     private string aiConnectionCheckStatusText = "未检查";
 
     [ObservableProperty]
-    private string aiModelPreferenceStatusText = "默认模型偏好已保存，待 AI provider 接入。";
+    private string aiModelPreferenceStatusText = "默认模型偏好会在下一次 AI 请求时生效。";
 
     [RelayCommand]
     private void CheckAiConfiguration()
@@ -158,9 +158,9 @@ public partial class SettingsViewModel
         AiEndpointStatusText = string.IsNullOrWhiteSpace(options.BaseUrl) ? "未配置" : "已配置";
 
         AiModelPreferenceStatusText = string.IsNullOrWhiteSpace(DefaultAiModelInput)
-            ? "默认模型偏好未设置；若需固定模型可保存偏好（待 provider 接入）。"
+            ? "默认模型偏好未设置；若需固定模型可保存偏好。"
             : string.IsNullOrWhiteSpace(options.Model)
-                ? "默认模型偏好已保存，待 AI provider 链路消费。"
-                : "运行时模型优先来自环境变量；默认模型偏好已保存，待 provider 接入。";
+                ? "默认模型偏好会在下一次 AI 请求时生效。"
+                : "设置页默认模型会覆盖环境变量模型用于下一次请求。";
     }
 }

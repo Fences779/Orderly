@@ -105,12 +105,19 @@ public sealed class AppSettingRepository : IAppSettingRepository
             NewCustomerNoteHotkey = GetHotkey(settings, AppSettingKeys.NewCustomerNoteHotkey, "Ctrl+Shift+M"),
             CopyCustomerPreferenceSummaryHotkey = GetHotkey(settings, AppSettingKeys.CopyCustomerPreferenceSummaryHotkey, "Ctrl+Shift+Y"),
             ShowFloatingWindowOnStartup = GetBool(settings, AppSettingKeys.ShowFloatingWindowOnStartup, false),
+            FloatingBallLeft = GetDouble(settings, AppSettingKeys.FloatingBallLeft, double.NaN, -100000, 100000),
+            FloatingBallTop = GetDouble(settings, AppSettingKeys.FloatingBallTop, double.NaN, -100000, 100000),
+            FloatingBallOpacity = GetDouble(settings, AppSettingKeys.FloatingBallOpacity, 0.82, 0.35, 1.0),
             StartMinimizedToTray = GetBool(settings, AppSettingKeys.StartMinimizedToTray, false),
             StartupDefaultSection = GetStartupSection(settings, AppSettingKeys.StartupDefaultSection, "工作台"),
             RememberLastSection = GetBool(settings, AppSettingKeys.RememberLastSection, false),
             LastSection = GetStartupSection(settings, AppSettingKeys.LastSection, "工作台"),
             StartWithWindows = GetBool(settings, AppSettingKeys.StartWithWindows, false),
             RememberWindowBounds = GetBool(settings, AppSettingKeys.RememberWindowBounds, false),
+            WindowLeft = GetDouble(settings, AppSettingKeys.WindowLeft, double.NaN, -100000, 100000),
+            WindowTop = GetDouble(settings, AppSettingKeys.WindowTop, double.NaN, -100000, 100000),
+            WindowWidth = GetDouble(settings, AppSettingKeys.WindowWidth, double.NaN, 320, 100000),
+            WindowHeight = GetDouble(settings, AppSettingKeys.WindowHeight, double.NaN, 240, 100000),
             DefaultWindowMode = GetEnum(settings, AppSettingKeys.DefaultWindowMode, "普通", AllowedWindowModes),
             SidebarDefaultExpanded = GetBool(settings, AppSettingKeys.SidebarDefaultExpanded, true),
             FontSizePreset = GetFontSizePreset(settings, AppSettingKeys.FontSizePreset, "标准"),
@@ -123,6 +130,7 @@ public sealed class AppSettingRepository : IAppSettingRepository
             AutoBackupEnabled = GetBool(settings, AppSettingKeys.AutoBackupEnabled, false),
             AutoBackupFrequency = GetEnum(settings, AppSettingKeys.AutoBackupFrequency, "手动", AllowedBackupFrequencies),
             BackupRetentionCount = GetInt(settings, AppSettingKeys.BackupRetentionCount, 10, 1, 100),
+            LastAutoBackupAt = GetDateTime(settings, AppSettingKeys.LastAutoBackupAt),
             MaskPhoneByDefault = GetBool(settings, AppSettingKeys.MaskPhoneByDefault, true),
             MaskAddressByDefault = GetBool(settings, AppSettingKeys.MaskAddressByDefault, true),
             IncludeSensitiveInExport = GetBool(settings, AppSettingKeys.IncludeSensitiveInExport, false),
@@ -173,12 +181,19 @@ public sealed class AppSettingRepository : IAppSettingRepository
             [AppSettingKeys.NewCustomerNoteHotkey] = NormalizeHotkey(preferences.NewCustomerNoteHotkey, "Ctrl+Shift+M"),
             [AppSettingKeys.CopyCustomerPreferenceSummaryHotkey] = NormalizeHotkey(preferences.CopyCustomerPreferenceSummaryHotkey, "Ctrl+Shift+Y"),
             [AppSettingKeys.ShowFloatingWindowOnStartup] = ToBoolValue(preferences.ShowFloatingWindowOnStartup),
+            [AppSettingKeys.FloatingBallLeft] = ToDoubleValue(preferences.FloatingBallLeft),
+            [AppSettingKeys.FloatingBallTop] = ToDoubleValue(preferences.FloatingBallTop),
+            [AppSettingKeys.FloatingBallOpacity] = ToDoubleValue(Math.Clamp(preferences.FloatingBallOpacity, 0.35, 1.0)),
             [AppSettingKeys.StartMinimizedToTray] = ToBoolValue(preferences.StartMinimizedToTray),
             [AppSettingKeys.StartupDefaultSection] = NormalizeStartupSectionValue(preferences.StartupDefaultSection, "工作台"),
             [AppSettingKeys.RememberLastSection] = ToBoolValue(preferences.RememberLastSection),
             [AppSettingKeys.LastSection] = NormalizeStartupSectionValue(preferences.LastSection, "工作台"),
             [AppSettingKeys.StartWithWindows] = ToBoolValue(preferences.StartWithWindows),
             [AppSettingKeys.RememberWindowBounds] = ToBoolValue(preferences.RememberWindowBounds),
+            [AppSettingKeys.WindowLeft] = ToDoubleValue(preferences.WindowLeft),
+            [AppSettingKeys.WindowTop] = ToDoubleValue(preferences.WindowTop),
+            [AppSettingKeys.WindowWidth] = ToDoubleValue(preferences.WindowWidth),
+            [AppSettingKeys.WindowHeight] = ToDoubleValue(preferences.WindowHeight),
             [AppSettingKeys.DefaultWindowMode] = NormalizeEnumValue(preferences.DefaultWindowMode, "普通", AllowedWindowModes),
             [AppSettingKeys.SidebarDefaultExpanded] = ToBoolValue(preferences.SidebarDefaultExpanded),
             [AppSettingKeys.FontSizePreset] = NormalizeFontSizePreset(preferences.FontSizePreset, "标准"),
@@ -191,6 +206,7 @@ public sealed class AppSettingRepository : IAppSettingRepository
             [AppSettingKeys.AutoBackupEnabled] = ToBoolValue(preferences.AutoBackupEnabled),
             [AppSettingKeys.AutoBackupFrequency] = NormalizeEnumValue(preferences.AutoBackupFrequency, "手动", AllowedBackupFrequencies),
             [AppSettingKeys.BackupRetentionCount] = Math.Clamp(preferences.BackupRetentionCount, 1, 100).ToString(),
+            [AppSettingKeys.LastAutoBackupAt] = ToDateTimeValue(preferences.LastAutoBackupAt),
             [AppSettingKeys.MaskPhoneByDefault] = ToBoolValue(preferences.MaskPhoneByDefault),
             [AppSettingKeys.MaskAddressByDefault] = ToBoolValue(preferences.MaskAddressByDefault),
             [AppSettingKeys.IncludeSensitiveInExport] = ToBoolValue(preferences.IncludeSensitiveInExport),
@@ -319,6 +335,27 @@ public sealed class AppSettingRepository : IAppSettingRepository
         return Math.Clamp(parsed, min, max);
     }
 
+    private static double GetDouble(IDictionary<string, string> settings, string key, double fallback, double min, double max)
+    {
+        var raw = Get(settings, key, string.Empty);
+        if (!double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+            || double.IsNaN(parsed)
+            || double.IsInfinity(parsed))
+        {
+            return fallback;
+        }
+
+        return Math.Clamp(parsed, min, max);
+    }
+
+    private static DateTime? GetDateTime(IDictionary<string, string> settings, string key)
+    {
+        var raw = Get(settings, key, string.Empty);
+        return DateTime.TryParse(raw, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed)
+            ? parsed
+            : null;
+    }
+
     private static string GetEnum(IDictionary<string, string> settings, string key, string fallback, HashSet<string> allowedValues)
     {
         var raw = Get(settings, key, fallback).Trim();
@@ -396,6 +433,18 @@ public sealed class AppSettingRepository : IAppSettingRepository
     private static string ToBoolValue(bool value)
     {
         return value ? "true" : "false";
+    }
+
+    private static string ToDoubleValue(double value)
+    {
+        return double.IsNaN(value) || double.IsInfinity(value)
+            ? string.Empty
+            : value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string ToDateTimeValue(DateTime? value)
+    {
+        return value?.ToString("O") ?? string.Empty;
     }
 
     private static string NormalizeHotkey(string? value, string fallback)

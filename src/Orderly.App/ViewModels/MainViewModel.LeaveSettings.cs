@@ -59,9 +59,15 @@ public partial class MainViewModel
     /// </summary>
     private async Task HandleLeaveSettingsGateAsync(string oldSection, string newSection)
     {
-        var canLeave = await Settings.TryLeaveSettingsAsync(oldSection, newSection);
+        await FlushMainSettingsAutoSaveAsync();
+        var outcome = _lastMainSettingsSaveOutcome;
+        var canLeave = outcome is null || outcome.Success;
         if (canLeave)
         {
+            if (outcome?.Success == true)
+            {
+                _lastMainSettingsSaveOutcome = null;
+            }
             return;
         }
 

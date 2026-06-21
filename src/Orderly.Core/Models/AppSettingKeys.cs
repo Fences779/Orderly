@@ -14,6 +14,9 @@ public static class AppSettingKeys
     public const string NewCustomerNoteHotkey = "NewCustomerNoteHotkey";
     public const string CopyCustomerPreferenceSummaryHotkey = "CopyCustomerPreferenceSummaryHotkey";
     public const string ShowFloatingWindowOnStartup = "ShowFloatingWindowOnStartup";
+    public const string FloatingBallLeft = "FloatingBallLeft";
+    public const string FloatingBallTop = "FloatingBallTop";
+    public const string FloatingBallOpacity = "FloatingBallOpacity";
     public const string StartMinimizedToTray = "StartMinimizedToTray";
 
     public const string StartupDefaultSection = "StartupDefaultSection";
@@ -21,6 +24,10 @@ public static class AppSettingKeys
     public const string LastSection = "LastSection";
     public const string StartWithWindows = "StartWithWindows";
     public const string RememberWindowBounds = "RememberWindowBounds";
+    public const string WindowLeft = "WindowLeft";
+    public const string WindowTop = "WindowTop";
+    public const string WindowWidth = "WindowWidth";
+    public const string WindowHeight = "WindowHeight";
     public const string DefaultWindowMode = "DefaultWindowMode";
     public const string SidebarDefaultExpanded = "SidebarDefaultExpanded";
     public const string FontSizePreset = "FontSizePreset";
@@ -35,6 +42,7 @@ public static class AppSettingKeys
     public const string AutoBackupEnabled = "AutoBackupEnabled";
     public const string AutoBackupFrequency = "AutoBackupFrequency";
     public const string BackupRetentionCount = "BackupRetentionCount";
+    public const string LastAutoBackupAt = "LastAutoBackupAt";
 
     public const string MaskPhoneByDefault = "MaskPhoneByDefault";
     public const string MaskAddressByDefault = "MaskAddressByDefault";

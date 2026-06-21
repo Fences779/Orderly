@@ -12,6 +12,7 @@ public sealed partial class LocalBackupService
         string outputPath,
         string createdBy = "p2.7",
         bool tagForQaScope = false,
+        bool includeSensitivePlaintext = false,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(outputPath))
@@ -32,7 +33,7 @@ public sealed partial class LocalBackupService
                 LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(directory, "备份输出目录");
             }
 
-            var manifest = await BuildManifestAsync(cancellationToken);
+            var manifest = await BuildManifestAsync(includeSensitivePlaintext, cancellationToken);
             await AppendLauncherSnapshotAsync(manifest, cancellationToken);
             manifest.Checksum = ComputeChecksum(manifest);
             StampIntegrityTag(manifest);
@@ -117,7 +118,7 @@ public sealed partial class LocalBackupService
         };
     }
 
-    private async Task<BackupManifest> BuildManifestAsync(CancellationToken cancellationToken)
+    private async Task<BackupManifest> BuildManifestAsync(bool includeSensitivePlaintext, CancellationToken cancellationToken)
     {
         var manifest = new BackupManifest
         {
@@ -131,7 +132,7 @@ public sealed partial class LocalBackupService
 
         foreach (var tableName in IncludedTableNames)
         {
-            var rows = await ReadTableRowsAsync(connection, transaction: null, tableName, cancellationToken);
+            var rows = await ReadTableRowsAsync(connection, transaction: null, tableName, includeSensitivePlaintext, cancellationToken);
             manifest.Tables[tableName] = JsonSerializer.SerializeToElement(rows, SerializerOptions);
             manifest.Counts[tableName] = rows.Count;
         }
@@ -143,6 +144,7 @@ public sealed partial class LocalBackupService
         SqliteConnection connection,
         SqliteTransaction? transaction,
         string tableName,
+        bool includeSensitivePlaintext,
         CancellationToken cancellationToken)
     {
         var safeTableName = RequireKnownBackupSqlTableName(tableName);
@@ -159,7 +161,7 @@ public sealed partial class LocalBackupService
             for (var index = 0; index < reader.FieldCount; index++)
             {
                 var columnName = reader.GetName(index);
-                row[columnName] = SanitizeValue(safeTableName, columnName, reader.GetValue(index));
+                row[columnName] = SanitizeValue(safeTableName, columnName, reader.GetValue(index), includeSensitivePlaintext);
             }
 
             rows.Add(row);

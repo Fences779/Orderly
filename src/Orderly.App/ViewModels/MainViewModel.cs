@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Orderly.Core.Commerce.Repositories;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
 using Orderly.Core.Services;
@@ -67,6 +68,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ISyncService _syncService;
     private readonly ISyncRecordRepository _syncRecordRepository;
     private readonly IClipboardService _clipboardService;
+    private readonly ICommerceOrderRepository? _commerceOrderRepository;
     private readonly ILocalAccountManagementService? _localAccountManagementService;
     private readonly ISessionContextService? _sessionContextService;
 
@@ -112,7 +114,8 @@ public partial class MainViewModel : ObservableObject
         ISecurityAuditService? securityAuditService = null,
         ISettingsSearchIndex? settingsSearchIndex = null,
         ICredentialChangeSessionCoordinator? credentialChangeSessionCoordinator = null,
-        IEmergencyEnableService? emergencyEnableService = null)
+        IEmergencyEnableService? emergencyEnableService = null,
+        ICommerceOrderRepository? commerceOrderRepository = null)
         : this(
             customerRepository,
             orderRepository,
@@ -146,7 +149,8 @@ public partial class MainViewModel : ObservableObject
             securityAuditService,
             settingsSearchIndex,
             credentialChangeSessionCoordinator,
-            emergencyEnableService)
+            emergencyEnableService,
+            commerceOrderRepository)
     {
     }
 
@@ -183,7 +187,8 @@ public partial class MainViewModel : ObservableObject
         ISecurityAuditService? securityAuditService = null,
         ISettingsSearchIndex? settingsSearchIndex = null,
         ICredentialChangeSessionCoordinator? credentialChangeSessionCoordinator = null,
-        IEmergencyEnableService? emergencyEnableService = null)
+        IEmergencyEnableService? emergencyEnableService = null,
+        ICommerceOrderRepository? commerceOrderRepository = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -207,6 +212,7 @@ public partial class MainViewModel : ObservableObject
         _syncService = syncService;
         _syncRecordRepository = syncRecordRepository;
         _clipboardService = clipboardService;
+        _commerceOrderRepository = commerceOrderRepository;
         _localAccountManagementService = localAccountManagementService;
         _sessionContextService = sessionContextService;
         DatabasePath = databasePath;

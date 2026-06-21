@@ -110,6 +110,9 @@ public partial class SettingsViewModel : ObservableObject
     private bool showFloatingWindowOnStartupInput;
 
     [ObservableProperty]
+    private double floatingBallOpacityInput = 0.82;
+
+    [ObservableProperty]
     private bool startMinimizedToTrayInput;
 
     [ObservableProperty]
@@ -212,6 +215,11 @@ public partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentThemeIcon));
     }
 
+    partial void OnAccentColorInputChanged(string value)
+    {
+        Orderly.App.Helpers.ThemeHelper.ApplyAccentColor(value);
+    }
+
     partial void OnFontSizePresetInputChanged(double value)
     {
         Orderly.App.Helpers.FontSizeHelper.ApplyFontScale(value);
@@ -250,12 +258,19 @@ public partial class SettingsViewModel : ObservableObject
 
             // ── P0 字段：由当前 *Input 规范化覆盖（任务 13.1）───────────────────────
             ShowFloatingWindowOnStartup = ShowFloatingWindowOnStartupInput,
+            FloatingBallLeft = basePreferences.FloatingBallLeft,
+            FloatingBallTop = basePreferences.FloatingBallTop,
+            FloatingBallOpacity = Math.Clamp(FloatingBallOpacityInput, 0.35, 1.0),
             StartMinimizedToTray = StartMinimizedToTrayInput,
             StartupDefaultSection = startupDefaultSection,
             RememberLastSection = RememberLastSectionInput,
             LastSection = lastSection,
             StartWithWindows = StartWithWindowsInput,
             RememberWindowBounds = RememberWindowBoundsInput,
+            WindowLeft = basePreferences.WindowLeft,
+            WindowTop = basePreferences.WindowTop,
+            WindowWidth = basePreferences.WindowWidth,
+            WindowHeight = basePreferences.WindowHeight,
             DefaultWindowMode = windowMode,
             SidebarDefaultExpanded = SidebarDefaultExpandedInput,
             FontSizePreset = fontPreset,
@@ -267,6 +282,7 @@ public partial class SettingsViewModel : ObservableObject
             AutoBackupEnabled = AutoBackupEnabledInput,
             AutoBackupFrequency = autoBackupFrequency,
             BackupRetentionCount = backupRetention,
+            LastAutoBackupAt = basePreferences.LastAutoBackupAt,
             MaskPhoneByDefault = MaskPhoneByDefaultInput,
             MaskAddressByDefault = MaskAddressByDefaultInput,
             IncludeSensitiveInExport = IncludeSensitiveInExportInput,
@@ -303,6 +319,7 @@ public partial class SettingsViewModel : ObservableObject
             LastSectionInput = NormalizeOption(preferences.LastSection, StartupSectionOptions, StartupDefaultSectionInput);
             StartWithWindowsInput = preferences.StartWithWindows;
             ShowFloatingWindowOnStartupInput = preferences.ShowFloatingWindowOnStartup;
+            FloatingBallOpacityInput = Math.Clamp(preferences.FloatingBallOpacity, 0.35, 1.0);
             StartMinimizedToTrayInput = preferences.StartMinimizedToTray;
             RememberWindowBoundsInput = preferences.RememberWindowBounds;
             DefaultWindowModeInput = NormalizeOption(preferences.DefaultWindowMode, WindowModeOptions, "普通");

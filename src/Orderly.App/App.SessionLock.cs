@@ -142,13 +142,13 @@ public partial class App
         _sessionLockService?.Logout();
         _sessionContextService?.Clear();
 
-        TeardownWorkspace();
+        await TeardownWorkspaceAsync();
         _isLoginCompleted = false;
 
         await Dispatcher.InvokeAsync(ShowLoginView);
     }
 
-    private void TeardownWorkspace()
+    private async Task TeardownWorkspaceAsync()
     {
         IsSwitchingSession = true;
         try
@@ -173,6 +173,11 @@ public partial class App
             CancelMinimizeToTrayIdleLock();
             if (_mainWindow is not null)
             {
+                if (_mainViewModel is not null)
+                {
+                    await _mainViewModel.PersistWindowBoundsIfNeededAsync(_mainWindow);
+                }
+
                 _mainWindow.HiddenToTray -= OnMainWindowHiddenToTray;
             }
 

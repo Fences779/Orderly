@@ -479,7 +479,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- 启动显示悬浮窗 -->
+                        <!-- 启动显示悬浮入口球 -->
                         <Border Style="{StaticResource SettingsRowStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -487,8 +487,8 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="启动时显示悬浮窗" Style="{StaticResource SettingsRowLabelStyle}" />
-                                    <TextBlock Text="应用开启后自动在桌面右上角显示快捷悬浮工具栏" Style="{StaticResource SettingsRowDescStyle}" />
+                                    <TextBlock Text="启动时显示悬浮入口球" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="应用开启后自动在桌面显示可拖动的 Orderly 快捷入口" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
                                 <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding ShowFloatingWindowOnStartupInput}"
@@ -496,7 +496,7 @@
                             </Grid>
                         </Border>
 
-                        <!-- 启动最小化至托盘 -->
+                        <!-- 悬浮入口球透明度 -->
                         <Border Style="{StaticResource SettingsRowStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -504,8 +504,38 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="启动最小化至托盘" Style="{StaticResource SettingsRowLabelStyle}" />
-                                    <TextBlock Text="开启后自动隐藏在后台，双击右下角图标打开" Style="{StaticResource SettingsRowDescStyle}" />
+                                    <TextBlock Text="悬浮入口球透明度" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="调整常驻桌面入口的默认透明程度" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="{StaticResource SettingsControlLeftMargin}">
+                                    <Slider x:Name="Slider_FloatingBallOpacity"
+                                            Width="160"
+                                            Minimum="0.35"
+                                            Maximum="1"
+                                            Value="{Binding FloatingBallOpacityInput}"
+                                            Style="{StaticResource SettingsFontSizeSliderStyle}"
+                                            AutomationProperties.AutomationId="Slider_FloatingBallOpacity" />
+                                    <TextBlock Text="{Binding ElementName=Slider_FloatingBallOpacity, Path=Value, StringFormat={}{0:P0}}"
+                                               Width="42"
+                                               FontSize="{DynamicResource UiFontBody}"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource HeadingBrush}"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Right" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 关闭窗口后最小化到托盘 -->
+                        <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="关闭窗口后最小化到托盘" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="点击右上角关闭按钮后隐藏在后台，双击右下角图标打开" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
                                 <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding StartMinimizedToTrayInput}"

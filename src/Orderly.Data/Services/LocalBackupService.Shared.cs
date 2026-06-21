@@ -117,9 +117,9 @@ public sealed partial class LocalBackupService
         return FromBase64(base64, "blob");
     }
 
-    private static object? SanitizeValue(string tableName, string columnName, object value)
+    private static object? SanitizeValue(string tableName, string columnName, object value, bool includeSensitivePlaintext = false)
     {
-        if (TryGetSensitivePlaintextDefault(tableName, columnName, out var defaultValue))
+        if (!includeSensitivePlaintext && TryGetSensitivePlaintextDefault(tableName, columnName, out var defaultValue))
         {
             return defaultValue == DBNull.Value ? null : defaultValue;
         }

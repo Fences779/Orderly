@@ -21,6 +21,7 @@ public partial class MainViewModel
         nameof(StartupDefaultSectionInput),
         nameof(StartWithWindowsInput),
         nameof(ShowFloatingWindowOnStartupInput),
+        nameof(FloatingBallOpacityInput),
         nameof(StartMinimizedToTrayInput),
         nameof(RememberLastSectionInput),
         nameof(RememberWindowBoundsInput),
@@ -33,6 +34,7 @@ public partial class MainViewModel
         nameof(BackupDirectoryInput),
         nameof(AutoBackupEnabledInput),
         nameof(AutoBackupFrequencyInput),
+        nameof(BackupRetentionCountInput),
         nameof(MaskPhoneByDefaultInput),
         nameof(MaskAddressByDefaultInput),
         nameof(IncludeSensitiveInExportInput),
@@ -92,6 +94,9 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private bool showFloatingWindowOnStartupInput;
+
+    [ObservableProperty]
+    private double floatingBallOpacityInput = 0.82;
 
     [ObservableProperty]
     private bool startMinimizedToTrayInput;
@@ -386,6 +391,7 @@ public partial class MainViewModel
                 ApplySettingsInputsFromPreferences(normalized);
                 RefreshAiSettingsRuntimeStatus();
                 RefreshNotificationSettingsRuntimeStatus();
+                _lastMainSettingsSaveOutcome = Orderly.App.ViewModels.Helpers.SettingsSaveOutcome.FromSuccess(DateTime.Now);
             },
             suppressBusyAndSuccessStatus: true);
     }

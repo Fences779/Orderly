@@ -28,8 +28,8 @@ public partial class MainWindow : Window, IToastService
     }
 
     /// <summary>
-    /// 当主窗口最小化到托盘（点击关闭按钮被拦截并隐藏）时触发，供壳层接入应用级会话锁定
-    /// 触发点（任务 9.8，需求 18.1/18.2/13.3）。不改动「隐藏到托盘」既有行为本身。
+    /// 当主窗口关闭按钮被拦截并隐藏到托盘时触发，供壳层接入应用级会话锁定
+    /// 触发点（任务 9.8，需求 18.1/18.2/13.3）。
     /// </summary>
     public event EventHandler? HiddenToTray;
 

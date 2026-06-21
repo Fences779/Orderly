@@ -55,7 +55,9 @@ public partial class MainViewModel
             errorStatusPrefix: "导出备份失败",
             action: async () =>
             {
-                var result = await _backupService.ExportAsync(dialog.FileName);
+                var result = await _backupService.ExportAsync(
+                    dialog.FileName,
+                    includeSensitivePlaintext: IncludeSensitiveInExportInput);
                 UpdateRecentBackupStatus(result);
             });
     }

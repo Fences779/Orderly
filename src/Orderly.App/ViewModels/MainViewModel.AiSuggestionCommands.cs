@@ -106,7 +106,7 @@ public partial class MainViewModel
 
     private bool CanGenerateAiSuggestion()
     {
-        return SelectedCustomer is not null && !IsBusy;
+        return EnableAiAssistantInput && SelectedCustomer is not null && !IsBusy;
     }
 
     private bool CanAcceptAiSuggestion(AiSuggestionListItem? suggestionItem)

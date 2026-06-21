@@ -1,3 +1,5 @@
+using Orderly.Core.Models;
+
 namespace Orderly.Data.Services;
 
 public sealed class AiProviderOptions
@@ -86,6 +88,22 @@ public sealed class AiProviderOptions
             DeepSeekProviderName => DeepSeekProviderName,
             _ => normalized.ToLowerInvariant()
         };
+    }
+
+    public AiProviderOptions WithPreferences(AppPreferences preferences)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+
+        var model = string.IsNullOrWhiteSpace(preferences.AiDefaultModel)
+            ? Model
+            : preferences.AiDefaultModel;
+
+        return new AiProviderOptions(
+            RequestedProvider,
+            BaseUrl,
+            ApiKey,
+            model,
+            preferences.AiTimeoutSeconds);
     }
 
     private static int NormalizeTimeout(int timeoutSeconds)

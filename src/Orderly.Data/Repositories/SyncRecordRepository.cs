@@ -186,6 +186,32 @@ public sealed class SyncRecordRepository : ISyncRecordRepository
         return rows;
     }
 
+    public async Task<IReadOnlyList<SyncRecord>> ListFailedOrConflictedAsync(CancellationToken cancellationToken = default)
+    {
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT
+                Id, EntityType, EntityId, RemoteId, SyncStatus, LastSyncedAt, ErrorMessage, ErrorMessageCiphertext, MetadataJson, MetadataJsonCiphertext,
+                CreatedAt, UpdatedAt, DeletedAt, IsSynced, Version
+            FROM SyncRecords
+            WHERE DeletedAt IS NULL AND SyncStatus IN ($failedStatus, $conflictStatus)
+            ORDER BY UpdatedAt DESC, Id DESC;
+            """;
+        command.Parameters.AddWithValue("$failedStatus", (int)SyncStatus.Failed);
+        command.Parameters.AddWithValue("$conflictStatus", (int)SyncStatus.Conflict);
+
+        var rows = new List<SyncRecord>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            rows.Add(Map(reader, _fieldEncryptionService));
+        }
+
+        return rows;
+    }
+
     private static void NormalizeRecord(SyncRecord record)
     {
         record.EntityType = NormalizeRequiredText(record.EntityType, MaxEntityTypeCharacters, "同步实体类型", allowLineBreaks: false);

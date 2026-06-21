@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.Input;
+using Orderly.App.ViewModels.Helpers;
 using Orderly.App.Views;
 using Orderly.Core.Models;
 
@@ -70,6 +71,7 @@ public partial class MainViewModel
         catch (Exception ex)
         {
             StatusMessage = $"{errorStatusPrefix}：{ex.Message}";
+            _lastMainSettingsSaveOutcome = SettingsSaveOutcome.FromFailure(ex, DateTime.Now);
             ShowErrorMessage(errorTitle, ex);
         }
         finally
@@ -163,6 +165,7 @@ public partial class MainViewModel
 
     private void ShowErrorMessage(string title, Exception ex)
     {
+        WriteDebugException(ex);
         System.Windows.MessageBox.Show(GetDialogOwner(), ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 

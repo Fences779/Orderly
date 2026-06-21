@@ -23,6 +23,15 @@ public partial class App : System.Windows.Application
 {
     private const int MainHotkeyId = 1001;
     private const int FloatingHotkeyId = 1002;
+    private const int GlobalSearchHotkeyId = 1003;
+    private const int TodayWorkbenchHotkeyId = 1004;
+    private const int CopyOrderSummaryHotkeyId = 1005;
+    private const int OpenProductionSheetHotkeyId = 1006;
+    private const int MarkOrderExceptionHotkeyId = 1007;
+    private const int AdvanceFulfillmentHotkeyId = 1008;
+    private const int OpenCustomerProfileHotkeyId = 1009;
+    private const int NewCustomerNoteHotkeyId = 1010;
+    private const int CopyCustomerPreferenceSummaryHotkeyId = 1011;
     private const string QaSessionAccountId = "qa-local-account";
     private const string QaSessionUsername = "qa-local-user";
     private const string QaSessionDisplayName = "QA Local User";
@@ -43,8 +52,7 @@ public partial class App : System.Windows.Application
     private FloatingWindowViewModel? _floatingViewModel;
     private bool _isLoginCompleted;
     private bool _isHotkeyAttached;
-    private string _registeredMainHotkey = "Ctrl+Alt+O";
-    private string _registeredFloatingHotkey = "Ctrl+Alt+R";
+    private readonly Dictionary<int, string> _registeredHotkeys = new();
     private string[] _startupArgs = [];
     private SqliteConnectionFactory? _connectionFactory;
     private LauncherConnectionFactory? _launcherConnectionFactory;
@@ -348,25 +356,70 @@ public partial class App : System.Windows.Application
         }
     }
 
-    private bool TryApplyRuntimeHotkeys(string mainHotkey, string floatingHotkey)
+    private async void NavigateFromFloatingWindow(string section)
+    {
+        if (_mainViewModel is null)
+        {
+            return;
+        }
+
+        ShowMainWindow();
+        await _mainViewModel.SelectSectionCommand.ExecuteAsync(section);
+    }
+
+    private bool TryApplyRuntimeHotkeys(AppPreferences preferences)
     {
         if (_hotkeyService is null || _mainWindow is null || !_isHotkeyAttached)
         {
             return false;
         }
 
-        var mainOk = _hotkeyService.Register(MainHotkeyId, mainHotkey);
-        var floatingOk = _hotkeyService.Register(FloatingHotkeyId, floatingHotkey);
-        if (mainOk && floatingOk)
+        var previous = new Dictionary<int, string>(_registeredHotkeys);
+        var candidates = BuildRuntimeHotkeyMap(preferences);
+        foreach (var candidate in candidates)
         {
-            _registeredMainHotkey = mainHotkey;
-            _registeredFloatingHotkey = floatingHotkey;
-            return true;
+            if (!_hotkeyService.Register(candidate.Key, candidate.Value))
+            {
+                foreach (var item in previous)
+                {
+                    _hotkeyService.Register(item.Key, item.Value);
+                }
+
+                _registeredHotkeys.Clear();
+                foreach (var item in previous)
+                {
+                    _registeredHotkeys[item.Key] = item.Value;
+                }
+
+                return false;
+            }
         }
 
-        _hotkeyService.Register(MainHotkeyId, _registeredMainHotkey);
-        _hotkeyService.Register(FloatingHotkeyId, _registeredFloatingHotkey);
-        return false;
+        _registeredHotkeys.Clear();
+        foreach (var candidate in candidates)
+        {
+            _registeredHotkeys[candidate.Key] = candidate.Value;
+        }
+
+        return true;
+    }
+
+    private static IReadOnlyDictionary<int, string> BuildRuntimeHotkeyMap(AppPreferences preferences)
+    {
+        return new Dictionary<int, string>
+        {
+            [MainHotkeyId] = preferences.MainHotkey,
+            [FloatingHotkeyId] = preferences.FloatingHotkey,
+            [GlobalSearchHotkeyId] = preferences.GlobalSearchHotkey,
+            [TodayWorkbenchHotkeyId] = preferences.TodayWorkbenchHotkey,
+            [CopyOrderSummaryHotkeyId] = preferences.CopyOrderSummaryHotkey,
+            [OpenProductionSheetHotkeyId] = preferences.OpenProductionSheetHotkey,
+            [MarkOrderExceptionHotkeyId] = preferences.MarkOrderExceptionHotkey,
+            [AdvanceFulfillmentHotkeyId] = preferences.AdvanceFulfillmentHotkey,
+            [OpenCustomerProfileHotkeyId] = preferences.OpenCustomerProfileHotkey,
+            [NewCustomerNoteHotkeyId] = preferences.NewCustomerNoteHotkey,
+            [CopyCustomerPreferenceSummaryHotkeyId] = preferences.CopyCustomerPreferenceSummaryHotkey
+        };
     }
 
     private bool TrySendDesktopNotification(string title, string message)
@@ -411,6 +464,7 @@ public partial class App : System.Windows.Application
         CancelMinimizeToTrayIdleLock();
         if (_mainWindow is not null)
         {
+            _mainViewModel?.PersistWindowBoundsIfNeededAsync(_mainWindow).GetAwaiter().GetResult();
             _mainWindow.HiddenToTray -= OnMainWindowHiddenToTray;
         }
 

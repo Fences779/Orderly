@@ -14,4 +14,7 @@ public sealed class AiSuggestionRequest
     public string OrderRemark { get; set; } = string.Empty;
     public string FocusMessage { get; set; } = string.Empty;
     public IReadOnlyList<AiSuggestionContextMessage> RecentMessages { get; set; } = Array.Empty<AiSuggestionContextMessage>();
+    public string ReplyTone { get; set; } = "简洁";
+    public string ReplyLength { get; set; } = "标准";
+    public bool AutoGenerateOrderSummary { get; set; }
 }

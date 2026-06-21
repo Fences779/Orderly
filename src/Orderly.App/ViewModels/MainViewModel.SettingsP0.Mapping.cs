@@ -21,12 +21,19 @@ public partial class MainViewModel
             MainHotkey = Preferences.MainHotkey,
             FloatingHotkey = Preferences.FloatingHotkey,
             ShowFloatingWindowOnStartup = ShowFloatingWindowOnStartupInput,
+            FloatingBallLeft = Preferences.FloatingBallLeft,
+            FloatingBallTop = Preferences.FloatingBallTop,
+            FloatingBallOpacity = Math.Clamp(FloatingBallOpacityInput, 0.35, 1.0),
             StartMinimizedToTray = StartMinimizedToTrayInput,
             StartupDefaultSection = startupDefaultSection,
             RememberLastSection = RememberLastSectionInput,
             LastSection = lastSection,
             StartWithWindows = StartWithWindowsInput,
             RememberWindowBounds = RememberWindowBoundsInput,
+            WindowLeft = Preferences.WindowLeft,
+            WindowTop = Preferences.WindowTop,
+            WindowWidth = Preferences.WindowWidth,
+            WindowHeight = Preferences.WindowHeight,
             DefaultWindowMode = windowMode,
             SidebarDefaultExpanded = SidebarDefaultExpandedInput,
             FontSizePreset = fontPreset,
@@ -38,6 +45,7 @@ public partial class MainViewModel
             AutoBackupEnabled = AutoBackupEnabledInput,
             AutoBackupFrequency = autoBackupFrequency,
             BackupRetentionCount = backupRetention,
+            LastAutoBackupAt = Preferences.LastAutoBackupAt,
             MaskPhoneByDefault = MaskPhoneByDefaultInput,
             MaskAddressByDefault = MaskAddressByDefaultInput,
             IncludeSensitiveInExport = IncludeSensitiveInExportInput,
@@ -60,6 +68,7 @@ public partial class MainViewModel
             LastSectionInput = NormalizeOption(preferences.LastSection, StartupSectionOptions, StartupDefaultSectionInput);
             StartWithWindowsInput = preferences.StartWithWindows;
             ShowFloatingWindowOnStartupInput = preferences.ShowFloatingWindowOnStartup;
+            FloatingBallOpacityInput = Math.Clamp(preferences.FloatingBallOpacity, 0.35, 1.0);
             StartMinimizedToTrayInput = preferences.StartMinimizedToTray;
             RememberWindowBoundsInput = preferences.RememberWindowBounds;
             DefaultWindowModeInput = NormalizeOption(preferences.DefaultWindowMode, WindowModeOptions, "普通");

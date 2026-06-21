@@ -14,6 +14,9 @@ public sealed class AppPreferences
     public string NewCustomerNoteHotkey { get; set; } = "Ctrl+Shift+M";
     public string CopyCustomerPreferenceSummaryHotkey { get; set; } = "Ctrl+Shift+Y";
     public bool ShowFloatingWindowOnStartup { get; set; }
+    public double FloatingBallLeft { get; set; } = double.NaN;
+    public double FloatingBallTop { get; set; } = double.NaN;
+    public double FloatingBallOpacity { get; set; } = 0.82;
     public bool StartMinimizedToTray { get; set; }
 
     public string StartupDefaultSection { get; set; } = "工作台";
@@ -21,6 +24,10 @@ public sealed class AppPreferences
     public string LastSection { get; set; } = "工作台";
     public bool StartWithWindows { get; set; }
     public bool RememberWindowBounds { get; set; }
+    public double WindowLeft { get; set; } = double.NaN;
+    public double WindowTop { get; set; } = double.NaN;
+    public double WindowWidth { get; set; } = double.NaN;
+    public double WindowHeight { get; set; } = double.NaN;
     public string DefaultWindowMode { get; set; } = "普通";
     public bool SidebarDefaultExpanded { get; set; } = true;
     public string FontSizePreset { get; set; } = "标准";
@@ -36,6 +43,7 @@ public sealed class AppPreferences
     public bool AutoBackupEnabled { get; set; }
     public string AutoBackupFrequency { get; set; } = "手动";
     public int BackupRetentionCount { get; set; } = 10;
+    public DateTime? LastAutoBackupAt { get; set; }
 
     public bool MaskPhoneByDefault { get; set; } = true;
     public bool MaskAddressByDefault { get; set; } = true;

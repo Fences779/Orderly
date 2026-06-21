@@ -9,7 +9,7 @@ namespace Orderly.App.ViewModels;
 
 public partial class MainViewModel
 {
-    private Func<string, string, bool>? _tryApplyRuntimeHotkeys;
+    private Func<AppPreferences, bool>? _tryApplyRuntimeHotkeys;
     private Func<string, string, bool>? _trySendDesktopNotification;
 
     [ObservableProperty]
@@ -79,13 +79,13 @@ public partial class MainViewModel
     private string hotkeyValidationStatusText = "保存时会自动校验格式与重复绑定。";
 
     [ObservableProperty]
-    private string hotkeyRuntimeStatusText = "仅主窗口/悬浮窗快捷键支持立即重载，其余动作待接入。";
+    private string hotkeyRuntimeStatusText = "全部快捷键保存后会尝试立即重载。";
 
     [ObservableProperty]
     private string notificationServiceStatusText = "通知服务未接入。";
 
     [ObservableProperty]
-    private string notificationStrategyStatusText = "策略已保存，待提醒调度接入。";
+    private string notificationStrategyStatusText = "提醒策略保存后会立即更新本地调度。";
 
     [ObservableProperty]
     private string notificationTestStatusText = "未执行测试通知。";
@@ -93,7 +93,7 @@ public partial class MainViewModel
     public bool IsDesktopNotificationTestAvailable => _trySendDesktopNotification is not null;
 
     public void ConfigureSettingsRuntimeHooks(
-        Func<string, string, bool>? tryApplyRuntimeHotkeys,
+        Func<AppPreferences, bool>? tryApplyRuntimeHotkeys,
         Func<string, string, bool>? trySendDesktopNotification)
     {
         _tryApplyRuntimeHotkeys = tryApplyRuntimeHotkeys;
@@ -132,44 +132,44 @@ public partial class MainViewModel
 
     private bool TryApplyRuntimeHotkeysBeforeSave(AppPreferences previous, AppPreferences current, out string status)
     {
-        var hasMainOrFloatingChanges =
-            !string.Equals(previous.MainHotkey, current.MainHotkey, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(previous.FloatingHotkey, current.FloatingHotkey, StringComparison.OrdinalIgnoreCase);
-        if (!hasMainOrFloatingChanges)
+        var hasHotkeyChanges = BuildHotkeyValues(previous)
+            .Zip(BuildHotkeyValues(current), (oldValue, newValue) => !string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase))
+            .Any(changed => changed);
+        if (!hasHotkeyChanges)
         {
-            HotkeyRuntimeStatusText = "主窗口/悬浮窗快捷键无变更；其余快捷键策略已保存，待接入。";
-            status = "主窗口/悬浮窗快捷键无变更；";
+            HotkeyRuntimeStatusText = "快捷键无变更。";
+            status = "快捷键无变更。";
             return true;
         }
 
         if (_tryApplyRuntimeHotkeys is null)
         {
-            HotkeyRuntimeStatusText = "主窗口/悬浮窗快捷键已保存，重启后生效；其余快捷键待接入。";
-            status = "主窗口/悬浮窗快捷键已保存，重启后生效；";
+            HotkeyRuntimeStatusText = "快捷键已保存，重启后生效。";
+            status = "快捷键已保存，重启后生效。";
             return true;
         }
 
-        var applied = _tryApplyRuntimeHotkeys(current.MainHotkey, current.FloatingHotkey);
+        var applied = _tryApplyRuntimeHotkeys(current);
         if (applied)
         {
-            HotkeyRuntimeStatusText = "主窗口/悬浮窗快捷键已立即生效；其余快捷键待接入。";
-            status = "主窗口/悬浮窗快捷键已立即生效；";
+            HotkeyRuntimeStatusText = "全部快捷键已立即生效。";
+            status = "全部快捷键已立即生效。";
             return true;
         }
 
-        HotkeyRuntimeStatusText = "主窗口/悬浮窗快捷键被系统或其它应用占用，未保存；其余快捷键待接入。";
-        status = "主窗口/悬浮窗快捷键被系统或其它应用占用，未保存。";
+        HotkeyRuntimeStatusText = "快捷键被系统或其它应用占用，未保存。";
+        status = "快捷键被系统或其它应用占用，未保存。";
         return false;
     }
 
     private void RollbackRuntimeHotkeys(AppPreferences previous, AppPreferences current)
     {
-        var hasMainOrFloatingChanges =
-            !string.Equals(previous.MainHotkey, current.MainHotkey, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(previous.FloatingHotkey, current.FloatingHotkey, StringComparison.OrdinalIgnoreCase);
-        if (hasMainOrFloatingChanges && _tryApplyRuntimeHotkeys is not null)
+        var hasHotkeyChanges = BuildHotkeyValues(previous)
+            .Zip(BuildHotkeyValues(current), (oldValue, newValue) => !string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase))
+            .Any(changed => changed);
+        if (hasHotkeyChanges && _tryApplyRuntimeHotkeys is not null)
         {
-            _ = _tryApplyRuntimeHotkeys(previous.MainHotkey, previous.FloatingHotkey);
+            _ = _tryApplyRuntimeHotkeys(previous);
         }
     }
 
@@ -178,7 +178,9 @@ public partial class MainViewModel
         NotificationServiceStatusText = IsDesktopNotificationTestAvailable
             ? "托盘通知服务已接入，可执行测试通知。"
             : "通知服务未接入，当前仅保存提醒策略。";
-        NotificationStrategyStatusText = "提醒策略已保存，待提醒调度接入。";
+        NotificationStrategyStatusText = IsDesktopNotificationTestAvailable
+            ? "提醒策略已接入本地调度。"
+            : "提醒策略已保存，通知服务可用后自动生效。";
     }
 
     private IReadOnlyList<HotkeyValidationItem> BuildHotkeyValidationItems()
@@ -196,6 +198,24 @@ public partial class MainViewModel
             new("打开客户档案", OpenCustomerProfileHotkeyInput),
             new("新建客户备注", NewCustomerNoteHotkeyInput),
             new("复制客户偏好摘要", CopyCustomerPreferenceSummaryHotkeyInput)
+        ];
+    }
+
+    private static IReadOnlyList<string> BuildHotkeyValues(AppPreferences preferences)
+    {
+        return
+        [
+            preferences.MainHotkey,
+            preferences.FloatingHotkey,
+            preferences.GlobalSearchHotkey,
+            preferences.TodayWorkbenchHotkey,
+            preferences.CopyOrderSummaryHotkey,
+            preferences.OpenProductionSheetHotkey,
+            preferences.MarkOrderExceptionHotkey,
+            preferences.AdvanceFulfillmentHotkey,
+            preferences.OpenCustomerProfileHotkey,
+            preferences.NewCustomerNoteHotkey,
+            preferences.CopyCustomerPreferenceSummaryHotkey
         ];
     }
 
