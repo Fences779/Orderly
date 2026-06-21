@@ -74,6 +74,16 @@
             <Setter Property="BorderThickness" Value="{StaticResource SettingsZeroThickness}" />
         </Style>
 
+        <!-- 记住上次停留页开启时，默认启动页仅保留当前值展示，不允许修改。 -->
+        <Style x:Key="StartupDefaultSectionRowStyle" TargetType="Border" BasedOn="{StaticResource SettingsRowStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RememberLastSectionInput}" Value="True">
+                    <Setter Property="IsEnabled" Value="False" />
+                    <Setter Property="Opacity" Value="0.48" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- ===== 标签（标题段） ===== -->
         <Style x:Key="SettingsRowLabelStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="{DynamicResource UiFontBody}" />
@@ -407,7 +417,7 @@
                         <TextBlock Text="启动与显示" Style="{StaticResource SettingsGroupTitleStyle}" />
 
                         <!-- 默认启动页 -->
-                        <Border Style="{StaticResource SettingsRowStyle}">
+                        <Border Style="{StaticResource StartupDefaultSectionRowStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -415,7 +425,18 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="默认启动页" Style="{StaticResource SettingsRowLabelStyle}" />
-                                    <TextBlock Text="打开应用时默认聚焦的板块" Style="{StaticResource SettingsRowDescStyle}" />
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource SettingsRowDescStyle}">
+                                                <Setter Property="Text" Value="打开应用时默认聚焦的板块" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding RememberLastSectionInput}" Value="True">
+                                                        <Setter Property="Text" Value="已启用记住上次停留页，默认启动页暂不生效" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </StackPanel>
                                 <Button Grid.Column="1"
                                         Style="{StaticResource SettingsChooseStartupButtonStyle}"

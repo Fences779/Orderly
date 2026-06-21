@@ -218,6 +218,17 @@ public sealed class SettingsTabsContractTests
             $"{fileName}.cs 出现疑似新增命令 / 状态逻辑信号：{string.Join(", ", hits)}");
     }
 
+    [Fact]
+    public void AppearanceTab_disables_startup_default_when_remember_last_section_is_enabled()
+    {
+        var xaml = LoadViewText("SettingsTabAppearance.xaml");
+
+        Assert.Contains("StartupDefaultSectionRowStyle", xaml);
+        Assert.Contains("Binding=\"{Binding RememberLastSectionInput}\" Value=\"True\"", xaml);
+        Assert.Contains("<Setter Property=\"IsEnabled\" Value=\"False\" />", xaml);
+        Assert.Contains("已启用记住上次停留页，默认启动页暂不生效", xaml);
+    }
+
     // ==================== 辅助方法 ====================
 
     /// <summary>

@@ -148,10 +148,6 @@ public partial class MainWindow : Window, IToastService
                         if (mainVM != null && mainVM.StartupSectionOptions.Contains(sectionName))
                         {
                             mainVM.StartupDefaultSectionInput = sectionName;
-                            if (mainVM.Settings != null)
-                            {
-                                mainVM.Settings.StartupDefaultSectionInput = sectionName;
-                            }
                             Orderly.App.Helpers.SettingsHelper.SetIsSelectingStartupSection(this, false);
                             Show($"已成功将“{sectionName}”设定为默认启动页", ToastSeverity.Success);
                             e.Handled = true;
