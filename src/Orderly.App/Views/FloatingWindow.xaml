@@ -28,6 +28,7 @@
           ToolTip="Orderly 快捷入口"
           MouseLeftButtonDown="Root_MouseLeftButtonDown"
           MouseLeftButtonUp="Root_MouseLeftButtonUp"
+          MouseRightButtonUp="Root_MouseRightButtonUp"
           MouseMove="Root_MouseMove"
           MouseEnter="Root_MouseEnter"
           MouseLeave="Root_MouseLeave">

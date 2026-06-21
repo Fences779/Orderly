@@ -13,6 +13,7 @@ public sealed class AppPreferences
     public string OpenCustomerProfileHotkey { get; set; } = "Ctrl+Shift+F";
     public string NewCustomerNoteHotkey { get; set; } = "Ctrl+Shift+M";
     public string CopyCustomerPreferenceSummaryHotkey { get; set; } = "Ctrl+Shift+Y";
+    public bool FloatingBallEnabled { get; set; }
     public bool ShowFloatingWindowOnStartup { get; set; }
     public double FloatingBallLeft { get; set; } = double.NaN;
     public double FloatingBallTop { get; set; } = double.NaN;

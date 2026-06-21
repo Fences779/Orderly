@@ -13,6 +13,7 @@ public static class AppSettingKeys
     public const string OpenCustomerProfileHotkey = "OpenCustomerProfileHotkey";
     public const string NewCustomerNoteHotkey = "NewCustomerNoteHotkey";
     public const string CopyCustomerPreferenceSummaryHotkey = "CopyCustomerPreferenceSummaryHotkey";
+    public const string FloatingBallEnabled = "FloatingBallEnabled";
     public const string ShowFloatingWindowOnStartup = "ShowFloatingWindowOnStartup";
     public const string FloatingBallLeft = "FloatingBallLeft";
     public const string FloatingBallTop = "FloatingBallTop";

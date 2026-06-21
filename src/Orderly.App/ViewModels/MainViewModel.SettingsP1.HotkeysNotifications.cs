@@ -11,6 +11,7 @@ public partial class MainViewModel
 {
     private Func<AppPreferences, bool>? _tryApplyRuntimeHotkeys;
     private Func<string, string, bool>? _trySendDesktopNotification;
+    private Action<AppPreferences, AppPreferences>? _applyFloatingWindowRuntime;
 
     [ObservableProperty]
     private string mainWindowHotkeyInput = "Ctrl+Alt+O";
@@ -94,10 +95,12 @@ public partial class MainViewModel
 
     public void ConfigureSettingsRuntimeHooks(
         Func<AppPreferences, bool>? tryApplyRuntimeHotkeys,
-        Func<string, string, bool>? trySendDesktopNotification)
+        Func<string, string, bool>? trySendDesktopNotification,
+        Action<AppPreferences, AppPreferences>? applyFloatingWindowRuntime = null)
     {
         _tryApplyRuntimeHotkeys = tryApplyRuntimeHotkeys;
         _trySendDesktopNotification = trySendDesktopNotification;
+        _applyFloatingWindowRuntime = applyFloatingWindowRuntime;
         OnPropertyChanged(nameof(IsDesktopNotificationTestAvailable));
         RefreshNotificationSettingsRuntimeStatus();
 

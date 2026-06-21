@@ -345,11 +345,37 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        if (_mainViewModel?.Preferences.FloatingBallEnabled != true)
+        {
+            _floatingWindow.Hide();
+            return;
+        }
+
         if (_floatingWindow.IsVisible)
         {
             _floatingWindow.Hide();
         }
         else
+        {
+            _floatingWindow.Show();
+            _floatingWindow.Activate();
+        }
+    }
+
+    private void ApplyFloatingWindowRuntime(AppPreferences previous, AppPreferences current)
+    {
+        if (_floatingWindow is null)
+        {
+            return;
+        }
+
+        if (!current.FloatingBallEnabled)
+        {
+            _floatingWindow.Hide();
+            return;
+        }
+
+        if (!previous.FloatingBallEnabled && current.FloatingBallEnabled)
         {
             _floatingWindow.Show();
             _floatingWindow.Activate();

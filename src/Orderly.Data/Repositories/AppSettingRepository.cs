@@ -104,6 +104,10 @@ public sealed class AppSettingRepository : IAppSettingRepository
             OpenCustomerProfileHotkey = GetHotkey(settings, AppSettingKeys.OpenCustomerProfileHotkey, "Ctrl+Shift+F"),
             NewCustomerNoteHotkey = GetHotkey(settings, AppSettingKeys.NewCustomerNoteHotkey, "Ctrl+Shift+M"),
             CopyCustomerPreferenceSummaryHotkey = GetHotkey(settings, AppSettingKeys.CopyCustomerPreferenceSummaryHotkey, "Ctrl+Shift+Y"),
+            FloatingBallEnabled = GetBool(
+                settings,
+                AppSettingKeys.FloatingBallEnabled,
+                GetBool(settings, AppSettingKeys.ShowFloatingWindowOnStartup, false)),
             ShowFloatingWindowOnStartup = GetBool(settings, AppSettingKeys.ShowFloatingWindowOnStartup, false),
             FloatingBallLeft = GetDouble(settings, AppSettingKeys.FloatingBallLeft, double.NaN, -100000, 100000),
             FloatingBallTop = GetDouble(settings, AppSettingKeys.FloatingBallTop, double.NaN, -100000, 100000),
@@ -180,6 +184,7 @@ public sealed class AppSettingRepository : IAppSettingRepository
             [AppSettingKeys.OpenCustomerProfileHotkey] = NormalizeHotkey(preferences.OpenCustomerProfileHotkey, "Ctrl+Shift+F"),
             [AppSettingKeys.NewCustomerNoteHotkey] = NormalizeHotkey(preferences.NewCustomerNoteHotkey, "Ctrl+Shift+M"),
             [AppSettingKeys.CopyCustomerPreferenceSummaryHotkey] = NormalizeHotkey(preferences.CopyCustomerPreferenceSummaryHotkey, "Ctrl+Shift+Y"),
+            [AppSettingKeys.FloatingBallEnabled] = ToBoolValue(preferences.FloatingBallEnabled),
             [AppSettingKeys.ShowFloatingWindowOnStartup] = ToBoolValue(preferences.ShowFloatingWindowOnStartup),
             [AppSettingKeys.FloatingBallLeft] = ToDoubleValue(preferences.FloatingBallLeft),
             [AppSettingKeys.FloatingBallTop] = ToDoubleValue(preferences.FloatingBallTop),

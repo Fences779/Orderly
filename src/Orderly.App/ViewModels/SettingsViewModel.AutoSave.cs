@@ -33,6 +33,7 @@ public partial class SettingsViewModel
     {
         nameof(StartupDefaultSectionInput),
         nameof(StartWithWindowsInput),
+        nameof(FloatingBallEnabledInput),
         nameof(ShowFloatingWindowOnStartupInput),
         nameof(StartMinimizedToTrayInput),
         nameof(RememberLastSectionInput),

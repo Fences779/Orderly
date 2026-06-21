@@ -107,6 +107,9 @@ public partial class SettingsViewModel : ObservableObject
     private bool startWithWindowsInput;
 
     [ObservableProperty]
+    private bool floatingBallEnabledInput;
+
+    [ObservableProperty]
     private bool showFloatingWindowOnStartupInput;
 
     [ObservableProperty]
@@ -257,6 +260,7 @@ public partial class SettingsViewModel : ObservableObject
             AvatarReference = basePreferences.AvatarReference,
 
             // ── P0 字段：由当前 *Input 规范化覆盖（任务 13.1）───────────────────────
+            FloatingBallEnabled = FloatingBallEnabledInput,
             ShowFloatingWindowOnStartup = ShowFloatingWindowOnStartupInput,
             FloatingBallLeft = basePreferences.FloatingBallLeft,
             FloatingBallTop = basePreferences.FloatingBallTop,
@@ -318,6 +322,7 @@ public partial class SettingsViewModel : ObservableObject
             RememberLastSectionInput = preferences.RememberLastSection;
             LastSectionInput = NormalizeOption(preferences.LastSection, StartupSectionOptions, StartupDefaultSectionInput);
             StartWithWindowsInput = preferences.StartWithWindows;
+            FloatingBallEnabledInput = preferences.FloatingBallEnabled;
             ShowFloatingWindowOnStartupInput = preferences.ShowFloatingWindowOnStartup;
             FloatingBallOpacityInput = Math.Clamp(preferences.FloatingBallOpacity, 0.35, 1.0);
             StartMinimizedToTrayInput = preferences.StartMinimizedToTray;

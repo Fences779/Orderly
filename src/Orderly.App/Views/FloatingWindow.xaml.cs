@@ -15,7 +15,8 @@ public partial class FloatingWindow : Window
     private readonly Action<string> _navigateToSection;
     private System.Windows.Point _dragStart;
     private bool _isDragging;
-    private bool _isApplyingOpacity;
+    private bool _isInitialized;
+    private bool _isApplyingOpacity = true;
     private double _restingOpacity = 0.82;
 
     public FloatingWindow(
@@ -25,13 +26,14 @@ public partial class FloatingWindow : Window
         Action openMainWindow,
         Action<string> navigateToSection)
     {
-        InitializeComponent();
-        DataContext = viewModel;
         _settingRepository = settingRepository;
         _openMainWindow = openMainWindow;
         _navigateToSection = navigateToSection;
 
+        InitializeComponent();
+        DataContext = viewModel;
         ApplyInitialState(preferences);
+        _isInitialized = true;
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -131,10 +133,27 @@ public partial class FloatingWindow : Window
         {
             _ = SavePositionAsync();
             _isDragging = false;
+            e.Handled = true;
             return;
         }
 
-        Root.ContextMenu ??= (ContextMenu)FindResource("FloatingBallMenu");
+        _openMainWindow();
+        e.Handled = true;
+    }
+
+    private void Root_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        OpenContextMenu();
+        e.Handled = true;
+    }
+
+    private void OpenContextMenu()
+    {
+        if (Root.ContextMenu is null)
+        {
+            return;
+        }
+
         Root.ContextMenu.PlacementTarget = Root;
         Root.ContextMenu.IsOpen = true;
     }
@@ -156,6 +175,11 @@ public partial class FloatingWindow : Window
 
     private void MenuNavigate_Click(object sender, RoutedEventArgs e)
     {
+        if (Root.ContextMenu is not null)
+        {
+            Root.ContextMenu.IsOpen = false;
+        }
+
         if (sender is MenuItem { Tag: string section })
         {
             _navigateToSection(section);
@@ -164,12 +188,17 @@ public partial class FloatingWindow : Window
 
     private void MenuHide_Click(object sender, RoutedEventArgs e)
     {
+        if (Root.ContextMenu is not null)
+        {
+            Root.ContextMenu.IsOpen = false;
+        }
+
         Hide();
     }
 
     private void Slider_Opacity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (_isApplyingOpacity)
+        if (!_isInitialized || _isApplyingOpacity)
         {
             return;
         }

@@ -381,7 +381,8 @@ public partial class App
             "settings runtime hook setup",
             () => _mainViewModel.ConfigureSettingsRuntimeHooks(
                 TryApplyRuntimeHotkeys,
-                TrySendDesktopNotification));
+                TrySendDesktopNotification,
+                ApplyFloatingWindowRuntime));
 
         _mainWindow.SourceInitialized += (_, _) =>
         {
@@ -411,7 +412,7 @@ public partial class App
         _mainWindow.Show();
         _mainWindow.Activate();
 
-        if (preferences.ShowFloatingWindowOnStartup && _floatingWindow is not null)
+        if (preferences.FloatingBallEnabled && preferences.ShowFloatingWindowOnStartup && _floatingWindow is not null)
         {
             TryRunNonCriticalWorkspaceStartupStep(
                 "floating window startup show",

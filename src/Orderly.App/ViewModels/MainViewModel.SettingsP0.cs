@@ -20,6 +20,7 @@ public partial class MainViewModel
     {
         nameof(StartupDefaultSectionInput),
         nameof(StartWithWindowsInput),
+        nameof(FloatingBallEnabledInput),
         nameof(ShowFloatingWindowOnStartupInput),
         nameof(FloatingBallOpacityInput),
         nameof(StartMinimizedToTrayInput),
@@ -91,6 +92,9 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private bool startWithWindowsInput;
+
+    [ObservableProperty]
+    private bool floatingBallEnabledInput;
 
     [ObservableProperty]
     private bool showFloatingWindowOnStartupInput;
@@ -389,6 +393,7 @@ public partial class MainViewModel
 
                 Preferences = normalized;
                 ApplySettingsInputsFromPreferences(normalized);
+                _applyFloatingWindowRuntime?.Invoke(previous, normalized);
                 RefreshAiSettingsRuntimeStatus();
                 RefreshNotificationSettingsRuntimeStatus();
                 _lastMainSettingsSaveOutcome = Orderly.App.ViewModels.Helpers.SettingsSaveOutcome.FromSuccess(DateTime.Now);

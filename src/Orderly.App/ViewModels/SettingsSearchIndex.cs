@@ -42,7 +42,8 @@ public sealed class SettingsSearchIndex : ISettingsSearchIndex
         new SettingsSearchEntry("默认窗口模式", "设置应用启动时的窗口显示模式", new[] { "窗口", "模式", "window" }, "外观与启动", "List_DefaultWindowMode"),
         new SettingsSearchEntry("记住上次所在页面", "重新打开时回到上次停留的页面", new[] { "记住", "上次", "页面" }, "外观与启动", "Chk_RememberLastSection"),
         new SettingsSearchEntry("开机自启动", "随 Windows 启动自动运行", new[] { "开机", "自启", "启动", "startup" }, "外观与启动", "Chk_StartWithWindows"),
-        new SettingsSearchEntry("启动时显示悬浮窗", "启动后自动呼出桌面悬浮窗", new[] { "悬浮窗", "浮窗", "启动" }, "外观与启动", "Chk_ShowFloatingWindow"),
+        new SettingsSearchEntry("悬浮球", "控制桌面悬浮入口球是否启用", new[] { "悬浮球", "悬浮窗", "浮窗", "入口" }, "外观与启动", "Chk_FloatingBallEnabled"),
+        new SettingsSearchEntry("启动时显示悬浮球", "应用启动后自动呼出桌面悬浮球", new[] { "悬浮球", "悬浮窗", "浮窗", "启动" }, "外观与启动", "Chk_ShowFloatingWindow"),
         new SettingsSearchEntry("关闭窗口后最小化到托盘", "点击关闭按钮后隐藏到系统托盘", new[] { "托盘", "最小化", "关闭" }, "外观与启动", "Chk_StartMinimizedToTray"),
         new SettingsSearchEntry("记住窗口位置与大小", "重新打开时恢复上次的窗口位置与尺寸", new[] { "窗口", "位置", "大小" }, "外观与启动", "Chk_RememberWindowBounds"),
 

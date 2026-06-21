@@ -128,6 +128,7 @@ public sealed partial class DatabaseInitializer
             [AppSettingKeys.OpenCustomerProfileHotkey] = "Ctrl+Shift+F",
             [AppSettingKeys.NewCustomerNoteHotkey] = "Ctrl+Shift+M",
             [AppSettingKeys.CopyCustomerPreferenceSummaryHotkey] = "Ctrl+Shift+Y",
+            [AppSettingKeys.FloatingBallEnabled] = "false",
             [AppSettingKeys.ShowFloatingWindowOnStartup] = "false",
             [AppSettingKeys.FloatingBallOpacity] = "0.82",
             [AppSettingKeys.StartMinimizedToTray] = "false",

@@ -500,8 +500,26 @@
                             </Grid>
                         </Border>
 
-                        <!-- 启动显示悬浮入口球 -->
+                        <!-- 悬浮入口球总开关 -->
                         <Border Style="{StaticResource SettingsRowStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="悬浮球" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="开启后立即在桌面显示 Orderly 快捷入口" Style="{StaticResource SettingsRowDescStyle}" />
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
+                                          IsChecked="{Binding FloatingBallEnabledInput}"
+                                          AutomationProperties.AutomationId="Chk_FloatingBallEnabled" />
+                            </Grid>
+                        </Border>
+
+                        <!-- 启动显示悬浮入口球 -->
+                        <Border Style="{StaticResource SettingsRowStyle}"
+                                IsEnabled="{Binding FloatingBallEnabledInput}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />

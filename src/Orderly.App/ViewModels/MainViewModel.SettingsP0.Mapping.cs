@@ -20,6 +20,7 @@ public partial class MainViewModel
         {
             MainHotkey = Preferences.MainHotkey,
             FloatingHotkey = Preferences.FloatingHotkey,
+            FloatingBallEnabled = FloatingBallEnabledInput,
             ShowFloatingWindowOnStartup = ShowFloatingWindowOnStartupInput,
             FloatingBallLeft = Preferences.FloatingBallLeft,
             FloatingBallTop = Preferences.FloatingBallTop,
@@ -67,6 +68,7 @@ public partial class MainViewModel
             RememberLastSectionInput = preferences.RememberLastSection;
             LastSectionInput = NormalizeOption(preferences.LastSection, StartupSectionOptions, StartupDefaultSectionInput);
             StartWithWindowsInput = preferences.StartWithWindows;
+            FloatingBallEnabledInput = preferences.FloatingBallEnabled;
             ShowFloatingWindowOnStartupInput = preferences.ShowFloatingWindowOnStartup;
             FloatingBallOpacityInput = Math.Clamp(preferences.FloatingBallOpacity, 0.35, 1.0);
             StartMinimizedToTrayInput = preferences.StartMinimizedToTray;
