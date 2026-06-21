@@ -326,11 +326,6 @@ public partial class App : System.Windows.Application
                 _sessionLockService?.State ?? SessionLockState.LoggedOut,
                 _deferPinUnlockUntilMainWindowOpen))
         {
-            _mainWindow.IsEnabled = false;
-            _mainWindow.Show();
-            _mainWindow.WindowState = WindowState.Normal;
-            _mainWindow.Activate();
-
             await RequirePinUnlockAsync();
             if (_mainWindow is null || _sessionLockService?.State != SessionLockState.Unlocked)
             {
