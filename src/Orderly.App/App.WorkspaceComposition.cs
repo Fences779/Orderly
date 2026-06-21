@@ -302,6 +302,7 @@ public partial class App
         // 子 VM 的 Toast 提示（保存结果 / 头像 / 紧急启用等）经统一壳层 Popup_Toast 呈现。
         toastRelay.Target = _mainWindow;
         _mainWindow.HiddenToTray += OnMainWindowHiddenToTray;
+        _mainWindow.ExitRequested += OnMainWindowExitRequested;
         TryRunNonCriticalWorkspaceStartupStep(
             "floating window construction",
             () =>

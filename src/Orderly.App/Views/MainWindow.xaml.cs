@@ -19,10 +19,12 @@ public partial class MainWindow : Window, IToastService
     private static readonly TimeSpan DefaultToastDuration = TimeSpan.FromMilliseconds(1500);
 
     private CancellationTokenSource? _toastCts;
+    private readonly MainViewModel _viewModel;
 
     public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
+        _viewModel = viewModel;
         DataContext = viewModel;
         System.Windows.Application.Current.MainWindow = this;
     }
@@ -33,13 +35,28 @@ public partial class MainWindow : Window, IToastService
     /// </summary>
     public event EventHandler? HiddenToTray;
 
+    /// <summary>
+    /// 当用户关闭主窗口且未启用“关闭窗口后最小化到托盘”时触发，
+    /// 由应用统一完成资源清理和进程退出。
+    /// </summary>
+    public event EventHandler? ExitRequested;
+
     protected override void OnClosing(CancelEventArgs e)
     {
         if (System.Windows.Application.Current is App { IsExiting: false, IsSwitchingSession: false })
         {
             e.Cancel = true;
-            Hide();
-            HiddenToTray?.Invoke(this, EventArgs.Empty);
+
+            if (_viewModel.StartMinimizedToTrayInput)
+            {
+                Hide();
+                HiddenToTray?.Invoke(this, EventArgs.Empty);
+            }
+            else
+            {
+                ExitRequested?.Invoke(this, EventArgs.Empty);
+            }
+
             return;
         }
 

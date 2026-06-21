@@ -466,6 +466,13 @@ public partial class App : System.Windows.Application
         _ = Dispatcher.InvokeAsync(() => ExitApplication(forceProcessTermination: true));
     }
 
+    private void OnMainWindowExitRequested(object? sender, EventArgs e)
+    {
+        // OnClosing 尚未返回，延后到下一次 Dispatcher 调度再进入统一退出流程，
+        // 避免在同一次关闭回调内重入 Window.Close()。
+        _ = Dispatcher.InvokeAsync(() => ExitApplication());
+    }
+
     private void ExitApplication(bool forceProcessTermination = false)
     {
         if (IsExiting)
@@ -492,6 +499,7 @@ public partial class App : System.Windows.Application
         {
             _mainViewModel?.PersistWindowBoundsIfNeededAsync(_mainWindow).GetAwaiter().GetResult();
             _mainWindow.HiddenToTray -= OnMainWindowHiddenToTray;
+            _mainWindow.ExitRequested -= OnMainWindowExitRequested;
         }
 
         _loginView?.Close();
