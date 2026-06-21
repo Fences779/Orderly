@@ -9,38 +9,20 @@
         （运行框架 / 链接状态 / 自检说明）与既有自检命令按钮。统一「标签-控件-说明」
         三段式行；按钮禁用态由令牌化 UiSecondaryButtonStyle 既有视觉承载。
         全部引用全局令牌，零硬编码视觉字面量；仅消费 MainViewModel 既有只读字段与命令，
-        不新增、不重命名路径。Ui* 令牌与控件样式经 App.xaml 全局合并提供。
+        不新增、不重命名路径。设置卡片样式显式合并 MainWindowResources，与数据备份页保持一致。
     -->
     <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
         <!-- ===== 派生 Thickness 布局令牌（对齐 Shape.xaml 的 UiSpace 4pt 栅格） ===== -->
-        <Thickness x:Key="SettingsCardPadding">24</Thickness>
         <Thickness x:Key="SettingsCardSpacing">0,16,0,0</Thickness>
-        <Thickness x:Key="SettingsGroupTitleMargin">0,0,0,16</Thickness>
         <Thickness x:Key="SettingsRowPadding">0,12,0,12</Thickness>
         <Thickness x:Key="SettingsRowDescMargin">0,4,0,0</Thickness>
         <Thickness x:Key="SettingsControlLeftMargin">16,0,0,0</Thickness>
         <Thickness x:Key="SettingsSeparatorThickness">0,0,0,1</Thickness>
         <Thickness x:Key="SettingsZeroThickness">0</Thickness>
-
-        <!-- ===== 卡片容器 ===== -->
-        <Style x:Key="SettingsGroupCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushSoft}" />
-            <Setter Property="BorderThickness" Value="{StaticResource UiHairline}" />
-            <Setter Property="CornerRadius" Value="{StaticResource UiRadiusLg}" />
-            <Setter Property="Padding" Value="{StaticResource SettingsCardPadding}" />
-            <Setter Property="Effect" Value="{StaticResource UiElevationCard}" />
-            <Setter Property="SnapsToDevicePixels" Value="True" />
-        </Style>
-
-        <!-- ===== 分组标题 ===== -->
-        <Style x:Key="SettingsGroupTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="{DynamicResource UiFontSubtitle}" />
-            <Setter Property="FontWeight" Value="{StaticResource UiFontWeightSemiBold}" />
-            <Setter Property="FontFamily" Value="{StaticResource UiFontFamilyCjk}" />
-            <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
-            <Setter Property="Margin" Value="{StaticResource SettingsGroupTitleMargin}" />
-        </Style>
 
         <!-- ===== 行容器 ===== -->
         <Style x:Key="SettingsRowStyle" TargetType="Border">
@@ -86,6 +68,7 @@
             <Setter Property="Margin" Value="{StaticResource SettingsControlLeftMargin}" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <StackPanel>
