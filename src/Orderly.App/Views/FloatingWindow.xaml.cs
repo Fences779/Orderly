@@ -14,6 +14,7 @@ public partial class FloatingWindow : Window
     private readonly Action _openMainWindow;
     private readonly Action<string> _navigateToSection;
     private System.Windows.Point _dragStart;
+    private System.Windows.Point _windowStart;
     private bool _isDragging;
     private bool _isInitialized;
     private bool _isApplyingOpacity = true;
@@ -84,7 +85,8 @@ public partial class FloatingWindow : Window
 
     private void Root_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _dragStart = e.GetPosition(this);
+        _dragStart = GetScreenPosition(e);
+        _windowStart = new System.Windows.Point(Left, Top);
         _isDragging = false;
 
         if (e.ClickCount == 2)
@@ -94,17 +96,18 @@ public partial class FloatingWindow : Window
             return;
         }
 
-        CaptureMouse();
+        Root.CaptureMouse();
+        e.Handled = true;
     }
 
     private void Root_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || !IsMouseCaptured)
+        if (e.LeftButton != MouseButtonState.Pressed || !Root.IsMouseCaptured)
         {
             return;
         }
 
-        var current = e.GetPosition(this);
+        var current = GetScreenPosition(e);
         if (!_isDragging
             && Math.Abs(current.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance
             && Math.Abs(current.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance)
@@ -113,20 +116,16 @@ public partial class FloatingWindow : Window
         }
 
         _isDragging = true;
-        try
-        {
-            DragMove();
-        }
-        catch (InvalidOperationException)
-        {
-        }
+        Left = _windowStart.X + current.X - _dragStart.X;
+        Top = _windowStart.Y + current.Y - _dragStart.Y;
+        e.Handled = true;
     }
 
     private void Root_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (IsMouseCaptured)
+        if (Root.IsMouseCaptured)
         {
-            ReleaseMouseCapture();
+            Root.ReleaseMouseCapture();
         }
 
         if (_isDragging)
@@ -139,6 +138,13 @@ public partial class FloatingWindow : Window
 
         _openMainWindow();
         e.Handled = true;
+    }
+
+    private System.Windows.Point GetScreenPosition(System.Windows.Input.MouseEventArgs e)
+    {
+        var devicePoint = PointToScreen(e.GetPosition(this));
+        var source = PresentationSource.FromVisual(this);
+        return source?.CompositionTarget?.TransformFromDevice.Transform(devicePoint) ?? devicePoint;
     }
 
     private void Root_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
