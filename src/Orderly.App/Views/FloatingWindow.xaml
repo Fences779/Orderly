@@ -17,10 +17,10 @@
         Background="Transparent">
     <Window.Resources>
         <DropShadowEffect x:Key="FloatingBallShadow"
-                          BlurRadius="22"
-                          ShadowDepth="6"
-                          Color="#334155"
-                          Opacity="0.22" />
+                           BlurRadius="18"
+                           ShadowDepth="3"
+                           Color="#334155"
+                           Opacity="0.16" />
     </Window.Resources>
 
     <Grid x:Name="Root"
@@ -57,37 +57,73 @@
                 <MenuItem Header="退出" Click="MenuExit_Click" />
             </ContextMenu>
         </Grid.ContextMenu>
-        <Ellipse Width="64"
-                 Height="64"
-                 Fill="#66FFFFFF"
-                 Stroke="#88FFFFFF"
-                 StrokeThickness="1"
-                 Effect="{StaticResource FloatingBallShadow}" />
-        <Ellipse Width="56"
-                 Height="56">
-            <Ellipse.Fill>
-                <RadialGradientBrush Center="0.32,0.24"
-                                     GradientOrigin="0.24,0.18"
-                                     RadiusX="0.72"
-                                     RadiusY="0.72">
-                    <GradientStop Color="#F8FFFFFF" Offset="0" />
-                    <GradientStop Color="#BEE8FFF7" Offset="0.46" />
-                    <GradientStop Color="#9C10B981" Offset="1" />
-                </RadialGradientBrush>
-            </Ellipse.Fill>
+        
+        <Ellipse Width="60"
+                 Height="60"
+                 Effect="{StaticResource FloatingBallShadow}"
+                 RenderTransformOrigin="0.5,0.5">
+            <Ellipse.RenderTransform>
+                <ScaleTransform ScaleX="1.0" ScaleY="1.0" />
+            </Ellipse.RenderTransform>
+            <Ellipse.Style>
+                <Style TargetType="Ellipse">
+                    <Setter Property="Fill">
+                        <Setter.Value>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#E6FFFFFF" Offset="0" />
+                                <GradientStop Color="#C0F1F5F9" Offset="0.5" />
+                                <GradientStop Color="#99E2E8F0" Offset="1" />
+                            </LinearGradientBrush>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Stroke" Value="#25FFFFFF" />
+                    <Setter Property="StrokeThickness" Value="1.2" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsMouseOver, ElementName=Root}" Value="True">
+                            <Setter Property="Fill">
+                                <Setter.Value>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#F8FFFFFF" Offset="0" />
+                                        <GradientStop Color="#DDF0FDF4" Offset="0.5" />
+                                        <GradientStop Color="#BBE0F2E9" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="Stroke" Value="#6610B981" />
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="1.04" ScaleY="1.04" />
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Ellipse.Style>
         </Ellipse>
-        <Border Width="34"
-                Height="34"
-                CornerRadius="14"
-                Background="#F9FFFFFF"
-                BorderBrush="#55FFFFFF"
-                BorderThickness="1">
-            <Image Source="{StaticResource OrderlyBrandLogoImage}"
-                   Width="24"
-                   Height="24"
-                   Stretch="Uniform"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center" />
-        </Border>
+
+        <Image Source="{StaticResource OrderlyBrandLogoImage}"
+               Width="28"
+               Height="28"
+               Stretch="Uniform"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               RenderTransformOrigin="0.5,0.5">
+            <Image.RenderTransform>
+                <ScaleTransform ScaleX="1.0" ScaleY="1.0" />
+            </Image.RenderTransform>
+            <Image.Style>
+                <Style TargetType="Image">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsMouseOver, ElementName=Root}" Value="True">
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="1.06" ScaleY="1.06" />
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Image.Style>
+        </Image>
     </Grid>
 </Window>
