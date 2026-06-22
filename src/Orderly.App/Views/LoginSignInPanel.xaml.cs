@@ -14,7 +14,7 @@ public partial class LoginSignInPanel : System.Windows.Controls.UserControl
 {
     private const double SignInAccountLiftOffset = -8d;
     private const double RecentAccountsDropdownExpandedMaxHeight = 188d;
-    private const double SignInCredentialExpandedMaxHeight = 182d;
+    private const double SignInCredentialExpandedMaxHeight = 310d;
     private static readonly TimeSpan RecentAccountsDropdownTransitionDuration = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan SignInCredentialTransitionDuration = TimeSpan.FromMilliseconds(180);
 
@@ -132,6 +132,43 @@ public partial class LoginSignInPanel : System.Windows.Controls.UserControl
         }
 
         await _viewModel.SignInAsync(TxtSignInUsername.Text, TxtSignInPassword.Password);
+    }
+
+    private async void BtnQuickLoginPin_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            await _viewModel.SignInWithPinAsync(TxtQuickLoginPin.Password);
+            TxtQuickLoginPin.Password = string.Empty;
+        }
+    }
+
+    private void TxtQuickLoginPin_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            BtnQuickLoginPin_Click(sender, e);
+        }
+    }
+
+    private async void BtnWindowsHello_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            await _viewModel.SignInWithWindowsHelloAsync();
+        }
+    }
+
+    private void BtnUsePassword_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel?.UsePasswordLogin();
+        TxtSignInPassword.Focus();
+    }
+
+    private void BtnUseQuickLogin_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel?.UseQuickLogin();
+        TxtQuickLoginPin.Focus();
     }
 
     private async void TxtSignInPassword_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)

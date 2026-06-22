@@ -3,7 +3,7 @@
   <PropertyGroup>
     <!-- net8.0-windows + WPF/WinForms so the test project can reference the WPF Orderly.App
          project and exercise the per-page ViewModels (UI smoke tests, task 19.4). -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

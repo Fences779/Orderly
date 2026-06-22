@@ -57,7 +57,8 @@ internal static class LocalAccountMetadataSecurity
         var expected = ComputeMac(account);
         try
         {
-            if (!CryptographicOperations.FixedTimeEquals(expected, account.MetadataMac))
+            if (!CryptographicOperations.FixedTimeEquals(expected, account.MetadataMac)
+                && !VerifyLegacyMac(account))
             {
                 throw new InvalidOperationException("账号安全元数据完整性校验失败。");
             }
@@ -68,7 +69,31 @@ internal static class LocalAccountMetadataSecurity
         }
     }
 
-    private static byte[] BuildCanonicalPayload(LocalAccount account)
+    private static bool VerifyLegacyMac(LocalAccount account)
+    {
+        var localSecret = LocalCredentialSecretStore.GetOrCreateSecret();
+        try
+        {
+            using var hmac = new HMACSHA256(localSecret);
+            var payload = BuildCanonicalPayload(account, includeQuickLogin: false);
+            var legacy = hmac.ComputeHash(payload);
+            try
+            {
+                return CryptographicOperations.FixedTimeEquals(legacy, account.MetadataMac);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(payload);
+                CryptographicOperations.ZeroMemory(legacy);
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(localSecret);
+        }
+    }
+
+    private static byte[] BuildCanonicalPayload(LocalAccount account, bool includeQuickLogin = true)
     {
         using var stream = new MemoryStream();
 
@@ -100,6 +125,10 @@ internal static class LocalAccountMetadataSecurity
         WriteString(stream, account.DatabasePath);
         WriteInt32(stream, (int)account.Role);
         WriteBool(stream, account.IsEnabled);
+        if (includeQuickLogin)
+        {
+            WriteBool(stream, account.QuickLoginEnabled);
+        }
         WriteString(stream, account.CreatedAt.ToString("O"));
         WriteString(stream, account.UpdatedAt.ToString("O"));
         WriteString(stream, account.LastLoginAt?.ToString("O") ?? string.Empty);

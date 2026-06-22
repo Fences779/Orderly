@@ -67,6 +67,8 @@ public partial class App
 
         _localAuthService = new LocalAuthService(accountRepository, legacyMigrationService, _sessionContextService, credentialAttemptTracker, _securityAuditService);
         _localAccountManagementService = new LocalAccountManagementService(accountRepository, _sessionContextService, credentialAttemptTracker, _securityAuditService);
+        _quickLoginService = new QuickLoginService(accountRepository, _sessionContextService, _localAuthService, _securityAuditService);
+        _windowsHelloService = new Orderly.App.Services.WindowsHelloService();
 
         _sessionLockService.LockStateChanged += OnSessionLockStateChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;

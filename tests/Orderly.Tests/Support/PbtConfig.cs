@@ -29,6 +29,10 @@ public static class PbtConfig
     [ModuleInitializer]
     public static void EnsureMinimumIterations()
     {
+        // 大量 SQLite 属性测试会在清理临时库时调用全局 ClearAllPools；CsCheck 多线程采样会
+        // 释放同一进程内其他样本正在使用的连接，因此数据库属性测试必须串行采样。
+        Check.Threads = 1;
+
         if (Check.Iter < MinIterations)
         {
             Check.Iter = MinIterations;

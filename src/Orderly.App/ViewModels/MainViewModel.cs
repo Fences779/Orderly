@@ -115,7 +115,8 @@ public partial class MainViewModel : ObservableObject
         ISettingsSearchIndex? settingsSearchIndex = null,
         ICredentialChangeSessionCoordinator? credentialChangeSessionCoordinator = null,
         IEmergencyEnableService? emergencyEnableService = null,
-        ICommerceOrderRepository? commerceOrderRepository = null)
+        ICommerceOrderRepository? commerceOrderRepository = null,
+        IQuickLoginService? quickLoginService = null)
         : this(
             customerRepository,
             orderRepository,
@@ -150,7 +151,8 @@ public partial class MainViewModel : ObservableObject
             settingsSearchIndex,
             credentialChangeSessionCoordinator,
             emergencyEnableService,
-            commerceOrderRepository)
+            commerceOrderRepository,
+            quickLoginService)
     {
     }
 
@@ -188,7 +190,8 @@ public partial class MainViewModel : ObservableObject
         ISettingsSearchIndex? settingsSearchIndex = null,
         ICredentialChangeSessionCoordinator? credentialChangeSessionCoordinator = null,
         IEmergencyEnableService? emergencyEnableService = null,
-        ICommerceOrderRepository? commerceOrderRepository = null)
+        ICommerceOrderRepository? commerceOrderRepository = null,
+        IQuickLoginService? quickLoginService = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -245,6 +248,7 @@ public partial class MainViewModel : ObservableObject
             activityLogService: activityLogService,
             clipboardService: clipboardService,
             sessionContextService: sessionContextService,
+            quickLoginService: quickLoginService,
             databasePath: databasePath);
 
         // 机密页面 PIN 门禁协调器（任务 19.1 / BC-12 / 设计 §9.8）：集成接线（任务 21.1）注入真实

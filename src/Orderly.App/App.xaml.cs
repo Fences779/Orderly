@@ -57,6 +57,8 @@ public partial class App : System.Windows.Application
     private SqliteConnectionFactory? _connectionFactory;
     private LauncherConnectionFactory? _launcherConnectionFactory;
     private ILocalAuthService? _localAuthService;
+    private IQuickLoginService? _quickLoginService;
+    private IWindowsHelloService? _windowsHelloService;
     private ILocalAccountManagementService? _localAccountManagementService;
     private ISessionContextService? _sessionContextService;
     private ISessionLockService? _sessionLockService;
@@ -292,7 +294,9 @@ public partial class App : System.Windows.Application
     {
         var localAuthService = _localAuthService ?? throw new InvalidOperationException("Local auth service is not initialized.");
         var localAccountManagementService = _localAccountManagementService ?? throw new InvalidOperationException("Local account management service is not initialized.");
-        var loginViewModel = new LoginViewModel(localAuthService, localAccountManagementService);
+        var quickLoginService = _quickLoginService ?? throw new InvalidOperationException("Quick login service is not initialized.");
+        var windowsHelloService = _windowsHelloService ?? throw new InvalidOperationException("Windows Hello service is not initialized.");
+        var loginViewModel = new LoginViewModel(localAuthService, localAccountManagementService, quickLoginService, windowsHelloService);
         _loginView = new LoginView(loginViewModel);
 
         loginViewModel.LoginSucceeded += session => _ = CompleteLoginAsync(session);

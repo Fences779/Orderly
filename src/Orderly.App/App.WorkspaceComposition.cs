@@ -270,7 +270,8 @@ public partial class App
             settingsSearchIndex,
             credentialChangeSessionCoordinator,
             emergencyEnableService,
-            commerceOrderRepository);
+            commerceOrderRepository,
+            _quickLoginService);
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
 

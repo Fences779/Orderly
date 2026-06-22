@@ -214,6 +214,7 @@ public sealed partial class LocalBackupService
                 DatabasePath,
                 Role,
                 IsEnabled,
+                QuickLoginEnabled,
                 CreatedAt,
                 UpdatedAt,
                 LastLoginAt
@@ -258,9 +259,10 @@ public sealed partial class LocalBackupService
                 DatabasePath = reader.GetString(22),
                 Role = reader.GetInt32(23),
                 IsEnabled = reader.GetInt32(24) == 1,
-                CreatedAt = reader.GetString(25),
-                UpdatedAt = reader.GetString(26),
-                LastLoginAt = reader.IsDBNull(27) ? null : reader.GetString(27)
+                QuickLoginEnabled = reader.GetInt32(25) == 1,
+                CreatedAt = reader.GetString(26),
+                UpdatedAt = reader.GetString(27),
+                LastLoginAt = reader.IsDBNull(28) ? null : reader.GetString(28)
             }
         };
 

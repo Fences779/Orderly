@@ -13,6 +13,7 @@ public partial class LoginViewModel
             && !string.Equals(ConfirmedSignInAccount.Username, normalizedUsername, StringComparison.OrdinalIgnoreCase))
         {
             ConfirmedSignInAccount = null;
+            ResetQuickLoginState();
         }
 
         ApplySignInAccountFilter(normalizedUsername);
@@ -44,6 +45,7 @@ public partial class LoginViewModel
 
         ConfirmedSignInAccount = account;
         ReplaceFilteredSignInAccounts([]);
+        _ = RefreshQuickLoginStateAsync();
         return true;
     }
 
@@ -90,6 +92,7 @@ public partial class LoginViewModel
     {
         SignInAccountErrorMessage = string.Empty;
         ConfirmedSignInAccount = null;
+        ResetQuickLoginState();
         ApplySignInAccountFilter(string.Empty);
     }
 }

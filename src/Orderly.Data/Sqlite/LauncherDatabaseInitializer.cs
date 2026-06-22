@@ -55,6 +55,7 @@ public sealed class LauncherDatabaseInitializer
                 DatabasePath TEXT NOT NULL,
                 Role INTEGER NOT NULL,
                 IsEnabled INTEGER NOT NULL DEFAULT 1,
+                QuickLoginEnabled INTEGER NOT NULL DEFAULT 0,
                 CreatedAt TEXT NOT NULL,
                 UpdatedAt TEXT NOT NULL,
                 LastLoginAt TEXT NULL,
@@ -89,6 +90,7 @@ public sealed class LauncherDatabaseInitializer
         await EnsureColumnAsync(connection, "LocalAccounts", "AdminDataKeyNonce", "BLOB NULL", cancellationToken);
         await EnsureColumnAsync(connection, "LocalAccounts", "AdminDataKeyTag", "BLOB NULL", cancellationToken);
         await EnsureColumnAsync(connection, "LocalAccounts", "MetadataMac", "BLOB NULL", cancellationToken);
+        await EnsureColumnAsync(connection, "LocalAccounts", "QuickLoginEnabled", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
     }
 
     private static async Task ExecuteAsync(SqliteConnection connection, string commandText, CancellationToken cancellationToken)

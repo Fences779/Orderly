@@ -88,12 +88,14 @@ git status --short
 
 ## 文件状态
 
+- `src/Orderly.Data/Services/QuickLoginService.cs`、`src/Orderly.App/Services/WindowsHelloService.cs`、`src/Orderly.App/ViewModels/LoginViewModel*.cs`、`src/Orderly.App/Views/LoginSignInPanel.xaml*`、`src/Orderly.App/Views/Sections/SettingsTabDataSecurity.xaml`（新增/已修改）：新增“本次开机允许快速登录（PIN / Windows Hello）”，使用 Windows 当前用户加密且绑定系统启动标识的临时票据恢复账号数据密钥；设置页已开启时登录页隐藏重复选择框，并始终保留主密码登录入口。
+- `tests/Orderly.Tests/AssemblyInfo.cs`、`tests/Orderly.Tests/Support/PbtConfig.cs`（新增/已修改）：同时关闭 xUnit 测试类并行和 CsCheck 样本并行，保留每项至少 100 次属性覆盖，避免 SQLite 测试调用全局 `ClearAllPools()` 时相互释放连接造成随机假失败。
 - `start-qa.bat` (新增)：提供以管理员（Owner）角色免登录直接启动应用的开发/QA模式脚本。
 - `dev-watch-qa.bat` (新增)：提供具备热更新（dotnet watch）能力的管理员免密登录启动脚本。
 - `AGENTS.md` (已修改)：在验收工作流中强制加入运行 UIA 自动点击测试进行管理员登录后实战验收的要求；追加关于防范 WPF 项目在 `dotnet watch` 模式下因临时文件监视导致挂起（pause）的开发规约。
 - `tools/qa/qa-common.ps1` (已修改)：修改 `Assert-NoRunningOrderlyProcess`，增加进程缓冲等待和强杀兜底机制，解决测试时的竞态条件。
 - `tools/qa/run-p1-write-smoke.ps1` (已修改)：修复在 SQLCipher 加密库下直连报错的 bug，改用 `New-QaConnectionFactory` 以便带密码连接数据库。
-- `tools/qa/run-uia-smoke.ps1` (已修改)：为 `Save-WindowScreenshot` 里的 `CopyFromScreen` 增加 try-catch，避免在无 GUI 交互后台会话中运行时因截图失败而中断测试；同时将寻找 Tab 的超时等待时间延长至 15 秒以降低后台启动竞态失败率。
+- `tools/qa/run-uia-smoke.ps1` (已修改)：为 `Save-WindowScreenshot` 里的 `CopyFromScreen` 增加 try-catch，避免在无 GUI 交互后台会话中运行时因截图失败而中断测试；寻找 Tab 的超时等待时间延长至 15 秒，并精确选择“Orderly 商家工作台”，避免误将悬浮入口球识别为主窗口。
 - `src/Orderly.App/ViewModels/SensitivePageGuardViewModel.cs` (已修改)：为 QA 模式的伪造内存账号放行敏感财务页面的 PIN 码解锁，以支持 UIA 冒烟与本地自动免密调试。
 - `src/Orderly.App/Views/Sections/SettingsView.xaml` (已修改)：将右侧承载内容容器由 `Border` 替换为 `ContentControl`，使其能被 UIA 树识别以公开 `Pane_SettingsContent` 标志，通过冒烟测试校验。
 - `src/Orderly.App/Helpers/FontSizeHelper.cs` (新增)：全局字号缩放管理器，提供内存资源字典覆盖与热更新机制。

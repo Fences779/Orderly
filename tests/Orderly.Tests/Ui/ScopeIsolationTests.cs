@@ -130,6 +130,29 @@ public sealed class ScopeIsolationTests
         "tools/qa/run-p1-write-smoke.ps1",
         "tools/qa/run-uia-smoke.ps1",
         "src/Orderly.App/ViewModels/SensitivePageGuardViewModel.cs",
+        // 本次开机快速登录功能线：用户明确授权的跨层登录功能，不属于 commerce-settings-ui-rebuild。
+        "src/Orderly.App/App.Composition.cs",
+        "src/Orderly.App/App.xaml.cs",
+        "src/Orderly.App/Orderly.App.csproj",
+        "src/Orderly.App/Services/WindowsHelloService.cs",
+        "src/Orderly.App/ViewModels/LoginViewModel.SignInAccounts.cs",
+        "src/Orderly.App/ViewModels/LoginViewModel.cs",
+        "src/Orderly.App/ViewModels/MainViewModel.Loading.cs",
+        "src/Orderly.App/ViewModels/MainViewModel.cs",
+        "src/Orderly.App/Views/LoginSignInPanel.xaml",
+        "src/Orderly.App/Views/LoginSignInPanel.xaml.cs",
+        "src/Orderly.Core/Models/LocalAccount.cs",
+        "src/Orderly.Core/Models/LocalAccountSummary.cs",
+        "src/Orderly.Core/Models/QuickLoginStatus.cs",
+        "src/Orderly.Core/Services/IQuickLoginService.cs",
+        "src/Orderly.Core/Services/IWindowsHelloService.cs",
+        "src/Orderly.Data/Repositories/LocalAccountRepository.cs",
+        "src/Orderly.Data/Services/LocalAccountMetadataSecurity.cs",
+        "src/Orderly.Data/Services/LocalBackupService.Export.cs",
+        "src/Orderly.Data/Services/LocalBackupService.Restore.Launcher.cs",
+        "src/Orderly.Data/Services/LocalBackupService.Shared.Types.cs",
+        "src/Orderly.Data/Services/QuickLoginService.cs",
+        "src/Orderly.Data/Sqlite/LauncherDatabaseInitializer.cs",
     };
 
     // ==================== 1. ViewModels 一律不得出现（需求 10.1） ====================
@@ -167,6 +190,7 @@ public sealed class ScopeIsolationTests
     {
         var offenders = GetChangedFiles()
             .Where(IsOutOfScopeView)
+            .Where(p => !KnownUnrelatedExemptions.Contains(p))
             .ToList();
 
         Assert.True(offenders.Count == 0,

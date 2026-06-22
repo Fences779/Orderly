@@ -16,6 +16,7 @@ public partial class MainViewModel
             Preferences = await _settingRepository.GetPreferencesAsync(cancellationToken);
             ApplySettingsInputsFromPreferences(Preferences);
             Settings.ApplySettingsInputsFromPreferences(Preferences);
+            await Settings.LoadQuickLoginSettingAsync(cancellationToken);
             ApplyStartupSectionPreferenceIfNeeded();
             var currentSession = _sessionContextService?.Current;
             CurrentAccountDisplayName = currentSession?.DisplayName ?? string.Empty;

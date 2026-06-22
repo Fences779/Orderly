@@ -109,6 +109,7 @@ public sealed partial class LocalBackupService
                 DatabasePath,
                 Role,
                 IsEnabled,
+                QuickLoginEnabled,
                 CreatedAt,
                 UpdatedAt,
                 LastLoginAt,
@@ -143,6 +144,7 @@ public sealed partial class LocalBackupService
                 $databasePath,
                 $role,
                 $isEnabled,
+                $quickLoginEnabled,
                 $createdAt,
                 $updatedAt,
                 $lastLoginAt,
@@ -176,6 +178,7 @@ public sealed partial class LocalBackupService
                 DatabasePath = excluded.DatabasePath,
                 Role = excluded.Role,
                 IsEnabled = excluded.IsEnabled,
+                QuickLoginEnabled = excluded.QuickLoginEnabled,
                 CreatedAt = excluded.CreatedAt,
                 UpdatedAt = excluded.UpdatedAt,
                 LastLoginAt = excluded.LastLoginAt,
@@ -232,6 +235,7 @@ public sealed partial class LocalBackupService
                 DatabasePath = restoredDatabasePath,
                 Role = (LocalAccountRole)row.Role,
                 IsEnabled = row.IsEnabled,
+                QuickLoginEnabled = row.QuickLoginEnabled,
                 CreatedAt = DateTime.Parse(row.CreatedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
                 UpdatedAt = DateTime.Parse(row.UpdatedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
                 LastLoginAt = string.IsNullOrWhiteSpace(row.LastLoginAt)
@@ -281,6 +285,7 @@ public sealed partial class LocalBackupService
             command.Parameters.AddWithValue("$databasePath", restoredDatabasePath);
             command.Parameters.AddWithValue("$role", row.Role);
             command.Parameters.AddWithValue("$isEnabled", row.IsEnabled ? 1 : 0);
+            command.Parameters.AddWithValue("$quickLoginEnabled", row.QuickLoginEnabled ? 1 : 0);
             command.Parameters.AddWithValue("$createdAt", row.CreatedAt);
             command.Parameters.AddWithValue("$updatedAt", row.UpdatedAt);
             command.Parameters.AddWithValue("$lastLoginAt", string.IsNullOrWhiteSpace(row.LastLoginAt) ? DBNull.Value : row.LastLoginAt);

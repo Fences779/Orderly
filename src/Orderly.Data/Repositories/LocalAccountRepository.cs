@@ -117,6 +117,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 DatabasePath,
                 Role,
                 IsEnabled,
+                QuickLoginEnabled,
                 CreatedAt,
                 UpdatedAt,
                 LastLoginAt,
@@ -151,6 +152,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 $databasePath,
                 $role,
                 $isEnabled,
+                $quickLoginEnabled,
                 $createdAt,
                 $updatedAt,
                 $lastLoginAt,
@@ -201,6 +203,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
                 DatabasePath = $databasePath,
                 Role = $role,
                 IsEnabled = $isEnabled,
+                QuickLoginEnabled = $quickLoginEnabled,
                 CreatedAt = $createdAt,
                 UpdatedAt = $updatedAt,
                 LastLoginAt = $lastLoginAt,
@@ -256,6 +259,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
             DatabasePath,
             Role,
             IsEnabled,
+            QuickLoginEnabled,
             CreatedAt,
             UpdatedAt,
             LastLoginAt,
@@ -295,10 +299,11 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
             DatabasePath = reader.GetString(25),
             Role = (LocalAccountRole)reader.GetInt32(26),
             IsEnabled = reader.GetInt32(27) == 1,
-            CreatedAt = DateTime.Parse(reader.GetString(28), null, DateTimeStyles.RoundtripKind),
-            UpdatedAt = DateTime.Parse(reader.GetString(29), null, DateTimeStyles.RoundtripKind),
-            LastLoginAt = reader.IsDBNull(30) ? null : DateTime.Parse(reader.GetString(30), null, DateTimeStyles.RoundtripKind),
-            MetadataMac = reader.IsDBNull(31) ? [] : (byte[])reader[31]
+            QuickLoginEnabled = reader.GetInt32(28) == 1,
+            CreatedAt = DateTime.Parse(reader.GetString(29), null, DateTimeStyles.RoundtripKind),
+            UpdatedAt = DateTime.Parse(reader.GetString(30), null, DateTimeStyles.RoundtripKind),
+            LastLoginAt = reader.IsDBNull(31) ? null : DateTime.Parse(reader.GetString(31), null, DateTimeStyles.RoundtripKind),
+            MetadataMac = reader.IsDBNull(32) ? [] : (byte[])reader[32]
         };
 
         LocalAccountMetadataSecurity.VerifyOrThrow(account);
@@ -351,6 +356,7 @@ public sealed class LocalAccountRepository : ILocalAccountRepository
         command.Parameters.AddWithValue("$databasePath", databasePath);
         command.Parameters.AddWithValue("$role", (int)account.Role);
         command.Parameters.AddWithValue("$isEnabled", account.IsEnabled ? 1 : 0);
+        command.Parameters.AddWithValue("$quickLoginEnabled", account.QuickLoginEnabled ? 1 : 0);
         command.Parameters.AddWithValue("$createdAt", account.CreatedAt.ToString("O"));
         command.Parameters.AddWithValue("$updatedAt", account.UpdatedAt.ToString("O"));
         command.Parameters.AddWithValue("$lastLoginAt", ToDbDate(account.LastLoginAt));

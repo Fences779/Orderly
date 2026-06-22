@@ -37,6 +37,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IActivityLogService? _activityLogService;
     private readonly IClipboardService? _clipboardService;
     private readonly ISessionContextService? _sessionContextService;
+    private readonly IQuickLoginService? _quickLoginService;
 
     // 应用 *Input 时抑制由属性变更触发的自动保存（自动保存引擎在任务 13.2 迁入；此处保留标志位以保持映射语义一致）。
     private bool _isApplyingSettingsInputs;
@@ -61,6 +62,7 @@ public partial class SettingsViewModel : ObservableObject
         IActivityLogService? activityLogService = null,
         IClipboardService? clipboardService = null,
         ISessionContextService? sessionContextService = null,
+        IQuickLoginService? quickLoginService = null,
         string? databasePath = null)
     {
         _settingRepository = settingRepository;
@@ -69,6 +71,7 @@ public partial class SettingsViewModel : ObservableObject
         _activityLogService = activityLogService;
         _clipboardService = clipboardService;
         _sessionContextService = sessionContextService;
+        _quickLoginService = quickLoginService;
         _databasePath = databasePath ?? string.Empty;
     }
 
@@ -176,6 +179,70 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool debugModeEnabledInput;
+
+    [ObservableProperty]
+    private bool quickLoginEnabledInput;
+
+    private bool _isApplyingQuickLoginInput;
+    private readonly SemaphoreSlim _quickLoginSaveGate = new(1, 1);
+
+    public async Task LoadQuickLoginSettingAsync(CancellationToken cancellationToken = default)
+    {
+        var username = _sessionContextService?.Current?.Username;
+        if (_quickLoginService is null || string.IsNullOrWhiteSpace(username))
+        {
+            return;
+        }
+
+        var status = await _quickLoginService.GetStatusAsync(username, cancellationToken);
+        _isApplyingQuickLoginInput = true;
+        try
+        {
+            QuickLoginEnabledInput = status.IsEnabled;
+        }
+        finally
+        {
+            _isApplyingQuickLoginInput = false;
+        }
+    }
+
+    partial void OnQuickLoginEnabledInputChanged(bool value)
+    {
+        if (!_isApplyingQuickLoginInput && _quickLoginService is not null)
+        {
+            _ = SaveQuickLoginSettingAsync(value);
+        }
+    }
+
+    private async Task SaveQuickLoginSettingAsync(bool value)
+    {
+        await _quickLoginSaveGate.WaitAsync();
+        try
+        {
+            await _quickLoginService!.SetEnabledForCurrentAccountAsync(value);
+            SettingsStatusMessage = value
+                ? "已开启本次开机快速登录。"
+                : "已关闭快速登录并清除本次开机票据。";
+        }
+        catch (Exception ex)
+        {
+            _isApplyingQuickLoginInput = true;
+            try
+            {
+                QuickLoginEnabledInput = !value;
+            }
+            finally
+            {
+                _isApplyingQuickLoginInput = false;
+            }
+
+            SettingsStatusMessage = $"快速登录设置失败：{ex.Message}";
+        }
+        finally
+        {
+            _quickLoginSaveGate.Release();
+        }
+    }
 
     // ── P0 派生只读状态 ──
 

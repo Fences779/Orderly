@@ -23,6 +23,23 @@
                                 <StackPanel>
                                     <TextBlock Text="数据安全与隐私" Style="{StaticResource SettingsGroupTitleStyle}" />
 
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="本次开机允许快速登录（PIN / Windows Hello）" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="使用主密码登录一次后，本次开机内重新启动软件可快速验证" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1"
+                                                      Style="{StaticResource SettingsRowCheckBoxStyle}"
+                                                      IsChecked="{Binding QuickLoginEnabledInput}"
+                                                      AutomationProperties.AutomationId="Chk_QuickLoginEnabled" />
+                                        </Grid>
+                                    </Border>
+
                                     <!-- 敏感电话默认遮蔽 -->
                                     <Border Style="{StaticResource SettingsRowItemBorder}">
                                         <Grid>

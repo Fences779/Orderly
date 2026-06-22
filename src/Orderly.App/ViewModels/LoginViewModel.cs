@@ -10,13 +10,21 @@ public partial class LoginViewModel : ObservableObject
 {
     private readonly ILocalAuthService _localAuthService;
     private readonly ILocalAccountManagementService _localAccountManagementService;
+    private readonly IQuickLoginService _quickLoginService;
+    private readonly IWindowsHelloService _windowsHelloService;
     private readonly List<LocalAccountSummary> _availableSignInAccounts = [];
     private LocalSessionContext? _pendingSession;
 
-    public LoginViewModel(ILocalAuthService localAuthService, ILocalAccountManagementService localAccountManagementService)
+    public LoginViewModel(
+        ILocalAuthService localAuthService,
+        ILocalAccountManagementService localAccountManagementService,
+        IQuickLoginService quickLoginService,
+        IWindowsHelloService windowsHelloService)
     {
         _localAuthService = localAuthService;
         _localAccountManagementService = localAccountManagementService;
+        _quickLoginService = quickLoginService;
+        _windowsHelloService = windowsHelloService;
     }
 
     public event Action<LocalSessionContext>? LoginSucceeded;
@@ -110,7 +118,25 @@ public partial class LoginViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSignInAccountConfirmed))]
     [NotifyPropertyChangedFor(nameof(IsSignInPasswordStepVisible))]
+    [NotifyPropertyChangedFor(nameof(ShouldShowQuickLoginOptIn))]
     private LocalAccountSummary? confirmedSignInAccount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShouldShowQuickLoginOptIn))]
+    private bool quickLoginPreferenceEnabled;
+
+    [ObservableProperty]
+    private bool quickLoginAvailableThisBoot;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShouldShowQuickLoginOptIn))]
+    private bool enableQuickLoginThisBoot;
+
+    [ObservableProperty]
+    private bool isQuickLoginMode;
+
+    [ObservableProperty]
+    private bool isWindowsHelloAvailable;
 
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool HasNoticeMessage => !string.IsNullOrWhiteSpace(NoticeMessage);
@@ -120,6 +146,7 @@ public partial class LoginViewModel : ObservableObject
     public bool HasSignInAccountErrorMessage => !string.IsNullOrWhiteSpace(SignInAccountErrorMessage);
     public bool IsSignInAccountConfirmed => ConfirmedSignInAccount is not null;
     public bool IsSignInPasswordStepVisible => IsSignInAccountConfirmed;
+    public bool ShouldShowQuickLoginOptIn => IsSignInAccountConfirmed && !QuickLoginPreferenceEnabled;
     public bool HasRecoveryOwnerSection => IsRecoveryOwnerAccountDetected;
     public bool HasRecoveryMemberSection => IsRecoveryMemberAccountDetected;
     public bool CanEditRecoveryKeyInput => IsRecoveryOwnerAccountDetected;
@@ -163,6 +190,7 @@ public partial class LoginViewModel : ObservableObject
         AccountManagementStatus = string.Empty;
         SignInAccountErrorMessage = string.Empty;
         ConfirmedSignInAccount = null;
+        ResetQuickLoginState();
         AccountDirectory.Clear();
         FilteredSignInAccounts.Clear();
         _availableSignInAccounts.Clear();
@@ -223,6 +251,18 @@ public partial class LoginViewModel : ObservableObject
                 return;
             }
 
+            try
+            {
+                await _quickLoginService.CaptureCurrentPasswordSessionAsync(
+                    ConfirmedSignInAccount.Username,
+                    QuickLoginPreferenceEnabled || EnableQuickLoginThisBoot,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                NoticeMessage = $"已使用主密码登录，但快速登录未能启用：{ex.Message}";
+            }
+
             LoginSucceeded?.Invoke(result.Session);
         }
         catch (Exception ex)
@@ -233,6 +273,131 @@ public partial class LoginViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    public async Task SignInWithPinAsync(string pin, CancellationToken cancellationToken = default)
+    {
+        if (ConfirmedSignInAccount is null || string.IsNullOrWhiteSpace(pin))
+        {
+            ErrorMessage = "请输入 6 位 PIN。";
+            return;
+        }
+
+        await CompleteQuickSignInAsync(
+            () => _quickLoginService.SignInWithPinAsync(ConfirmedSignInAccount.Username, pin, cancellationToken));
+    }
+
+    public async Task SignInWithWindowsHelloAsync(CancellationToken cancellationToken = default)
+    {
+        if (ConfirmedSignInAccount is null)
+        {
+            ErrorMessage = "请先确认账号。";
+            return;
+        }
+
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+        try
+        {
+            if (!await _windowsHelloService.VerifyAsync($"验证后登录 Orderly 账号 {ConfirmedSignInAccount.Username}"))
+            {
+                ErrorMessage = "Windows Hello 验证未通过或已取消。";
+                return;
+            }
+
+            var result = await _quickLoginService.SignInWithWindowsHelloAsync(
+                ConfirmedSignInAccount.Username,
+                cancellationToken);
+            PublishQuickLoginResult(result);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public void UsePasswordLogin() => IsQuickLoginMode = false;
+
+    public void UseQuickLogin()
+    {
+        if (QuickLoginAvailableThisBoot)
+        {
+            IsQuickLoginMode = true;
+        }
+    }
+
+    private async Task CompleteQuickSignInAsync(Func<Task<LocalSignInResult>> signIn)
+    {
+        IsBusy = true;
+        ErrorMessage = string.Empty;
+        try
+        {
+            PublishQuickLoginResult(await signIn());
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private void PublishQuickLoginResult(LocalSignInResult result)
+    {
+        if (!result.Succeeded || result.Session is null)
+        {
+            ErrorMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                ? "快速登录失败，请改用主密码。"
+                : result.ErrorMessage;
+            return;
+        }
+
+        LoginSucceeded?.Invoke(result.Session);
+    }
+
+    internal async Task RefreshQuickLoginStateAsync(CancellationToken cancellationToken = default)
+    {
+        if (ConfirmedSignInAccount is null)
+        {
+            ResetQuickLoginState();
+            return;
+        }
+
+        var username = ConfirmedSignInAccount.Username;
+        try
+        {
+            var status = await _quickLoginService.GetStatusAsync(username, cancellationToken);
+            if (ConfirmedSignInAccount is null
+                || !string.Equals(ConfirmedSignInAccount.Username, username, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            QuickLoginPreferenceEnabled = status.IsEnabled;
+            QuickLoginAvailableThisBoot = status.IsAvailableThisBoot;
+            IsWindowsHelloAvailable = status.IsAvailableThisBoot && await _windowsHelloService.IsAvailableAsync();
+            IsQuickLoginMode = status.IsAvailableThisBoot;
+            EnableQuickLoginThisBoot = false;
+        }
+        catch
+        {
+            ResetQuickLoginState();
+        }
+    }
+
+    private void ResetQuickLoginState()
+    {
+        QuickLoginPreferenceEnabled = false;
+        QuickLoginAvailableThisBoot = false;
+        EnableQuickLoginThisBoot = false;
+        IsQuickLoginMode = false;
+        IsWindowsHelloAvailable = false;
     }
 
     public async Task CreateFirstOwnerAsync(

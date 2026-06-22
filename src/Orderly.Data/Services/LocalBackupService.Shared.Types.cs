@@ -91,6 +91,9 @@ public sealed partial class LocalBackupService
         [JsonPropertyName("isEnabled")]
         public bool IsEnabled { get; set; }
 
+        [JsonPropertyName("quickLoginEnabled")]
+        public bool QuickLoginEnabled { get; set; }
+
         [JsonPropertyName("createdAt")]
         public string CreatedAt { get; set; } = string.Empty;
 

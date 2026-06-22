@@ -161,13 +161,11 @@ function Wait-MainWindow {
             for ($i = 0; $i -lt $windows.Count; $i++) {
                 $win = $windows.Item($i)
                 $name = $win.Current.Name
-                # 寻找真正的 MainWindow（Name 通常为 'Orderly' 或包含 'Orderly'）
-                if ($name -like "*Orderly*") {
+                # 浮窗标题同样包含 Orderly；必须精确选择商家工作台，避免把悬浮入口球当成主窗口。
+                if ($name -eq 'Orderly 商家工作台') {
                     return $win
                 }
             }
-            # 如果没找到带 'Orderly' 标题的，但存在窗口，兜底返回第一个
-            return $windows.Item(0)
         }
 
         Start-Sleep -Milliseconds 300
@@ -809,7 +807,7 @@ try {
     $process = Start-Process -FilePath $exePath -ArgumentList @('--qa-mode') -PassThru
     Add-LogLine "等待主窗口就绪（超时 ${WindowTimeoutSeconds}s）"
     $window = Wait-MainWindow -Process $process -TimeoutSeconds $WindowTimeoutSeconds
-    $windowHandle = [IntPtr]$process.MainWindowHandle
+    $windowHandle = [IntPtr]$window.Current.NativeWindowHandle
     Wait-AutomationElementReady -Element $window -TimeoutSeconds 10 -RequireEnabled -RequireVisible
     [QaNativeMethods]::ShowWindow($windowHandle, 9) | Out-Null
     [QaNativeMethods]::SetForegroundWindow($windowHandle) | Out-Null

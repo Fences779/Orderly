@@ -30,6 +30,7 @@ public sealed class LocalAccount
     public string DatabasePath { get; set; } = string.Empty;
     public LocalAccountRole Role { get; set; } = LocalAccountRole.Member;
     public bool IsEnabled { get; set; } = true;
+    public bool QuickLoginEnabled { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
     public DateTime? LastLoginAt { get; set; }
