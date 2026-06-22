@@ -5,14 +5,16 @@ namespace Orderly.App.Views;
 
 public partial class PinUnlockView : Window
 {
-    public PinUnlockView(string displayName, string username)
+    public PinUnlockView(string displayName, string username, bool isWindowsHelloAvailable = false)
     {
         InitializeComponent();
         TxtAccount.Text = $"账号：{displayName}（{username}）";
+        BtnWindowsHello.Visibility = isWindowsHelloAvailable ? Visibility.Visible : Visibility.Collapsed;
         Loaded += (_, _) => TxtPin.Focus();
     }
 
     public string EnteredPin { get; private set; } = string.Empty;
+    public PinUnlockMethod UnlockMethod { get; private set; } = PinUnlockMethod.Pin;
 
     private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -30,6 +32,13 @@ public partial class PinUnlockView : Window
     private void BtnLogout_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
+        Close();
+    }
+
+    private void BtnWindowsHello_Click(object sender, RoutedEventArgs e)
+    {
+        UnlockMethod = PinUnlockMethod.WindowsHello;
+        DialogResult = true;
         Close();
     }
 
@@ -52,7 +61,14 @@ public partial class PinUnlockView : Window
         }
 
         EnteredPin = pin;
+        UnlockMethod = PinUnlockMethod.Pin;
         DialogResult = true;
         Close();
     }
+}
+
+public enum PinUnlockMethod
+{
+    Pin,
+    WindowsHello
 }

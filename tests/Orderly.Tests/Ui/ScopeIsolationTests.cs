@@ -132,6 +132,7 @@ public sealed class ScopeIsolationTests
         "src/Orderly.App/ViewModels/SensitivePageGuardViewModel.cs",
         // 本次开机快速登录功能线：用户明确授权的跨层登录功能，不属于 commerce-settings-ui-rebuild。
         "src/Orderly.App/App.Composition.cs",
+        "src/Orderly.App/App.SessionLock.cs",
         "src/Orderly.App/App.xaml.cs",
         "src/Orderly.App/Orderly.App.csproj",
         "src/Orderly.App/Services/WindowsHelloService.cs",
@@ -141,6 +142,8 @@ public sealed class ScopeIsolationTests
         "src/Orderly.App/ViewModels/MainViewModel.cs",
         "src/Orderly.App/Views/LoginSignInPanel.xaml",
         "src/Orderly.App/Views/LoginSignInPanel.xaml.cs",
+        "src/Orderly.App/Views/PinUnlockView.xaml",
+        "src/Orderly.App/Views/PinUnlockView.xaml.cs",
         "src/Orderly.Core/Models/LocalAccount.cs",
         "src/Orderly.Core/Models/LocalAccountSummary.cs",
         "src/Orderly.Core/Models/QuickLoginStatus.cs",

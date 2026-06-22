@@ -31,6 +31,11 @@ public sealed class QuickLoginServiceTests
             Assert.True(enabled.IsEnabled);
             Assert.True(enabled.IsAvailableThisBoot);
 
+            await service.CaptureCurrentPasswordSessionAsync(account.Username, enableQuickLogin: false);
+            var preserved = await service.GetStatusAsync(account.Username);
+            Assert.True(preserved.IsEnabled);
+            Assert.True(preserved.IsAvailableThisBoot);
+
             sessionContext.Clear();
             var result = await service.SignInWithPinAsync(account.Username, "123456");
             Assert.True(result.Succeeded);
@@ -63,6 +68,20 @@ public sealed class QuickLoginServiceTests
         Assert.Contains("Visibility=\"{Binding ShouldShowQuickLoginOptIn", login);
         Assert.Contains("本次开机允许快速登录（PIN / Windows Hello）", settings);
         Assert.Contains("IsChecked=\"{Binding QuickLoginEnabledInput}\"", settings);
+    }
+
+    [Fact]
+    public void Pin_lock_view_exposes_windows_hello_unlock_and_restores_the_suspended_session_key()
+    {
+        var root = ResolveRepositoryRoot();
+        var pinUnlockView = File.ReadAllText(Path.Combine(root, "src", "Orderly.App", "Views", "PinUnlockView.xaml"));
+        var pinUnlockCode = File.ReadAllText(Path.Combine(root, "src", "Orderly.App", "Views", "PinUnlockView.xaml.cs"));
+        var sessionLockCode = File.ReadAllText(Path.Combine(root, "src", "Orderly.App", "App.SessionLock.cs"));
+
+        Assert.Contains("使用 Windows Hello 解锁", pinUnlockView);
+        Assert.Contains("PinUnlockMethod.WindowsHello", pinUnlockCode);
+        Assert.Contains("windowsHelloService.VerifyAsync", sessionLockCode);
+        Assert.Contains("TryRestoreDataKey(session.AccountId)", sessionLockCode);
     }
 
     private static LocalAccount CreateAccount()

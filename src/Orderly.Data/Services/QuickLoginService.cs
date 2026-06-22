@@ -94,10 +94,6 @@ public sealed class QuickLoginService : IQuickLoginService
 
         if (!enableQuickLogin)
         {
-            account.QuickLoginEnabled = false;
-            account.UpdatedAt = DateTime.Now;
-            await _accounts.UpdateAsync(account, cancellationToken);
-            DeleteTicket(account.AccountId);
             return;
         }
 

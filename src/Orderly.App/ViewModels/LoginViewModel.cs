@@ -253,9 +253,14 @@ public partial class LoginViewModel : ObservableObject
 
             try
             {
+                var shouldEnableQuickLogin = EnableQuickLoginThisBoot;
+                var status = await _quickLoginService.GetStatusAsync(ConfirmedSignInAccount.Username, cancellationToken);
+                QuickLoginPreferenceEnabled = status.IsEnabled;
+                shouldEnableQuickLogin = shouldEnableQuickLogin || status.IsEnabled;
+
                 await _quickLoginService.CaptureCurrentPasswordSessionAsync(
                     ConfirmedSignInAccount.Username,
-                    QuickLoginPreferenceEnabled || EnableQuickLoginThisBoot,
+                    shouldEnableQuickLogin,
                     cancellationToken);
             }
             catch (Exception ex)

@@ -88,7 +88,7 @@ git status --short
 
 ## 文件状态
 
-- `src/Orderly.Data/Services/QuickLoginService.cs`、`src/Orderly.App/Services/WindowsHelloService.cs`、`src/Orderly.App/ViewModels/LoginViewModel*.cs`、`src/Orderly.App/Views/LoginSignInPanel.xaml*`、`src/Orderly.App/Views/Sections/SettingsTabDataSecurity.xaml`（新增/已修改）：新增“本次开机允许快速登录（PIN / Windows Hello）”，使用 Windows 当前用户加密且绑定系统启动标识的临时票据恢复账号数据密钥；设置页已开启时登录页隐藏重复选择框，并始终保留主密码登录入口。
+- `src/Orderly.Data/Services/QuickLoginService.cs`、`src/Orderly.App/Services/WindowsHelloService.cs`、`src/Orderly.App/ViewModels/LoginViewModel*.cs`、`src/Orderly.App/Views/LoginSignInPanel.xaml*`、`src/Orderly.App/Views/PinUnlockView.xaml*`、`src/Orderly.App/App.SessionLock.cs`、`src/Orderly.App/Views/Sections/SettingsTabDataSecurity.xaml`（新增/已修改）：新增“本次开机允许快速登录（PIN / Windows Hello）”，使用 Windows 当前用户加密且绑定系统启动标识的临时票据恢复账号数据密钥；设置页已开启时登录页隐藏重复选择框，并始终保留主密码登录入口；修复主密码登录竞态误关闭设置项的问题，并让 PIN 锁定页支持 Windows Hello 解锁当前会话。
 - `tests/Orderly.Tests/AssemblyInfo.cs`、`tests/Orderly.Tests/Support/PbtConfig.cs`（新增/已修改）：同时关闭 xUnit 测试类并行和 CsCheck 样本并行，保留每项至少 100 次属性覆盖，避免 SQLite 测试调用全局 `ClearAllPools()` 时相互释放连接造成随机假失败。
 - `start-qa.bat` (新增)：提供以管理员（Owner）角色免登录直接启动应用的开发/QA模式脚本。
 - `dev-watch-qa.bat` (新增)：提供具备热更新（dotnet watch）能力的管理员免密登录启动脚本。

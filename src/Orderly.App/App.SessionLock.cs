@@ -65,6 +65,7 @@ public partial class App
         }
 
         var localAuthService = _localAuthService;
+        var windowsHelloService = _windowsHelloService;
         var session = _sessionContextService?.Current;
         if (localAuthService is null || session is null)
         {
@@ -88,7 +89,9 @@ public partial class App
                     break;
                 }
 
-                var dialog = new PinUnlockView(session.DisplayName, session.Username);
+                var isWindowsHelloAvailable = windowsHelloService is not null
+                    && await windowsHelloService.IsAvailableAsync();
+                var dialog = new PinUnlockView(session.DisplayName, session.Username, isWindowsHelloAvailable);
                 if (_mainWindow is { IsVisible: true } mainWindow)
                 {
                     dialog.Owner = mainWindow;
@@ -101,6 +104,25 @@ public partial class App
                     return;
                 }
 
+                if (dialog.UnlockMethod == PinUnlockMethod.WindowsHello)
+                {
+                    if (windowsHelloService is null
+                        || !await windowsHelloService.VerifyAsync($"验证后解锁 Orderly 账号 {session.Username}"))
+                    {
+                        ShowPinUnlockMessage("Windows Hello 验证未通过或已取消。");
+                        continue;
+                    }
+
+                    if (_sessionContextService?.TryRestoreDataKey(session.AccountId) == true)
+                    {
+                        _sessionLockService?.UnlockWithPin(verified: true);
+                        break;
+                    }
+
+                    ShowPinUnlockMessage("会话密钥恢复失败，请切换账号后重新登录。");
+                    continue;
+                }
+
                 var verified = await localAuthService.VerifyPinAsync(session.AccountId, dialog.EnteredPin);
                 if (verified)
                 {
@@ -108,23 +130,7 @@ public partial class App
                     break;
                 }
 
-                if (_mainWindow is { IsVisible: true } owner)
-                {
-                    System.Windows.MessageBox.Show(
-                        owner,
-                        "PIN 错误，请重试。",
-                        "Orderly",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                }
-                else
-                {
-                    System.Windows.MessageBox.Show(
-                        "PIN 错误，请重试。",
-                        "Orderly",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-                }
+                ShowPinUnlockMessage("PIN 错误，请重试。");
             }
         }
         finally
@@ -135,6 +141,26 @@ public partial class App
                 _mainWindow.IsEnabled = true;
             }
         }
+    }
+
+    private void ShowPinUnlockMessage(string message)
+    {
+        if (_mainWindow is { IsVisible: true } owner)
+        {
+            System.Windows.MessageBox.Show(
+                owner,
+                message,
+                "Orderly",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        System.Windows.MessageBox.Show(
+            message,
+            "Orderly",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
     }
 
     private async Task LogoutToLoginAsync()
