@@ -54,6 +54,7 @@
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="隐藏悬浮球" Click="MenuHide_Click" />
+                <MenuItem Header="退出" Click="MenuExit_Click" />
             </ContextMenu>
         </Grid.ContextMenu>
         <Ellipse Width="64"

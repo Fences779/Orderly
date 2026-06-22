@@ -25,6 +25,18 @@ public sealed class WindowCloseRuntimeWiringTests
         Assert.Contains("_mainWindow.ExitRequested -= OnMainWindowExitRequested;", appSource);
     }
 
+    [Fact]
+    public void Floating_window_exit_uses_the_same_cleanup_path_as_the_tray_exit()
+    {
+        var xamlSource = LoadSource("src", "Orderly.App", "Views", "FloatingWindow.xaml");
+        var windowSource = LoadSource("src", "Orderly.App", "Views", "FloatingWindow.xaml.cs");
+        var compositionSource = LoadSource("src", "Orderly.App", "App.WorkspaceComposition.cs");
+
+        Assert.Contains("Header=\"退出\" Click=\"MenuExit_Click\"", xamlSource);
+        Assert.Contains("_exitApplication();", windowSource);
+        Assert.Contains("ExitApplicationFromTray);", compositionSource);
+    }
+
     private static string LoadSource(params string[] segments)
     {
         var path = ResolveRepositoryRoot();

@@ -13,6 +13,7 @@ public partial class FloatingWindow : Window
     private readonly IAppSettingRepository _settingRepository;
     private readonly Action _openMainWindow;
     private readonly Action<string> _navigateToSection;
+    private readonly Action _exitApplication;
     private System.Windows.Point _dragStart;
     private System.Windows.Point _windowStart;
     private bool _isDragging;
@@ -25,11 +26,13 @@ public partial class FloatingWindow : Window
         AppPreferences preferences,
         IAppSettingRepository settingRepository,
         Action openMainWindow,
-        Action<string> navigateToSection)
+        Action<string> navigateToSection,
+        Action exitApplication)
     {
         _settingRepository = settingRepository;
         _openMainWindow = openMainWindow;
         _navigateToSection = navigateToSection;
+        _exitApplication = exitApplication;
 
         InitializeComponent();
         DataContext = viewModel;
@@ -210,6 +213,16 @@ public partial class FloatingWindow : Window
         }
 
         Hide();
+    }
+
+    private void MenuExit_Click(object sender, RoutedEventArgs e)
+    {
+        if (Root.ContextMenu is not null)
+        {
+            Root.ContextMenu.IsOpen = false;
+        }
+
+        _exitApplication();
     }
 
     private void Slider_Opacity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

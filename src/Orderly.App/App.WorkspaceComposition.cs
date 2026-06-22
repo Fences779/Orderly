@@ -312,7 +312,8 @@ public partial class App
                     preferences,
                     settingRepository,
                     ShowMainWindow,
-                    NavigateFromFloatingWindow);
+                    NavigateFromFloatingWindow,
+                    ExitApplicationFromTray);
             });
 
         TryRunNonCriticalWorkspaceStartupStep(
