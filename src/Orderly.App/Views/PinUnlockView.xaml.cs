@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 
@@ -48,6 +50,11 @@ public partial class PinUnlockView : Window
         {
             SubmitUnlock();
         }
+    }
+
+    private void TxtPin_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        TxtPlaceholder.Visibility = string.IsNullOrEmpty(TxtPin.Password) ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void SubmitUnlock()
