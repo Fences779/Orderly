@@ -49,6 +49,16 @@ public partial class FloatingWindow : Window
         base.OnClosing(e);
     }
 
+    protected override void OnStateChanged(EventArgs e)
+    {
+        base.OnStateChanged(e);
+
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+    }
+
     private void ApplyInitialState(AppPreferences preferences)
     {
         _restingOpacity = Math.Clamp(preferences.FloatingBallOpacity, 0.35, 1.0);
