@@ -66,6 +66,11 @@ public sealed class QuickLoginServiceTests
 
         Assert.Contains("本次开机允许快速登录（PIN / Windows Hello）", login);
         Assert.Contains("Visibility=\"{Binding ShouldShowQuickLoginOptIn", login);
+        Assert.Contains("Windows Hello 快速登录", login);
+        Assert.Contains("Visibility=\"{Binding IsWindowsHelloQuickLoginMode", login);
+        Assert.Contains("Visibility=\"{Binding IsPinQuickLoginMode", login);
+        Assert.Contains("改用 PIN 登录", login);
+        Assert.Contains("改用主密码登录", login);
         Assert.Contains("本次开机允许快速登录（PIN / Windows Hello）", settings);
         Assert.Contains("IsChecked=\"{Binding QuickLoginEnabledInput}\"", settings);
     }

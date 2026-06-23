@@ -64,12 +64,7 @@ public partial class FloatingWindow : Window
 
     private void ApplyInitialState(AppPreferences preferences)
     {
-        _restingOpacity = Math.Clamp(preferences.FloatingBallOpacity, 0.35, 1.0);
-        Opacity = _restingOpacity;
-
-        _isApplyingOpacity = true;
-        Slider_Opacity.Value = _restingOpacity;
-        _isApplyingOpacity = false;
+        ApplyRuntimePreferences(preferences);
 
         if (IsUsablePoint(preferences.FloatingBallLeft, preferences.FloatingBallTop))
         {
@@ -80,6 +75,19 @@ public partial class FloatingWindow : Window
 
         Left = SystemParameters.WorkArea.Right - Width - 28;
         Top = SystemParameters.WorkArea.Top + 96;
+    }
+
+    public void ApplyRuntimePreferences(AppPreferences preferences)
+    {
+        _restingOpacity = Math.Clamp(preferences.FloatingBallOpacity, 0.35, 1.0);
+
+        _isApplyingOpacity = true;
+        Slider_Opacity.Value = _restingOpacity;
+        _isApplyingOpacity = false;
+
+        Opacity = Root.IsMouseOver || Root.ContextMenu?.IsOpen == true
+            ? 1.0
+            : _restingOpacity;
     }
 
     private static bool IsUsablePoint(double left, double top)

@@ -35,6 +35,7 @@ public partial class SettingsViewModel
         nameof(StartWithWindowsInput),
         nameof(FloatingBallEnabledInput),
         nameof(ShowFloatingWindowOnStartupInput),
+        nameof(FloatingBallOpacityInput),
         nameof(StartMinimizedToTrayInput),
         nameof(RememberLastSectionInput),
         nameof(RememberWindowBoundsInput),
@@ -228,6 +229,7 @@ public partial class SettingsViewModel
             // 落盘成功：以规范化结果作为新基线，回填以保持 *Input 与持久化值一致。
             _baselinePreferences = normalized;
             ApplySettingsInputsFromPreferences(normalized);
+            _applyFloatingWindowRuntime?.Invoke(previous, normalized);
             RefreshAiSettingsRuntimeStatus();
             RefreshNotificationSettingsRuntimeStatus();
 

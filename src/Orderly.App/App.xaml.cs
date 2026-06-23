@@ -379,6 +379,8 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        _floatingWindow.ApplyRuntimePreferences(current);
+
         if (!previous.FloatingBallEnabled && current.FloatingBallEnabled)
         {
             _floatingWindow.Show();

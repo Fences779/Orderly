@@ -29,6 +29,7 @@ public partial class SettingsViewModel
     // App 壳层能力的委托接缝（设计 §8.4.1）：为 null 时退化为「已保存，重启后生效 / 服务未接入」语义。
     private Func<AppPreferences, bool>? _tryApplyRuntimeHotkeys;
     private Func<string, string, bool>? _trySendDesktopNotification;
+    private Action<AppPreferences, AppPreferences>? _applyFloatingWindowRuntime;
 
     // ── 快捷键绑定 *Input（六大分类之「快捷键」，§8.4.2）──────────────────────────────
 
@@ -124,10 +125,12 @@ public partial class SettingsViewModel
     /// </summary>
     public void ConfigureSettingsRuntimeHooks(
         Func<AppPreferences, bool>? tryApplyRuntimeHotkeys,
-        Func<string, string, bool>? trySendDesktopNotification)
+        Func<string, string, bool>? trySendDesktopNotification,
+        Action<AppPreferences, AppPreferences>? applyFloatingWindowRuntime = null)
     {
         _tryApplyRuntimeHotkeys = tryApplyRuntimeHotkeys;
         _trySendDesktopNotification = trySendDesktopNotification;
+        _applyFloatingWindowRuntime = applyFloatingWindowRuntime;
         OnPropertyChanged(nameof(IsDesktopNotificationTestAvailable));
         RefreshNotificationSettingsRuntimeStatus();
     }

@@ -168,7 +168,26 @@ public partial class LoginSignInPanel : System.Windows.Controls.UserControl
     private void BtnUseQuickLogin_Click(object sender, RoutedEventArgs e)
     {
         _viewModel?.UseQuickLogin();
+        FocusQuickLoginInput();
+    }
+
+    private void BtnUsePinQuickLogin_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel?.UsePinQuickLogin();
         TxtQuickLoginPin.Focus();
+    }
+
+    private void BtnUseWindowsHelloQuickLogin_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel?.UseWindowsHelloQuickLogin();
+    }
+
+    private void FocusQuickLoginInput()
+    {
+        if (_viewModel?.IsPinQuickLoginMode == true)
+        {
+            TxtQuickLoginPin.Focus();
+        }
     }
 
     private async void TxtSignInPassword_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)

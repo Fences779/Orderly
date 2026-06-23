@@ -133,10 +133,17 @@ public partial class LoginViewModel : ObservableObject
     private bool enableQuickLoginThisBoot;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsWindowsHelloQuickLoginMode))]
+    [NotifyPropertyChangedFor(nameof(IsPinQuickLoginMode))]
     private bool isQuickLoginMode;
 
     [ObservableProperty]
     private bool isWindowsHelloAvailable;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsWindowsHelloQuickLoginMode))]
+    [NotifyPropertyChangedFor(nameof(IsPinQuickLoginMode))]
+    private bool preferWindowsHelloQuickLogin;
 
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool HasNoticeMessage => !string.IsNullOrWhiteSpace(NoticeMessage);
@@ -147,6 +154,8 @@ public partial class LoginViewModel : ObservableObject
     public bool IsSignInAccountConfirmed => ConfirmedSignInAccount is not null;
     public bool IsSignInPasswordStepVisible => IsSignInAccountConfirmed;
     public bool ShouldShowQuickLoginOptIn => IsSignInAccountConfirmed && !QuickLoginPreferenceEnabled;
+    public bool IsWindowsHelloQuickLoginMode => IsQuickLoginMode && PreferWindowsHelloQuickLogin;
+    public bool IsPinQuickLoginMode => IsQuickLoginMode && !PreferWindowsHelloQuickLogin;
     public bool HasRecoveryOwnerSection => IsRecoveryOwnerAccountDetected;
     public bool HasRecoveryMemberSection => IsRecoveryMemberAccountDetected;
     public bool CanEditRecoveryKeyInput => IsRecoveryOwnerAccountDetected;
@@ -331,6 +340,25 @@ public partial class LoginViewModel : ObservableObject
     {
         if (QuickLoginAvailableThisBoot)
         {
+            PreferWindowsHelloQuickLogin = IsWindowsHelloAvailable;
+            IsQuickLoginMode = true;
+        }
+    }
+
+    public void UsePinQuickLogin()
+    {
+        if (QuickLoginAvailableThisBoot)
+        {
+            PreferWindowsHelloQuickLogin = false;
+            IsQuickLoginMode = true;
+        }
+    }
+
+    public void UseWindowsHelloQuickLogin()
+    {
+        if (QuickLoginAvailableThisBoot && IsWindowsHelloAvailable)
+        {
+            PreferWindowsHelloQuickLogin = true;
             IsQuickLoginMode = true;
         }
     }
@@ -387,6 +415,7 @@ public partial class LoginViewModel : ObservableObject
             QuickLoginPreferenceEnabled = status.IsEnabled;
             QuickLoginAvailableThisBoot = status.IsAvailableThisBoot;
             IsWindowsHelloAvailable = status.IsAvailableThisBoot && await _windowsHelloService.IsAvailableAsync();
+            PreferWindowsHelloQuickLogin = IsWindowsHelloAvailable;
             IsQuickLoginMode = status.IsAvailableThisBoot;
             EnableQuickLoginThisBoot = false;
         }
@@ -403,6 +432,7 @@ public partial class LoginViewModel : ObservableObject
         EnableQuickLoginThisBoot = false;
         IsQuickLoginMode = false;
         IsWindowsHelloAvailable = false;
+        PreferWindowsHelloQuickLogin = false;
     }
 
     public async Task CreateFirstOwnerAsync(
