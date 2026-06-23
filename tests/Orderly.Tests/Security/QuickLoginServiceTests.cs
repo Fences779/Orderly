@@ -64,15 +64,15 @@ public sealed class QuickLoginServiceTests
         var login = File.ReadAllText(Path.Combine(root, "src", "Orderly.App", "Views", "LoginSignInPanel.xaml"));
         var settings = File.ReadAllText(Path.Combine(root, "src", "Orderly.App", "Views", "Sections", "SettingsTabDataSecurity.xaml"));
 
-        Assert.Contains("本次开机允许快速登录（PIN / Windows Hello）", login);
+        Assert.Contains("开机后允许快速登录（PIN / Windows Hello）", login);
         Assert.Contains("Visibility=\"{Binding ShouldShowQuickLoginOptIn", login);
-        Assert.Contains("Windows Hello 快速登录", login);
         Assert.Contains("Visibility=\"{Binding IsWindowsHelloQuickLoginMode", login);
         Assert.Contains("Visibility=\"{Binding IsPinQuickLoginMode", login);
-        Assert.Contains("改用 PIN 登录", login);
-        Assert.Contains("改用主密码登录", login);
-        Assert.Contains("本次开机允许快速登录（PIN / Windows Hello）", settings);
-        Assert.Contains("IsChecked=\"{Binding QuickLoginEnabledInput}\"", settings);
+        Assert.Contains("使用 PIN", login);
+        Assert.Contains("使用主密码", login);
+        Assert.Contains("开机后允许快速登录（PIN / Windows Hello）", settings);
+        Assert.Contains("IsChecked=\"{Binding Settings.QuickLoginEnabledInput}\"", settings);
+        Assert.Contains("Command=\"{Binding RunDatabaseHealthCheckCommand}\"", settings);
     }
 
     [Fact]

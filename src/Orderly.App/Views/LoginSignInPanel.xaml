@@ -113,7 +113,7 @@
                             <TextBlock Text="主密码" Style="{StaticResource FieldLabel}" FontWeight="Bold" Foreground="#1D1D1F" />
                             <PasswordBox x:Name="TxtSignInPassword" Width="320" HorizontalAlignment="Left" KeyDown="TxtSignInPassword_KeyDown" />
                             <CheckBox Margin="0,12,0,0"
-                                      Content="本次开机允许快速登录（PIN / Windows Hello）"
+                                      Content="开机后允许快速登录（PIN / Windows Hello）"
                                       IsChecked="{Binding EnableQuickLoginThisBoot}"
                                       Visibility="{Binding ShouldShowQuickLoginOptIn, Converter={StaticResource BooleanToVisibilityConverter}}"
                                       AutomationProperties.AutomationId="Chk_EnableQuickLoginThisBoot" />
@@ -133,24 +133,28 @@
                         </StackPanel>
 
                         <StackPanel Visibility="{Binding IsWindowsHelloQuickLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Text="Windows Hello 快速登录"
-                                       Style="{StaticResource FieldLabel}"
-                                       FontWeight="Bold"
-                                       Foreground="#1D1D1F" />
                             <Button Content="使用 Windows Hello 登录"
                                     Width="320"
                                     Style="{StaticResource PremiumButtonStyle}"
+                                    Margin="0,8,0,0"
                                     Click="BtnWindowsHello_Click" />
-                            <Button Content="改用 PIN 登录"
-                                    Width="320"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Margin="0,10,0,0"
-                                    Click="BtnUsePinQuickLogin_Click" />
-                            <Button Content="改用主密码登录"
-                                    Width="320"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Margin="0,10,0,0"
-                                    Click="BtnUsePassword_Click" />
+                            <Grid Margin="0,18,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="使用 PIN"
+                                        Height="38"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Click="BtnUsePinQuickLogin_Click" />
+                                <Button Grid.Column="2"
+                                        Content="使用主密码"
+                                        Height="38"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Click="BtnUsePassword_Click" />
+                            </Grid>
                         </StackPanel>
 
                         <StackPanel Visibility="{Binding IsPinQuickLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -161,17 +165,24 @@
                                     Style="{StaticResource PremiumButtonStyle}"
                                     Margin="0,14,0,0"
                                     Click="BtnQuickLoginPin_Click" />
-                            <Button Content="改用 Windows Hello 登录"
-                                    Width="320"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Margin="0,10,0,0"
-                                    Visibility="{Binding IsWindowsHelloAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                    Click="BtnUseWindowsHelloQuickLogin_Click" />
-                            <Button Content="改用主密码登录"
-                                    Width="320"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Margin="0,10,0,0"
-                                    Click="BtnUsePassword_Click" />
+                            <Grid Margin="0,18,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="改用 Hello"
+                                        Height="38"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Visibility="{Binding IsWindowsHelloAvailable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        Click="BtnUseWindowsHelloQuickLogin_Click" />
+                                <Button Grid.Column="2"
+                                        Content="改用主密码"
+                                        Height="38"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Click="BtnUsePassword_Click" />
+                            </Grid>
                         </StackPanel>
                     </StackPanel>
                 </Grid>

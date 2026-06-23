@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Repositories;
 using Orderly.Core.Commerce.Services;
+using Orderly.Core.Models;
+using Orderly.Core.Repositories;
 
 namespace Orderly.Tests.Ui;
 
@@ -65,6 +67,25 @@ internal sealed class FakeInventoryItemRepository : FakeCommerceRepositoryBase<I
 internal sealed class FakeCommerceCustomerRepository : FakeCommerceRepositoryBase<Customer>, ICommerceCustomerRepository { }
 
 internal sealed class FakeCashFlowEntryRepository : FakeCommerceRepositoryBase<CashFlowEntry>, ICashFlowEntryRepository { }
+
+internal sealed class FakeAppSettingRepository : IAppSettingRepository
+{
+    private AppPreferences _preferences;
+
+    public FakeAppSettingRepository(AppPreferences preferences) => _preferences = preferences;
+
+    public Task<AppPreferences> GetPreferencesAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(_preferences);
+
+    public Task SavePreferencesAsync(AppPreferences preferences, CancellationToken cancellationToken = default)
+    {
+        _preferences = preferences;
+        return Task.CompletedTask;
+    }
+
+    public Task UpsertAsync(string key, string value, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+}
 
 /// <summary>Dashboard fake: backs the Workbench page (Req 6.2).</summary>
 internal sealed class FakeDashboardService : IDashboardService

@@ -30,12 +30,12 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="本次开机允许快速登录（PIN / Windows Hello）" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="开机后允许快速登录（PIN / Windows Hello）" Style="{StaticResource SettingsItemTitleStyle}" />
                                                 <TextBlock Text="使用主密码登录一次后，本次开机内重新启动软件可快速验证" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
                                             <CheckBox Grid.Column="1"
                                                       Style="{StaticResource SettingsRowCheckBoxStyle}"
-                                                      IsChecked="{Binding QuickLoginEnabledInput}"
+                                                      IsChecked="{Binding Settings.QuickLoginEnabledInput}"
                                                       AutomationProperties.AutomationId="Chk_QuickLoginEnabled" />
                                         </Grid>
                                     </Border>
@@ -151,7 +151,7 @@
                                                 <TextBlock Text="{Binding DatabaseHealthStatusText}" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
                                             <Button Grid.Column="1" Content="开始检查" Style="{StaticResource SettingsRowActionButtonStyle}"
-                                                    Command="{Binding CheckDatabaseHealthCommand}"
+                                                    Command="{Binding RunDatabaseHealthCheckCommand}"
                                                     AutomationProperties.AutomationId="Btn_CheckDatabaseHealth" />
                                         </Grid>
                                     </Border>

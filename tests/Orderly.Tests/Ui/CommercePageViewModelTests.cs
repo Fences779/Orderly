@@ -1,8 +1,11 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Orderly.App.ViewModels.Pages;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Services;
+using Orderly.Core.Models;
+using Orderly.Core.Repositories;
 using Xunit;
 
 namespace Orderly.Tests.Ui;
@@ -263,8 +266,46 @@ public sealed class CommercePageViewModelTests
         Assert.Equal(1, repo.GetAllCallCount);
         Assert.Single(vm.Customers);
         Assert.Equal("客户 A", vm.Customers[0].Name);
+        Assert.Equal("10***", vm.Customers[0].PhoneDisplay);
         Assert.Equal(3, vm.Customers[0].Frequency);
         Assert.True(vm.ShowContent);
+    }
+
+    [Fact]
+    public async Task Customers_masks_phone_display_from_privacy_setting()
+    {
+        var customer = new Customer { WorkspaceId = Workspace, Name = "客户 B", Phone = "13800138000" };
+        var repo = new FakeCommerceCustomerRepository();
+        repo.Items.Add(customer);
+
+        var vm = new CustomersPageViewModel(
+            new FakeCustomerService(),
+            repo,
+            new FakeAppSettingRepository(new AppPreferences { MaskPhoneByDefault = true }));
+
+        await vm.LoadAsync();
+
+        Assert.Single(vm.Customers);
+        Assert.Equal("138****8000", vm.Customers[0].PhoneDisplay);
+        Assert.Equal("13800138000", vm.Customers[0].Phone);
+    }
+
+    [Fact]
+    public async Task Customers_preserves_phone_display_when_privacy_setting_is_off()
+    {
+        var customer = new Customer { WorkspaceId = Workspace, Name = "客户 C", Phone = "13800138000" };
+        var repo = new FakeCommerceCustomerRepository();
+        repo.Items.Add(customer);
+
+        var vm = new CustomersPageViewModel(
+            new FakeCustomerService(),
+            repo,
+            new FakeAppSettingRepository(new AppPreferences { MaskPhoneByDefault = false }));
+
+        await vm.LoadAsync();
+
+        Assert.Single(vm.Customers);
+        Assert.Equal("13800138000", vm.Customers[0].PhoneDisplay);
     }
 
     [Fact]

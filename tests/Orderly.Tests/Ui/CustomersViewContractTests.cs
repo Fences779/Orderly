@@ -28,7 +28,7 @@ namespace Orderly.Tests.Ui;
 ///   · 绑定根：MainViewModel.CustomersPage（<c>{Binding CustomersPage}</c>）。
 ///   · CommercePageViewModel 基类：RefreshCommand、ShowLoading、HasError、ErrorMessage、IsEmpty、ShowContent。
 ///   · CustomersPageViewModel：Customers 集合。
-///   · CustomerRow：Name、Phone、RecencyDays、Frequency、Monetary（CustomerId 未在 View 消费）。
+///   · CustomerRow：Name、PhoneDisplay、RecencyDays、Frequency、Monetary（CustomerId/Phone 未在 View 消费）。
 /// </summary>
 public sealed class CustomersViewContractTests
 {
@@ -56,7 +56,7 @@ public sealed class CustomersViewContractTests
         "Customers",
         // CustomerRow 行字段
         "Name",
-        "Phone",
+        "PhoneDisplay",
         "RecencyDays",
         "Frequency",
         "Monetary",
@@ -180,7 +180,7 @@ public sealed class CustomersViewContractTests
         string[] mustBind =
         {
             "CustomersPage", "RefreshCommand", "ShowLoading", "HasError", "ErrorMessage",
-            "IsEmpty", "ShowContent", "Customers", "Name", "Phone", "RecencyDays", "Frequency", "Monetary",
+            "IsEmpty", "ShowContent", "Customers", "Name", "PhoneDisplay", "RecencyDays", "Frequency", "Monetary",
         };
 
         var missing = mustBind.Where(p => !paths.Contains(p)).ToList();

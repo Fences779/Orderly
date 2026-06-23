@@ -25,7 +25,8 @@
 - **Required Behavior After Modification**:
   - Automatically check for compile or build errors using the most relevant local project command.
   - 施工完成之后进行编译正确性审核。
-  - 必须通过运行 UIA 自动化测试脚本进行管理员登录后的实战验收，确保主链路无损，不得只卡在登录界面。具体为运行：`powershell -ExecutionPolicy Bypass -File .\tools\qa\run-p1-smoke.ps1` 进行验证。
+  - 默认先执行“本次修改点定向验收”：拉起最相关本地预览或应用入口，只验证这次刚修改的点、直接影响的交互和对应保存/回显/状态链路；改对则收口，未改对继续修改。
+  - `run-p1-smoke.ps1`、`run-commerce-smoke.ps1`、全页面 UIA 点检、业务闭环回归，不再作为每次日常改动后的默认必跑项；仅在本次改动直接命中对应链路、用户明确要求，或进入发布前/专项回归时执行。
   - Automatically launch the most relevant local preview target when a preview entry exists and can be started safely.
   - Return a brief acceptance checklist telling the user what to verify.
 - **Failure Handling**: If build or preview cannot run, Codex must state the real blocker and provide the exact command the user should run locally.
@@ -51,4 +52,3 @@
 ### 针对 WPF 项目热重载卡死的防范规范
 - 任何具备热重载（dotnet watch）或持续监视特性的脚本与工具，必须确保项目配置文件（.csproj）中明确排除了对 `*_wpftmp.csproj` 及 `bin`/`obj` 等动态编译目录的监视，防止编译死循环与异常闪退。
 - 在自动化测试或后台静默运行的脚本中，严禁依赖会产生阻断性等待（如 `pause`、`read`、`Press any key to continue`）的命令或批处理文件，避免 AI 代理在验证流程中永久挂起。
-

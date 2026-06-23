@@ -7,7 +7,7 @@
         ================================================================================
         约束遵循：
           · 仅消费 CustomersPageViewModel 既有绑定（DataContext=CustomersPage）：
-              集合 Customers（CustomerRow: Name / Phone / RecencyDays / Frequency / Monetary）、
+              集合 Customers（CustomerRow: Name / PhoneDisplay / RecencyDays / Frequency / Monetary）、
               状态四标志 ShowLoading / HasError / IsEmpty / ShowContent、ErrorMessage、命令 RefreshCommand。
               不新增、不重命名任何绑定路径；不改代码后置。
           · 该 VM 未暴露任何搜索 / 筛选属性，故不渲染绑定到空的死控件（遵守"仅消费既有绑定"硬约束）。
@@ -103,7 +103,7 @@
                   Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="客户名称" Binding="{Binding Name}" Width="*" />
-                <DataGridTextColumn Header="电话" Binding="{Binding Phone}" Width="Auto" />
+                <DataGridTextColumn Header="电话" Binding="{Binding PhoneDisplay}" Width="Auto" />
                 <!-- 跟进状态徽标：Frequency=0（从未成交）→ 警告色「待跟进」，否则成功色「正常」 -->
                 <DataGridTemplateColumn Header="跟进状态" Width="Auto">
                     <DataGridTemplateColumn.CellTemplate>

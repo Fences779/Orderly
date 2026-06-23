@@ -283,7 +283,7 @@ public partial class App
             new Orderly.App.ViewModels.Pages.OrdersPageViewModel(commerceOrderService, commerceOrderRepository),
             new Orderly.App.ViewModels.Pages.ProductsPageViewModel(commerceProductService),
             new Orderly.App.ViewModels.Pages.InventoryPageViewModel(commerceInventoryService, commerceInventoryItemRepository),
-            new Orderly.App.ViewModels.Pages.CustomersPageViewModel(commerceCustomerService, commerceCustomerRepository),
+            new Orderly.App.ViewModels.Pages.CustomersPageViewModel(commerceCustomerService, commerceCustomerRepository, settingRepository),
             new Orderly.App.ViewModels.Pages.CashflowPageViewModel(commerceCashFlowService, commerceCashFlowRepository),
             new Orderly.App.ViewModels.Pages.BusinessAdvicePageViewModel(commerceBusinessInsightService));
 
