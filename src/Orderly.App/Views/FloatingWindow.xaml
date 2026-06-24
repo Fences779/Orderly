@@ -150,7 +150,6 @@
                     <Setter Property="StrokeThickness" Value="1.0" />
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsMouseOver, ElementName=Root}" Value="True">
-                            <Setter Property="Stroke" Value="#5010B981" /> <!-- 悬停时，物理边框微微带一点透绿 -->
                             <DataTrigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
