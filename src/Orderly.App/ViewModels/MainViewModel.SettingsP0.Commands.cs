@@ -393,4 +393,55 @@ public partial class MainViewModel
             AccentColorInput = hexColor;
         }
     }
+
+    [RelayCommand]
+    private void CopyDatabasePath()
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(DatabasePath))
+            {
+                _clipboardService.SetText(DatabasePath);
+                SettingsStatusMessage = "数据库路径已复制到剪贴板。";
+            }
+        }
+        catch (Exception ex)
+        {
+            SettingsStatusMessage = $"复制路径失败：{ex.Message}";
+            ShowErrorMessage("复制路径失败", ex);
+        }
+    }
+
+    [RelayCommand]
+    private async Task OptimizeDatabaseAsync()
+    {
+        await ExecuteSaveActionAsync(
+            busyMessage: "正在优化数据库...",
+            successMessage: "数据库优化与碎片整理已完成",
+            errorTitle: "数据库优化失败",
+            errorStatusPrefix: "数据库优化失败",
+            action: async () =>
+            {
+                if (string.IsNullOrWhiteSpace(DatabasePath) || !File.Exists(DatabasePath))
+                {
+                    throw new FileNotFoundException("数据库文件不存在。");
+                }
+
+                await using var connection = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+                {
+                    DataSource = DatabasePath,
+                    Mode = Microsoft.Data.Sqlite.SqliteOpenMode.ReadWrite
+                }.ToString());
+                await connection.OpenAsync();
+                SqliteConnectionKeying.ApplyRawKey(connection, _sessionContextService?.Current?.DataKey?.ToArray());
+
+                await using var command = connection.CreateCommand();
+                command.CommandText = "VACUUM;";
+                await command.ExecuteNonQueryAsync();
+
+                // 重新读取大小
+                var info = new FileInfo(DatabasePath);
+                DatabaseSizeText = info.Exists ? FormatFileSize(info.Length) : "数据库文件不存在";
+            });
+    }
 }

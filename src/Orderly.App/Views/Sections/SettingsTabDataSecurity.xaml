@@ -118,12 +118,24 @@
                                     <!-- 数据库路径 -->
                                     <Border Style="{StaticResource SettingsRowItemBorder}">
                                         <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="80" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="数据库路径" Style="{StaticResource SettingsItemTitleStyle}" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="{Binding DatabasePath}" Style="{StaticResource SettingsStatusTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="数据库路径" Style="{StaticResource SettingsItemTitleStyle}" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                    <Button Content="复制路径" Style="{StaticResource SettingsRowActionButtonStyle}" Height="28" Padding="10,0" Margin="0,0,8,0" Command="{Binding CopyDatabasePathCommand}" />
+                                                    <Button Content="打开文件夹" Style="{StaticResource SettingsRowActionButtonStyle}" Height="28" Padding="10,0" Command="{Binding OpenDataDirectoryCommand}" />
+                                                </StackPanel>
+                                            </Grid>
+                                            <Border Grid.Row="1" Background="{DynamicResource GreySoftBrush}" CornerRadius="8" Padding="12,10">
+                                                <TextBlock Text="{Binding DatabasePath}" Style="{StaticResource SettingsStatusTextStyle}" TextWrapping="Wrap" Foreground="{DynamicResource HeadingBrush}" FontFamily="Consolas, Courier New" />
+                                            </Border>
                                         </Grid>
                                     </Border>
 
@@ -131,11 +143,30 @@
                                     <Border Style="{StaticResource SettingsRowItemBorder}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="80" />
                                                 <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="数据体积" Style="{StaticResource SettingsItemTitleStyle}" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1" Text="{Binding DatabaseSizeText}" Style="{StaticResource SettingsStatusTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="数据体积" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="本地 SQLite 数据库文件占用磁盘空间大小" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding DatabaseSizeText}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 数据库优化与清理 -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="数据库优化与压缩" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="整理碎片空间以提升性能" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Content="立即优化" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                    Command="{Binding OptimizeDatabaseCommand}" />
                                         </Grid>
                                     </Border>
 
@@ -148,21 +179,57 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                 <TextBlock Text="数据完整性校验" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="{Binding DatabaseHealthStatusText}" Style="{StaticResource SettingsItemDescStyle}" />
+                                                <TextBlock Text="检测数据库结构是否受损、关键表是否存在" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="开始检查" Style="{StaticResource SettingsRowActionButtonStyle}"
-                                                    Command="{Binding RunDatabaseHealthCheckCommand}"
-                                                    AutomationProperties.AutomationId="Btn_CheckDatabaseHealth" />
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Border CornerRadius="6" Padding="10,4" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{DynamicResource GreySoftBrush}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding DatabaseHealthStatusText}" Value="正常">
+                                                                    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding DatabaseHealthStatusText}" Value="异常">
+                                                                    <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock Text="{Binding DatabaseHealthStatusText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding DatabaseHealthStatusText}" Value="正常">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding DatabaseHealthStatusText}" Value="异常">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                                <Button Content="开始检查" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                        Command="{Binding RunDatabaseHealthCheckCommand}"
+                                                        AutomationProperties.AutomationId="Btn_CheckDatabaseHealth" />
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
 
                                     <!-- 检查详细结果 -->
                                     <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
                                         <Grid>
-                                            <StackPanel>
-                                                <TextBlock Text="校验日志详情" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="{Binding DatabaseHealthDetailText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" Margin="{StaticResource SettingsRowDescMargin}" />
-                                            </StackPanel>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="校验日志详情" Style="{StaticResource SettingsItemTitleStyle}" Margin="0,0,0,8" />
+                                            <Border Grid.Row="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                                <TextBlock Text="{Binding DatabaseHealthDetailText}" FontSize="12" FontFamily="Consolas, Courier New" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" LineHeight="18" />
+                                            </Border>
                                         </Grid>
                                     </Border>
                                 </StackPanel>
