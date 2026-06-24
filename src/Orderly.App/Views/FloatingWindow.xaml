@@ -25,12 +25,13 @@
     </Window.Resources>
 
     <Grid x:Name="Root"
+          Background="Transparent"
           Cursor="Hand"
           ToolTip="Orderly 快捷入口"
-          MouseLeftButtonDown="Root_MouseLeftButtonDown"
-          MouseLeftButtonUp="Root_MouseLeftButtonUp"
-          MouseRightButtonUp="Root_MouseRightButtonUp"
-          MouseMove="Root_MouseMove"
+          PreviewMouseLeftButtonDown="Root_MouseLeftButtonDown"
+          PreviewMouseLeftButtonUp="Root_MouseLeftButtonUp"
+          PreviewMouseRightButtonUp="Root_MouseRightButtonUp"
+          PreviewMouseMove="Root_MouseMove"
           MouseEnter="Root_MouseEnter"
           MouseLeave="Root_MouseLeave">
         <Grid.ContextMenu>
@@ -63,6 +64,7 @@
         <Ellipse x:Name="Backlight"
                  Width="46"
                  Height="46"
+                 IsHitTestVisible="False"
                  Opacity="0.0"
                  RenderTransformOrigin="0.5,0.5">
             <Ellipse.Fill>
@@ -116,6 +118,7 @@
         <Ellipse x:Name="GlassBody"
                  Width="54"
                  Height="54"
+                 IsHitTestVisible="False"
                  Effect="{StaticResource FloatingBallShadow}"
                  RenderTransformOrigin="0.5,0.5">
             <Ellipse.RenderTransform>
@@ -178,6 +181,7 @@
         <Image Source="{StaticResource OrderlyBrandLogoImage}"
                Width="25"
                Height="25"
+               IsHitTestVisible="False"
                Stretch="Uniform"
                HorizontalAlignment="Center"
                VerticalAlignment="Center"

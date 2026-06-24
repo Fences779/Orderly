@@ -37,6 +37,18 @@ public sealed class WindowCloseRuntimeWiringTests
         Assert.Contains("ExitApplicationFromTray);", compositionSource);
     }
 
+    [Fact]
+    public void Floating_window_drag_surface_keeps_input_on_the_root_container()
+    {
+        var xamlSource = LoadSource("src", "Orderly.App", "Views", "FloatingWindow.xaml");
+
+        Assert.Contains("Background=\"Transparent\"", xamlSource);
+        Assert.Contains("PreviewMouseLeftButtonDown=\"Root_MouseLeftButtonDown\"", xamlSource);
+        Assert.Contains("PreviewMouseLeftButtonUp=\"Root_MouseLeftButtonUp\"", xamlSource);
+        Assert.Contains("PreviewMouseMove=\"Root_MouseMove\"", xamlSource);
+        Assert.Contains("IsHitTestVisible=\"False\"", xamlSource);
+    }
+
     private static string LoadSource(params string[] segments)
     {
         var path = ResolveRepositoryRoot();
