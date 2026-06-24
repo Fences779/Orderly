@@ -26,17 +26,6 @@ public partial class PinUnlockView : Window
         }
     }
 
-    private void BtnUnlock_Click(object sender, RoutedEventArgs e)
-    {
-        SubmitUnlock();
-    }
-
-    private void BtnLogout_Click(object sender, RoutedEventArgs e)
-    {
-        DialogResult = false;
-        Close();
-    }
-
     private void BtnWindowsHello_Click(object sender, RoutedEventArgs e)
     {
         UnlockMethod = PinUnlockMethod.WindowsHello;
@@ -59,7 +48,7 @@ public partial class PinUnlockView : Window
 
     private void FadePlaceholder(bool show)
     {
-        double targetOpacity = show ? 0.5 : 0.0;
+        double targetOpacity = show ? 0.65 : 0.0;
         if (TxtPlaceholder.Opacity == targetOpacity) return;
 
         var animation = new System.Windows.Media.Animation.DoubleAnimation

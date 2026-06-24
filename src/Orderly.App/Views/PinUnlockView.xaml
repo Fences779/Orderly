@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="会话解锁"
         Width="460"
-        Height="470"
+        Height="408"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -47,7 +47,7 @@
             </StackPanel.RenderTransform>
 
             <!-- 头像/Logo 区 -->
-            <Border Width="64" Height="64" CornerRadius="32" Background="#000000" HorizontalAlignment="Center" Margin="0,0,0,24">
+            <Border Width="64" Height="64" CornerRadius="32" Background="#000000" HorizontalAlignment="Center" Margin="0,0,0,20">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="16" ShadowDepth="6" Direction="270" Color="#000000" Opacity="0.15" />
                 </Border.Effect>
@@ -55,30 +55,30 @@
             </Border>
             
             <TextBlock Text="会话已锁定" FontSize="{DynamicResource UiFontSize22}" FontWeight="Bold" Foreground="#1D1D1F" HorizontalAlignment="Center" />
-            <TextBlock x:Name="TxtAccount" Margin="0,6,0,32" Foreground="#86868B" FontSize="{DynamicResource UiFontSize13}" TextWrapping="Wrap" HorizontalAlignment="Center" />
+            <TextBlock x:Name="TxtAccount" Margin="0,6,0,26" Foreground="#86868B" FontSize="{DynamicResource UiFontSize13}" TextWrapping="Wrap" HorizontalAlignment="Center" />
             
-            <Border Width="280" Background="#F5F5F7" CornerRadius="12" BorderThickness="1" BorderBrush="Transparent" Margin="0,0,0,16">
+            <Border Width="280" Background="#F5F5F7" CornerRadius="12" BorderThickness="1" BorderBrush="Transparent" Margin="0,0,0,12">
                 <Grid>
                     <PasswordBox x:Name="TxtPin" Height="52" FontSize="{DynamicResource UiFontSize24}" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" KeyDown="TxtPin_KeyDown" MaxLength="6" PasswordChanged="TxtPin_PasswordChanged" />
                     <TextBlock x:Name="TxtPlaceholder"
-                               Text="请输入  PIN码"
-                               Foreground="#AEAEB2"
-                               FontWeight="Medium"
+                               Text="请输入PIN码"
+                               Foreground="#C6C7CC"
+                               FontWeight="SemiBold"
                                FontSize="{DynamicResource UiFontSize15}"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                IsHitTestVisible="False"
-                               Opacity="0.5" />
+                               Opacity="0.65" />
                 </Grid>
             </Border>
             
-            <TextBlock x:Name="TxtError" Foreground="#FF3B30" Margin="0,0,0,16" Visibility="Collapsed" TextWrapping="Wrap" HorizontalAlignment="Center" />
+            <TextBlock x:Name="TxtError" Foreground="#FF3B30" Margin="0,0,0,12" Visibility="Collapsed" TextWrapping="Wrap" HorizontalAlignment="Center" />
 
             <Button x:Name="BtnWindowsHello"
                     Content="使用 Windows Hello 解锁"
                     Width="280"
                     Height="42"
-                    Margin="0,0,0,6"
+                    Margin="0,4,0,0"
                     Click="BtnWindowsHello_Click"
                     Visibility="Collapsed">
                 <Button.Style>
@@ -112,59 +112,6 @@
                     </Style>
                 </Button.Style>
             </Button>
-            
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
-                <Button Content="切换账号" Width="120" Height="44" Margin="0,0,12,0" Click="BtnLogout_Click">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="#E5E5EA" />
-                            <Setter Property="Foreground" Value="#1D1D1F" />
-                            <Setter Property="FontWeight" Value="SemiBold" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="12">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#D1D1D6" />
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
-
-                <Button Content="立即解锁" Width="120" Height="44" Click="BtnUnlock_Click">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="#000000" />
-                            <Setter Property="Foreground" Value="#FFFFFF" />
-                            <Setter Property="FontWeight" Value="Bold" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border x:Name="bg" Background="{TemplateBinding Background}" CornerRadius="12">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bg" Property="Opacity" Value="0.85" />
-                                            </Trigger>
-                                            <Trigger Property="IsPressed" Value="True">
-                                                <Setter TargetName="bg" Property="Opacity" Value="0.7" />
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
-                </Button>
-            </StackPanel>
         </StackPanel>
     </Border>
 </Window>
