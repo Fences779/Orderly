@@ -54,7 +54,21 @@ public partial class PinUnlockView : Window
 
     private void TxtPin_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        TxtPlaceholder.Visibility = string.IsNullOrEmpty(TxtPin.Password) ? Visibility.Visible : Visibility.Collapsed;
+        FadePlaceholder(string.IsNullOrEmpty(TxtPin.Password));
+    }
+
+    private void FadePlaceholder(bool show)
+    {
+        double targetOpacity = show ? 0.5 : 0.0;
+        if (TxtPlaceholder.Opacity == targetOpacity) return;
+
+        var animation = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            To = targetOpacity,
+            Duration = TimeSpan.FromSeconds(0.15),
+            EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut }
+        };
+        TxtPlaceholder.BeginAnimation(UIElement.OpacityProperty, animation);
     }
 
     private void SubmitUnlock()
