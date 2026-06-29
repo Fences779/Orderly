@@ -49,7 +49,7 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                 <TextBlock Text="敏感电话默认加星" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="在客户与订单列表中遮蔽电话号码关键数字" Style="{StaticResource SettingsItemDescStyle}" />
+                                                <TextBlock Text="在客户列表与复制内容中遮蔽电话号码关键数字" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
                                             <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
                                                       IsChecked="{Binding MaskPhoneByDefaultInput}"
@@ -66,7 +66,7 @@
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                 <TextBlock Text="敏感地址默认加星" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="在客户与订单列表中遮蔽联系地址关键详情" Style="{StaticResource SettingsItemDescStyle}" />
+                                                <TextBlock Text="在复制内容中识别并遮蔽联系地址关键详情" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
                                             <CheckBox Grid.Column="1" Style="{StaticResource SettingsRowCheckBoxStyle}"
                                                       IsChecked="{Binding MaskAddressByDefaultInput}"

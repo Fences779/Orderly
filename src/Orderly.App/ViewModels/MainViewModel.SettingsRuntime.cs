@@ -33,6 +33,14 @@ public partial class MainViewModel
         @"[\u4e00-\u9fa5A-Za-z0-9#\-]{2,}(?:省|市|区|县|镇|乡|街道|路|街|巷|号|栋|幢|单元|室)[\u4e00-\u9fa5A-Za-z0-9#\-]{0,40}",
         RegexOptions.Compiled);
 
+    private static readonly Regex RuntimeOrderSummaryCustomerRegex = new(
+        @"(?m)^(客户：).+$",
+        RegexOptions.Compiled);
+
+    private static readonly Regex RuntimeOrderSummaryAmountRegex = new(
+        @"(?m)^(金额：).+$",
+        RegexOptions.Compiled);
+
     private static readonly Regex OrderExceptionKeywordRegex = new(
         "异常|缺货|退款|退货|支付异常|付款异常|无法发货|延迟发货|投诉|取消",
         RegexOptions.Compiled);
@@ -581,6 +589,14 @@ public partial class MainViewModel
         return result;
     }
 
+    private static string MaskOrderSummaryPrivacy(string value, bool maskPhone, bool maskAddress)
+    {
+        var result = MaskSensitiveText(value, maskPhone, maskAddress);
+        result = RuntimeOrderSummaryCustomerRegex.Replace(result, "$1[客户已隐藏]");
+        result = RuntimeOrderSummaryAmountRegex.Replace(result, "$1[金额已隐藏]");
+        return result;
+    }
+
     private static string MaskMiddle(string value)
     {
         var digits = new string(value.Where(char.IsDigit).ToArray());
@@ -611,7 +627,7 @@ public partial class MainViewModel
         };
         var text = string.Join(Environment.NewLine, lines.Where(line => !string.IsNullOrWhiteSpace(line)));
         return MaskOrderSummaryOnCopyInput
-            ? MaskSensitiveText(text, MaskPhoneByDefaultInput, MaskAddressByDefaultInput)
+            ? MaskOrderSummaryPrivacy(text, MaskPhoneByDefaultInput, MaskAddressByDefaultInput)
             : text;
     }
 
