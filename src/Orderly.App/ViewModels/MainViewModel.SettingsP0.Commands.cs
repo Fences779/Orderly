@@ -39,7 +39,7 @@ public partial class MainViewModel
             {
                 var (status, detail) = await CheckDatabaseHealthAsync();
                 DatabaseHealthStatusText = status;
-                DatabaseHealthDetailText = detail;
+                DatabaseHealthDetailText = $"[{DateTime.Now:HH:mm:ss}] {detail}";
             });
     }
 
@@ -427,6 +427,7 @@ public partial class MainViewModel
                     throw new FileNotFoundException("数据库文件不存在。");
                 }
 
+                var sizeBefore = new FileInfo(DatabasePath).Length;
                 await using var connection = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
                 {
                     DataSource = DatabasePath,
@@ -442,6 +443,7 @@ public partial class MainViewModel
                 // 重新读取大小
                 var info = new FileInfo(DatabasePath);
                 DatabaseSizeText = info.Exists ? FormatFileSize(info.Length) : "数据库文件不存在";
+                DatabaseHealthDetailText = $"[{DateTime.Now:HH:mm:ss}] 数据库优化完成。优化前：{FormatFileSize(sizeBefore)}；优化后：{DatabaseSizeText}。";
             });
     }
 }
