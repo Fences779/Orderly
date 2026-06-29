@@ -138,11 +138,13 @@ public partial class MainViewModel
         {
             RestoreStatusText = "未选择恢复备份";
             RestoreDetailText = "先选择备份文件，再生成恢复预览。";
+            NotifyRestorePreviewStateChanged();
             return;
         }
 
         RestoreStatusText = $"已选择：{Path.GetFileName(value)}";
         RestoreDetailText = "已切换备份文件，请先生成恢复预览；旧确认状态已清空。";
+        NotifyRestorePreviewStateChanged();
     }
 
     partial void OnRestorePreviewChanged(BackupRestorePreviewResult? value)

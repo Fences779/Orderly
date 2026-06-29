@@ -155,7 +155,12 @@ public partial class MainViewModel
     private void NotifyRestorePreviewStateChanged()
     {
         OnPropertyChanged(nameof(HasRestorePreview));
+        OnPropertyChanged(nameof(HasSelectedBackupPath));
         OnPropertyChanged(nameof(CanConfirmRestoreRisk));
+        OnPropertyChanged(nameof(RestoreWorkflowStatusText));
+        OnPropertyChanged(nameof(RestoreWorkflowStatusDetailText));
+        OnPropertyChanged(nameof(RestoreSelectedBackupFileNameText));
+        OnPropertyChanged(nameof(RestoreSelectedBackupPathText));
         OnPropertyChanged(nameof(RestorePreviewFileName));
         OnPropertyChanged(nameof(RestorePreviewExportedAtText));
         OnPropertyChanged(nameof(RestorePreviewSchemaVersionText));
@@ -170,6 +175,9 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(RestorePreviewRefuseReasonText));
         OnPropertyChanged(nameof(RestoreRiskPromptText));
         OnPropertyChanged(nameof(RestoreRiskConfirmationText));
+        OnPropertyChanged(nameof(RestoreCheckSummaryText));
+        OnPropertyChanged(nameof(RestoreValidateActionText));
+        OnPropertyChanged(nameof(RestorePrimaryActionText));
         OnPropertyChanged(nameof(CanRestoreWithConfirmation));
     }
 

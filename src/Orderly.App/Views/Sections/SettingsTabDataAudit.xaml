@@ -13,6 +13,7 @@
             <Thickness x:Key="SettingsRowGapXs">0,8,0,0</Thickness>                <!-- 上 UiSpaceXs(8)，报告区字段行间距（含原 0,6 归一） -->
             <Thickness x:Key="SettingsSectionSpacingSm">0,12,0,0</Thickness>        <!-- 上 UiSpaceSm(12)，区块分隔间距（含原 0,10 归一） -->
             <Thickness x:Key="SettingsPrimaryButtonPadding">16,0,16,0</Thickness>   <!-- 左右 UiSpaceMd(16)，主操作按钮内边距 -->
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
     <!--
@@ -23,82 +24,101 @@
     <StackPanel>
                             <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
                                 <StackPanel>
-                                    <TextBlock Text="数据校验与导入恢复" Style="{StaticResource SettingsGroupTitleStyle}" />
+                                    <Grid Margin="0,8,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="数据校验与导入恢复" Style="{StaticResource SettingsGroupTitleStyle}" Margin="0,0,0,2" />
+                                            <TextBlock Text="{Binding RestoreWorkflowStatusDetailText}" Style="{StaticResource SettingsItemDescStyle}" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="14" Padding="12,6" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding RestoreWorkflowStatusText}" Style="{StaticResource SettingsItemTitleStyle}" FontSize="{DynamicResource UiFontSize12_5}" />
+                                        </Border>
+                                    </Grid>
 
                                     <Border Style="{StaticResource SettingsRowItemBorder}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="34" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="0,2,10,0">
+                                                <TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="选择备份文件" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="{Binding SelectedBackupPath, StringFormat='已选：\{0\}'}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding RestoreSelectedBackupFileNameText}" Style="{StaticResource SettingsItemDescStyle}" />
+                                                <TextBlock Text="{Binding RestoreSelectedBackupPathText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Content="选择文件" Style="{StaticResource SettingsRowActionButtonStyle}" Margin="{StaticResource SettingsInlineButtonMargin}"
-                                                        Command="{Binding SelectBackupFileCommand}"
-                                                        AutomationProperties.AutomationId="Btn_SelectBackupFile" />
-                                                <Button Content="验证备份" Style="{StaticResource SettingsRowActionButtonStyle}"
-                                                        Command="{Binding ValidateBackupCommand}"
-                                                        AutomationProperties.AutomationId="Btn_ValidateBackup" />
-                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="选择文件" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                    Command="{Binding SelectBackupFileCommand}"
+                                                    AutomationProperties.AutomationId="Btn_SelectBackupFile" />
                                         </Grid>
                                     </Border>
 
-                                    <!-- 恢复检查报告：套用令牌化具名样式 SettingsPanelStyle（背景/边框/圆角/内边距均经令牌），消除硬编码视觉字面量，保证深浅色主题切换无异常（Req 9.1, 9.4） -->
-                                    <Border Style="{StaticResource SettingsPanelStyle}" Margin="{StaticResource SettingsCardSpacing}">
-                                        <StackPanel>
-                                            <TextBlock Text="数据恢复校验报告" Style="{StaticResource SettingsFieldLabelStyle}" />
-                                            <Grid Margin="{StaticResource SettingsRowGapXs}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="130" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Text="文件名" Style="{StaticResource SettingsFieldLabelStyle}" />
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding RestorePreviewFileName}" TextWrapping="Wrap" />
-
-                                                <TextBlock Grid.Row="1" Text="导出时间" Style="{StaticResource SettingsFieldLabelStyle}" Margin="{StaticResource SettingsRowGapXs}" />
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RestorePreviewExportedAtText}" Margin="{StaticResource SettingsRowGapXs}" />
-
-                                                <TextBlock Grid.Row="2" Text="校验状态" Style="{StaticResource SettingsFieldLabelStyle}" Margin="{StaticResource SettingsRowGapXs}" />
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding RestorePreviewChecksumStatusText}" Margin="{StaticResource SettingsRowGapXs}" />
-
-                                                <TextBlock Grid.Row="3" Text="允许恢复" Style="{StaticResource SettingsFieldLabelStyle}" Margin="{StaticResource SettingsRowGapXs}" />
-                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RestorePreviewCanRestoreText}" Margin="{StaticResource SettingsRowGapXs}" FontWeight="SemiBold" />
-
-                                                <TextBlock Grid.Row="4" Text="风险警示" Style="{StaticResource SettingsFieldLabelStyle}" Margin="{StaticResource SettingsRowGapXs}" />
-                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding RestoreRiskPromptText}" Margin="{StaticResource SettingsRowGapXs}" Foreground="{DynamicResource WarmTextBrush}" TextWrapping="Wrap" />
-                                            </Grid>
-
-                                            <CheckBox x:Name="Chk_RestoreRiskConfirm" Margin="{StaticResource SettingsSectionSpacingSm}"
-                                                      Content="{Binding RestoreRiskConfirmationText}"
-                                                      IsChecked="{Binding IsRestoreRiskConfirmed}"
-                                                      IsEnabled="{Binding CanConfirmRestoreRisk}"
-                                                      AutomationProperties.AutomationId="Chk_RestoreRiskConfirm" />
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- 执行导入 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0" Margin="{StaticResource SettingsSectionSpacingSm}">
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="34" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="开始执行数据恢复" Style="{StaticResource SettingsItemTitleStyle}" />
-                                                <TextBlock Text="{Binding RestoreStatusText}" Style="{StaticResource SettingsItemDescStyle}" />
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="0,2,10,0">
+                                                <TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="检查备份内容" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="{Binding RestoreCheckSummaryText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                <UniformGrid Columns="2" Margin="{StaticResource SettingsSectionSpacingSm}">
+                                                    <StackPanel Margin="0,0,16,8">
+                                                        <TextBlock Text="备份时间" Style="{StaticResource SettingsFieldLabelStyle}" />
+                                                        <TextBlock Text="{Binding RestorePreviewExportedAtText}" Style="{StaticResource SettingsItemDescStyle}" />
+                                                    </StackPanel>
+                                                    <StackPanel Margin="0,0,0,8">
+                                                        <TextBlock Text="当前数据库" Style="{StaticResource SettingsFieldLabelStyle}" />
+                                                        <TextBlock Text="{Binding RestorePreviewTargetStateText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <StackPanel Margin="0,0,16,0">
+                                                        <TextBlock Text="包含数据" Style="{StaticResource SettingsFieldLabelStyle}" />
+                                                        <TextBlock Text="{Binding RestorePreviewCountsText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <StackPanel>
+                                                        <TextBlock Text="恢复结论" Style="{StaticResource SettingsFieldLabelStyle}" />
+                                                        <TextBlock Text="{Binding RestorePreviewCanRestoreText}" Style="{StaticResource SettingsItemDescStyle}" FontWeight="SemiBold" />
+                                                    </StackPanel>
+                                                </UniformGrid>
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="执行安全恢复" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="34" Padding="{StaticResource SettingsPrimaryButtonPadding}"
+                                            <Button Grid.Column="2" Content="{Binding RestoreValidateActionText}" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                    Command="{Binding ValidateBackupCommand}"
+                                                    AutomationProperties.AutomationId="Btn_ValidateBackup" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="34" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="0,2,10,0">
+                                                <TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="确认并恢复" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="{Binding RestoreRiskPromptText}" Style="{StaticResource SettingsItemDescStyle}" Foreground="{DynamicResource WarmTextBrush}" TextWrapping="Wrap" />
+                                                <CheckBox x:Name="Chk_RestoreRiskConfirm"
+                                                          Margin="{StaticResource SettingsSectionSpacingSm}"
+                                                          Content="{Binding RestoreRiskConfirmationText}"
+                                                          IsChecked="{Binding IsRestoreRiskConfirmed}"
+                                                          IsEnabled="{Binding CanConfirmRestoreRisk}"
+                                                          Visibility="{Binding CanConfirmRestoreRisk, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                          AutomationProperties.AutomationId="Chk_RestoreRiskConfirm" />
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="{Binding RestorePrimaryActionText}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="34" Padding="{StaticResource SettingsPrimaryButtonPadding}"
                                                     Command="{Binding RestoreBackupCommand}"
                                                     AutomationProperties.AutomationId="Btn_RestoreBackup" />
                                         </Grid>
