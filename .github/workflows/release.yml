@@ -68,3 +68,43 @@ jobs:
             --releaseName "Orderly ${{ steps.version.outputs.version }}" `
             --tag "${{ github.ref_name }}" `
             --targetCommitish "${{ github.sha }}"
+
+      - name: Upload release sidecar assets
+        shell: pwsh
+        run: |
+          $headers = @{
+            Authorization = "Bearer ${{ github.token }}"
+            Accept = "application/vnd.github+json"
+            "User-Agent" = "GitHubActions"
+          }
+          $release = Invoke-RestMethod `
+            -Headers $headers `
+            -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}"
+          $uploadBase = $release.upload_url -replace '\{\?name,label\}', ''
+          $existingAssets = @{}
+          foreach ($asset in $release.assets) {
+            $existingAssets[$asset.name] = $asset.id
+          }
+          $files = @(
+            @{ Name = "RELEASES-stable"; Path = ".\artifacts\release\${{ steps.version.outputs.version }}\packages\RELEASES-stable"; ContentType = "application/octet-stream" },
+            @{ Name = "assets.stable.json"; Path = ".\artifacts\release\${{ steps.version.outputs.version }}\packages\assets.stable.json"; ContentType = "application/json" }
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path -LiteralPath $file.Path)) {
+              throw "Release sidecar asset not found: $($file.Path)"
+            }
+            if ($existingAssets.ContainsKey($file.Name)) {
+              Invoke-RestMethod `
+                -Method Delete `
+                -Headers $headers `
+                -Uri "https://api.github.com/repos/${{ github.repository }}/releases/assets/$($existingAssets[$file.Name])"
+            }
+            $builder = [System.UriBuilder]::new($uploadBase)
+            $builder.Query = "name=$([System.Uri]::EscapeDataString($file.Name))"
+            Invoke-RestMethod `
+              -Method Post `
+              -Headers $headers `
+              -ContentType $file.ContentType `
+              -InFile $file.Path `
+              -Uri $builder.Uri.AbsoluteUri | Out-Null
+          }
