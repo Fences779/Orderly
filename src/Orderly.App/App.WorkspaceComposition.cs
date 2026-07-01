@@ -236,6 +236,8 @@ public partial class App
         IEmergencyEnableService emergencyEnableService =
             new EmergencyEnableService(localAccountRepository, localAuthService, sessionContextService, securityAuditService);
 
+        IAppUpdateService appUpdateService = new VelopackAppUpdateService();
+
         _mainViewModel = new MainViewModel(
             customerRepository,
             orderRepository,
@@ -271,7 +273,8 @@ public partial class App
             credentialChangeSessionCoordinator,
             emergencyEnableService,
             commerceOrderRepository,
-            _quickLoginService);
+            _quickLoginService,
+            appUpdateService);
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
 

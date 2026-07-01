@@ -88,7 +88,7 @@ git status --short
 - `miniprogram/` 与 `cloudfunctions/` 不属于本主线交付范围
 
 ## 文件状态
-
+- `.github/workflows/release.yml`、`scripts/release/build-velopack-release.ps1`、`src/Orderly.Infrastructure/Services/VelopackAppUpdateService.cs`、`README.md`（已修改）：将发布架构收敛为同仓库公开 GitHub Releases，默认更新源固定为 `https://github.com/Fences779/Orderly`；发布工作流改为仅允许正式 tag `vX.Y.Z` 继续执行，使用 GitHub Actions 自带 `GITHUB_TOKEN` 和 `contents: write` 直接向当前仓库发布 Velopack 资产，并清理 `Orderly-Releases`、`ORDERLY_RELEASES_PAT` 和跨仓库发布口径。
 - `src/Orderly.App/Views/Sections/SettingsTabDataAudit.xaml`、`src/Orderly.App/ViewModels/MainViewModel.BackupRestoreState.cs`、`src/Orderly.App/ViewModels/MainViewModel.BackupCommands*.cs`（已修改）：将“数据校验与导入恢复”卡片重排为选择文件、检查备份、确认恢复三步流程，收拢恢复状态、检查结论、风险确认和按钮文案，真实备份恢复服务与安全规则保持不变。
 - `src/Orderly.Data/Services/QuickLoginService.cs`、`src/Orderly.App/Services/WindowsHelloService.cs`、`src/Orderly.App/ViewModels/LoginViewModel*.cs`、`src/Orderly.App/Views/LoginSignInPanel.xaml*`、`src/Orderly.App/Views/PinUnlockView.xaml*`、`src/Orderly.App/App.SessionLock.cs`、`src/Orderly.App/Views/Sections/SettingsTabDataSecurity.xaml`（新增/已修改）：新增“本次开机允许快速登录（PIN / Windows Hello）”，使用 Windows 当前用户加密且绑定系统启动标识的临时票据恢复账号数据密钥；设置页已开启时登录页隐藏重复选择框，并始终保留主密码登录入口；修复主密码登录竞态误关闭设置项的问题，并让 PIN 锁定页支持 Windows Hello 解锁当前会话。
 - `tests/Orderly.Tests/AssemblyInfo.cs`、`tests/Orderly.Tests/Support/PbtConfig.cs`（新增/已修改）：同时关闭 xUnit 测试类并行和 CsCheck 样本并行，保留每项至少 100 次属性覆盖，避免 SQLite 测试调用全局 `ClearAllPools()` 时相互释放连接造成随机假失败。
@@ -112,3 +112,4 @@ git status --short
 - `src/Orderly.Core/Services/IBackupService.cs`、`src/Orderly.Data/Services/LocalBackupService.Export.cs`、`src/Orderly.Data/Services/LocalBackupService.Shared.cs`、`src/Orderly.App/ViewModels/MainViewModel.BackupCommands.cs` (已修改)：让“导出时包含敏感信息”和自动备份频率/保留数量进入真实备份链路。
 - `src/Orderly.Core/Models/AiSuggestionRequest.cs`、`src/Orderly.Data/Services/LocalAiAssistantService.cs`、`src/Orderly.Data/Services/AiProviderOptions.cs`、`src/Orderly.Data/Services/ChatCompletionSuggestionSupport.cs`、`src/Orderly.Data/Services/LocalAiSuggestionProvider.cs` (已修改)：让 AI 助手开关、模型、超时、上下文范围、语气长度、自动摘要和支付交易号遮蔽影响真实生成请求。
 - `src/Orderly.App/Orderly.App.csproj` (已修改)：在配置中排除 `dotnet watch` 针对 `*_wpftmp.csproj` 临时文件与 `bin/obj` 目录的监视，解决热重载频繁闪退挂起问题。
+- `src/Orderly.Infrastructure/Services/VelopackAppUpdateService.cs`、`scripts/e2e/Run-OrderlyLocalE2E.ps1`、`scripts/e2e/README.md`（新增/已修改）：`ORDERLY_UPDATE_SOURCE_URL` 现已同时支持 Web 更新源、本地绝对路径和 `file://` 更新源；本地目录会严格校验存在性与 `releases.stable.json`，无效配置直接返回清晰错误；本地 E2E 脚本增加 `-ValidateOnly` 无副作用自检、Windows PowerShell 5.1/StrictMode 对象安全读取、卸载注册表字段全量诊断、可重跑安装清理保护、失败报告兜底和卸载保留 `%LOCALAPPDATA%\OrderlyData` 验证入口，真实安装/更新/卸载改为通过 `-ExpectedTestUserName "your-temporary-test-user"` 显式锁定临时测试账号。

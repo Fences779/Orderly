@@ -58,6 +58,8 @@ public sealed class SettingsViewContractTests
     //   * Settings.SelectedCategoryKey          —— 右内容区按分类 key 切换可见性。
     //   * ActualWidth                           —— ElementName 绑定的控件属性（浮层宽度对齐搜索框），
     //                                              属控件自身结构属性，非 ViewModel 契约新增路径。
+    //   * ActualHeight                          —— ElementName 绑定的控件属性（内层滚动区高度约束），
+    //                                              属控件自身结构属性，非 ViewModel 契约新增路径。
     private static readonly HashSet<string> AllowedBindingPaths = new(StringComparer.Ordinal)
     {
         "Settings",
@@ -72,6 +74,7 @@ public sealed class SettingsViewContractTests
         "Settings.PendingScrollAnchorId",
         "Settings.SelectedCategoryKey",
         "ActualWidth",
+        "ActualHeight",
         "(helpers:SettingsHelper.IsSelectingStartupSection)",
     };
 

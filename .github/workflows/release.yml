@@ -1,0 +1,70 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_REPO_URL: https://github.com/Fences779/Orderly
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -notmatch '^v\d+\.\d+\.\d+$') {
+            throw "仅允许正式发布 tag：vX.Y.Z。当前：$tag"
+          }
+          $version = $tag -replace '^v', ''
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Restore
+        run: dotnet restore Orderly.sln
+
+      - name: Build
+        run: dotnet build Orderly.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Orderly.sln -c Release --no-build
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Build Velopack release
+        shell: pwsh
+        run: |
+          .\scripts\release\build-velopack-release.ps1 `
+            -Version "${{ steps.version.outputs.version }}" `
+            -RepoUrl "${env:RELEASE_REPO_URL}" `
+            -GithubToken "${{ github.token }}"
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        run: |
+          dotnet tool run vpk -- upload github `
+            --outputDir ".\artifacts\release\${{ steps.version.outputs.version }}\packages" `
+            --channel stable `
+            --repoUrl "${env:RELEASE_REPO_URL}" `
+            --token "${{ github.token }}" `
+            --publish true `
+            --merge true `
+            --releaseName "Orderly ${{ steps.version.outputs.version }}" `
+            --tag "${{ github.ref_name }}" `
+            --targetCommitish "${{ github.sha }}"

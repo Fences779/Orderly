@@ -11,6 +11,15 @@
             <Thickness x:Key="SettingsCardSpacing">0,16,0,0</Thickness>            <!-- 上 UiSpaceMd(16)，卡片顶部间距 -->
             <Thickness x:Key="SettingsRowDescMargin">0,4,0,0</Thickness>           <!-- 上 UiSpaceXxs(4)，说明文字间距 -->
             <Thickness x:Key="SettingsInlineLabelMargin">8,0,0,0</Thickness>        <!-- 左 UiSpaceXs(8)，行内单位标签间隔 -->
+            <Thickness x:Key="SettingsUpdateStatusMargin">0,8,0,0</Thickness>       <!-- 上 UiSpaceXs(8)，更新状态间距 -->
+            <Thickness x:Key="SettingsFieldHeaderMargin">0,0,0,8</Thickness>
+            <Thickness x:Key="SettingsInlineButtonMargin">0,0,8,0</Thickness>
+            <Thickness x:Key="SettingsSmallActionButtonPadding">10,0</Thickness>
+            <Thickness x:Key="SettingsPathPanelPadding">12,10</Thickness>
+            <Thickness x:Key="SettingsStatusBadgePadding">10,4</Thickness>
+            <Thickness x:Key="SettingsLogPanelPadding">12</Thickness>
+            <CornerRadius x:Key="SettingsPathPanelRadius">8</CornerRadius>
+            <CornerRadius x:Key="SettingsStatusBadgeRadius">6</CornerRadius>
         </ResourceDictionary>
     </UserControl.Resources>
     <!--
@@ -122,18 +131,18 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
-                                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                            <Grid Grid.Row="0" Margin="{StaticResource SettingsFieldHeaderMargin}">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="数据库路径" Style="{StaticResource SettingsItemTitleStyle}" VerticalAlignment="Center" />
                                                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                                    <Button Content="复制路径" Style="{StaticResource SettingsRowActionButtonStyle}" Height="28" Padding="10,0" Margin="0,0,8,0" Command="{Binding CopyDatabasePathCommand}" />
-                                                    <Button Content="打开文件夹" Style="{StaticResource SettingsRowActionButtonStyle}" Height="28" Padding="10,0" Command="{Binding OpenDataDirectoryCommand}" />
+                                                    <Button Content="复制路径" Style="{StaticResource SettingsRowActionButtonStyle}" Height="28" Padding="{StaticResource SettingsSmallActionButtonPadding}" Margin="{StaticResource SettingsInlineButtonMargin}" Command="{Binding CopyDatabasePathCommand}" />
+                                                    <Button Content="打开文件夹" Style="{StaticResource SettingsRowActionButtonStyle}" Height="28" Padding="{StaticResource SettingsSmallActionButtonPadding}" Command="{Binding OpenDataDirectoryCommand}" />
                                                 </StackPanel>
                                             </Grid>
-                                            <Border Grid.Row="1" Background="{DynamicResource GreySoftBrush}" CornerRadius="8" Padding="12,10">
+                                            <Border Grid.Row="1" Background="{DynamicResource GreySoftBrush}" CornerRadius="{StaticResource SettingsPathPanelRadius}" Padding="{StaticResource SettingsPathPanelPadding}">
                                                 <TextBlock Text="{Binding DatabasePath}" Style="{StaticResource SettingsStatusTextStyle}" TextWrapping="Wrap" Foreground="{DynamicResource HeadingBrush}" FontFamily="Consolas, Courier New" />
                                             </Border>
                                         </Grid>
@@ -150,7 +159,7 @@
                                                 <TextBlock Text="数据体积" Style="{StaticResource SettingsItemTitleStyle}" />
                                                 <TextBlock Text="本地 SQLite 数据库文件占用磁盘空间大小" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="1" Text="{Binding DatabaseSizeText}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding DatabaseSizeText}" FontSize="{DynamicResource UiFontSize14}" FontWeight="SemiBold" Foreground="{DynamicResource HeadingBrush}" VerticalAlignment="Center" />
                                         </Grid>
                                     </Border>
 
@@ -182,7 +191,7 @@
                                                 <TextBlock Text="检测数据库结构是否受损、关键表是否存在" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Border CornerRadius="6" Padding="10,4" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                <Border CornerRadius="{StaticResource SettingsStatusBadgeRadius}" Padding="{StaticResource SettingsStatusBadgePadding}" Margin="{StaticResource SettingsInlineButtonMargin}" VerticalAlignment="Center">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="{DynamicResource GreySoftBrush}" />
@@ -196,7 +205,7 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </Border.Style>
-                                                    <TextBlock Text="{Binding DatabaseHealthStatusText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding DatabaseHealthStatusText}" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" VerticalAlignment="Center">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock">
                                                                 <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
@@ -226,10 +235,56 @@
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
-                                            <TextBlock Grid.Row="0" Text="校验日志详情" Style="{StaticResource SettingsItemTitleStyle}" Margin="0,0,0,8" />
-                                            <Border Grid.Row="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="8" Padding="12">
-                                                <TextBlock Text="{Binding DatabaseHealthDetailText}" FontSize="12" FontFamily="Consolas, Courier New" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" LineHeight="18" />
+                                            <TextBlock Grid.Row="0" Text="校验日志详情" Style="{StaticResource SettingsItemTitleStyle}" Margin="{StaticResource SettingsFieldHeaderMargin}" />
+                                            <Border Grid.Row="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="{StaticResource SettingsPathPanelRadius}" Padding="{StaticResource SettingsLogPanelPadding}">
+                                                <TextBlock Text="{Binding DatabaseHealthDetailText}" FontSize="{DynamicResource UiFontSize12}" FontFamily="Consolas, Courier New" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" LineHeight="18" />
                                             </Border>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
+                                <StackPanel>
+                                    <TextBlock Text="应用更新" Style="{StaticResource SettingsGroupTitleStyle}" />
+
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="当前版本" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="安装版可从 GitHub Releases 检查 stable 更新" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding AppVersionText}"
+                                                       FontSize="{DynamicResource UiFontSize14}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource HeadingBrush}"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="手动检查更新" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="{Binding UpdateCheckStatusText}"
+                                                           Style="{StaticResource SettingsItemDescStyle}"
+                                                           Margin="{StaticResource SettingsUpdateStatusMargin}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1"
+                                                    Content="检查更新"
+                                                    Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                    Command="{Binding CheckForAppUpdateCommand}"
+                                                    AutomationProperties.AutomationId="Btn_CheckForAppUpdate" />
                                         </Grid>
                                     </Border>
                                 </StackPanel>

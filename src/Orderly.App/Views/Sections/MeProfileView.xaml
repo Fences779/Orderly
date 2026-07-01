@@ -1069,6 +1069,28 @@
                         <TextBlock Text="面向小微商家，覆盖成交销售、订单、库存、客户、现金流、数据分析与经营建议七大能力。所有业务数据均保存在本机，默认不依赖云端。"
                                    Style="{StaticResource SettingsItemDescStyle}"
                                    TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,4" />
+
+                        <Border Background="{DynamicResource SurfaceSoftBrush}"
+                                CornerRadius="{StaticResource RadiusSm}" Padding="14,12" Margin="0,12,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="当前版本" Style="{StaticResource SettingsItemTitleStyle}" />
+                                    <TextBlock Text="{Binding DataContext.AppVersionText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                               Style="{StaticResource SettingsItemDescStyle}" Margin="0,4,0,0" />
+                                    <TextBlock Text="{Binding DataContext.UpdateCheckStatusText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                               Style="{StaticResource SettingsItemDescStyle}" Margin="0,8,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Content="检查更新"
+                                        Command="{Binding DataContext.CheckForAppUpdateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Style="{StaticResource ToolbarPrimaryButtonStyle}"
+                                        Height="34" Padding="16,0" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
             </StackPanel>

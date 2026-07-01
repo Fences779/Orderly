@@ -2,20 +2,22 @@ namespace Orderly.Data.Sqlite;
 
 public static class DatabasePaths
 {
-    // Neutral product application-root directory name. All local data (launcher database,
-    // per-account workspace databases, identity material) lives exclusively under this single
-    // directory beneath %LocalAppData% (Req 1.5). The launcher database and multi-account
-    // structure are derived relative to this root, so they continue to resolve unchanged.
-    private const string AppRootDirectoryName = "Orderly";
+    // Current product data-root directory name. Business data now lives under an installation-
+    // independent root so Velopack uninstall/repair actions cannot remove launcher/account data.
+    private const string AppRootDirectoryName = "OrderlyData";
+    private const string LegacyAppRootDirectoryName = "Orderly";
 
     public static string GetAppRootPath()
     {
-        var root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            AppRootDirectoryName);
+        var root = GetRootPath(AppRootDirectoryName);
 
         LocalDataFileSecurity.EnsureDirectoryExistsAndIsNotLinked(root, "应用数据目录");
         return root;
+    }
+
+    public static string GetLegacyAppRootPath()
+    {
+        return GetRootPath(LegacyAppRootDirectoryName);
     }
 
     public static string GetLegacyDatabasePath()
@@ -27,9 +29,9 @@ public static class DatabasePaths
     /// Neutral label used whenever the application refers to recovering local data left behind by a
     /// previous installation directory (Req 1.9). Any such recovery is treated strictly as a
     /// "legacy local data migration": existing user data is never deleted or overwritten by this
-    /// module (constraint C-6). This module owns only the current application root under
-    /// <see cref="AppRootDirectoryName"/>; actual migration of prior-install data is handled by the
-    /// data-layer migration pipeline.
+    /// module (constraint C-6). This module owns only the legacy installation/data root under
+    /// <see cref="LegacyAppRootDirectoryName"/>; actual migration of prior-install data is handled
+    /// by the data-layer migration pipeline.
     /// </summary>
     public const string LegacyLocalDataMigrationLabel = "legacy local data migration";
 
@@ -147,5 +149,12 @@ public static class DatabasePaths
         }
 
         return value;
+    }
+
+    private static string GetRootPath(string directoryName)
+    {
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            directoryName);
     }
 }

@@ -10,4 +10,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Orderly.Core\Orderly.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Velopack" Version="1.2.0" />
+  </ItemGroup>
 </Project>

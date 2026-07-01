@@ -71,6 +71,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ICommerceOrderRepository? _commerceOrderRepository;
     private readonly ILocalAccountManagementService? _localAccountManagementService;
     private readonly ISessionContextService? _sessionContextService;
+    private readonly IAppUpdateService? _appUpdateService;
 
     /// <summary>「我的页」专属 ViewModel（设计 §8.1 / BC-8），经组合暴露给视图绑定。</summary>
     public MeProfileViewModel MeProfile { get; }
@@ -116,7 +117,8 @@ public partial class MainViewModel : ObservableObject
         ICredentialChangeSessionCoordinator? credentialChangeSessionCoordinator = null,
         IEmergencyEnableService? emergencyEnableService = null,
         ICommerceOrderRepository? commerceOrderRepository = null,
-        IQuickLoginService? quickLoginService = null)
+        IQuickLoginService? quickLoginService = null,
+        IAppUpdateService? appUpdateService = null)
         : this(
             customerRepository,
             orderRepository,
@@ -152,7 +154,8 @@ public partial class MainViewModel : ObservableObject
             credentialChangeSessionCoordinator,
             emergencyEnableService,
             commerceOrderRepository,
-            quickLoginService)
+            quickLoginService,
+            appUpdateService)
     {
     }
 
@@ -191,7 +194,8 @@ public partial class MainViewModel : ObservableObject
         ICredentialChangeSessionCoordinator? credentialChangeSessionCoordinator = null,
         IEmergencyEnableService? emergencyEnableService = null,
         ICommerceOrderRepository? commerceOrderRepository = null,
-        IQuickLoginService? quickLoginService = null)
+        IQuickLoginService? quickLoginService = null,
+        IAppUpdateService? appUpdateService = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -218,6 +222,7 @@ public partial class MainViewModel : ObservableObject
         _commerceOrderRepository = commerceOrderRepository;
         _localAccountManagementService = localAccountManagementService;
         _sessionContextService = sessionContextService;
+        _appUpdateService = appUpdateService;
         DatabasePath = databasePath;
         InitializeFilterOptions();
 

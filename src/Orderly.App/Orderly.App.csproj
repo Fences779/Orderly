@@ -10,6 +10,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>Assets\Brand\Orderly Logo.ico</ApplicationIcon>
+    <StartupObject>Orderly.App.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,6 +30,11 @@
     <Content Include="Assets\Brand\Orderly Logo.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
   </ItemGroup>
 
   <ItemGroup>

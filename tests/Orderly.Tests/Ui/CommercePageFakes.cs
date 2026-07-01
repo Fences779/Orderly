@@ -6,10 +6,45 @@ using System.Threading.Tasks;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Repositories;
 using Orderly.Core.Commerce.Services;
-using Orderly.Core.Models;
 using Orderly.Core.Repositories;
+using AppPreferences = Orderly.Core.Models.AppPreferences;
+using CommerceCustomer = Orderly.Core.Commerce.Customer;
+using CommerceOrder = Orderly.Core.Commerce.Order;
 
 namespace Orderly.Tests.Ui;
+
+// UI page tests share the Orderly.Tests.Ui namespace and import both Commerce and legacy model
+// namespaces. These lightweight shells provide an unambiguous local Order/Customer symbol while
+// remaining implicitly convertible to the Commerce entities expected by the repositories/services.
+internal sealed class Order
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid WorkspaceId { get; init; }
+    public string OrderNo { get; init; } = string.Empty;
+
+    public static implicit operator CommerceOrder(Order order) => new()
+    {
+        Id = order.Id,
+        WorkspaceId = order.WorkspaceId,
+        OrderNo = order.OrderNo
+    };
+}
+
+internal sealed class Customer
+{
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid WorkspaceId { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string? Phone { get; init; }
+
+    public static implicit operator CommerceCustomer(Customer customer) => new()
+    {
+        Id = customer.Id,
+        WorkspaceId = customer.WorkspaceId,
+        Name = customer.Name,
+        Phone = customer.Phone
+    };
+}
 
 /// <summary>
 /// Lightweight, configurable test doubles for the Commerce Service Layer interfaces the nine-entry
@@ -60,11 +95,11 @@ internal abstract class FakeCommerceRepositoryBase<TEntity> : ICommerceRepositor
     public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
 
-internal sealed class FakeCommerceOrderRepository : FakeCommerceRepositoryBase<Order>, ICommerceOrderRepository { }
+internal sealed class FakeCommerceOrderRepository : FakeCommerceRepositoryBase<CommerceOrder>, ICommerceOrderRepository { }
 
 internal sealed class FakeInventoryItemRepository : FakeCommerceRepositoryBase<InventoryItem>, IInventoryItemRepository { }
 
-internal sealed class FakeCommerceCustomerRepository : FakeCommerceRepositoryBase<Customer>, ICommerceCustomerRepository { }
+internal sealed class FakeCommerceCustomerRepository : FakeCommerceRepositoryBase<CommerceCustomer>, ICommerceCustomerRepository { }
 
 internal sealed class FakeCashFlowEntryRepository : FakeCommerceRepositoryBase<CashFlowEntry>, ICashFlowEntryRepository { }
 
@@ -274,14 +309,14 @@ internal sealed class FakeBusinessInsightService : IBusinessInsightService
 internal sealed class FakeOrderService : IOrderService
 {
     public void RecalculateOrder(
-        Order order,
+        CommerceOrder order,
         IReadOnlyCollection<OrderItem> items,
         IReadOnlyCollection<PaymentRecord> payments)
     {
     }
 
     public OrderStageTransitionResult ApplyStageTransition(
-        Order order,
+        CommerceOrder order,
         OrderStageTransitionRequest request,
         OrderWorkflowConfiguration workflow)
         => OrderStageTransitionResult.Applied();

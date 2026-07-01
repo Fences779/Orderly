@@ -13,6 +13,15 @@
             <Thickness x:Key="SettingsRowGapXs">0,8,0,0</Thickness>                <!-- 上 UiSpaceXs(8)，报告区字段行间距（含原 0,6 归一） -->
             <Thickness x:Key="SettingsSectionSpacingSm">0,12,0,0</Thickness>        <!-- 上 UiSpaceSm(12)，区块分隔间距（含原 0,10 归一） -->
             <Thickness x:Key="SettingsPrimaryButtonPadding">16,0,16,0</Thickness>   <!-- 左右 UiSpaceMd(16)，主操作按钮内边距 -->
+            <Thickness x:Key="SettingsHeaderGridMargin">0,8,0,4</Thickness>
+            <Thickness x:Key="SettingsHeaderTitleMargin">0,0,0,2</Thickness>
+            <Thickness x:Key="SettingsStatusBadgePadding">12,6</Thickness>
+            <Thickness x:Key="SettingsStepBadgeMargin">0,2,10,0</Thickness>
+            <Thickness x:Key="SettingsPreviewCellMarginWithRightGap">0,0,16,8</Thickness>
+            <Thickness x:Key="SettingsPreviewCellMarginBottom">0,0,0,8</Thickness>
+            <Thickness x:Key="SettingsPreviewCellMarginRight">0,0,16,0</Thickness>
+            <CornerRadius x:Key="SettingsStatusBadgeRadius">14</CornerRadius>
+            <CornerRadius x:Key="SettingsStepBadgeRadius">12</CornerRadius>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         </ResourceDictionary>
     </UserControl.Resources>
@@ -24,16 +33,16 @@
     <StackPanel>
                             <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
                                 <StackPanel>
-                                    <Grid Margin="0,8,0,4">
+                                    <Grid Margin="{StaticResource SettingsHeaderGridMargin}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="数据校验与导入恢复" Style="{StaticResource SettingsGroupTitleStyle}" Margin="0,0,0,2" />
+                                            <TextBlock Text="数据校验与导入恢复" Style="{StaticResource SettingsGroupTitleStyle}" Margin="{StaticResource SettingsHeaderTitleMargin}" />
                                             <TextBlock Text="{Binding RestoreWorkflowStatusDetailText}" Style="{StaticResource SettingsItemDescStyle}" />
                                         </StackPanel>
-                                        <Border Grid.Column="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="14" Padding="12,6" VerticalAlignment="Center">
+                                        <Border Grid.Column="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="{StaticResource SettingsStatusBadgeRadius}" Padding="{StaticResource SettingsStatusBadgePadding}" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding RestoreWorkflowStatusText}" Style="{StaticResource SettingsItemTitleStyle}" FontSize="{DynamicResource UiFontSize12_5}" />
                                         </Border>
                                     </Grid>
@@ -45,7 +54,7 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="0,2,10,0">
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="{StaticResource SettingsStepBadgeRadius}" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="{StaticResource SettingsStepBadgeMargin}">
                                                 <TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
                                             </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -66,22 +75,22 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="0,2,10,0">
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="{StaticResource SettingsStepBadgeRadius}" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="{StaticResource SettingsStepBadgeMargin}">
                                                 <TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
                                             </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="检查备份内容" Style="{StaticResource SettingsItemTitleStyle}" />
                                                 <TextBlock Text="{Binding RestoreCheckSummaryText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
                                                 <UniformGrid Columns="2" Margin="{StaticResource SettingsSectionSpacingSm}">
-                                                    <StackPanel Margin="0,0,16,8">
+                                                    <StackPanel Margin="{StaticResource SettingsPreviewCellMarginWithRightGap}">
                                                         <TextBlock Text="备份时间" Style="{StaticResource SettingsFieldLabelStyle}" />
                                                         <TextBlock Text="{Binding RestorePreviewExportedAtText}" Style="{StaticResource SettingsItemDescStyle}" />
                                                     </StackPanel>
-                                                    <StackPanel Margin="0,0,0,8">
+                                                    <StackPanel Margin="{StaticResource SettingsPreviewCellMarginBottom}">
                                                         <TextBlock Text="当前数据库" Style="{StaticResource SettingsFieldLabelStyle}" />
                                                         <TextBlock Text="{Binding RestorePreviewTargetStateText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
                                                     </StackPanel>
-                                                    <StackPanel Margin="0,0,16,0">
+                                                    <StackPanel Margin="{StaticResource SettingsPreviewCellMarginRight}">
                                                         <TextBlock Text="包含数据" Style="{StaticResource SettingsFieldLabelStyle}" />
                                                         <TextBlock Text="{Binding RestorePreviewCountsText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
                                                     </StackPanel>
@@ -104,7 +113,7 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="12" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="0,2,10,0">
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="{StaticResource SettingsStepBadgeRadius}" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="{StaticResource SettingsStepBadgeMargin}">
                                                 <TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
                                             </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">

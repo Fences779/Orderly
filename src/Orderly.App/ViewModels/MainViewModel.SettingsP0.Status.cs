@@ -49,7 +49,7 @@ public partial class MainViewModel
     private void RefreshAppInfoRuntimeStatus()
     {
         var entryAssembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
-        AppVersionText = entryAssembly.GetName().Version?.ToString() ?? "未知";
+        AppVersionText = ResolveDisplayAppVersion(entryAssembly);
 
         var location = entryAssembly.Location;
         if (!string.IsNullOrWhiteSpace(location) && File.Exists(location))
@@ -70,6 +70,9 @@ public partial class MainViewModel
             $"数据库: {DatabasePath}"
         };
         RuntimeEnvironmentText = string.Join(Environment.NewLine, lines);
+
+        var updateSupportInfo = _appUpdateService?.GetSupportInfo();
+        UpdateCheckStatusText = updateSupportInfo?.StatusText ?? "当前版本未接入更新服务。";
     }
 
     private async Task<(string Status, string Detail)> CheckDatabaseHealthAsync(CancellationToken cancellationToken = default)
@@ -224,6 +227,29 @@ public partial class MainViewModel
             FileName = path,
             UseShellExecute = true
         });
+    }
+
+    private static string ResolveDisplayAppVersion(Assembly entryAssembly)
+    {
+        var informationalVersion = entryAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            return NormalizeDisplayVersion(informationalVersion);
+        }
+
+        var version = entryAssembly.GetName().Version;
+        if (version is not null)
+        {
+            return $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}";
+        }
+
+        return "未知";
+    }
+
+    private static string NormalizeDisplayVersion(string version)
+    {
+        var metadataSeparatorIndex = version.IndexOf('+');
+        return metadataSeparatorIndex >= 0 ? version[..metadataSeparatorIndex] : version;
     }
 
     private static string ResolveQaToolsPath()

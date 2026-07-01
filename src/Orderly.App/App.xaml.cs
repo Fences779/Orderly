@@ -95,6 +95,7 @@ public partial class App : System.Windows.Application
 
         try
         {
+            LegacyAppDataMigrationService.EnsureMigrated();
             await EnsureIdentityPreparedAsync();
             EnsureAuthServicesPrepared();
             EnsurePrivilegedStartupModesAllowed(
