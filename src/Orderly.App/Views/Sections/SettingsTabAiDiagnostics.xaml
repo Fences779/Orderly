@@ -89,14 +89,14 @@
                     </Grid>
                 </Border>
 
-                <!-- 服务链接状态 -->
+                <!-- 配置检查结果 -->
                 <Border Style="{StaticResource SettingsRowStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="服务链接状态" Style="{StaticResource SettingsRowLabelStyle}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="0" Text="配置检查结果" Style="{StaticResource SettingsRowLabelStyle}" VerticalAlignment="Center" />
                         <TextBlock Grid.Column="1" Text="{Binding AiConnectionCheckStatusText}" Style="{StaticResource SettingsRowValueStyle}" />
                     </Grid>
                 </Border>

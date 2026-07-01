@@ -149,7 +149,7 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="分析客户历史行为画像" Style="{StaticResource SettingsRowLabelStyle}" />
-                                    <TextBlock Text="授权 AI 助手分析该客户的历史备忘以提供个性化话术" Style="{StaticResource SettingsRowDescStyle}" />
+                                    <TextBlock Text="授权 AI 助手分析该客户的历史备忘以补充个性化话术，不影响最近对话上下文" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
                                 <CheckBox Grid.Column="1" Style="{DynamicResource SettingsRowCheckBoxStyle}"
                                           IsChecked="{Binding AllowAiCustomerProfileContextInput}"
@@ -185,7 +185,7 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="AI 请求超时时间 (秒)" Style="{StaticResource SettingsRowLabelStyle}" />
-                                    <TextBlock Text="大模型推理超时机制，超时后将自动切换为本地话术" Style="{StaticResource SettingsRowDescStyle}" />
+                                    <TextBlock Text="大模型推理超时机制，超时或远程不可用时将回退到本地建议兜底" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
                                 <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
                                          MinWidth="{StaticResource SettingsControlMinWidthNarrow}"

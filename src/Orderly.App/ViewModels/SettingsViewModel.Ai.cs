@@ -99,7 +99,7 @@ public partial class SettingsViewModel
         switch (provider)
         {
             case AiProviderOptions.LocalProviderName:
-                AiConnectionCheckStatusText = "配置检查通过：当前 provider=local，离线模式可运行（未发起真实请求）。";
+                AiConnectionCheckStatusText = "配置检查通过：当前 provider=local，仅检查本地配置，未执行网络连通性测试。";
                 SettingsStatusMessage = "AI 配置检查已完成（仅配置检查）。";
                 return;
             case AiProviderOptions.OpenAiCompatibleProviderName:
@@ -132,15 +132,11 @@ public partial class SettingsViewModel
             {
                 errors.Add("ORDERLY_AI_MODEL 未配置");
             }
-            else
-            {
-                errors.Add("运行时 ORDERLY_AI_MODEL 未配置（已保存默认模型偏好，待 provider 接入）");
-            }
         }
 
         if (errors.Count == 0)
         {
-            AiConnectionCheckStatusText = "配置检查通过：provider / endpoint / key / model / timeout 已满足最低配置（未发起真实请求）。";
+            AiConnectionCheckStatusText = "配置检查通过：provider / endpoint / key / model / timeout 已满足最低配置，未执行网络连通性测试。";
             SettingsStatusMessage = "AI 配置检查已完成（仅配置检查）。";
             return;
         }
@@ -160,7 +156,7 @@ public partial class SettingsViewModel
         AiModelPreferenceStatusText = string.IsNullOrWhiteSpace(DefaultAiModelInput)
             ? "默认模型偏好未设置；若需固定模型可保存偏好。"
             : string.IsNullOrWhiteSpace(options.Model)
-                ? "默认模型偏好会在下一次 AI 请求时生效。"
-                : "设置页默认模型会覆盖环境变量模型用于下一次请求。";
+                ? "已保存默认模型偏好；若运行时未配置模型，下一次 AI 请求将使用该偏好。"
+                : "已保存默认模型偏好；下一次 AI 请求会优先使用设置页模型覆盖运行时模型。";
     }
 }

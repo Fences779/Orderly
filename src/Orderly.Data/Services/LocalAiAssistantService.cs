@@ -373,8 +373,9 @@ public sealed class LocalAiAssistantService : IAiAssistantService
             OrderBudgetText = allowOrderContext ? request.OrderBudgetText : string.Empty,
             OrderStatusText = allowOrderContext ? request.OrderStatusText : string.Empty,
             OrderRemark = allowOrderContext ? request.OrderRemark : string.Empty,
-            FocusMessage = allowCustomerContext ? request.FocusMessage : string.Empty,
-            RecentMessages = allowCustomerContext ? request.RecentMessages : Array.Empty<AiSuggestionContextMessage>(),
+            // 最近对话是生成建议的主上下文，不应被“客户档案”开关一并裁掉。
+            FocusMessage = request.FocusMessage,
+            RecentMessages = request.RecentMessages,
             ReplyTone = request.ReplyTone,
             ReplyLength = request.ReplyLength,
             AutoGenerateOrderSummary = request.AutoGenerateOrderSummary

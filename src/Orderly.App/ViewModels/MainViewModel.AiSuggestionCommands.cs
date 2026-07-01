@@ -25,7 +25,7 @@ public partial class MainViewModel
         try
         {
             IsGeneratingAiSuggestion = true;
-            StatusMessage = "正在生成本地 AI 建议...";
+            StatusMessage = "正在生成 AI 建议...";
 
             var created = await _aiAssistantService.GenerateAndSaveReplySuggestionAsync(
                 customer.Id,
@@ -34,7 +34,7 @@ public partial class MainViewModel
 
             await ReloadSelectedCustomerDetailsAsync(customer);
             SelectedAiSuggestion = AiSuggestions.FirstOrDefault(item => item.Id == created.Id) ?? AiSuggestions.FirstOrDefault();
-            StatusMessage = $"本地 AI 建议已生成并写入{context.ContextLabel}";
+            StatusMessage = $"AI 建议已生成并写入{context.ContextLabel}";
         }
         catch (Exception ex)
         {

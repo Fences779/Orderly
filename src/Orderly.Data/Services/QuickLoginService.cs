@@ -40,6 +40,11 @@ public sealed class QuickLoginService : IQuickLoginService
             return new QuickLoginStatus(false, false);
         }
 
+        if (!await LocalAccountDatabasePathRepair.TryRepairAsync(_accounts, account, cancellationToken))
+        {
+            return new QuickLoginStatus(account.QuickLoginEnabled, false);
+        }
+
         var available = TryReadTicket(account, out var dataKey);
         CryptographicOperations.ZeroMemory(dataKey);
         return new QuickLoginStatus(true, available);
@@ -50,6 +55,11 @@ public sealed class QuickLoginService : IQuickLoginService
         var session = _sessionContext.Current ?? throw new InvalidOperationException("当前没有已登录账号。");
         var account = await _accounts.GetByAccountIdAsync(session.AccountId, cancellationToken)
             ?? throw new InvalidOperationException("当前账号不存在。");
+
+        if (!await LocalAccountDatabasePathRepair.TryRepairAsync(_accounts, account, cancellationToken))
+        {
+            throw new InvalidOperationException("当前账号数据路径异常，无法修改快速登录设置。");
+        }
 
         if (!enabled)
         {
@@ -92,6 +102,11 @@ public sealed class QuickLoginService : IQuickLoginService
             throw new InvalidOperationException("登录账号与当前会话不一致。");
         }
 
+        if (!await LocalAccountDatabasePathRepair.TryRepairAsync(_accounts, account, cancellationToken))
+        {
+            throw new InvalidOperationException("登录账号数据路径异常，无法保存快速登录状态。");
+        }
+
         if (!enableQuickLogin)
         {
             return;
@@ -127,6 +142,11 @@ public sealed class QuickLoginService : IQuickLoginService
             return LocalSignInResult.Failure("当前账号不能使用快速登录，请改用主密码。");
         }
 
+        if (!await LocalAccountDatabasePathRepair.TryRepairAsync(_accounts, account, cancellationToken))
+        {
+            return LocalSignInResult.Failure("账号数据路径异常，请改用主密码登录。");
+        }
+
         if (!await _authService.VerifyPinAsync(account.AccountId, pin, cancellationToken))
         {
             return LocalSignInResult.Failure("PIN 不正确，请重试或改用主密码。");
@@ -143,6 +163,11 @@ public sealed class QuickLoginService : IQuickLoginService
         if (account is null || !account.IsEnabled || !account.QuickLoginEnabled)
         {
             return LocalSignInResult.Failure("当前账号不能使用快速登录，请改用主密码。");
+        }
+
+        if (!await LocalAccountDatabasePathRepair.TryRepairAsync(_accounts, account, cancellationToken))
+        {
+            return LocalSignInResult.Failure("账号数据路径异常，请改用主密码登录。");
         }
 
         return await CompleteQuickSignInAsync(account, "quick-signin-windows-hello", cancellationToken);

@@ -99,7 +99,7 @@ public sealed class QuickLoginServiceTests
             DisplayName = "Quick Login Test",
             PasswordHash = RandomNumberGenerator.GetBytes(32),
             PinHash = RandomNumberGenerator.GetBytes(32),
-            DatabasePath = Path.Combine(Path.GetTempPath(), accountId, "orderly.db"),
+            DatabasePath = DatabasePaths.GetExpectedAccountDatabasePath(accountId),
             IsEnabled = true,
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now

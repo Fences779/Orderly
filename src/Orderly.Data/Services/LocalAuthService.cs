@@ -242,7 +242,7 @@ public sealed class LocalAuthService : ILocalAuthService
             return await FailSignInAsync(normalizedUsername, GenericSignInFailureMessage, cancellationToken);
         }
 
-        if (!IsAccountDatabasePathSafe(account))
+        if (!await LocalAccountDatabasePathRepair.TryRepairAsync(_accountRepository, account, cancellationToken))
         {
             return LocalSignInResult.Failure("账号数据路径异常，已拒绝登录。");
         }
@@ -308,7 +308,8 @@ public sealed class LocalAuthService : ILocalAuthService
         }
 
         var account = await _accountRepository.GetByAccountIdAsync(normalizedAccountId, cancellationToken);
-        if (account is null || !IsAccountUsableForCredentialCheck(account))
+        if (account is null
+            || !await TryEnsureAccountUsableForCredentialCheckAsync(account, cancellationToken))
         {
             RecordCredentialFailure("pin", normalizedAccountId);
             return false;
@@ -350,7 +351,8 @@ public sealed class LocalAuthService : ILocalAuthService
         }
 
         var account = await _accountRepository.GetByAccountIdAsync(normalizedAccountId, cancellationToken);
-        if (account is null || !IsAccountUsableForCredentialCheck(account))
+        if (account is null
+            || !await TryEnsureAccountUsableForCredentialCheckAsync(account, cancellationToken))
         {
             RecordCredentialFailure("recovery", normalizedAccountId);
             return false;
@@ -529,40 +531,14 @@ public sealed class LocalAuthService : ILocalAuthService
         };
     }
 
-    private static bool IsAccountUsableForCredentialCheck(LocalAccount account)
+    private async Task<bool> TryEnsureAccountUsableForCredentialCheckAsync(LocalAccount account, CancellationToken cancellationToken)
     {
-        return account.IsEnabled && IsAccountDatabasePathSafe(account);
-    }
-
-    private static bool IsAccountDatabasePathSafe(LocalAccount account)
-    {
-        try
-        {
-            if (!DatabasePaths.IsExpectedAccountDatabasePath(account.AccountId, account.DatabasePath)
-                || LocalDataFileSecurity.IsReparsePoint(account.DatabasePath))
-            {
-                return false;
-            }
-
-            var directory = Path.GetDirectoryName(Path.GetFullPath(account.DatabasePath));
-            if (string.IsNullOrWhiteSpace(directory))
-            {
-                return false;
-            }
-
-            LocalDataFileSecurity.EnsureDirectoryIsNotLinked(directory, "账号数据目录");
-            return true;
-        }
-        catch (Exception ex) when (
-            ex is ArgumentException
-                or NotSupportedException
-                or PathTooLongException
-                or IOException
-                or UnauthorizedAccessException
-                or InvalidOperationException)
+        if (!account.IsEnabled)
         {
             return false;
         }
+
+        return await LocalAccountDatabasePathRepair.TryRepairAsync(_accountRepository, account, cancellationToken);
     }
 
     private async Task<bool> IsCredentialAttemptBlockedAsync(string purpose, string identifier, CancellationToken cancellationToken)
