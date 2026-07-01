@@ -75,6 +75,7 @@ function Try-DownloadPreviousReleases {
     )
 
     try {
+        $downloadTimeoutMs = 60000
         $arguments = @(
             'tool', 'run', 'vpk', '--', 'download', 'github',
             '--outputDir', $PackageDir,
@@ -86,9 +87,20 @@ function Try-DownloadPreviousReleases {
             $arguments += @('--token', $GithubToken)
         }
 
-        & dotnet @arguments
-        if ($LASTEXITCODE -ne 0) {
-            throw ("vpk download github exited with code {0}." -f $LASTEXITCODE)
+        $process = Start-Process -FilePath 'dotnet' -ArgumentList $arguments -NoNewWindow -PassThru
+        if (-not $process.WaitForExit($downloadTimeoutMs)) {
+            try {
+                $process.Kill()
+            }
+            catch {
+                Write-Host "Timed out while downloading previous release assets; failed to stop process cleanly. $($_.Exception.Message)"
+            }
+
+            throw ("vpk download github timed out after {0} seconds." -f [int]($downloadTimeoutMs / 1000))
+        }
+
+        if ($process.ExitCode -ne 0) {
+            throw ("vpk download github exited with code {0}." -f $process.ExitCode)
         }
     }
     catch {
