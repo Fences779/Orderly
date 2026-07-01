@@ -55,6 +55,43 @@ jobs:
             -RepoUrl "${env:RELEASE_REPO_URL}" `
             -GithubToken "${{ github.token }}"
 
+      - name: Clear existing release assets for rerun
+        shell: pwsh
+        run: |
+          $headers = @{
+            Authorization = "Bearer ${{ github.token }}"
+            Accept = "application/vnd.github+json"
+            "User-Agent" = "GitHubActions"
+          }
+          try {
+            $release = Invoke-RestMethod `
+              -Headers $headers `
+              -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}"
+          }
+          catch {
+            Write-Host "Release does not exist yet; upload will create it."
+            return
+          }
+
+          $deleteNames = @(
+            "Orderly-stable-Setup.exe",
+            "Orderly-${{ steps.version.outputs.version }}-stable-full.nupkg",
+            "Orderly-${{ steps.version.outputs.version }}-stable-delta.nupkg",
+            "RELEASES-stable",
+            "releases.stable.json",
+            "assets.stable.json"
+          )
+
+          foreach ($asset in $release.assets) {
+            if ($deleteNames -contains $asset.name) {
+              Write-Host "Deleting existing release asset: $($asset.name)"
+              Invoke-RestMethod `
+                -Method Delete `
+                -Headers $headers `
+                -Uri "https://api.github.com/repos/${{ github.repository }}/releases/assets/$($asset.id)"
+            }
+          }
+
       - name: Publish GitHub Release
         shell: pwsh
         run: |

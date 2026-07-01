@@ -42,9 +42,37 @@ public sealed class LegacyAccountDatabasePathRepairTests
     }
 
     [Fact]
+    public async Task Master_password_sign_in_repairs_the_current_windows_legacy_account_workspace_path()
+    {
+        var accountId = Guid.NewGuid().ToString("N");
+        var account = CreateAccount(accountId, GetCurrentWindowsLegacyAccountDatabasePath(accountId));
+        var expectedPath = PrepareExpectedAccountDatabase(account.AccountId);
+        var repository = new InMemoryLocalAccountRepository([account]);
+        var sessionContext = new SessionContextService();
+        var service = new LocalAuthService(repository, new NoOpLegacyDatabaseMigrationService(), sessionContext);
+
+        try
+        {
+            var result = await service.SignInAsync(account.Username, MasterPassword);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(result.Session);
+            Assert.Equal(expectedPath, account.DatabasePath);
+            Assert.Equal(expectedPath, result.Session!.DatabasePath);
+            Assert.Equal(account.AccountId, sessionContext.Current?.AccountId);
+        }
+        finally
+        {
+            sessionContext.Clear();
+            DeleteAccountWorkspace(account.AccountId);
+        }
+    }
+
+    [Fact]
     public async Task Master_password_sign_in_keeps_rejecting_a_foreign_windows_users_legacy_path()
     {
-        var account = CreateAccount($@"C:\Users\someone-else\AppData\Local\OrderlyData\orderly.db");
+        var foreignPath = $@"Z:\ForeignProfile\AppData\Local\OrderlyData\orderly.db";
+        var account = CreateAccount(foreignPath);
         PrepareExpectedAccountDatabase(account.AccountId);
         var repository = new InMemoryLocalAccountRepository([account]);
         var service = new LocalAuthService(repository, new NoOpLegacyDatabaseMigrationService(), new SessionContextService());
@@ -55,7 +83,31 @@ public sealed class LegacyAccountDatabasePathRepairTests
 
             Assert.False(result.Succeeded);
             Assert.Equal("账号数据路径异常，已拒绝登录。", result.ErrorMessage);
-            Assert.Equal($@"C:\Users\someone-else\AppData\Local\OrderlyData\orderly.db", account.DatabasePath);
+            Assert.Equal(foreignPath, account.DatabasePath);
+        }
+        finally
+        {
+            DeleteAccountWorkspace(account.AccountId);
+        }
+    }
+
+    [Fact]
+    public async Task Master_password_sign_in_keeps_rejecting_a_foreign_windows_users_legacy_account_workspace_path()
+    {
+        var accountId = Guid.NewGuid().ToString("N");
+        var foreignPath = $@"Z:\ForeignProfile\AppData\Local\Orderly\accounts\{accountId}\orderly.db";
+        var account = CreateAccount(accountId, foreignPath);
+        PrepareExpectedAccountDatabase(account.AccountId);
+        var repository = new InMemoryLocalAccountRepository([account]);
+        var service = new LocalAuthService(repository, new NoOpLegacyDatabaseMigrationService(), new SessionContextService());
+
+        try
+        {
+            var result = await service.SignInAsync(account.Username, MasterPassword);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal("账号数据路径异常，已拒绝登录。", result.ErrorMessage);
+            Assert.Equal(foreignPath, account.DatabasePath);
         }
         finally
         {
@@ -111,7 +163,11 @@ public sealed class LegacyAccountDatabasePathRepairTests
 
     private static LocalAccount CreateAccount(string databasePath, bool quickLoginEnabled = false)
     {
-        var accountId = Guid.NewGuid().ToString("N");
+        return CreateAccount(Guid.NewGuid().ToString("N"), databasePath, quickLoginEnabled);
+    }
+
+    private static LocalAccount CreateAccount(string accountId, string databasePath, bool quickLoginEnabled = false)
+    {
         var passwordSalt = RandomNumberGenerator.GetBytes(16);
         var passwordHash = LocalCredentialSecurity.ComputeHash(MasterPassword, passwordSalt, LocalCredentialSecurity.DefaultPasswordIterations);
         var pinSalt = RandomNumberGenerator.GetBytes(16);
@@ -150,6 +206,15 @@ public sealed class LegacyAccountDatabasePathRepairTests
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now
         };
+    }
+
+    private static string GetCurrentWindowsLegacyAccountDatabasePath(string accountId)
+    {
+        return Path.Combine(
+            DatabasePaths.GetLegacyAppRootPath(),
+            "accounts",
+            accountId,
+            "orderly.db");
     }
 
     private static string PrepareExpectedAccountDatabase(string accountId)

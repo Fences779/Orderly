@@ -50,9 +50,11 @@ public sealed class VelopackAppUpdateService : IAppUpdateService
     public async Task<AppUpdateCheckResult> CheckForUpdatesAsync(CancellationToken cancellationToken = default)
     {
         var currentVersion = ResolveCurrentVersion(manager: null);
+        var sourceDescription = "未解析";
         try
         {
             var source = ResolveSourceConfiguration();
+            sourceDescription = source.Description;
             var manager = CreateUpdateManager(source);
             currentVersion = ResolveCurrentVersion(manager);
             if (!manager.IsInstalled)
@@ -61,7 +63,7 @@ public sealed class VelopackAppUpdateService : IAppUpdateService
                 _downloadedUpdate = null;
                 return new AppUpdateCheckResult(
                     State: AppUpdateState.Unsupported,
-                    StatusText: "当前为未安装开发版，需通过 Setup 安装后才能检查更新。",
+                    StatusText: AppendUpdateSourceStatus("当前为未安装开发版，需通过 Setup 安装后才能检查更新。", sourceDescription),
                     CurrentVersion: currentVersion);
             }
 
@@ -73,7 +75,7 @@ public sealed class VelopackAppUpdateService : IAppUpdateService
                 var pendingVersion = NormalizeDisplayVersion(pendingUpdate.Version?.ToString());
                 return new AppUpdateCheckResult(
                     State: AppUpdateState.PendingRestart,
-                    StatusText: $"更新 {pendingVersion} 已下载完成，重启后完成安装。",
+                    StatusText: AppendUpdateSourceStatus($"更新 {pendingVersion} 已下载完成，重启后完成安装。", sourceDescription),
                     CurrentVersion: currentVersion,
                     AvailableVersion: pendingVersion,
                     ReleaseNotesMarkdown: pendingUpdate.NotesMarkdown);
@@ -86,14 +88,14 @@ public sealed class VelopackAppUpdateService : IAppUpdateService
             {
                 return new AppUpdateCheckResult(
                     State: AppUpdateState.UpToDate,
-                    StatusText: $"已是最新版（{currentVersion}）。",
+                    StatusText: AppendUpdateSourceStatus($"已是最新版（{currentVersion}）。", sourceDescription),
                     CurrentVersion: currentVersion);
             }
 
             var targetVersion = NormalizeDisplayVersion(updateInfo.TargetFullRelease.Version?.ToString());
             return new AppUpdateCheckResult(
                 State: AppUpdateState.UpdateAvailable,
-                StatusText: $"发现新版本 {targetVersion}，可立即下载。",
+                StatusText: AppendUpdateSourceStatus($"发现新版本 {targetVersion}，可立即下载。", sourceDescription),
                 CurrentVersion: currentVersion,
                 AvailableVersion: targetVersion,
                 ReleaseNotesMarkdown: updateInfo.TargetFullRelease.NotesMarkdown);
@@ -104,7 +106,7 @@ public sealed class VelopackAppUpdateService : IAppUpdateService
             _downloadedUpdate = null;
             return new AppUpdateCheckResult(
                 State: AppUpdateState.Failed,
-                StatusText: ex.Message,
+                StatusText: AppendUpdateSourceStatus($"检查更新失败：{ex.Message}", sourceDescription),
                 CurrentVersion: currentVersion);
         }
     }
@@ -258,6 +260,11 @@ public sealed class VelopackAppUpdateService : IAppUpdateService
         }
 
         return trimmed;
+    }
+
+    private static string AppendUpdateSourceStatus(string statusText, string sourceDescription)
+    {
+        return $"{statusText} 更新源：{sourceDescription}";
     }
 
     private sealed record UpdateSourceConfiguration(

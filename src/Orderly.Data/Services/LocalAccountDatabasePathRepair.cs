@@ -79,8 +79,7 @@ internal static class LocalAccountDatabasePathRepair
             return false;
         }
 
-        if (!TryNormalizeFullPath(DatabasePaths.GetLegacyDatabasePath(), out var normalizedLegacyPath)
-            || !string.Equals(normalizedDatabasePath, normalizedLegacyPath, StringComparison.OrdinalIgnoreCase))
+        if (!IsRepairableLegacyPath(accountId, normalizedDatabasePath))
         {
             return false;
         }
@@ -94,6 +93,27 @@ internal static class LocalAccountDatabasePathRepair
         }
 
         return true;
+    }
+
+    private static bool IsRepairableLegacyPath(string accountId, string normalizedDatabasePath)
+    {
+        if (TryNormalizeFullPath(DatabasePaths.GetLegacyDatabasePath(), out var normalizedLegacyDatabasePath)
+            && string.Equals(normalizedDatabasePath, normalizedLegacyDatabasePath, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return TryNormalizeFullPath(GetLegacyAccountDatabasePath(accountId), out var normalizedLegacyAccountPath)
+            && string.Equals(normalizedDatabasePath, normalizedLegacyAccountPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetLegacyAccountDatabasePath(string accountId)
+    {
+        return Path.Combine(
+            DatabasePaths.GetLegacyAppRootPath(),
+            "accounts",
+            accountId,
+            "orderly.db");
     }
 
     private static bool TryNormalizeFullPath(string? path, out string normalizedPath)

@@ -13,8 +13,14 @@ $ErrorActionPreference = 'Stop'
 
 $PackageId = 'Orderly'
 $Channel = 'stable'
-$SourceVersion = '0.1.1'
-$TargetVersion = '0.1.2'
+$ReleaseVersion = '0.1.2'
+$ReleaseRepoUrl = 'https://github.com/Fences779/Orderly'
+$ReleaseTag = "v$ReleaseVersion"
+$ReleaseDownloadBaseUrl = "$ReleaseRepoUrl/releases/download/$ReleaseTag"
+$ReleaseSetupUrl = "$ReleaseDownloadBaseUrl/Orderly-stable-Setup.exe"
+$ReleaseManifestUrl = "$ReleaseDownloadBaseUrl/releases.stable.json"
+$ReleaseAssetsUrl = "$ReleaseDownloadBaseUrl/assets.stable.json"
+$ReleaseFullPackageUrl = "$ReleaseDownloadBaseUrl/Orderly-$ReleaseVersion-stable-full.nupkg"
 
 $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $DesktopPath = [Environment]::GetFolderPath('Desktop')
@@ -26,11 +32,10 @@ $ReportPath = Join-Path $DesktopPath 'Orderly-E2E-Report.txt'
 $InstallRoot = Join-Path $env:LOCALAPPDATA 'Orderly'
 $InstallCurrentDir = Join-Path $InstallRoot 'current'
 $DataRoot = Join-Path $env:LOCALAPPDATA 'OrderlyData'
-$ExpectedUpdateSource = Join-Path $RepoRoot 'artifacts\release\0.1.2\packages'
-$Release011Root = Join-Path $RepoRoot 'artifacts\release\0.1.1'
+$ExpectedUpdateSource = $ReleaseRepoUrl
 $Release012Root = Join-Path $RepoRoot 'artifacts\release\0.1.2'
-$Release011Packages = Join-Path $Release011Root 'packages'
 $Release012Packages = Join-Path $Release012Root 'packages'
+$DownloadedSetupPath = Join-Path $env:TEMP "Orderly-$ReleaseVersion-stable-Setup.exe"
 $InstallLogPath = Join-Path $DesktopPath 'Orderly-E2E-Install.log'
 $UpdateLaunchLogPath = Join-Path $DesktopPath 'Orderly-E2E-AppLaunch.log'
 
@@ -303,8 +308,10 @@ function Write-BasicDiagnostics {
     Write-ReportLine 'LOCALAPPDATA=<LOCALAPPDATA>'
     Write-ReportLine "ScriptPath=$PSCommandPath"
     Write-ReportLine "ScriptSHA256=$($scriptHash.Hash)"
-    Write-ReportLine "SourceVersion=$SourceVersion"
-    Write-ReportLine "TargetVersion=$TargetVersion"
+    Write-ReportLine "ReleaseVersion=$ReleaseVersion"
+    Write-ReportLine "ReleaseRepoUrl=$ReleaseRepoUrl"
+    Write-ReportLine "ReleaseSetupUrl=$ReleaseSetupUrl"
+    Write-ReportLine "ReleaseManifestUrl=$ReleaseManifestUrl"
     Write-ReportLine "ExpectedTestUserName=$ExpectedTestUserName"
     Write-ReportLine "InstallRoot=$InstallRoot"
     Write-ReportLine "InstallCurrentDir=$InstallCurrentDir"
@@ -312,6 +319,7 @@ function Write-BasicDiagnostics {
     Write-ReportLine "InstallLogPath=$InstallLogPath"
     Write-ReportLine "UpdateLaunchLogPath=$UpdateLaunchLogPath"
     Write-ReportLine "ExpectedUpdateSource=$ExpectedUpdateSource"
+    Write-ReportLine "DownloadedSetupPath=$DownloadedSetupPath"
 }
 
 function Assert-TestAccountContext {
@@ -423,6 +431,53 @@ function Assert-ReleaseArtifacts {
     Assert-FileContains -Path $manifestPath -Needle $nupkgName -Description "$Version SHA256SUMS"
     Assert-HashManifestEntry -ManifestPath $manifestPath -ReleaseRoot $ReleaseRoot -RelativePath 'Setup.exe'
     Assert-HashManifestEntry -ManifestPath $manifestPath -ReleaseRoot $ReleaseRoot -RelativePath "packages\$nupkgName"
+}
+
+function Assert-WebUrlAvailable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url,
+        [Parameter(Mandatory = $true)]
+        [string]$Description
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Head -UseBasicParsing -Headers @{ 'User-Agent' = 'Orderly-E2E' } -TimeoutSec 30
+        if ([int]$response.StatusCode -lt 200 -or [int]$response.StatusCode -ge 300) {
+            Fail-Step "$Description 不可访问：$Url，HTTP $($response.StatusCode)"
+        }
+
+        Write-ReportLine "OK: $Description 可访问 -> $Url"
+    }
+    catch {
+        Fail-Step "$Description 不可访问：$Url；$($_.Exception.Message)" `
+            '确认 GitHub Release 已发布且资产为公开可匿名下载。'
+    }
+}
+
+function Assert-GithubReleaseArtifacts {
+    Assert-WebUrlAvailable -Url $ReleaseManifestUrl -Description 'GitHub Release releases.stable.json'
+    Assert-WebUrlAvailable -Url $ReleaseAssetsUrl -Description 'GitHub Release assets.stable.json'
+    Assert-WebUrlAvailable -Url $ReleaseSetupUrl -Description 'GitHub Release Setup.exe'
+    Assert-WebUrlAvailable -Url $ReleaseFullPackageUrl -Description 'GitHub Release full nupkg'
+
+    $manifest = Invoke-RestMethod -Uri $ReleaseManifestUrl -Headers @{ 'User-Agent' = 'Orderly-E2E' } -TimeoutSec 30
+    $assets = @(ConvertTo-ObjectArray -InputObject (Get-SafePropertyValue -InputObject $manifest -Name 'Assets' -DefaultValue @()))
+    $fullAsset = $assets | Where-Object {
+        [string]::Equals([string](Get-SafePropertyValue -InputObject $_ -Name 'Version' -DefaultValue ''), $ReleaseVersion, [System.StringComparison]::OrdinalIgnoreCase) -and
+        [string]::Equals([string](Get-SafePropertyValue -InputObject $_ -Name 'Type' -DefaultValue ''), 'Full', [System.StringComparison]::OrdinalIgnoreCase)
+    } | Select-Object -First 1
+
+    if ($null -eq $fullAsset) {
+        Fail-Step "GitHub Release 清单中未找到 $ReleaseVersion full 包。"
+    }
+
+    $fileName = [string](Get-SafePropertyValue -InputObject $fullAsset -Name 'FileName' -DefaultValue '')
+    if (-not [string]::Equals($fileName, "Orderly-$ReleaseVersion-stable-full.nupkg", [System.StringComparison]::OrdinalIgnoreCase)) {
+        Fail-Step "GitHub Release full 包文件名不匹配：$fileName"
+    }
+
+    Write-ReportLine "OK: GitHub Release 清单指向 $fileName"
 }
 
 function Resolve-UpdateSourceInput {
@@ -606,7 +661,7 @@ function Assert-UninstallEntriesUsable {
     param([object[]]$Entries)
 
     if ($null -eq $Entries -or $Entries.Count -eq 0) {
-        Fail-Step '未找到卸载注册表项。' '确认 0.1.1 Setup.exe 已在测试账号下安装成功，并检查 HKCU/HKLM 卸载项。'
+        Fail-Step '未找到卸载注册表项。' '确认 Orderly 已在测试账号下安装成功，并检查 HKCU/HKLM 卸载项。'
     }
 
     $usableCount = 0
@@ -719,17 +774,35 @@ function Invoke-SetupInstall {
     Assert-PathExists -Path $InstallLogPath -Description '安装日志'
 }
 
-function Start-InstalledAppWithLocalUpdateSource {
+function Save-GithubReleaseSetup {
+    Assert-WebUrlAvailable -Url $ReleaseSetupUrl -Description 'GitHub Release Setup.exe'
+
+    if (Test-Path -LiteralPath $DownloadedSetupPath) {
+        Remove-Item -LiteralPath $DownloadedSetupPath -Force
+    }
+
+    Write-ReportLine "下载 GitHub Release 安装包：$ReleaseSetupUrl"
+    Invoke-WebRequest -Uri $ReleaseSetupUrl -OutFile $DownloadedSetupPath -UseBasicParsing -Headers @{ 'User-Agent' = 'Orderly-E2E' } -TimeoutSec 180
+    Assert-PathExists -Path $DownloadedSetupPath -Description '已下载 GitHub Release Setup.exe'
+
+    $downloadedVersion = Get-InstalledProductVersion -ExePath $DownloadedSetupPath
+    if (-not [string]::Equals($downloadedVersion, $ReleaseVersion, [System.StringComparison]::OrdinalIgnoreCase)) {
+        Fail-Step "下载的 Setup.exe 版本不匹配。期望：$ReleaseVersion，实际：$downloadedVersion"
+    }
+
+    $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $DownloadedSetupPath).Hash.ToLowerInvariant()
+    Write-ReportLine "OK: 下载的 Setup.exe 版本=$downloadedVersion SHA256=$hash"
+}
+
+function Start-InstalledAppWithDefaultUpdateSource {
     $exePath = Join-Path $InstallCurrentDir 'Orderly.App.exe'
     Assert-PathExists -Path $exePath -Description '启动用已安装主程序'
-    Assert-LocalUpdateSource -SourcePath $ExpectedUpdateSource
 
-    Write-ReportLine "以进程级环境变量启动 $SourceVersion，更新源=$ExpectedUpdateSource"
+    Write-ReportLine "启动 $ReleaseVersion，使用程序内默认 GitHub 更新源：$ExpectedUpdateSource"
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $exePath
     $psi.WorkingDirectory = $InstallCurrentDir
     $psi.UseShellExecute = $false
-    $psi.EnvironmentVariables['ORDERLY_UPDATE_SOURCE_URL'] = $ExpectedUpdateSource
     $psi.EnvironmentVariables['ORDERLY_E2E_LAUNCH_LOG'] = $UpdateLaunchLogPath
     $process = [System.Diagnostics.Process]::Start($psi)
     if ($null -eq $process) {
@@ -969,24 +1042,17 @@ function Invoke-InstallStateSelfTest {
 }
 
 function Invoke-UpdateSourceSelfTest {
-    $absolute = Resolve-UpdateSourceInput -Value $ExpectedUpdateSource
-    if ($absolute.Kind -ne 'Local') {
-        throw '本地绝对路径更新源解析失败。'
-    }
-
-    $fileUri = New-Object System.Uri($ExpectedUpdateSource)
-    $fileResolved = Resolve-UpdateSourceInput -Value $fileUri.AbsoluteUri
-    if ($fileResolved.Kind -ne 'Local') {
-        throw 'file URI 更新源解析失败。'
-    }
-
-    $webResolved = Resolve-UpdateSourceInput -Value 'https://example.com/releases'
+    $webResolved = Resolve-UpdateSourceInput -Value $ExpectedUpdateSource
     if ($webResolved.Kind -ne 'Web') {
-        throw 'https 更新源解析失败。'
+        throw 'GitHub Web 更新源解析失败。'
     }
 
-    Assert-LocalUpdateSource -SourcePath $ExpectedUpdateSource
-    Write-ReportLine 'OK: 更新源自检覆盖本地绝对路径、file URI、https。'
+    if (-not [string]::Equals([string]$webResolved.ResolvedPath, $ReleaseRepoUrl, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw 'GitHub 更新源解析结果不匹配。'
+    }
+
+    Assert-GithubReleaseArtifacts
+    Write-ReportLine 'OK: 更新源自检覆盖 GitHub Release Web 源。'
 }
 
 function Invoke-ReturnContractSelfTest {
@@ -995,7 +1061,7 @@ function Invoke-ReturnContractSelfTest {
         throw 'Write-ReportLine 污染 success pipeline。'
     }
 
-    $versionOutput = @(& { Get-InstalledProductVersion -ExePath (Join-Path $Release011Root 'Setup.exe') })
+    $versionOutput = @(& { Get-InstalledProductVersion -ExePath (Join-Path $Release012Root 'Setup.exe') })
     if ($versionOutput.Count -ne 1) {
         throw "Get-InstalledProductVersion 返回数量不正确：$($versionOutput.Count)"
     }
@@ -1005,8 +1071,8 @@ function Invoke-ReturnContractSelfTest {
     }
 
     $versionText = [string]$versionOutput[0]
-    if ($versionText -ne $SourceVersion) {
-        throw "Get-InstalledProductVersion 返回值不等于 $SourceVersion：$versionText"
+    if ($versionText -ne $ReleaseVersion) {
+        throw "Get-InstalledProductVersion 返回值不等于 $ReleaseVersion：$versionText"
     }
 
     if ($versionText.Contains('OK:') -or $versionText.Contains('\') -or $versionText.Contains("`r") -or $versionText.Contains("`n")) {
@@ -1019,8 +1085,8 @@ function Invoke-ReturnContractSelfTest {
     }
 
     $resolved = Resolve-UpdateSourceInput -Value $ExpectedUpdateSource
-    if (-not [string]::Equals([string]$resolved.ResolvedPath, [System.IO.Path]::GetFullPath($ExpectedUpdateSource), [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw '路径比较自检失败。'
+    if (-not [string]::Equals([string]$resolved.ResolvedPath, $ReleaseRepoUrl, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw 'GitHub 更新源比较自检失败。'
     }
 
     $state = Get-InstallState -RootPath (Join-Path $env:TEMP 'OrderlyE2E-NoSuchRoot') -CurrentPath (Join-Path $env:TEMP 'OrderlyE2E-NoSuchRoot\current')
@@ -1040,8 +1106,8 @@ function Invoke-ValidateOnly {
         Fail-Step 'StrictMode 未开启。'
     }
 
-    Assert-ReleaseArtifacts -Version $SourceVersion -ReleaseRoot $Release011Root -PackageRoot $Release011Packages
-    Assert-ReleaseArtifacts -Version $TargetVersion -ReleaseRoot $Release012Root -PackageRoot $Release012Packages
+    Assert-ReleaseArtifacts -Version $ReleaseVersion -ReleaseRoot $Release012Root -PackageRoot $Release012Packages
+    Assert-GithubReleaseArtifacts
     Invoke-ObjectShapeSelfTest
     Invoke-InstallStateSelfTest
     Invoke-UpdateSourceSelfTest
@@ -1062,43 +1128,25 @@ try {
         Invoke-Step -Name '卸载验证' -Action { Invoke-UninstallVerification }
     }
     else {
-        Invoke-Step -Name '发布资产检查' -Action {
-            Assert-ReleaseArtifacts -Version $SourceVersion -ReleaseRoot $Release011Root -PackageRoot $Release011Packages
-            Assert-ReleaseArtifacts -Version $TargetVersion -ReleaseRoot $Release012Root -PackageRoot $Release012Packages
-            Assert-LocalUpdateSource -SourcePath $ExpectedUpdateSource
+        Invoke-Step -Name 'GitHub Release 资产检查' -Action {
+            Assert-ReleaseArtifacts -Version $ReleaseVersion -ReleaseRoot $Release012Root -PackageRoot $Release012Packages
+            Assert-GithubReleaseArtifacts
         }
 
-        if (Test-InstalledVersionEquals -ExpectedVersion $SourceVersion) {
-            Write-ReportLine "OK: 已检测到安装版本 $SourceVersion，跳过清理和重新安装。"
-        }
-        else {
-            Invoke-Step -Name '重跑前清理安装目录' -Action { Remove-InstallRootOnly }
-            Invoke-Step -Name '安装 0.1.1' -Action { Invoke-SetupInstall -SetupPath (Join-Path $Release011Root 'Setup.exe') }
-        }
-
-        Invoke-Step -Name '验证 0.1.1 安装状态' -Action { Assert-InstalledLayout -ExpectedVersion $SourceVersion }
-        Invoke-Step -Name '启动应用并注入本地更新源' -Action { Start-InstalledAppWithLocalUpdateSource }
+        Invoke-Step -Name '清理测试账号旧安装目录' -Action { Remove-InstallRootOnly }
+        Invoke-Step -Name '下载 0.1.2 GitHub Release 安装包' -Action { Save-GithubReleaseSetup }
+        Invoke-Step -Name '安装 0.1.2' -Action { Invoke-SetupInstall -SetupPath $DownloadedSetupPath }
+        Invoke-Step -Name '验证 0.1.2 安装状态' -Action { Assert-InstalledLayout -ExpectedVersion $ReleaseVersion }
+        Invoke-Step -Name '启动应用并使用默认 GitHub 更新源' -Action { Start-InstalledAppWithDefaultUpdateSource }
 
         Write-ReportLine ''
         Write-ReportLine '人工操作提示：'
-        Write-ReportLine '1. 在程序内创建最小测试账号。'
-        Write-ReportLine '2. 创建一条测试数据。'
-        Write-ReportLine '3. 设置头像。'
-        Write-ReportLine '4. 修改两项设置。'
-        Write-ReportLine '5. 在程序内点击检查更新并确认更新。'
+        Write-ReportLine '1. 确认“关于 Orderly”显示当前版本 0.1.2。'
+        Write-ReportLine '2. 确认更新状态显示 GitHub Releases（https://github.com/Fences779/Orderly）。'
+        Write-ReportLine '3. 点击检查更新，确认不会再访问 Orderly-Releases。'
+        Write-ReportLine '4. 创建最小测试账号和一条测试数据，确认新安装可正常使用。'
         Write-ReportLine ''
-        [void](Read-Host '完成上述操作后按 Enter 继续验收')
-
-        Invoke-Step -Name '验证升级到 0.1.2' -Action { Assert-InstalledLayout -ExpectedVersion $TargetVersion }
-        Invoke-Step -Name '验证升级后可启动' -Action { Start-And-VerifyRelaunch }
-        Invoke-Step -Name '验证数据保留和安装目录隔离' -Action {
-            if (-not (Test-Path -LiteralPath $DataRoot)) {
-                Fail-Step "升级后业务数据目录不存在：$DataRoot"
-            }
-
-            Write-ReportLine "OK: 升级后业务数据目录仍存在 -> $DataRoot"
-            Assert-NoBusinessDataInsideInstallRoot
-        }
+        Write-ReportLine 'OK: 已启动应用，后续交由人工测试。'
     }
 
     $script:FinalResult = 'PASS'

@@ -20,7 +20,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\e2e\Run-Orderl
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\e2e\Run-OrderlyLocalE2E.ps1 -ExpectedTestUserName "your-temporary-test-user"
 ```
 
-脚本会自动安装 `0.1.1`、启动应用并注入本地 `0.1.2` 更新源。人工只需在应用内创建测试账号、创建一条数据、设置头像、修改两项设置、点击检查更新并确认更新，然后按提示回到脚本继续。
+脚本会清理测试账号下的旧 `%LOCALAPPDATA%\Orderly` 安装目录，从 `https://github.com/Fences779/Orderly` 的 GitHub Release 下载 `0.1.2` 安装包，安装后直接启动应用。人工只需确认“关于 Orderly”显示 `0.1.2`，更新源显示 `GitHub Releases（https://github.com/Fences779/Orderly）`，再点击检查更新并创建最小测试数据。
 
 ## 测试账号卸载保留数据验收
 
@@ -40,4 +40,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\e2e\Run-Orderl
 %USERPROFILE%\Desktop\Orderly-E2E-Report.txt
 ```
 
-失败时报告包含失败步骤、原始异常、修复建议、安装目录、数据目录、脚本 SHA256、发布产物 SHA256、本地更新源、快捷方式和卸载注册表字段清单。
+失败时报告包含失败步骤、原始异常、修复建议、安装目录、数据目录、脚本 SHA256、发布产物 SHA256、GitHub Release 更新源、快捷方式和卸载注册表字段清单。

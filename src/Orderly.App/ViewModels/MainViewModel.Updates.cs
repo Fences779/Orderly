@@ -1,4 +1,3 @@
-using System.Text;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -37,10 +36,7 @@ public partial class MainViewModel
             switch (result.State)
             {
                 case AppUpdateState.UpdateAvailable:
-                    if (ShouldDownloadUpdate(result))
-                    {
-                        await DownloadAndApplyUpdateAsync(result);
-                    }
+                    await DownloadAndApplyUpdateAsync(result);
                     break;
                 case AppUpdateState.PendingRestart:
                     if (ShouldRestartToApplyUpdate(result.AvailableVersion))
@@ -103,30 +99,6 @@ public partial class MainViewModel
         SettingsStatusMessage = status;
     }
 
-    private bool ShouldDownloadUpdate(AppUpdateCheckResult result)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine($"当前版本：{result.CurrentVersion}");
-        builder.AppendLine($"发现新版本：{result.AvailableVersion}");
-        builder.AppendLine();
-        builder.AppendLine("是否现在开始下载？");
-
-        var releaseNotes = BuildReleaseNotesPreview(result.ReleaseNotesMarkdown);
-        if (!string.IsNullOrWhiteSpace(releaseNotes))
-        {
-            builder.AppendLine();
-            builder.AppendLine("更新说明：");
-            builder.AppendLine(releaseNotes);
-        }
-
-        return System.Windows.MessageBox.Show(
-            GetDialogOwner(),
-            builder.ToString(),
-            "发现新版本",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Information) == MessageBoxResult.Yes;
-    }
-
     private static bool ShouldRestartToApplyUpdate(string? targetVersion)
     {
         var versionText = string.IsNullOrWhiteSpace(targetVersion)
@@ -145,22 +117,5 @@ public partial class MainViewModel
         return string.IsNullOrWhiteSpace(targetVersion)
             ? "正在重启并安装更新..."
             : $"正在重启并安装 {targetVersion}...";
-    }
-
-    private static string? BuildReleaseNotesPreview(string? markdown)
-    {
-        if (string.IsNullOrWhiteSpace(markdown))
-        {
-            return null;
-        }
-
-        var lines = markdown
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .Take(6)
-            .ToArray();
-
-        return lines.Length == 0 ? null : string.Join(Environment.NewLine, lines);
     }
 }
