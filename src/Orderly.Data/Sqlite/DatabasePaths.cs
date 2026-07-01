@@ -6,6 +6,8 @@ public static class DatabasePaths
     // independent root so Velopack uninstall/repair actions cannot remove launcher/account data.
     private const string AppRootDirectoryName = "OrderlyData";
     private const string LegacyAppRootDirectoryName = "Orderly";
+    private const string AppRootEnvironmentVariableName = "ORDERLY_DATA_ROOT";
+    private const string DefaultAppRootPath = @"D:\OrderlyData";
 
     public static string GetAppRootPath()
     {
@@ -153,6 +155,14 @@ public static class DatabasePaths
 
     private static string GetRootPath(string directoryName)
     {
+        if (string.Equals(directoryName, AppRootDirectoryName, StringComparison.Ordinal))
+        {
+            var configuredRoot = Environment.GetEnvironmentVariable(AppRootEnvironmentVariableName);
+            return Path.GetFullPath(string.IsNullOrWhiteSpace(configuredRoot)
+                ? DefaultAppRootPath
+                : configuredRoot);
+        }
+
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             directoryName);

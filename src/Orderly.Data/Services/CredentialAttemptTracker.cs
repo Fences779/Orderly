@@ -1,5 +1,6 @@
 using Orderly.Data.Sqlite;
 using System.Security.Cryptography;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
 
@@ -197,7 +198,7 @@ public sealed class CredentialAttemptTracker
                 protectedBytes = ProtectedData.Protect(
                     jsonBytes,
                     optionalEntropy: null,
-                    DataProtectionScope.CurrentUser);
+                    DataProtectionScope.LocalMachine);
                 File.WriteAllBytes(tempPath, protectedBytes);
             }
             finally
@@ -253,16 +254,33 @@ public sealed class CredentialAttemptTracker
                 throw new PlatformNotSupportedException("凭据尝试状态保护需要 Windows DPAPI。");
             }
 
-            jsonBytes = ProtectedData.Unprotect(
-                persistedBytes,
-                optionalEntropy: null,
-                DataProtectionScope.CurrentUser);
+            jsonBytes = UnprotectPersistedJson(persistedBytes);
             return Encoding.UTF8.GetString(jsonBytes);
         }
         finally
         {
             CryptographicOperations.ZeroMemory(jsonBytes);
         }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static byte[] UnprotectPersistedJson(byte[] persistedBytes)
+    {
+        foreach (var scope in new[] { DataProtectionScope.LocalMachine, DataProtectionScope.CurrentUser })
+        {
+            try
+            {
+                return ProtectedData.Unprotect(
+                    persistedBytes,
+                    optionalEntropy: null,
+                    scope);
+            }
+            catch (CryptographicException)
+            {
+            }
+        }
+
+        return Encoding.UTF8.GetBytes("{}");
     }
 
     private static string BuildMutexName(string stateFilePath)

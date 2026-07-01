@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Runtime.Versioning;
 using Orderly.Data.Sqlite;
 
 namespace Orderly.Data.Services;
@@ -36,10 +37,7 @@ internal static class LocalCredentialSecretStore
         try
         {
             var protectedSecret = File.ReadAllBytes(path);
-            var secret = ProtectedData.Unprotect(
-                protectedSecret,
-                optionalEntropy: null,
-                DataProtectionScope.CurrentUser);
+            var secret = UnprotectSecretWithMigration(path, protectedSecret);
 
             if (secret.Length != SecretByteLength)
             {
@@ -77,10 +75,7 @@ internal static class LocalCredentialSecretStore
         var secret = RandomNumberGenerator.GetBytes(SecretByteLength);
         try
         {
-            var protectedSecret = ProtectedData.Protect(
-                secret,
-                optionalEntropy: null,
-                DataProtectionScope.CurrentUser);
+            var protectedSecret = ProtectSecret(secret);
 
             File.WriteAllBytes(path, protectedSecret);
             LocalDataFileSecurity.HardenFile(path);
@@ -105,5 +100,64 @@ internal static class LocalCredentialSecretStore
     private static string GetSecretPath()
     {
         return Path.Combine(DatabasePaths.GetIdentityDirectoryPath(), SecretFileName);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static byte[] UnprotectSecretWithMigration(string path, byte[] protectedSecret)
+    {
+        if (TryUnprotectSecret(protectedSecret, DataProtectionScope.LocalMachine, out var secret))
+        {
+            return secret;
+        }
+
+        if (TryUnprotectSecret(protectedSecret, DataProtectionScope.CurrentUser, out secret))
+        {
+            RewriteProtectedSecret(path, secret);
+            return secret;
+        }
+
+        throw new CryptographicException("本地凭据密钥无法解密。");
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static bool TryUnprotectSecret(byte[] protectedSecret, DataProtectionScope scope, out byte[] secret)
+    {
+        secret = [];
+        try
+        {
+            secret = ProtectedData.Unprotect(
+                protectedSecret,
+                optionalEntropy: null,
+                scope);
+            return true;
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static byte[] ProtectSecret(byte[] secret)
+    {
+        return ProtectedData.Protect(
+            secret,
+            optionalEntropy: null,
+            DataProtectionScope.LocalMachine);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void RewriteProtectedSecret(string path, byte[] secret)
+    {
+        var protectedSecret = ProtectSecret(secret);
+        try
+        {
+            File.WriteAllBytes(path, protectedSecret);
+            LocalDataFileSecurity.HardenFile(path);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(protectedSecret);
+        }
     }
 }

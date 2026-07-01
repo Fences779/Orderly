@@ -6,6 +6,10 @@ namespace Orderly.Data.Sqlite;
 
 public static class LocalDataFileSecurity
 {
+    private const string SharedDataUsersGroupName = "OrderlyDataUsers";
+    private const string SharedDataAccountsEnvironmentVariableName = "ORDERLY_SHARED_DATA_ACCOUNTS";
+    private static readonly string[] DefaultSharedDataAccounts = ["26911", "XinglanOps", "Xinglan"];
+
     public static void HardenDirectory(string directoryPath)
     {
         if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(directoryPath) || !Directory.Exists(directoryPath))
@@ -137,6 +141,11 @@ public static class LocalDataFileSecurity
 
             security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
             AddDirectoryRule(security, currentUser);
+            foreach (var sharedDataPrincipal in ResolveSharedDataPrincipals())
+            {
+                AddDirectoryRule(security, sharedDataPrincipal);
+            }
+
             AddDirectoryRule(
                 security,
                 new SecurityIdentifier(WellKnownSidType.LocalSystemSid, domainSid: null));
@@ -181,6 +190,11 @@ public static class LocalDataFileSecurity
 
             security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
             security.AddAccessRule(new FileSystemAccessRule(currentUser, FileSystemRights.FullControl, AccessControlType.Allow));
+            foreach (var sharedDataPrincipal in ResolveSharedDataPrincipals())
+            {
+                security.AddAccessRule(new FileSystemAccessRule(sharedDataPrincipal, FileSystemRights.FullControl, AccessControlType.Allow));
+            }
+
             security.AddAccessRule(new FileSystemAccessRule(
                 new SecurityIdentifier(WellKnownSidType.LocalSystemSid, domainSid: null),
                 FileSystemRights.FullControl,
@@ -205,6 +219,67 @@ public static class LocalDataFileSecurity
             InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
             PropagationFlags.None,
             AccessControlType.Allow));
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static IReadOnlyList<SecurityIdentifier> ResolveSharedDataPrincipals()
+    {
+        var resolved = new List<SecurityIdentifier>();
+        TryAddResolvedPrincipal(resolved, SharedDataUsersGroupName);
+
+        foreach (var accountName in GetSharedDataAccountNames())
+        {
+            TryAddResolvedPrincipal(resolved, accountName);
+        }
+
+        return resolved;
+    }
+
+    private static IEnumerable<string> GetSharedDataAccountNames()
+    {
+        var configuredAccounts = Environment.GetEnvironmentVariable(SharedDataAccountsEnvironmentVariableName);
+        if (string.IsNullOrWhiteSpace(configuredAccounts))
+        {
+            return DefaultSharedDataAccounts;
+        }
+
+        return configuredAccounts
+            .Split([';', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void TryAddResolvedPrincipal(ICollection<SecurityIdentifier> resolved, string accountName)
+    {
+        foreach (var candidate in GetAccountCandidates(accountName))
+        {
+            try
+            {
+                var securityIdentifier = (SecurityIdentifier)candidate.Translate(typeof(SecurityIdentifier));
+                if (!resolved.Contains(securityIdentifier))
+                {
+                    resolved.Add(securityIdentifier);
+                }
+
+                return;
+            }
+            catch (Exception ex) when (
+                ex is IdentityNotMappedException
+                    or SystemException)
+            {
+            }
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static IEnumerable<NTAccount> GetAccountCandidates(string accountName)
+    {
+        if (string.IsNullOrWhiteSpace(accountName))
+        {
+            yield break;
+        }
+
+        yield return new NTAccount(Environment.MachineName, accountName);
+        yield return new NTAccount(accountName);
     }
 
     private static bool HasReparsePoint(string path)

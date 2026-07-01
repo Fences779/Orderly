@@ -5,7 +5,7 @@ namespace Orderly.Data.Sqlite;
 
 /// <summary>
 /// 启动器数据库（launcher.db）的 SQLCipher 主密钥存储。
-/// 启动器库必须在登录前打开，无法使用会话数据密钥，因此使用 Windows DPAPI（CurrentUser）
+/// 启动器库必须在登录前打开，无法使用会话数据密钥，因此使用 Windows DPAPI（LocalMachine）
 /// 保护的本机 32 字节随机密钥。密钥文件经反链接校验与 ACL 加固。
 /// </summary>
 public static class LauncherDatabaseKeyStore
@@ -50,7 +50,7 @@ public static class LauncherDatabaseKeyStore
                 throw new InvalidOperationException("启动器数据库密钥文件长度无效。");
             }
 
-            var key = ProtectedData.Unprotect(protectedKey, ProtectionEntropy, DataProtectionScope.CurrentUser);
+            var key = UnprotectKeyWithMigration(path, protectedKey);
             if (key.Length != KeyByteLength)
             {
                 CryptographicOperations.ZeroMemory(key);
@@ -84,7 +84,7 @@ public static class LauncherDatabaseKeyStore
         var key = RandomNumberGenerator.GetBytes(KeyByteLength);
         try
         {
-            var protectedKey = ProtectedData.Protect(key, ProtectionEntropy, DataProtectionScope.CurrentUser);
+            var protectedKey = ProtectKey(key);
             try
             {
                 LocalDataFileSecurity.EnsureFileIsNotLinked(path, "启动器数据库密钥文件");
@@ -111,6 +111,59 @@ public static class LauncherDatabaseKeyStore
         finally
         {
             CryptographicOperations.ZeroMemory(key);
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static byte[] UnprotectKeyWithMigration(string path, byte[] protectedKey)
+    {
+        if (TryUnprotectKey(protectedKey, DataProtectionScope.LocalMachine, out var key))
+        {
+            return key;
+        }
+
+        if (TryUnprotectKey(protectedKey, DataProtectionScope.CurrentUser, out key))
+        {
+            RewriteProtectedKey(path, key);
+            return key;
+        }
+
+        throw new CryptographicException("启动器数据库密钥无法解密。");
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static bool TryUnprotectKey(byte[] protectedKey, DataProtectionScope scope, out byte[] key)
+    {
+        key = [];
+        try
+        {
+            key = ProtectedData.Unprotect(protectedKey, ProtectionEntropy, scope);
+            return true;
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static byte[] ProtectKey(byte[] key)
+    {
+        return ProtectedData.Protect(key, ProtectionEntropy, DataProtectionScope.LocalMachine);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void RewriteProtectedKey(string path, byte[] key)
+    {
+        var protectedKey = ProtectKey(key);
+        try
+        {
+            File.WriteAllBytes(path, protectedKey);
+            LocalDataFileSecurity.HardenFile(path);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(protectedKey);
         }
     }
 

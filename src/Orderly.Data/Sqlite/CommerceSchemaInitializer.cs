@@ -5,7 +5,7 @@ namespace Orderly.Data.Sqlite;
 /// <summary>
 /// Idempotent schema initialization for the Universal_Domain_Model (Commerce) entities
 /// (Requirements 3.2, 3.3). One SQLite/SQLCipher table is created per Commerce entity inside the
-/// per-workspace encrypted database under <c>%LocalAppData%\Orderly</c>.
+/// per-workspace encrypted database under the fixed application data root.
 ///
 /// <para>
 /// This routine is intentionally SEPARATE from <see cref="DatabaseInitializer"/> so the legacy

@@ -4,7 +4,7 @@ namespace Orderly.Data.Sqlite;
 
 /// <summary>
 /// Copies legacy business data from the old Velopack installation root (%LocalAppData%\Orderly)
-/// into the new independent data root (%LocalAppData%\OrderlyData) without deleting the source.
+/// into the fixed independent data root (D:\OrderlyData by default) without deleting the source.
 /// The migration is whitelist-based so installer files like current/Update.exe/sq.version are
 /// never touched, and it is safe to rerun after interruption.
 /// </summary>
