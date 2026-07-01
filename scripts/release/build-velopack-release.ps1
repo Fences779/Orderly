@@ -12,7 +12,9 @@ param(
 
     [string]$ReleaseNotesPath,
 
-    [string]$GithubToken
+    [string]$GithubToken,
+
+    [switch]$IncludeDeltaPackages
 )
 
 Set-StrictMode -Version Latest
@@ -237,7 +239,12 @@ try {
         throw ("dotnet publish failed with exit code {0}." -f $LASTEXITCODE)
     }
 
-    Try-DownloadPreviousReleases -PackageDir $packageDir -RepoUrl $RepoUrl -GithubToken $GithubToken
+    if ($IncludeDeltaPackages) {
+        Try-DownloadPreviousReleases -PackageDir $packageDir -RepoUrl $RepoUrl -GithubToken $GithubToken
+    }
+    else {
+        Write-Host "Skipping previous release download; building full package only."
+    }
 
     & dotnet tool run vpk -- pack `
         --outputDir $packageDir `
