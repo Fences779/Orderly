@@ -40,6 +40,7 @@ builder.Services.AddScoped<ICloudPermissionService, CloudPermissionService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IWorkspaceSyncService, WorkspaceSyncService>();
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
+builder.Services.AddScoped<CommerceCommandService>();
 builder.Services.AddSingleton<ISignalRNotifier, SignalRNotifier>();
 
 // Auth

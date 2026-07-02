@@ -7,72 +7,128 @@ namespace Orderly.Server.Controllers;
 [Route("api/workspaces/{workspaceId:guid}")]
 public class CommerceWriteController : CloudControllerBase
 {
-    public CommerceWriteController(ICurrentUserContext currentUser, ICloudAuthService authService, ICloudPermissionService permissions)
+    private readonly CommerceCommandService _commandService;
+
+    public CommerceWriteController(CommerceCommandService commandService, ICurrentUserContext currentUser, ICloudAuthService authService, ICloudPermissionService permissions)
         : base(currentUser, authService, permissions)
     {
+        _commandService = commandService;
     }
 
     [HttpPost("orders")]
-    public Task<ActionResult<CloudOrderDto>> CreateOrderAsync(Guid workspaceId, [FromBody] CreateOrderCommand command)
-        => Task.FromResult<ActionResult<CloudOrderDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudOrderDto>> CreateOrderAsync(Guid workspaceId, [FromBody] CreateOrderCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.CreateOrderAsync(workspaceId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPut("orders/{orderId:guid}")]
-    public Task<ActionResult<CloudOrderDto>> UpdateOrderAsync(Guid workspaceId, Guid orderId, [FromBody] UpdateOrderCommand command)
-        => Task.FromResult<ActionResult<CloudOrderDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudOrderDto>> UpdateOrderAsync(Guid workspaceId, Guid orderId, [FromBody] UpdateOrderCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        command.OrderId = orderId;
+        var result = await _commandService.UpdateOrderAsync(workspaceId, orderId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPost("orders/{orderId:guid}/complete")]
-    public Task<IActionResult> CompleteOrderAsync(Guid workspaceId, Guid orderId, [FromBody] CompleteOrderCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudOrderDto>> CompleteOrderAsync(Guid workspaceId, Guid orderId, [FromBody] CompleteOrderCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.CompleteOrderAsync(workspaceId, orderId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPost("orders/{orderId:guid}/stage")]
-    public Task<IActionResult> StageOrderAsync(Guid workspaceId, Guid orderId, [FromBody] OrderStageCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public Task<ActionResult<CloudOrderDto>> StageOrderAsync(Guid workspaceId, Guid orderId, [FromBody] OrderStageCommand command)
+        => UpdateOrderStageAsync(workspaceId, orderId, command, "sales");
 
     [HttpPost("orders/{orderId:guid}/payment-status")]
-    public Task<IActionResult> UpdatePaymentStatusAsync(Guid workspaceId, Guid orderId, [FromBody] OrderStageCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public Task<ActionResult<CloudOrderDto>> UpdatePaymentStatusAsync(Guid workspaceId, Guid orderId, [FromBody] OrderStageCommand command)
+        => UpdateOrderStageAsync(workspaceId, orderId, command, "payment");
 
     [HttpPost("orders/{orderId:guid}/fulfillment-status")]
-    public Task<IActionResult> UpdateFulfillmentStatusAsync(Guid workspaceId, Guid orderId, [FromBody] OrderStageCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public Task<ActionResult<CloudOrderDto>> UpdateFulfillmentStatusAsync(Guid workspaceId, Guid orderId, [FromBody] OrderStageCommand command)
+        => UpdateOrderStageAsync(workspaceId, orderId, command, "fulfillment");
+
+    private async Task<ActionResult<CloudOrderDto>> UpdateOrderStageAsync(Guid workspaceId, Guid orderId, OrderStageCommand command, string dimension)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.UpdateOrderStageAsync(workspaceId, orderId, command, dimension);
+        return Ok(result.Value);
+    }
 
     [HttpPost("inventory/movements")]
-    public Task<IActionResult> RecordMovementAsync(Guid workspaceId, [FromBody] InventoryMovementCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudInventoryMovementDto>> RecordMovementAsync(Guid workspaceId, [FromBody] InventoryMovementCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.RecordInventoryMovementAsync(workspaceId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPost("inventory/stocktake-adjustments")]
-    public Task<IActionResult> StocktakeAdjustmentAsync(Guid workspaceId, [FromBody] InventoryMovementCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudInventoryMovementDto>> StocktakeAdjustmentAsync(Guid workspaceId, [FromBody] InventoryMovementCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        command.IsStocktake = true;
+        var result = await _commandService.RecordInventoryMovementAsync(workspaceId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPost("customers")]
-    public Task<ActionResult<CloudCustomerDto>> CreateCustomerAsync(Guid workspaceId, [FromBody] CreateCustomerCommand command)
-        => Task.FromResult<ActionResult<CloudCustomerDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudCustomerDto>> CreateCustomerAsync(Guid workspaceId, [FromBody] CreateCustomerCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.CreateCustomerAsync(workspaceId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPut("customers/{customerId:guid}")]
-    public Task<ActionResult<CloudCustomerDto>> UpdateCustomerAsync(Guid workspaceId, Guid customerId, [FromBody] UpdateCustomerCommand command)
-        => Task.FromResult<ActionResult<CloudCustomerDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudCustomerDto>> UpdateCustomerAsync(Guid workspaceId, Guid customerId, [FromBody] UpdateCustomerCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        command.CustomerId = customerId;
+        var result = await _commandService.UpdateCustomerAsync(workspaceId, customerId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPost("customers/{customerId:guid}/notes")]
-    public Task<IActionResult> AddCustomerNoteAsync(Guid workspaceId, Guid customerId, [FromBody] CustomerNoteCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudCustomerDto>> AddCustomerNoteAsync(Guid workspaceId, Guid customerId, [FromBody] CustomerNoteCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.AddCustomerNoteAsync(workspaceId, customerId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPost("cashflow/income")]
     public Task<ActionResult<CloudCashFlowEntryDto>> RecordIncomeAsync(Guid workspaceId, [FromBody] CashFlowEntryCommand command)
-        => Task.FromResult<ActionResult<CloudCashFlowEntryDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+        => RecordCashFlowAsync(workspaceId, command, "income");
 
     [HttpPost("cashflow/expense")]
     public Task<ActionResult<CloudCashFlowEntryDto>> RecordExpenseAsync(Guid workspaceId, [FromBody] CashFlowEntryCommand command)
-        => Task.FromResult<ActionResult<CloudCashFlowEntryDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+        => RecordCashFlowAsync(workspaceId, command, "expense");
 
     [HttpPost("cashflow/receivable")]
     public Task<ActionResult<CloudCashFlowEntryDto>> RecordReceivableAsync(Guid workspaceId, [FromBody] CashFlowEntryCommand command)
-        => Task.FromResult<ActionResult<CloudCashFlowEntryDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+        => RecordCashFlowAsync(workspaceId, command, "receivable");
 
     [HttpPost("cashflow/payable")]
     public Task<ActionResult<CloudCashFlowEntryDto>> RecordPayableAsync(Guid workspaceId, [FromBody] CashFlowEntryCommand command)
-        => Task.FromResult<ActionResult<CloudCashFlowEntryDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+        => RecordCashFlowAsync(workspaceId, command, "payable");
+
+    private async Task<ActionResult<CloudCashFlowEntryDto>> RecordCashFlowAsync(Guid workspaceId, CashFlowEntryCommand command, string kind)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.RecordCashFlowAsync(workspaceId, command, kind);
+        return Ok(result.Value);
+    }
 
     [HttpPost("cashflow/{entryId:guid}/settle")]
-    public Task<ActionResult<CloudCashFlowEntryDto>> SettleAsync(Guid workspaceId, Guid entryId, [FromBody] SettleCashFlowCommand command)
-        => Task.FromResult<ActionResult<CloudCashFlowEntryDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudCashFlowEntryDto>> SettleAsync(Guid workspaceId, Guid entryId, [FromBody] SettleCashFlowCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.SettleCashFlowAsync(workspaceId, entryId, command);
+        return Ok(result.Value);
+    }
 }

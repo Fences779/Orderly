@@ -7,16 +7,27 @@ namespace Orderly.Server.Controllers;
 [Route("api/workspaces/{workspaceId:guid}/editing")]
 public class EditingController : CloudControllerBase
 {
-    public EditingController(ICurrentUserContext currentUser, ICloudAuthService authService, ICloudPermissionService permissions)
+    private readonly CommerceCommandService _commandService;
+
+    public EditingController(CommerceCommandService commandService, ICurrentUserContext currentUser, ICloudAuthService authService, ICloudPermissionService permissions)
         : base(currentUser, authService, permissions)
     {
+        _commandService = commandService;
     }
 
     [HttpPost("begin")]
-    public Task<IActionResult> BeginAsync(Guid workspaceId, [FromBody] EditingPresenceCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<IActionResult> BeginAsync(Guid workspaceId, [FromBody] EditingPresenceCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        await _commandService.BeginEditingAsync(workspaceId, command, HttpContext.Connection.Id);
+        return Ok();
+    }
 
     [HttpPost("end")]
-    public Task<IActionResult> EndAsync(Guid workspaceId, [FromBody] EditingPresenceCommand command)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<IActionResult> EndAsync(Guid workspaceId, [FromBody] EditingPresenceCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        await _commandService.EndEditingAsync(workspaceId, command, HttpContext.Connection.Id);
+        return Ok();
+    }
 }

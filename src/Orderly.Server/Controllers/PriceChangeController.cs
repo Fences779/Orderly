@@ -7,9 +7,12 @@ namespace Orderly.Server.Controllers;
 [Route("api/workspaces/{workspaceId:guid}/price-change-requests")]
 public class PriceChangeController : CloudControllerBase
 {
-    public PriceChangeController(ICurrentUserContext currentUser, ICloudAuthService authService, ICloudPermissionService permissions)
+    private readonly CommerceCommandService _commandService;
+
+    public PriceChangeController(CommerceCommandService commandService, ICurrentUserContext currentUser, ICloudAuthService authService, ICloudPermissionService permissions)
         : base(currentUser, authService, permissions)
     {
+        _commandService = commandService;
     }
 
     [HttpGet]
@@ -17,14 +20,26 @@ public class PriceChangeController : CloudControllerBase
         => Task.FromResult<ActionResult<PagedList<CloudPriceChangeRequestDto>>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
 
     [HttpPost]
-    public Task<ActionResult<CloudPriceChangeRequestDto>> CreateAsync(Guid workspaceId, [FromBody] PriceChangeRequestCommand command)
-        => Task.FromResult<ActionResult<CloudPriceChangeRequestDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudPriceChangeRequestDto>> CreateAsync(Guid workspaceId, [FromBody] PriceChangeRequestCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.CreatePriceChangeRequestAsync(workspaceId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPost("{requestId:guid}/approve")]
-    public Task<ActionResult<CloudPriceChangeRequestDto>> ApproveAsync(Guid workspaceId, Guid requestId, [FromBody] ReviewPriceChangeCommand command)
-        => Task.FromResult<ActionResult<CloudPriceChangeRequestDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudPriceChangeRequestDto>> ApproveAsync(Guid workspaceId, Guid requestId, [FromBody] ReviewPriceChangeCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.ApprovePriceChangeRequestAsync(workspaceId, requestId, command);
+        return Ok(result.Value);
+    }
 
     [HttpPost("{requestId:guid}/reject")]
-    public Task<ActionResult<CloudPriceChangeRequestDto>> RejectAsync(Guid workspaceId, Guid requestId, [FromBody] ReviewPriceChangeCommand command)
-        => Task.FromResult<ActionResult<CloudPriceChangeRequestDto>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<CloudPriceChangeRequestDto>> RejectAsync(Guid workspaceId, Guid requestId, [FromBody] ReviewPriceChangeCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.RejectPriceChangeRequestAsync(workspaceId, requestId, command);
+        return Ok(result.Value);
+    }
 }

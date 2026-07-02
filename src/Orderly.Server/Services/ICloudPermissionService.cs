@@ -7,10 +7,13 @@ public interface ICloudPermissionService
 {
     bool IsAdmin(CloudWorkspaceMemberRecord membership);
     bool IsEmployee(CloudWorkspaceMemberRecord membership);
-    bool CanArchive(CloudWorkspaceMemberRecord membership, string entityType, Guid? createdByUserId, Guid? assignedToUserId);
     bool CanViewCosts(CloudWorkspaceMemberRecord membership);
     bool CanExport(CloudWorkspaceMemberRecord membership);
     bool CanManageUsers(CloudWorkspaceMemberRecord membership);
+    bool CanArchive(CloudWorkspaceMemberRecord membership, string entityType, Guid? createdByUserId, Guid? assignedToUserId);
+    bool CanManageCashFlow(CloudWorkspaceMemberRecord membership);
+    bool CanApprovePriceChange(CloudWorkspaceMemberRecord membership);
+    bool CanRecordInventoryMovement(CloudWorkspaceMemberRecord membership);
 }
 
 public sealed class CloudPermissionService : ICloudPermissionService
@@ -24,6 +27,9 @@ public sealed class CloudPermissionService : ICloudPermissionService
     public bool CanViewCosts(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
     public bool CanExport(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
     public bool CanManageUsers(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
+    public bool CanManageCashFlow(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
+    public bool CanApprovePriceChange(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
+    public bool CanRecordInventoryMovement(CloudWorkspaceMemberRecord membership) => IsAdmin(membership) || IsEmployee(membership);
 
     public bool CanArchive(CloudWorkspaceMemberRecord membership, string entityType, Guid? createdByUserId, Guid? assignedToUserId)
     {
