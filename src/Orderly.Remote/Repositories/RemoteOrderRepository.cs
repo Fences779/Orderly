@@ -1,4 +1,5 @@
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Permissions;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Repositories;
 using Orderly.Remote.Auth;
@@ -13,4 +14,72 @@ public sealed class RemoteOrderRepository : RemoteCommerceRepositoryBase<Order, 
 
     protected override string EntityPath => "orders";
     protected override Order Map(CloudOrderDto dto) => dto.ToEntity();
+
+    public override async Task<Order> CreateAsync(Order entity, CancellationToken cancellationToken = default)
+    {
+        var command = new CreateOrderCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = 0L,
+            OrderNo = entity.OrderNo ?? string.Empty,
+            CustomerId = entity.CustomerId,
+            SalesStage = entity.SalesStage,
+            PaymentStage = entity.PaymentStage,
+            FulfillmentStage = entity.FulfillmentStage,
+            OrderedAtUtc = entity.OrderedAt,
+            Note = entity.Note
+        };
+
+        var dto = await Client.PostAsync<CreateOrderCommand, CloudOrderDto>(
+            $"api/workspaces/{Session.WorkspaceId:N}/orders",
+            command,
+            cancellationToken).ConfigureAwait(false);
+
+        return dto?.ToEntity() ?? entity;
+    }
+
+    public override async Task UpdateAsync(Order entity, CancellationToken cancellationToken = default)
+    {
+        var latest = await Client.GetAsync<CloudOrderDto>(
+            $"api/workspaces/{Session.WorkspaceId:N}/orders/{entity.Id:N}",
+            cancellationToken).ConfigureAwait(false);
+
+        var command = new UpdateOrderCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = latest?.Revision ?? 0L,
+            OrderId = entity.Id,
+            CustomerId = entity.CustomerId,
+            SalesStage = entity.SalesStage,
+            PaymentStage = entity.PaymentStage,
+            FulfillmentStage = entity.FulfillmentStage,
+            Note = entity.Note
+        };
+
+        await Client.PutAsync<UpdateOrderCommand, CloudOrderDto>(
+            $"api/workspaces/{Session.WorkspaceId:N}/orders/{entity.Id:N}",
+            command,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public override async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var latest = await Client.GetAsync<CloudOrderDto>(
+            $"api/workspaces/{Session.WorkspaceId:N}/orders/{id:N}",
+            cancellationToken).ConfigureAwait(false);
+
+        var command = new ArchiveCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = latest?.Revision ?? 0L,
+            EntityType = EntityType.Order,
+            EntityId = id,
+            ArchiveReason = "Remote soft delete"
+        };
+
+        await Client.PostAsync<ArchiveCommand>(
+            $"api/workspaces/{Session.WorkspaceId:N}/archive/{EntityType.Order}/{id:N}",
+            command,
+            cancellationToken).ConfigureAwait(false);
+    }
 }

@@ -14,6 +14,8 @@ using Orderly.Data.Sqlite;
 using Orderly.Infrastructure.Hotkeys;
 using Orderly.Infrastructure.Services;
 using Orderly.Infrastructure.Tray;
+using Orderly.Contracts.Permissions;
+using Orderly.Contracts.Realtime;
 using Orderly.Remote.Auth;
 using Orderly.Remote.Clients;
 using Orderly.Remote.Realtime;
@@ -328,12 +330,23 @@ public partial class App
             new Orderly.App.ViewModels.Pages.CashflowPageViewModel(commerceCashFlowService, commerceCashFlowRepository),
             new Orderly.App.ViewModels.Pages.BusinessAdvicePageViewModel(commerceBusinessInsightService));
 
-        // Cloud real-time: when the server reports any entity change, mark commerce pages dirty so the
-        // next navigation refreshes from the server. In this stage we refresh all commerce pages;
-        // finer-grained invalidation can be added later per entity type.
+        // Cloud real-time: invalidate only the commerce page(s) affected by the server's change.
+        // Unknown or cross-cutting events still fall back to refreshing all commerce pages.
         if (_cloudRealtimeClient != null)
         {
-            _cloudRealtimeClient.EntityChanged += _ => _mainViewModel.MarkAllCommercePagesDirty();
+            _cloudRealtimeClient.EntityChanged += e =>
+            {
+                if (e is null)
+                {
+                    _mainViewModel.MarkAllCommercePagesDirty();
+                    return;
+                }
+
+                foreach (var section in MapEntityTypeToSections(e.EntityType))
+                {
+                    _mainViewModel.MarkCommercePageDirty(section);
+                }
+            };
             _cloudRealtimeClient.ForcedLogout += () =>
             {
                 Dispatcher.Invoke(() =>
@@ -518,5 +531,48 @@ public partial class App
             // only reads it), so the next launch retries. Surface the reason for diagnosis.
             Console.Error.WriteLine($"Commerce legacy migration failed (legacy data preserved, will retry): {ex.Message}");
         }
+    }
+
+    private static IEnumerable<string> MapEntityTypeToSections(string entityType)
+    {
+        if (string.Equals(entityType, EntityType.Order, StringComparison.OrdinalIgnoreCase))
+        {
+            return [MainViewModel.SectionOrders];
+        }
+
+        if (string.Equals(entityType, EntityType.Product, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entityType, EntityType.PriceChangeRequest, StringComparison.OrdinalIgnoreCase))
+        {
+            return [MainViewModel.SectionProducts];
+        }
+
+        if (string.Equals(entityType, EntityType.InventoryItem, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entityType, "inventory", StringComparison.OrdinalIgnoreCase))
+        {
+            return [MainViewModel.SectionInventory];
+        }
+
+        if (string.Equals(entityType, EntityType.Customer, StringComparison.OrdinalIgnoreCase))
+        {
+            return [MainViewModel.SectionCustomers];
+        }
+
+        if (string.Equals(entityType, EntityType.CashFlowEntry, StringComparison.OrdinalIgnoreCase))
+        {
+            return [MainViewModel.SectionCashflow];
+        }
+
+        if (string.Equals(entityType, EntityType.BusinessInsight, StringComparison.OrdinalIgnoreCase))
+        {
+            return [MainViewModel.SectionBusinessAdvice];
+        }
+
+        if (string.Equals(entityType, "dashboard", StringComparison.OrdinalIgnoreCase))
+        {
+            return [MainViewModel.SectionWorkbench];
+        }
+
+        // Cross-cutting or unrecognized change: refresh everything to stay safe.
+        return [MainViewModel.SectionWorkbench, MainViewModel.SectionOrders, MainViewModel.SectionProducts, MainViewModel.SectionInventory, MainViewModel.SectionCustomers, MainViewModel.SectionCashflow, MainViewModel.SectionBusinessAdvice];
     }
 }

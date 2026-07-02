@@ -56,6 +56,27 @@ public sealed class RemoteCommerceClient : IDisposable
         return await response.Content.ReadFromJsonAsync<TResponse>(cancellationToken);
     }
 
+    public async Task PostAsync<TRequest>(string path, TRequest request, CancellationToken cancellationToken = default)
+    {
+        EnsureAuthorized();
+        var response = await _httpClient.PostAsJsonAsync(path, request, cancellationToken);
+        await EnsureSuccessOrThrowAsync(response);
+    }
+
+    public async Task PutAsync<TRequest>(string path, TRequest request, CancellationToken cancellationToken = default)
+    {
+        EnsureAuthorized();
+        var response = await _httpClient.PutAsJsonAsync(path, request, cancellationToken);
+        await EnsureSuccessOrThrowAsync(response);
+    }
+
+    public async Task DeleteAsync(string path, CancellationToken cancellationToken = default)
+    {
+        EnsureAuthorized();
+        var response = await _httpClient.DeleteAsync(path, cancellationToken);
+        await EnsureSuccessOrThrowAsync(response);
+    }
+
     private void EnsureAuthorized()
     {
         if (!string.IsNullOrEmpty(_session.AccessToken))

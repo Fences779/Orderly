@@ -1,4 +1,5 @@
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Permissions;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Services;
 using Orderly.Remote.Auth;
@@ -43,8 +44,29 @@ public sealed class RemoteOrderService : IOrderService
 
     public async Task<OrderCompletionResult> CompleteOrderAsync(Guid orderId, DateTime completedAtUtc, CancellationToken cancellationToken = default)
     {
-        var command = new CompleteOrderCommand { CompletedAtUtc = completedAtUtc };
-        await _client.PostAsync<CompleteOrderCommand, CloudOrderDto>($"api/workspaces/{_session.WorkspaceId:N}/orders/{orderId:N}/complete", command, cancellationToken);
-        return OrderCompletionResult.Completed();
+        var latest = await _client.GetAsync<CloudOrderDto>($"api/workspaces/{_session.WorkspaceId:N}/orders/{orderId:N}", cancellationToken)
+            .ConfigureAwait(false);
+
+        var command = new CompleteOrderCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = latest?.Revision ?? 0L,
+            CompletedAtUtc = completedAtUtc
+        };
+
+        try
+        {
+            await _client.PostAsync<CompleteOrderCommand, CloudOrderDto>(
+                $"api/workspaces/{_session.WorkspaceId:N}/orders/{orderId:N}/complete",
+                command,
+                cancellationToken).ConfigureAwait(false);
+            return OrderCompletionResult.Completed();
+        }
+        catch (RemoteConflictException ex)
+        {
+            return OrderCompletionResult.InsufficientInventory(
+                Array.Empty<InventoryShortfall>(),
+                $"远程服务器拒绝完成订单：{ex.Message}");
+        }
     }
 }

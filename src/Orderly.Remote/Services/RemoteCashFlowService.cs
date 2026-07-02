@@ -52,19 +52,81 @@ public sealed class RemoteCashFlowService : ICashFlowService
         => Task.FromResult(50);
 
     public Task<CashFlowEntry> RecordIncomeAsync(CashFlowEntryInput input, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("Remote cash-flow recording is not implemented in this stage.");
+        => RecordAsync(input, "income", CashFlowDirection.Income, cancellationToken);
 
     public Task<CashFlowEntry> RecordExpenseAsync(CashFlowEntryInput input, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("Remote cash-flow recording is not implemented in this stage.");
+        => RecordAsync(input, "expense", CashFlowDirection.Expense, cancellationToken);
 
     public Task<CashFlowEntry> RecordReceivableAsync(CashFlowEntryInput input, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("Remote cash-flow recording is not implemented in this stage.");
+        => RecordAsync(input, "receivable", CashFlowDirection.Income, cancellationToken);
 
     public Task<CashFlowEntry> RecordPayableAsync(CashFlowEntryInput input, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("Remote cash-flow recording is not implemented in this stage.");
+        => RecordAsync(input, "payable", CashFlowDirection.Expense, cancellationToken);
 
-    public Task<CashFlowEntry> SettleAsync(Guid entryId, CommerceMoney amount, DateTime asOfUtc, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("Remote cash-flow settle is not implemented in this stage.");
+    public async Task<CashFlowEntry> SettleAsync(Guid entryId, CommerceMoney amount, DateTime asOfUtc, CancellationToken cancellationToken = default)
+    {
+        if (amount.Amount < 0m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Settlement amount cannot be negative.");
+        }
+
+        var latest = await _client.GetAsync<CloudCashFlowEntryDto>(
+            $"api/workspaces/{_session.WorkspaceId:N}/cashflow/entries/{entryId:N}",
+            cancellationToken).ConfigureAwait(false);
+
+        var command = new SettleCashFlowCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = latest?.Revision ?? 0L,
+            Amount = amount.Amount,
+            AsOfUtc = asOfUtc
+        };
+
+        var dto = await _client.PostAsync<SettleCashFlowCommand, CloudCashFlowEntryDto>(
+            $"api/workspaces/{_session.WorkspaceId:N}/cashflow/{entryId:N}/settle",
+            command,
+            cancellationToken).ConfigureAwait(false);
+
+        if (dto is null)
+        {
+            throw new InvalidOperationException("Cash-flow settlement returned no data.");
+        }
+
+        return dto.ToEntity();
+    }
+
+    private async Task<CashFlowEntry> RecordAsync(CashFlowEntryInput input, string kind, CashFlowDirection direction, CancellationToken cancellationToken)
+    {
+        if (input is null)
+        {
+            throw new ArgumentNullException(nameof(input));
+        }
+
+        var command = new CashFlowEntryCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = 0L,
+            Direction = direction,
+            Amount = input.Amount.Amount,
+            OccurredAtUtc = input.OccurredAt,
+            DueDateUtc = input.DueDate,
+            CategoryName = input.CategoryName ?? string.Empty,
+            OrderId = input.OrderId,
+            BusinessKey = input.BusinessKey
+        };
+
+        var dto = await _client.PostAsync<CashFlowEntryCommand, CloudCashFlowEntryDto>(
+            $"api/workspaces/{_session.WorkspaceId:N}/cashflow/{kind}",
+            command,
+            cancellationToken).ConfigureAwait(false);
+
+        if (dto is null)
+        {
+            throw new InvalidOperationException($"Cash-flow {kind} recording returned no data.");
+        }
+
+        return dto.ToEntity();
+    }
 
     private sealed class RemoteCashFlowSummaryDto
     {

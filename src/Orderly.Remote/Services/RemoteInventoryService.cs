@@ -36,8 +36,44 @@ public sealed class RemoteInventoryService : IInventoryService
     public Task<IReadOnlyList<BusinessInsight>> GenerateInventoryInsightsAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<BusinessInsight>>(Array.Empty<BusinessInsight>());
 
-    public Task<InventoryItem> RecordMovementAsync(InventoryMovement movement, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("Remote inventory movement is not implemented in this stage.");
+    public async Task<InventoryItem> RecordMovementAsync(InventoryMovement movement, CancellationToken cancellationToken = default)
+    {
+        if (movement is null)
+        {
+            throw new ArgumentNullException(nameof(movement));
+        }
+
+        var command = new InventoryMovementCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = 0L,
+            InventoryItemId = movement.InventoryItemId,
+            MovementType = movement.MovementType,
+            Quantity = movement.Quantity,
+            SupplierId = movement.SupplierId,
+            OrderId = movement.OrderId,
+            OccurredAtUtc = movement.OccurredAt,
+            BusinessKey = movement.BusinessKey,
+            Note = movement.Note,
+            IsStocktake = false
+        };
+
+        await _client.PostAsync<InventoryMovementCommand, CloudInventoryMovementDto>(
+            $"api/workspaces/{_session.WorkspaceId:N}/inventory/movements",
+            command,
+            cancellationToken).ConfigureAwait(false);
+
+        var updated = await _client.GetAsync<CloudInventoryItemDto>(
+            $"api/workspaces/{_session.WorkspaceId:N}/inventory/items/{movement.InventoryItemId:N}",
+            cancellationToken).ConfigureAwait(false);
+
+        if (updated is null)
+        {
+            throw new InvalidOperationException("Inventory item was not found after recording movement.");
+        }
+
+        return updated.ToEntity();
+    }
 
     private static InventoryMetrics ToMetrics(CloudInventoryItemDto dto)
     {
