@@ -20,10 +20,22 @@ public sealed class CurrentUserContextMiddleware
             var username = context.User.FindFirstValue(ClaimTypes.Name)
                         ?? context.User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.UniqueName);
             var tokenVersionValue = context.User.FindFirstValue("token_version");
+            var role = context.User.FindFirstValue(ClaimTypes.Role);
+            var businessLabel = context.User.FindFirstValue("business_label");
+            var workspaceIdValue = context.User.FindFirstValue("workspace_id");
 
-            if (Guid.TryParse(userId, out var parsedUserId) && int.TryParse(tokenVersionValue, out var tokenVersion))
+            if (Guid.TryParse(userId, out var parsedUserId)
+                && Guid.TryParse(workspaceIdValue, out var parsedWorkspaceId)
+                && int.TryParse(tokenVersionValue, out var tokenVersion))
             {
-                currentUser.Set(parsedUserId, username ?? string.Empty, displayName ?? string.Empty, tokenVersion);
+                currentUser.Set(
+                    parsedUserId,
+                    username ?? string.Empty,
+                    displayName ?? string.Empty,
+                    role ?? string.Empty,
+                    businessLabel ?? string.Empty,
+                    parsedWorkspaceId,
+                    tokenVersion);
             }
         }
 

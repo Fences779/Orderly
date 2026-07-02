@@ -1,3 +1,4 @@
+using System.Data;
 using Dapper;
 using Orderly.Server.Data;
 
@@ -28,7 +29,29 @@ public sealed class AuditLogService : IAuditLogService
     {
         var actorId = _currentUser.UserId;
         var actorName = _currentUser.DisplayName ?? "system";
-        var actorRole = "system";
+        var actorRole = _currentUser.Role ?? "system";
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        await LogAsync(connection, null, workspaceId, action, entityType, entityId, beforeJson, afterJson, reason, clientRequestId, ipAddress, userAgent);
+    }
+
+    public async Task LogAsync(
+        IDbConnection connection,
+        IDbTransaction? transaction,
+        Guid workspaceId,
+        string action,
+        string entityType,
+        Guid? entityId,
+        string? beforeJson,
+        string? afterJson,
+        string? reason = null,
+        string? clientRequestId = null,
+        string? ipAddress = null,
+        string? userAgent = null)
+    {
+        var actorId = _currentUser.UserId;
+        var actorName = _currentUser.DisplayName ?? "system";
+        var actorRole = _currentUser.Role ?? "system";
 
         const string sql = @"
             INSERT INTO ""CloudAuditLogs"" (
@@ -40,7 +63,6 @@ public sealed class AuditLogService : IAuditLogService
                 @action, @entityType, @entityId, @beforeJson, @afterJson,
                 @reason, @clientRequestId, @occurredAt, @ipAddress, @userAgent);";
 
-        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         await connection.ExecuteAsync(sql, new
         {
             id = Guid.NewGuid(),
@@ -58,6 +80,6 @@ public sealed class AuditLogService : IAuditLogService
             occurredAt = DateTime.UtcNow,
             ipAddress,
             userAgent
-        });
+        }, transaction);
     }
 }

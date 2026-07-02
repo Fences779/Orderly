@@ -20,7 +20,6 @@ public sealed class SignalRNotifier : ISignalRNotifier
 
     public async Task NotifyUserDisabledAsync(Guid userId)
     {
-        // Broadcast a force-logout event to all connections of the user.
         await _hubContext.Clients.User(userId.ToString("N")).SendAsync("ForceLogout", new { Reason = "AccountDisabled" });
     }
 }
