@@ -119,4 +119,22 @@ public partial class MainViewModel
             _loadedCommercePages.Add(section);
         }
     }
+
+    /// <summary>
+    /// Clears the loaded marker for a single commerce page so the next navigation refreshes it.
+    /// Used by cloud real-time event handlers when the server reports a change to that page's data.
+    /// </summary>
+    public void MarkCommercePageDirty(string section)
+    {
+        _loadedCommercePages.Remove(section);
+    }
+
+    /// <summary>
+    /// Clears the loaded markers for all commerce pages so the next navigation refreshes everything.
+    /// Used by cloud real-time event handlers when the exact affected page is unknown.
+    /// </summary>
+    public void MarkAllCommercePagesDirty()
+    {
+        _loadedCommercePages.Clear();
+    }
 }

@@ -14,6 +14,11 @@ using Orderly.Data.Sqlite;
 using Orderly.Infrastructure.Hotkeys;
 using Orderly.Infrastructure.Services;
 using Orderly.Infrastructure.Tray;
+using Orderly.Remote.Auth;
+using Orderly.Remote.Clients;
+using Orderly.Remote.Realtime;
+using Orderly.Remote.Repositories;
+using Orderly.Remote.Services;
 
 namespace Orderly.App;
 
@@ -155,52 +160,85 @@ public partial class App
         // commerce pages are re-sourced through the universal Commerce Service Layer below.
 
         // --- Commerce Service Layer wiring (Req 7.3, 7.4) ---
-        // The nine-entry shell's business pages obtain data only through these universal services
-        // over the Commerce repositories (the same encrypted SqliteConnectionFactory used by the
-        // P0 path, C-2). No legacy remote service participates.
-        var commerceOrderRepository = new Orderly.Data.Commerce.Repositories.CommerceOrderRepository(connectionFactory);
-        var commerceOrderItemRepository = new Orderly.Data.Commerce.Repositories.OrderItemRepository(connectionFactory);
-        var commerceCustomerRepository = new Orderly.Data.Commerce.Repositories.CommerceCustomerRepository(connectionFactory);
-        var commerceInventoryItemRepository = new Orderly.Data.Commerce.Repositories.InventoryItemRepository(connectionFactory);
-        var commerceInventoryMovementRepository = new Orderly.Data.Commerce.Repositories.InventoryMovementRepository(connectionFactory);
-        var commerceCashFlowRepository = new Orderly.Data.Commerce.Repositories.CashFlowEntryRepository(connectionFactory);
-        var commerceProductRepository = new Orderly.Data.Commerce.Repositories.ProductRepository(connectionFactory);
-        var commerceInsightRepository = new Orderly.Data.Commerce.Repositories.BusinessInsightRepository(connectionFactory);
-        var commerceMetricSnapshotRepository = new Orderly.Data.Commerce.Repositories.BusinessMetricSnapshotRepository(connectionFactory);
+        // Cloud runtime: use remote services over HTTPS/SignalR when a cloud session is present.
+        // LocalDev runtime (default): keep the existing SQLite-backed Commerce services.
+        var runtime = Environment.GetEnvironmentVariable("ORDERLY_RUNTIME") ?? "LocalDev";
+        Orderly.Core.Commerce.Services.IDashboardService commerceDashboardService;
+        Orderly.Core.Commerce.Services.IOrderService commerceOrderService;
+        Orderly.Core.Commerce.Services.IInventoryService commerceInventoryService;
+        Orderly.Core.Commerce.Services.ICustomerService commerceCustomerService;
+        Orderly.Core.Commerce.Services.ICashFlowService commerceCashFlowService;
+        Orderly.Core.Commerce.Services.IBusinessInsightService commerceBusinessInsightService;
+        Orderly.Core.Commerce.Services.IProductService commerceProductService;
+        Orderly.Core.Commerce.Repositories.ICommerceOrderRepository commerceOrderRepository;
+        Orderly.Core.Commerce.Repositories.IInventoryItemRepository commerceInventoryItemRepository;
+        Orderly.Core.Commerce.Repositories.ICommerceCustomerRepository commerceCustomerRepository;
+        Orderly.Core.Commerce.Repositories.ICashFlowEntryRepository commerceCashFlowRepository;
 
-        Orderly.Core.Commerce.Services.IDashboardService commerceDashboardService =
-            new Orderly.Data.Commerce.Services.CommerceDashboardService(
-                commerceOrderRepository,
-                commerceCashFlowRepository,
-                commerceInventoryItemRepository,
-                commerceCustomerRepository,
-                commerceMetricSnapshotRepository);
-        Orderly.Core.Commerce.Services.IOrderService commerceOrderService =
-            new Orderly.Data.Commerce.Services.CommerceOrderService(
+        if (string.Equals(runtime, "Cloud", StringComparison.OrdinalIgnoreCase) && _cloudAuthSession?.IsAuthenticated == true)
+        {
+            var baseUrl = Environment.GetEnvironmentVariable("ORDERLY_CLOUD_BASE_URL") ?? "https://localhost:5001";
+            var remoteClient = new RemoteCommerceClient(baseUrl, _cloudAuthSession);
+            _cloudRealtimeClient = new WorkspaceRealtimeClient(baseUrl, _cloudAuthSession);
+            _ = _cloudRealtimeClient.StartAsync();
+
+            commerceDashboardService = new RemoteDashboardService(remoteClient, _cloudAuthSession);
+            commerceOrderService = new RemoteOrderService(remoteClient, _cloudAuthSession);
+            commerceInventoryService = new RemoteInventoryService(remoteClient, _cloudAuthSession);
+            commerceCustomerService = new RemoteCustomerService(remoteClient, _cloudAuthSession);
+            commerceCashFlowService = new RemoteCashFlowService(remoteClient, _cloudAuthSession);
+            commerceBusinessInsightService = new RemoteBusinessInsightService(remoteClient, _cloudAuthSession);
+            commerceProductService = new RemoteProductService(remoteClient, _cloudAuthSession);
+
+            commerceOrderRepository = new RemoteOrderRepository(remoteClient, _cloudAuthSession);
+            commerceInventoryItemRepository = new RemoteInventoryItemRepository(remoteClient, _cloudAuthSession);
+            commerceCustomerRepository = new RemoteCustomerRepository(remoteClient, _cloudAuthSession);
+            commerceCashFlowRepository = new RemoteCashFlowEntryRepository(remoteClient, _cloudAuthSession);
+        }
+        else
+        {
+            var localCommerceOrderRepository = new Orderly.Data.Commerce.Repositories.CommerceOrderRepository(connectionFactory);
+            var localCommerceOrderItemRepository = new Orderly.Data.Commerce.Repositories.OrderItemRepository(connectionFactory);
+            var localCommerceCustomerRepository = new Orderly.Data.Commerce.Repositories.CommerceCustomerRepository(connectionFactory);
+            var localCommerceInventoryItemRepository = new Orderly.Data.Commerce.Repositories.InventoryItemRepository(connectionFactory);
+            var localCommerceInventoryMovementRepository = new Orderly.Data.Commerce.Repositories.InventoryMovementRepository(connectionFactory);
+            var localCommerceCashFlowRepository = new Orderly.Data.Commerce.Repositories.CashFlowEntryRepository(connectionFactory);
+            var localCommerceProductRepository = new Orderly.Data.Commerce.Repositories.ProductRepository(connectionFactory);
+            var localCommerceInsightRepository = new Orderly.Data.Commerce.Repositories.BusinessInsightRepository(connectionFactory);
+            var localCommerceMetricSnapshotRepository = new Orderly.Data.Commerce.Repositories.BusinessMetricSnapshotRepository(connectionFactory);
+
+            commerceOrderRepository = localCommerceOrderRepository;
+            commerceInventoryItemRepository = localCommerceInventoryItemRepository;
+            commerceCustomerRepository = localCommerceCustomerRepository;
+            commerceCashFlowRepository = localCommerceCashFlowRepository;
+
+            commerceDashboardService = new Orderly.Data.Commerce.Services.CommerceDashboardService(
+                localCommerceOrderRepository,
+                localCommerceCashFlowRepository,
+                localCommerceInventoryItemRepository,
+                localCommerceCustomerRepository,
+                localCommerceMetricSnapshotRepository);
+            commerceOrderService = new Orderly.Data.Commerce.Services.CommerceOrderService(
                 connectionFactory,
-                commerceOrderRepository,
-                commerceOrderItemRepository,
-                commerceInventoryItemRepository,
-                commerceInventoryMovementRepository,
-                commerceCustomerRepository);
-        Orderly.Core.Commerce.Services.IInventoryService commerceInventoryService =
-            new Orderly.Data.Commerce.Services.CommerceInventoryService(
-                commerceInventoryItemRepository,
-                commerceInventoryMovementRepository);
-        Orderly.Core.Commerce.Services.ICustomerService commerceCustomerService =
-            new Orderly.Data.Commerce.Services.CommerceCustomerService(
-                commerceOrderRepository,
-                commerceCustomerRepository);
-        Orderly.Core.Commerce.Services.ICashFlowService commerceCashFlowService =
-            new Orderly.Data.Commerce.Services.CommerceCashFlowService(commerceCashFlowRepository);
-        Orderly.Core.Commerce.Services.IBusinessInsightService commerceBusinessInsightService =
-            new Orderly.Data.Commerce.Services.CommerceBusinessInsightService(
+                localCommerceOrderRepository,
+                localCommerceOrderItemRepository,
+                localCommerceInventoryItemRepository,
+                localCommerceInventoryMovementRepository,
+                localCommerceCustomerRepository);
+            commerceInventoryService = new Orderly.Data.Commerce.Services.CommerceInventoryService(
+                localCommerceInventoryItemRepository,
+                localCommerceInventoryMovementRepository);
+            commerceCustomerService = new Orderly.Data.Commerce.Services.CommerceCustomerService(
+                localCommerceOrderRepository,
+                localCommerceCustomerRepository);
+            commerceCashFlowService = new Orderly.Data.Commerce.Services.CommerceCashFlowService(localCommerceCashFlowRepository);
+            commerceBusinessInsightService = new Orderly.Data.Commerce.Services.CommerceBusinessInsightService(
                 commerceInventoryService,
-                commerceCashFlowRepository,
+                localCommerceCashFlowRepository,
                 reservedProviders: null,
-                insightRepository: commerceInsightRepository);
-        Orderly.Core.Commerce.Services.IProductService commerceProductService =
-            new Orderly.Data.Commerce.Services.CommerceProductService(commerceProductRepository);
+                insightRepository: localCommerceInsightRepository);
+            commerceProductService = new Orderly.Data.Commerce.Services.CommerceProductService(localCommerceProductRepository);
+        }
 
         var preferences = await settingRepository.GetPreferencesAsync();
         Orderly.App.Helpers.ThemeHelper.ApplyTheme(preferences.ThemeMode);
@@ -289,6 +327,22 @@ public partial class App
             new Orderly.App.ViewModels.Pages.CustomersPageViewModel(commerceCustomerService, commerceCustomerRepository, settingRepository),
             new Orderly.App.ViewModels.Pages.CashflowPageViewModel(commerceCashFlowService, commerceCashFlowRepository),
             new Orderly.App.ViewModels.Pages.BusinessAdvicePageViewModel(commerceBusinessInsightService));
+
+        // Cloud real-time: when the server reports any entity change, mark commerce pages dirty so the
+        // next navigation refreshes from the server. In this stage we refresh all commerce pages;
+        // finer-grained invalidation can be added later per entity type.
+        if (_cloudRealtimeClient != null)
+        {
+            _cloudRealtimeClient.EntityChanged += _ => _mainViewModel.MarkAllCommercePagesDirty();
+            _cloudRealtimeClient.ForcedLogout += () =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    _sessionContextService?.Clear();
+                    ExitApplicationFromTray();
+                });
+            };
+        }
 
         await _mainViewModel.LoadAsync();
 

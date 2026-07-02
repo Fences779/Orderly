@@ -17,6 +17,8 @@
     <ProjectReference Include="..\Orderly.Core\Orderly.Core.csproj" />
     <ProjectReference Include="..\Orderly.Data\Orderly.Data.csproj" />
     <ProjectReference Include="..\Orderly.Infrastructure\Orderly.Infrastructure.csproj" />
+    <ProjectReference Include="..\Orderly.Contracts\Orderly.Contracts.csproj" />
+    <ProjectReference Include="..\Orderly.Remote\Orderly.Remote.csproj" />
   </ItemGroup>
 
   <ItemGroup>

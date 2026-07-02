@@ -68,6 +68,10 @@ public partial class App : System.Windows.Application
     private ISecurityAuditService? _securityAuditService;
     private ILocalAccountRepository? _localAccountRepository;
     private LoginView? _loginView;
+    private Orderly.Remote.Auth.CloudAuthSession? _cloudAuthSession;
+    private Orderly.Remote.Realtime.WorkspaceRealtimeClient? _cloudRealtimeClient;
+
+    internal void SetCloudAuthSession(Orderly.Remote.Auth.CloudAuthSession session) => _cloudAuthSession = session;
     private string? _databasePath;
     private string? _preparedDatabasePath;
     private bool _isPinUnlockDialogOpen;
