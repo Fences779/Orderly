@@ -1,4 +1,5 @@
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Offline;
 using Orderly.Contracts.Permissions;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Repositories;
@@ -10,9 +11,11 @@ namespace Orderly.Remote.Repositories;
 
 public sealed class RemoteCashFlowEntryRepository : RemoteCommerceRepositoryBase<CashFlowEntry, CloudCashFlowEntryDto>, ICashFlowEntryRepository
 {
-    public RemoteCashFlowEntryRepository(RemoteCommerceClient client, CloudAuthSession session) : base(client, session) { }
+    public RemoteCashFlowEntryRepository(RemoteCommerceClient client, CloudAuthSession session, ICloudCacheStore? cacheStore = null)
+        : base(client, session, cacheStore) { }
 
     protected override string EntityPath => "cashflow/entries";
+    protected override string CacheEntityType => EntityType.CashFlowEntry;
     protected override CashFlowEntry Map(CloudCashFlowEntryDto dto) => dto.ToEntity();
 
     public override async Task<CashFlowEntry> CreateAsync(CashFlowEntry entity, CancellationToken cancellationToken = default)

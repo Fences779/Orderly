@@ -1,4 +1,5 @@
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Offline;
 using Orderly.Contracts.Permissions;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Repositories;
@@ -10,9 +11,11 @@ namespace Orderly.Remote.Repositories;
 
 public sealed class RemoteCustomerRepository : RemoteCommerceRepositoryBase<Customer, CloudCustomerDto>, ICommerceCustomerRepository
 {
-    public RemoteCustomerRepository(RemoteCommerceClient client, CloudAuthSession session) : base(client, session) { }
+    public RemoteCustomerRepository(RemoteCommerceClient client, CloudAuthSession session, ICloudCacheStore? cacheStore = null)
+        : base(client, session, cacheStore) { }
 
     protected override string EntityPath => "customers";
+    protected override string CacheEntityType => EntityType.Customer;
     protected override Customer Map(CloudCustomerDto dto) => dto.ToEntity();
 
     public override async Task<Customer> CreateAsync(Customer entity, CancellationToken cancellationToken = default)

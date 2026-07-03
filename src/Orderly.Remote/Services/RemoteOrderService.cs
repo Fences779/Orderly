@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Offline;
 using Orderly.Contracts.Permissions;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Services;
@@ -11,11 +13,13 @@ public sealed class RemoteOrderService : IOrderService
 {
     private readonly RemoteCommerceClient _client;
     private readonly CloudAuthSession _session;
+    private readonly IEmergencyDraftQueue? _offlineDraftQueue;
 
-    public RemoteOrderService(RemoteCommerceClient client, CloudAuthSession session)
+    public RemoteOrderService(RemoteCommerceClient client, CloudAuthSession session, IEmergencyDraftQueue? offlineDraftQueue = null)
     {
         _client = client;
         _session = session;
+        _offlineDraftQueue = offlineDraftQueue;
     }
 
     public void RecalculateOrder(Order order, IReadOnlyCollection<OrderItem> items, IReadOnlyCollection<PaymentRecord> payments)
@@ -67,6 +71,22 @@ public sealed class RemoteOrderService : IOrderService
             return OrderCompletionResult.InsufficientInventory(
                 Array.Empty<InventoryShortfall>(),
                 $"远程服务器拒绝完成订单：{ex.Message}");
+        }
+        catch (HttpRequestException) when (_offlineDraftQueue is not null)
+        {
+            await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                EntityType = EntityType.Order,
+                EntityId = orderId.ToString("N"),
+                OperationType = "complete",
+                PayloadJson = JsonSerializer.Serialize(command),
+                BaseRevision = command.ExpectedRevision,
+                CreatedAtUtc = DateTime.UtcNow,
+                Status = "Pending"
+            }, cancellationToken).ConfigureAwait(false);
+
+            return OrderCompletionResult.Completed("当前离线，订单完成已保存为应急草稿，联网后自动提交。");
         }
     }
 }

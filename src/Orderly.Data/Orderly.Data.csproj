@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Orderly.Core\Orderly.Core.csproj" />
+    <ProjectReference Include="..\Orderly.Contracts\Orderly.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

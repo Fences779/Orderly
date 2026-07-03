@@ -1,4 +1,7 @@
+using System.Text.Json;
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Offline;
+using Orderly.Contracts.Permissions;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Services;
 using Orderly.Remote.Auth;
@@ -10,11 +13,13 @@ public sealed class RemoteCashFlowService : ICashFlowService
 {
     private readonly RemoteCommerceClient _client;
     private readonly CloudAuthSession _session;
+    private readonly IEmergencyDraftQueue? _offlineDraftQueue;
 
-    public RemoteCashFlowService(RemoteCommerceClient client, CloudAuthSession session)
+    public RemoteCashFlowService(RemoteCommerceClient client, CloudAuthSession session, IEmergencyDraftQueue? offlineDraftQueue = null)
     {
         _client = client;
         _session = session;
+        _offlineDraftQueue = offlineDraftQueue;
     }
 
     public async Task<CashFlowPeriodSummary> GetPeriodSummaryAsync(DateRange period, CancellationToken cancellationToken = default)
@@ -82,17 +87,36 @@ public sealed class RemoteCashFlowService : ICashFlowService
             AsOfUtc = asOfUtc
         };
 
-        var dto = await _client.PostAsync<SettleCashFlowCommand, CloudCashFlowEntryDto>(
-            $"api/workspaces/{_session.WorkspaceId:N}/cashflow/{entryId:N}/settle",
-            command,
-            cancellationToken).ConfigureAwait(false);
-
-        if (dto is null)
+        try
         {
-            throw new InvalidOperationException("Cash-flow settlement returned no data.");
-        }
+            var dto = await _client.PostAsync<SettleCashFlowCommand, CloudCashFlowEntryDto>(
+                $"api/workspaces/{_session.WorkspaceId:N}/cashflow/{entryId:N}/settle",
+                command,
+                cancellationToken).ConfigureAwait(false);
 
-        return dto.ToEntity();
+            if (dto is null)
+            {
+                throw new InvalidOperationException("Cash-flow settlement returned no data.");
+            }
+
+            return dto.ToEntity();
+        }
+        catch (HttpRequestException) when (_offlineDraftQueue is not null)
+        {
+            await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                EntityType = EntityType.CashFlowEntry,
+                EntityId = entryId.ToString("N"),
+                OperationType = "settle",
+                PayloadJson = JsonSerializer.Serialize(command),
+                BaseRevision = command.ExpectedRevision,
+                CreatedAtUtc = DateTime.UtcNow,
+                Status = "Pending"
+            }, cancellationToken).ConfigureAwait(false);
+
+            throw new InvalidOperationException("当前离线，现金结算已保存为应急草稿，联网后自动提交。");
+        }
     }
 
     private async Task<CashFlowEntry> RecordAsync(CashFlowEntryInput input, string kind, CashFlowDirection direction, CancellationToken cancellationToken)
@@ -115,17 +139,36 @@ public sealed class RemoteCashFlowService : ICashFlowService
             BusinessKey = input.BusinessKey
         };
 
-        var dto = await _client.PostAsync<CashFlowEntryCommand, CloudCashFlowEntryDto>(
-            $"api/workspaces/{_session.WorkspaceId:N}/cashflow/{kind}",
-            command,
-            cancellationToken).ConfigureAwait(false);
-
-        if (dto is null)
+        try
         {
-            throw new InvalidOperationException($"Cash-flow {kind} recording returned no data.");
-        }
+            var dto = await _client.PostAsync<CashFlowEntryCommand, CloudCashFlowEntryDto>(
+                $"api/workspaces/{_session.WorkspaceId:N}/cashflow/{kind}",
+                command,
+                cancellationToken).ConfigureAwait(false);
 
-        return dto.ToEntity();
+            if (dto is null)
+            {
+                throw new InvalidOperationException($"Cash-flow {kind} recording returned no data.");
+            }
+
+            return dto.ToEntity();
+        }
+        catch (HttpRequestException) when (_offlineDraftQueue is not null)
+        {
+            await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                EntityType = EntityType.CashFlowEntry,
+                EntityId = input.OrderId?.ToString("N"),
+                OperationType = kind,
+                PayloadJson = JsonSerializer.Serialize(command),
+                BaseRevision = command.ExpectedRevision,
+                CreatedAtUtc = DateTime.UtcNow,
+                Status = "Pending"
+            }, cancellationToken).ConfigureAwait(false);
+
+            throw new InvalidOperationException("当前离线，现金流水已保存为应急草稿，联网后自动提交。");
+        }
     }
 
     private sealed class RemoteCashFlowSummaryDto

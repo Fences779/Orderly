@@ -14,8 +14,10 @@ using Orderly.Data.Sqlite;
 using Orderly.Infrastructure.Hotkeys;
 using Orderly.Infrastructure.Services;
 using Orderly.Infrastructure.Tray;
+using Orderly.Contracts.Offline;
 using Orderly.Contracts.Permissions;
 using Orderly.Contracts.Realtime;
+using Orderly.Data.Cloud;
 using Orderly.Remote.Auth;
 using Orderly.Remote.Clients;
 using Orderly.Remote.Realtime;
@@ -184,18 +186,23 @@ public partial class App
             _cloudRealtimeClient = new WorkspaceRealtimeClient(baseUrl, _cloudAuthSession);
             _ = _cloudRealtimeClient.StartAsync();
 
+            // Cloud mode stores fetched snapshots and emergency drafts in the same SQLCipher workspace
+            // database that is already protected by the account data key.
+            ICloudCacheStore cloudCacheStore = new SqliteCloudCacheStore(connectionFactory);
+            IEmergencyDraftQueue emergencyDraftQueue = new SqliteEmergencyDraftQueue(connectionFactory);
+
             commerceDashboardService = new RemoteDashboardService(remoteClient, _cloudAuthSession);
-            commerceOrderService = new RemoteOrderService(remoteClient, _cloudAuthSession);
-            commerceInventoryService = new RemoteInventoryService(remoteClient, _cloudAuthSession);
+            commerceOrderService = new RemoteOrderService(remoteClient, _cloudAuthSession, emergencyDraftQueue);
+            commerceInventoryService = new RemoteInventoryService(remoteClient, _cloudAuthSession, emergencyDraftQueue);
             commerceCustomerService = new RemoteCustomerService(remoteClient, _cloudAuthSession);
-            commerceCashFlowService = new RemoteCashFlowService(remoteClient, _cloudAuthSession);
+            commerceCashFlowService = new RemoteCashFlowService(remoteClient, _cloudAuthSession, emergencyDraftQueue);
             commerceBusinessInsightService = new RemoteBusinessInsightService(remoteClient, _cloudAuthSession);
             commerceProductService = new RemoteProductService(remoteClient, _cloudAuthSession);
 
-            commerceOrderRepository = new RemoteOrderRepository(remoteClient, _cloudAuthSession);
-            commerceInventoryItemRepository = new RemoteInventoryItemRepository(remoteClient, _cloudAuthSession);
-            commerceCustomerRepository = new RemoteCustomerRepository(remoteClient, _cloudAuthSession);
-            commerceCashFlowRepository = new RemoteCashFlowEntryRepository(remoteClient, _cloudAuthSession);
+            commerceOrderRepository = new RemoteOrderRepository(remoteClient, _cloudAuthSession, cloudCacheStore);
+            commerceInventoryItemRepository = new RemoteInventoryItemRepository(remoteClient, _cloudAuthSession, cloudCacheStore);
+            commerceCustomerRepository = new RemoteCustomerRepository(remoteClient, _cloudAuthSession, cloudCacheStore);
+            commerceCashFlowRepository = new RemoteCashFlowEntryRepository(remoteClient, _cloudAuthSession, cloudCacheStore);
         }
         else
         {

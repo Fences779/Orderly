@@ -1,4 +1,7 @@
+using System.Text.Json;
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Offline;
+using Orderly.Contracts.Permissions;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Services;
 using Orderly.Remote.Auth;
@@ -10,11 +13,13 @@ public sealed class RemoteInventoryService : IInventoryService
 {
     private readonly RemoteCommerceClient _client;
     private readonly CloudAuthSession _session;
+    private readonly IEmergencyDraftQueue? _offlineDraftQueue;
 
-    public RemoteInventoryService(RemoteCommerceClient client, CloudAuthSession session)
+    public RemoteInventoryService(RemoteCommerceClient client, CloudAuthSession session, IEmergencyDraftQueue? offlineDraftQueue = null)
     {
         _client = client;
         _session = session;
+        _offlineDraftQueue = offlineDraftQueue;
     }
 
     public async Task<IReadOnlyList<InventoryMetrics>> GetAllMetricsAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
@@ -58,10 +63,29 @@ public sealed class RemoteInventoryService : IInventoryService
             IsStocktake = false
         };
 
-        await _client.PostAsync<InventoryMovementCommand, CloudInventoryMovementDto>(
-            $"api/workspaces/{_session.WorkspaceId:N}/inventory/movements",
-            command,
-            cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _client.PostAsync<InventoryMovementCommand, CloudInventoryMovementDto>(
+                $"api/workspaces/{_session.WorkspaceId:N}/inventory/movements",
+                command,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException) when (_offlineDraftQueue is not null)
+        {
+            await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                EntityType = EntityType.InventoryItem,
+                EntityId = movement.InventoryItemId.ToString("N"),
+                OperationType = "movement",
+                PayloadJson = JsonSerializer.Serialize(command),
+                BaseRevision = command.ExpectedRevision,
+                CreatedAtUtc = DateTime.UtcNow,
+                Status = "Pending"
+            }, cancellationToken).ConfigureAwait(false);
+
+            throw new InvalidOperationException("当前离线，库存变动已保存为应急草稿，联网后自动提交。");
+        }
 
         var updated = await _client.GetAsync<CloudInventoryItemDto>(
             $"api/workspaces/{_session.WorkspaceId:N}/inventory/items/{movement.InventoryItemId:N}",

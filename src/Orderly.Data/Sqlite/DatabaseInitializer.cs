@@ -322,6 +322,10 @@ public sealed partial class DatabaseInitializer
         // database. This is additive and idempotent (Req 3.3) and leaves the legacy CRM tables,
         // the launcher DB, and the multi-account structure unchanged (Req 1.5, C-2).
         await CommerceSchemaInitializer.InitializeSchemaAsync(connection, cancellationToken);
+
+        // Cloud cache and emergency draft tables are also stored in the same encrypted workspace
+        // database so the account data key protects offline data without a separate key.
+        await CloudCacheSchemaInitializer.InitializeSchemaAsync(connection, cancellationToken);
     }
 
     private static async Task EnsureSchemaAsync(SqliteConnection connection, CancellationToken cancellationToken)

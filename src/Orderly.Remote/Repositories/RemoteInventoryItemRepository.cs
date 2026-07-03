@@ -1,4 +1,5 @@
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Offline;
 using Orderly.Contracts.Permissions;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Repositories;
@@ -10,9 +11,11 @@ namespace Orderly.Remote.Repositories;
 
 public sealed class RemoteInventoryItemRepository : RemoteCommerceRepositoryBase<InventoryItem, CloudInventoryItemDto>, IInventoryItemRepository
 {
-    public RemoteInventoryItemRepository(RemoteCommerceClient client, CloudAuthSession session) : base(client, session) { }
+    public RemoteInventoryItemRepository(RemoteCommerceClient client, CloudAuthSession session, ICloudCacheStore? cacheStore = null)
+        : base(client, session, cacheStore) { }
 
     protected override string EntityPath => "inventory/items";
+    protected override string CacheEntityType => EntityType.InventoryItem;
     protected override InventoryItem Map(CloudInventoryItemDto dto) => dto.ToEntity();
 
     public override Task<InventoryItem> CreateAsync(InventoryItem entity, CancellationToken cancellationToken = default)

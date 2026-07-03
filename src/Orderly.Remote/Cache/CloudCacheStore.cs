@@ -3,7 +3,7 @@ using Orderly.Contracts.Offline;
 
 namespace Orderly.Remote.Cache;
 
-public sealed class CloudCacheStore
+public sealed class CloudCacheStore : ICloudCacheStore
 {
     private readonly ConcurrentDictionary<string, CloudCacheEntryDto> _entries = new();
 

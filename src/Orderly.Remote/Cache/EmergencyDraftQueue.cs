@@ -3,7 +3,7 @@ using Orderly.Contracts.Offline;
 
 namespace Orderly.Remote.Cache;
 
-public sealed class EmergencyDraftQueue
+public sealed class EmergencyDraftQueue : IEmergencyDraftQueue
 {
     private readonly ConcurrentDictionary<string, EmergencyDraftDto> _drafts = new();
 
