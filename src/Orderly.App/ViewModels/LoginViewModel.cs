@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Orderly.Core.Models;
 using Orderly.Core.Security;
 using Orderly.Core.Services;
+using Orderly.Remote.Clients;
 
 namespace Orderly.App.ViewModels;
 
@@ -19,12 +20,16 @@ public partial class LoginViewModel : ObservableObject
         ILocalAuthService localAuthService,
         ILocalAccountManagementService localAccountManagementService,
         IQuickLoginService quickLoginService,
-        IWindowsHelloService windowsHelloService)
+        IWindowsHelloService windowsHelloService,
+        RemoteAuthClient? cloudAuthClient = null,
+        string? cloudBaseUrl = null)
     {
         _localAuthService = localAuthService;
         _localAccountManagementService = localAccountManagementService;
         _quickLoginService = quickLoginService;
         _windowsHelloService = windowsHelloService;
+        _cloudAuthClient = cloudAuthClient;
+        CloudBaseUrl = cloudBaseUrl ?? string.Empty;
     }
 
     public event Action<LocalSessionContext>? LoginSucceeded;
@@ -207,6 +212,15 @@ public partial class LoginViewModel : ObservableObject
 
         try
         {
+            if (_cloudAuthClient is not null)
+            {
+                var silentSucceeded = await InitializeCloudLoginAsync(cancellationToken).ConfigureAwait(false);
+                if (silentSucceeded)
+                {
+                    return;
+                }
+            }
+
             IsFirstRunMode = !await _localAuthService.HasAnyAccountAsync(cancellationToken);
             if (!IsFirstRunMode)
             {

@@ -21,6 +21,19 @@
         </Grid.RenderTransform>
         <Grid Margin="0,26,0,30">
             <StackPanel Width="320" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,18"
+                            Visibility="{Binding IsCloudLoginAvailable, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Button Content="本地登录"
+                            Style="{StaticResource LinkButtonStyle}"
+                            Click="BtnSwitchToLocal_Click" />
+                    <TextBlock Text=" / " VerticalAlignment="Center" Foreground="#C7C7CC" Margin="6,0" />
+                    <Button Content="云登录"
+                            Style="{StaticResource LinkButtonStyle}"
+                            Click="BtnSwitchToCloud_Click" />
+                </StackPanel>
+
+                <StackPanel x:Name="LocalSignInSection"
+                            Visibility="{Binding IsLocalLoginMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel x:Name="SignInAccountBlock" Margin="0,0,0,22">
                     <StackPanel.RenderTransform>
                         <TranslateTransform x:Name="SignInAccountBlockTranslateTransform" Y="0" />
@@ -205,6 +218,35 @@
                             HorizontalAlignment="Right"
                             Click="BtnOpenAccountManagement_Click" />
                 </Grid>
+                </StackPanel>
+
+                <StackPanel x:Name="CloudSignInSection"
+                            Visibility="{Binding IsCloudLoginSectionVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Width="320">
+                    <TextBlock Text="云服务器地址" Style="{StaticResource FieldLabel}" FontWeight="Bold" Foreground="#1D1D1F" />
+                    <TextBox Text="{Binding CloudBaseUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,14" />
+
+                    <TextBlock Text="云账号" Style="{StaticResource FieldLabel}" FontWeight="Bold" Foreground="#1D1D1F" />
+                    <TextBox Text="{Binding CloudUsername, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,14" />
+
+                    <TextBlock Text="密码" Style="{StaticResource FieldLabel}" FontWeight="Bold" Foreground="#1D1D1F" />
+                    <PasswordBox x:Name="TxtCloudPassword" Margin="0,0,0,14" KeyDown="TxtCloudPassword_KeyDown" />
+
+                    <TextBlock Text="{Binding CloudLoginErrorMessage}"
+                               Foreground="#FF3B30"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10"
+                               Visibility="{Binding HasCloudLoginErrorMessage, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <Button Content="进入系统"
+                            Width="320"
+                            HorizontalAlignment="Left"
+                            Style="{StaticResource PremiumButtonStyle}"
+                            Margin="0,4,0,0"
+                            Click="BtnCloudSignIn_Click" />
+                </StackPanel>
             </StackPanel>
         </Grid>
     </Grid>

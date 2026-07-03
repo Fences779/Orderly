@@ -16,6 +16,7 @@ using Orderly.Data.Sqlite;
 using Orderly.Infrastructure.Hotkeys;
 using Orderly.Infrastructure.Services;
 using Orderly.Infrastructure.Tray;
+using Orderly.Remote.Clients;
 
 namespace Orderly.App;
 
@@ -69,6 +70,7 @@ public partial class App : System.Windows.Application
     private ILocalAccountRepository? _localAccountRepository;
     private LoginView? _loginView;
     private Orderly.Remote.Auth.CloudAuthSession? _cloudAuthSession;
+    private Orderly.Remote.Clients.RemoteAuthClient? _cloudAuthClient;
     private Orderly.Remote.Realtime.WorkspaceRealtimeClient? _cloudRealtimeClient;
 
     internal void SetCloudAuthSession(Orderly.Remote.Auth.CloudAuthSession session) => _cloudAuthSession = session;
@@ -254,7 +256,7 @@ public partial class App : System.Windows.Application
         return fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task CompleteLoginAsync(LocalSessionContext session)
+    private async Task CompleteLoginAsync(LocalSessionContext session, Orderly.Remote.Auth.CloudAuthSession? cloudSession = null)
     {
         if (_isLoginCompleted)
         {
@@ -274,6 +276,11 @@ public partial class App : System.Windows.Application
 
             _sessionContextService?.SetCurrent(session);
             currentSession = _sessionContextService?.Current;
+        }
+
+        if (cloudSession is not null)
+        {
+            SetCloudAuthSession(cloudSession);
         }
 
         _sessionLockService?.MarkSignedIn();
@@ -301,10 +308,32 @@ public partial class App : System.Windows.Application
         var localAccountManagementService = _localAccountManagementService ?? throw new InvalidOperationException("Local account management service is not initialized.");
         var quickLoginService = _quickLoginService ?? throw new InvalidOperationException("Quick login service is not initialized.");
         var windowsHelloService = _windowsHelloService ?? throw new InvalidOperationException("Windows Hello service is not initialized.");
-        var loginViewModel = new LoginViewModel(localAuthService, localAccountManagementService, quickLoginService, windowsHelloService);
+
+        var runtime = Environment.GetEnvironmentVariable("ORDERLY_RUNTIME") ?? "LocalDev";
+        var isCloudRuntime = string.Equals(runtime, "Cloud", StringComparison.OrdinalIgnoreCase);
+        var cloudBaseUrl = isCloudRuntime
+            ? Environment.GetEnvironmentVariable("ORDERLY_CLOUD_BASE_URL") ?? "https://localhost:5001"
+            : null;
+
+        RemoteAuthClient? cloudAuthClient = null;
+        if (isCloudRuntime && !string.IsNullOrWhiteSpace(cloudBaseUrl))
+        {
+            var tokenStorage = new Orderly.Remote.Auth.WindowsCloudTokenStorage();
+            var cloudSession = new Orderly.Remote.Auth.CloudAuthSession();
+            cloudAuthClient = new Orderly.Remote.Clients.RemoteAuthClient(cloudBaseUrl, cloudSession, tokenStorage);
+        }
+
+        _cloudAuthClient = cloudAuthClient;
+        var loginViewModel = new LoginViewModel(
+            localAuthService,
+            localAccountManagementService,
+            quickLoginService,
+            windowsHelloService,
+            cloudAuthClient,
+            cloudBaseUrl);
         _loginView = new LoginView(loginViewModel);
 
-        loginViewModel.LoginSucceeded += session => _ = CompleteLoginAsync(session);
+        loginViewModel.LoginSucceeded += session => _ = CompleteLoginAsync(session, _cloudAuthClient?.Session);
         _loginView.Closed += (_, _) =>
         {
             if (!_isLoginCompleted && !IsExiting)

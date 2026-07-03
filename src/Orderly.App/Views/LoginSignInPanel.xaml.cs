@@ -307,4 +307,38 @@ public partial class LoginSignInPanel : System.Windows.Controls.UserControl
     {
         OpenAccountManagementRequested?.Invoke(this, EventArgs.Empty);
     }
+
+    private void BtnSwitchToLocal_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.IsCloudLoginMode = false;
+        }
+    }
+
+    private void BtnSwitchToCloud_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.IsCloudLoginMode = true;
+        }
+    }
+
+    private async void BtnCloudSignIn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        await _viewModel.SignInWithCloudAsync(TxtCloudPassword.Password);
+    }
+
+    private void TxtCloudPassword_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            BtnCloudSignIn_Click(sender, e);
+        }
+    }
 }

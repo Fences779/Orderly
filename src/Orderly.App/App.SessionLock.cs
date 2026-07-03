@@ -168,6 +168,20 @@ public partial class App
         _sessionLockService?.Logout();
         _sessionContextService?.Clear();
 
+        try
+        {
+            await (_cloudAuthClient?.LogoutAsync() ?? Task.CompletedTask).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort cloud logout; proceed to login view regardless.
+        }
+        finally
+        {
+            _cloudAuthSession = null;
+            _cloudAuthClient = null;
+        }
+
         await TeardownWorkspaceAsync();
         _isLoginCompleted = false;
 
