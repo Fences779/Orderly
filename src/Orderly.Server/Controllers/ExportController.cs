@@ -77,7 +77,10 @@ public class ExportController : CloudControllerBase
         }
 
         var job = await _exportService.GetJobAsync(workspaceId, exportId, cancellationToken);
-        if (job == null || job.Status != Orderly.Contracts.Offline.EmergencyDraftStatus.Submitted)
+        if (job == null
+            || job.Status != Orderly.Contracts.Offline.EmergencyDraftStatus.Submitted
+            || string.IsNullOrWhiteSpace(job.FileName)
+            || string.IsNullOrWhiteSpace(job.FilePath))
         {
             return NotFound();
         }
@@ -85,33 +88,29 @@ public class ExportController : CloudControllerBase
         var blobStorage = HttpContext.RequestServices.GetRequiredService<IBlobStorage>();
         if (blobStorage.IsEnabled)
         {
-            var key = $"{GetExportPrefix()}{workspaceId:N}/{job.FileName}";
-            var stream = await blobStorage.DownloadAsync(key, cancellationToken);
+            var stream = await blobStorage.DownloadAsync(job.FilePath, cancellationToken);
             if (stream == null)
             {
                 return NotFound();
             }
 
-            return File(stream, "application/zip", job.FileName ?? "export.zip");
+            return File(stream, "application/zip", job.FileName);
         }
 
         // Local file fallback.
-        var localDir = Path.Combine(Path.GetTempPath(), "orderly-exports", workspaceId.ToString("N"));
-        var localPath = Path.Combine(localDir, job.FileName ?? string.Empty);
+        var expectedRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "orderly-exports", workspaceId.ToString("N")));
+        var localPath = Path.GetFullPath(job.FilePath);
+        if (!localPath.StartsWith(expectedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return NotFound();
+        }
+
         if (!System.IO.File.Exists(localPath))
         {
             return NotFound();
         }
 
         var fileStream = System.IO.File.OpenRead(localPath);
-        return File(fileStream, "application/zip", job.FileName ?? "export.zip");
-    }
-
-    private string GetExportPrefix()
-    {
-        var options = HttpContext.RequestServices.GetRequiredService<ServerOptions>();
-        var prefix = options.OssExportPrefix;
-        if (!prefix.EndsWith('/')) prefix += "/";
-        return prefix;
+        return File(fileStream, "application/zip", job.FileName);
     }
 }
