@@ -36,6 +36,7 @@ public class SyncController : CloudControllerBase
     public async Task<ActionResult<SnapshotPageResponse<object>>> GetSnapshotPageAsync(
         Guid workspaceId,
         string snapshotToken,
+        [FromQuery] string? entityType = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 200,
         CancellationToken cancellationToken = default)
@@ -45,7 +46,7 @@ public class SyncController : CloudControllerBase
             return Forbid();
         }
 
-        var response = await _syncQueryService.GetSnapshotPageAsync(snapshotToken, page, pageSize, cancellationToken);
+        var response = await _syncQueryService.GetSnapshotPageAsync(snapshotToken, entityType, page, pageSize, cancellationToken);
         return Ok(response);
     }
 
@@ -54,6 +55,7 @@ public class SyncController : CloudControllerBase
         Guid workspaceId,
         [FromQuery] long afterSequence = 0,
         [FromQuery] int maxCount = 200,
+        [FromQuery] int? limit = null,
         CancellationToken cancellationToken = default)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId))
@@ -61,7 +63,7 @@ public class SyncController : CloudControllerBase
             return Forbid();
         }
 
-        var response = await _syncQueryService.GetChangesAsync(workspaceId, afterSequence, maxCount, cancellationToken);
+        var response = await _syncQueryService.GetChangesAsync(workspaceId, afterSequence, limit ?? maxCount, cancellationToken);
         return Ok(response);
     }
 }
