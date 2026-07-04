@@ -199,6 +199,11 @@ public partial class App
             commerceBusinessInsightService = new RemoteBusinessInsightService(remoteClient, _cloudAuthSession);
             commerceProductService = new RemoteProductService(remoteClient, _cloudAuthSession);
 
+            _emergencyDraftSubmitter = new Orderly.Remote.Offline.RemoteEmergencyDraftSubmitter(
+                remoteClient,
+                emergencyDraftQueue,
+                _cloudAuthSession);
+
             commerceOrderRepository = new RemoteOrderRepository(remoteClient, _cloudAuthSession, cloudCacheStore);
             commerceInventoryItemRepository = new RemoteInventoryItemRepository(remoteClient, _cloudAuthSession, cloudCacheStore);
             commerceCustomerRepository = new RemoteCustomerRepository(remoteClient, _cloudAuthSession, cloudCacheStore);
@@ -322,6 +327,9 @@ public partial class App
             commerceOrderRepository,
             _quickLoginService,
             appUpdateService);
+        _mainViewModel.ConfigureEmergencyDraftSubmitter(_emergencyDraftSubmitter);
+        _emergencyDraftSubmitter?.Start();
+
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
 

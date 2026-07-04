@@ -211,6 +211,20 @@ public partial class App
             _floatingViewModel = null;
 
             CancelMinimizeToTrayIdleLock();
+
+            try
+            {
+                _emergencyDraftSubmitter?.StopAsync().Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to stop emergency draft submitter during teardown: {ex.Message}");
+            }
+            finally
+            {
+                _emergencyDraftSubmitter = null;
+            }
+
             if (_mainWindow is not null)
             {
                 if (_mainViewModel is not null)
