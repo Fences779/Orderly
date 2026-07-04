@@ -160,6 +160,30 @@ public static class CommerceDtoMapper
         };
     }
 
+    public static CloudBusinessTaskDto ToBusinessTaskDto(dynamic r)
+    {
+        return new CloudBusinessTaskDto
+        {
+            Id = r.Id,
+            Revision = r.Revision,
+            CreatedAtUtc = r.CreatedAt,
+            UpdatedAtUtc = r.UpdatedAt,
+            CreatedByUserId = r.CreatedByUserId,
+            UpdatedByUserId = r.UpdatedByUserId,
+            Lifecycle = (EntityLifecycleStatus)(int)r.Lifecycle,
+            CustomFieldsJson = r.CustomFieldsJson,
+            WorkspaceId = r.WorkspaceId,
+            Title = r.Title,
+            Description = r.Description,
+            Status = (Orderly.Core.Commerce.TaskStatus)(int)r.Status,
+            DueDateUtc = r.DueDate,
+            CompletedAtUtc = r.CompletedAt,
+            CustomerId = r.CustomerId,
+            OrderId = r.OrderId,
+            AssignedToUserId = r.AssignedToUserId
+        };
+    }
+
     public static CloudBusinessInsightDto ToInsightDto(dynamic r)
     {
         return new CloudBusinessInsightDto

@@ -88,10 +88,15 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
             return;
         }
 
-        if (string.Equals(key, EmergencyDraftAllowedOperations.OrderNote, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(key, EmergencyDraftAllowedOperations.BusinessTaskStatus, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(key, EmergencyDraftAllowedOperations.OrderNote, StringComparison.OrdinalIgnoreCase))
         {
-            await MarkFailedAsync(draft, $"{key} 类型的服务端重放尚未实现。", cancellationToken);
+            await ExecuteOrderNoteAsync(commandService, draft, cancellationToken);
+            return;
+        }
+
+        if (string.Equals(key, EmergencyDraftAllowedOperations.BusinessTaskStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            await ExecuteBusinessTaskStatusAsync(commandService, draft, cancellationToken);
             return;
         }
 
@@ -135,6 +140,40 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
             draft.EntityId!.Value,
             command,
             dimension,
+            cancellationToken);
+
+        await MarkSubmittedAsync(draft, cancellationToken);
+    }
+
+    private async Task ExecuteOrderNoteAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    {
+        var command = JsonSerializer.Deserialize<OrderNoteCommand>(draft.PayloadJson)
+            ?? throw new InvalidOperationException("无法反序列化订单备注命令。");
+
+        command.ClientRequestId = draft.Id.ToString("N");
+        command.ExpectedRevision = draft.BaseRevision ?? command.ExpectedRevision;
+
+        await commandService.AddOrderNoteAsync(
+            draft.WorkspaceId,
+            draft.EntityId!.Value,
+            command,
+            cancellationToken);
+
+        await MarkSubmittedAsync(draft, cancellationToken);
+    }
+
+    private async Task ExecuteBusinessTaskStatusAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    {
+        var command = JsonSerializer.Deserialize<BusinessTaskStatusCommand>(draft.PayloadJson)
+            ?? throw new InvalidOperationException("无法反序列化任务状态命令。");
+
+        command.ClientRequestId = draft.Id.ToString("N");
+        command.ExpectedRevision = draft.BaseRevision ?? command.ExpectedRevision;
+
+        await commandService.ChangeBusinessTaskStatusAsync(
+            draft.WorkspaceId,
+            draft.EntityId!.Value,
+            command,
             cancellationToken);
 
         await MarkSubmittedAsync(draft, cancellationToken);

@@ -72,6 +72,36 @@ public sealed class RemoteOrderService : IOrderService
                 Array.Empty<InventoryShortfall>(),
                 $"远程服务器拒绝完成订单：{ex.Message}");
         }
+        catch (HttpRequestException)
+        {
+            throw new InvalidOperationException("当前离线，订单完成不支持离线保存，请恢复网络后重试。");
+        }
+    }
+
+    public async Task AddNoteAsync(Guid orderId, string note, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+            throw new ArgumentException("备注内容不能为空。", nameof(note));
+
+        var latest = await _client.GetAsync<CloudOrderDto>(
+            $"api/workspaces/{_session.WorkspaceId:N}/orders/{orderId:N}",
+            cancellationToken).ConfigureAwait(false);
+
+        var command = new OrderNoteCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = latest?.Revision ?? 0L,
+            OrderId = orderId,
+            Note = note.Trim()
+        };
+
+        try
+        {
+            await _client.PostAsync<OrderNoteCommand, CloudOrderDto>(
+                $"api/workspaces/{_session.WorkspaceId:N}/orders/{orderId:N}/notes",
+                command,
+                cancellationToken).ConfigureAwait(false);
+        }
         catch (HttpRequestException) when (_offlineDraftQueue is not null)
         {
             await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
@@ -79,14 +109,73 @@ public sealed class RemoteOrderService : IOrderService
                 Id = Guid.NewGuid().ToString("N"),
                 EntityType = EntityType.Order,
                 EntityId = orderId.ToString("N"),
-                OperationType = "complete",
+                OperationType = "note",
                 PayloadJson = JsonSerializer.Serialize(command),
                 BaseRevision = command.ExpectedRevision,
                 CreatedAtUtc = DateTime.UtcNow,
                 Status = "Pending"
             }, cancellationToken).ConfigureAwait(false);
 
-            return OrderCompletionResult.Completed("当前离线，订单完成已保存为应急草稿，联网后自动提交。");
+            throw new InvalidOperationException("当前离线，订单备注已保存为应急草稿，联网后自动提交。");
         }
+    }
+
+    public async Task UpdateStageAsync(Guid orderId, OrderStageTransitionRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.NamedDimensionCount != 1)
+            throw new ArgumentException("每次只能更新一个订单阶段维度。", nameof(request));
+
+        var latest = await _client.GetAsync<CloudOrderDto>(
+            $"api/workspaces/{_session.WorkspaceId:N}/orders/{orderId:N}",
+            cancellationToken).ConfigureAwait(false);
+
+        var command = new OrderStageCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = latest?.Revision ?? 0L,
+            TargetSalesStage = request.TargetSalesStage,
+            TargetPaymentStage = request.TargetPaymentStage,
+            TargetFulfillmentStage = request.TargetFulfillmentStage
+        };
+
+        var pathSegment = InferDimension(request) switch
+        {
+            "sales" => "stage",
+            "payment" => "payment-status",
+            "fulfillment" => "fulfillment-status",
+            _ => throw new InvalidOperationException("未识别的阶段维度。")
+        };
+
+        try
+        {
+            await _client.PostAsync<OrderStageCommand, CloudOrderDto>(
+                $"api/workspaces/{_session.WorkspaceId:N}/orders/{orderId:N}/{pathSegment}",
+                command,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException) when (_offlineDraftQueue is not null)
+        {
+            await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                EntityType = EntityType.Order,
+                EntityId = orderId.ToString("N"),
+                OperationType = "stage",
+                PayloadJson = JsonSerializer.Serialize(command),
+                BaseRevision = command.ExpectedRevision,
+                CreatedAtUtc = DateTime.UtcNow,
+                Status = "Pending"
+            }, cancellationToken).ConfigureAwait(false);
+
+            throw new InvalidOperationException("当前离线，订单阶段已保存为应急草稿，联网后自动提交。");
+        }
+    }
+
+    private static string InferDimension(OrderStageTransitionRequest request)
+    {
+        if (request.TargetSalesStage.HasValue) return "sales";
+        if (request.TargetPaymentStage.HasValue) return "payment";
+        if (request.TargetFulfillmentStage.HasValue) return "fulfillment";
+        throw new InvalidOperationException("No stage dimension specified.");
     }
 }

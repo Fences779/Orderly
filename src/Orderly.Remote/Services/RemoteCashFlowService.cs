@@ -103,19 +103,7 @@ public sealed class RemoteCashFlowService : ICashFlowService
         }
         catch (HttpRequestException) when (_offlineDraftQueue is not null)
         {
-            await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                EntityType = EntityType.CashFlowEntry,
-                EntityId = entryId.ToString("N"),
-                OperationType = "settle",
-                PayloadJson = JsonSerializer.Serialize(command),
-                BaseRevision = command.ExpectedRevision,
-                CreatedAtUtc = DateTime.UtcNow,
-                Status = "Pending"
-            }, cancellationToken).ConfigureAwait(false);
-
-            throw new InvalidOperationException("当前离线，现金结算已保存为应急草稿，联网后自动提交。");
+            throw new InvalidOperationException("当前离线，现金结算不支持离线保存，请在联网后重试。");
         }
     }
 
@@ -155,19 +143,7 @@ public sealed class RemoteCashFlowService : ICashFlowService
         }
         catch (HttpRequestException) when (_offlineDraftQueue is not null)
         {
-            await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                EntityType = EntityType.CashFlowEntry,
-                EntityId = input.OrderId?.ToString("N"),
-                OperationType = kind,
-                PayloadJson = JsonSerializer.Serialize(command),
-                BaseRevision = command.ExpectedRevision,
-                CreatedAtUtc = DateTime.UtcNow,
-                Status = "Pending"
-            }, cancellationToken).ConfigureAwait(false);
-
-            throw new InvalidOperationException("当前离线，现金流水已保存为应急草稿，联网后自动提交。");
+            throw new InvalidOperationException("当前离线，现金流水不支持离线保存，请在联网后重试。");
         }
     }
 

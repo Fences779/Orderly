@@ -108,6 +108,24 @@ public static class RemoteEntityMapper
         return entry;
     }
 
+    public static BusinessTask ToEntity(this CloudBusinessTaskDto dto)
+    {
+        var task = new BusinessTask
+        {
+            Id = dto.Id,
+            WorkspaceId = dto.WorkspaceId,
+            Title = dto.Title,
+            Description = dto.Description,
+            Status = dto.Status,
+            DueDate = dto.DueDateUtc,
+            CompletedAt = dto.CompletedAtUtc,
+            CustomerId = dto.CustomerId,
+            OrderId = dto.OrderId
+        };
+        task.RestoreAuditState(dto.UpdatedAtUtc, GetDeletedAt(dto.Lifecycle), dto.Lifecycle);
+        return task;
+    }
+
     public static BusinessInsight ToEntity(this CloudBusinessInsightDto dto)
     {
         var insight = new BusinessInsight

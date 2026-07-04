@@ -398,6 +398,51 @@ public class CommerceReadController : CloudControllerBase
         });
     }
 
+    [HttpGet("business-tasks")]
+    public async Task<ActionResult<PagedList<CloudBusinessTaskDto>>> ListBusinessTasksAsync(
+        Guid workspaceId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? search = null)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        var offset = (page - 1) * pageSize;
+        var where = @"WHERE ""WorkspaceId"" = @workspaceId AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0";
+        if (!string.IsNullOrWhiteSpace(search))
+            where += @" AND (""Title"" ILIKE @search OR COALESCE(""Description"", '') ILIKE @search)";
+
+        var total = await connection.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM \"CommerceBusinessTasks\" {where};", new { workspaceId, search = $"%{search}%" });
+        var rows = await connection.QueryAsync($@"
+            SELECT * FROM ""CommerceBusinessTasks""
+            {where}
+            ORDER BY ""DueDate"" NULLS LAST, ""CreatedAt"" DESC
+            LIMIT @pageSize OFFSET @offset;", new { workspaceId, search = $"%{search}%", pageSize, offset });
+
+        return Ok(new PagedList<CloudBusinessTaskDto>
+        {
+            Items = rows.Select(MapBusinessTask).Cast<CloudBusinessTaskDto>().ToList(),
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total,
+            LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
+        });
+    }
+
+    [HttpGet("business-tasks/{taskId:guid}")]
+    public async Task<ActionResult<CloudBusinessTaskDto>> GetBusinessTaskAsync(Guid workspaceId, Guid taskId)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var row = await connection.QueryFirstOrDefaultAsync(
+            "SELECT * FROM \"CommerceBusinessTasks\" WHERE \"WorkspaceId\" = @workspaceId AND \"Id\" = @taskId AND \"DeletedAt\" IS NULL AND \"Lifecycle\" = 0;",
+            new { workspaceId, taskId });
+        if (row == null) return NotFound();
+        return Ok(MapBusinessTask(row));
+    }
+
     [HttpGet("archive/{entityType}")]
     public async Task<ActionResult<object>> ListArchiveAsync(Guid workspaceId, string entityType, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
@@ -620,5 +665,26 @@ public class CommerceReadController : CloudControllerBase
         IsAcknowledged = r.IsAcknowledged,
         GeneratedAtUtc = r.GeneratedAt,
         BusinessKey = r.BusinessKey
+    };
+
+    private static CloudBusinessTaskDto MapBusinessTask(dynamic r) => new()
+    {
+        Id = r.Id,
+        Revision = r.Revision,
+        CreatedAtUtc = r.CreatedAt,
+        UpdatedAtUtc = r.UpdatedAt,
+        CreatedByUserId = r.CreatedByUserId,
+        UpdatedByUserId = r.UpdatedByUserId,
+        Lifecycle = (EntityLifecycleStatus)(int)r.Lifecycle,
+        CustomFieldsJson = r.CustomFieldsJson,
+        WorkspaceId = r.WorkspaceId,
+        Title = r.Title,
+        Description = r.Description,
+        Status = (Orderly.Core.Commerce.TaskStatus)(int)r.Status,
+        DueDateUtc = r.DueDate,
+        CompletedAtUtc = r.CompletedAt,
+        CustomerId = r.CustomerId,
+        OrderId = r.OrderId,
+        AssignedToUserId = r.AssignedToUserId
     };
 }

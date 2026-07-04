@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using Dapper;
 using Npgsql;
 using Orderly.Contracts.Commerce;
@@ -330,9 +331,9 @@ public partial class CommerceCommandService
 
                 var (columnName, parameterName, value) = dimension.ToLowerInvariant() switch
                 {
-                    "sales" when command.TargetSalesStage.HasValue => ("SalesStage", "targetStage", (int?)command.TargetSalesStage.Value),
-                    "payment" when command.TargetPaymentStage.HasValue => ("PaymentStage", "targetStage", (int?)command.TargetPaymentStage.Value),
-                    "fulfillment" when command.TargetFulfillmentStage.HasValue => ("FulfillmentStage", "targetStage", (int?)command.TargetFulfillmentStage.Value),
+                    "sales" when command.TargetSalesStage.HasValue => ("SalesStage", "targetStage", (int)command.TargetSalesStage.Value),
+                    "payment" when command.TargetPaymentStage.HasValue => ("PaymentStage", "targetStage", (int)command.TargetPaymentStage.Value),
+                    "fulfillment" when command.TargetFulfillmentStage.HasValue => ("FulfillmentStage", "targetStage", (int)command.TargetFulfillmentStage.Value),
                     _ => throw new InvalidOperationException($"不支持的订单阶段维度或目标阶段为空: {dimension}")
                 };
 
@@ -350,7 +351,7 @@ public partial class CommerceCommandService
                         updatedBy = userId,
                         sequence,
                         orderId,
-                        targetStage = value.Value
+                        targetStage = value
                     },
                     transaction);
 
@@ -358,6 +359,62 @@ public partial class CommerceCommandService
                 var afterJson = await SnapshotJsonAsync(dto);
                 await AuditAsync(connection, transaction, workspaceId, $"Order{dimension}StageUpdated", EntityType.Order, orderId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.Order, orderId, "stageUpdated", dto.Revision);
+
+                return (dto, EntityType.Order, orderId);
+            },
+            cancellationToken);
+    }
+
+    public async Task<CommandResult<CloudOrderDto>> AddOrderNoteAsync(Guid workspaceId, Guid orderId, OrderNoteCommand command, CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
+        var membership = await GetMembershipAsync(userId);
+
+        if (string.IsNullOrWhiteSpace(command.Note))
+            throw new InvalidOperationException("备注内容不能为空。");
+
+        return await ExecuteWithIdempotencyAsync<OrderNoteCommand, CloudOrderDto>(
+            workspaceId,
+            "order:note",
+            command,
+            async (connection, transaction, sequence, ct) =>
+            {
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct);
+
+                var before = await LoadOrderDtoAsync(connection, transaction, workspaceId, orderId, membership, ct);
+                var beforeJson = await SnapshotJsonAsync(before);
+
+                var customFields = ParseCustomFields(before.CustomFieldsJson);
+                var notes = customFields.TryGetProperty("notes", out var notesElement)
+                    ? notesElement.EnumerateArray()
+                        .Select(e => e.GetString())
+                        .Where(s => s != null)
+                        .Cast<string>()
+                        .ToList()
+                    : new List<string>();
+                notes.Add(command.Note.Trim());
+
+                var updatedCustomFields = new Dictionary<string, object>(customFields.EnumerateObject().ToDictionary(p => p.Name, p => (object)p.Value.Clone()))
+                {
+                    ["notes"] = notes
+                };
+                var customFieldsJson = JsonSerializer.Serialize(updatedCustomFields, JsonOptions);
+
+                await connection.ExecuteAsync(
+                    @"UPDATE ""CommerceOrders""
+                     SET ""CustomFieldsJson"" = @customFieldsJson,
+                         ""Revision"" = ""Revision"" + 1,
+                         ""UpdatedAt"" = @now,
+                         ""UpdatedByUserId"" = @updatedBy,
+                         ""LastChangeSequence"" = @sequence
+                     WHERE ""Id"" = @orderId;",
+                    new { customFieldsJson, now = DateTime.UtcNow, updatedBy = userId, sequence, orderId },
+                    transaction);
+
+                var dto = await LoadOrderDtoAsync(connection, transaction, workspaceId, orderId, membership, ct);
+                var afterJson = await SnapshotJsonAsync(dto);
+                await AuditAsync(connection, transaction, workspaceId, "OrderNoteAdded", EntityType.Order, orderId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
+                await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.Order, orderId, "noteAdded", dto.Revision);
 
                 return (dto, EntityType.Order, orderId);
             },

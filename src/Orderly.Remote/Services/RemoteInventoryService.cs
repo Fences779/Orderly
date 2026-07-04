@@ -72,19 +72,7 @@ public sealed class RemoteInventoryService : IInventoryService
         }
         catch (HttpRequestException) when (_offlineDraftQueue is not null)
         {
-            await _offlineDraftQueue.AddAsync(new EmergencyDraftDto
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                EntityType = EntityType.InventoryItem,
-                EntityId = movement.InventoryItemId.ToString("N"),
-                OperationType = "movement",
-                PayloadJson = JsonSerializer.Serialize(command),
-                BaseRevision = command.ExpectedRevision,
-                CreatedAtUtc = DateTime.UtcNow,
-                Status = "Pending"
-            }, cancellationToken).ConfigureAwait(false);
-
-            throw new InvalidOperationException("当前离线，库存变动已保存为应急草稿，联网后自动提交。");
+            throw new InvalidOperationException("当前离线，库存变动不支持离线保存，请在联网后重试。");
         }
 
         var updated = await _client.GetAsync<CloudInventoryItemDto>(

@@ -6,8 +6,8 @@ namespace Orderly.Remote.Services;
 
 public interface IRemoteImportService
 {
-    Task<LocalImportDryRunResponse> DryRunAsync(LocalImportDryRunRequest request, CancellationToken cancellationToken = default);
-    Task<LocalImportCommitResponse> CommitAsync(LocalImportCommitRequest request, CancellationToken cancellationToken = default);
+    Task<LocalImportDryRunResponse?> DryRunAsync(LocalImportDryRunRequest request, CancellationToken cancellationToken = default);
+    Task<LocalImportCommitResponse?> CommitAsync(LocalImportCommitRequest request, CancellationToken cancellationToken = default);
     Task<LocalImportBatchStatusDto?> GetBatchStatusAsync(Guid batchId, CancellationToken cancellationToken = default);
 }
 
@@ -22,13 +22,13 @@ public sealed class RemoteImportService : IRemoteImportService
         _session = session;
     }
 
-    public Task<LocalImportDryRunResponse> DryRunAsync(LocalImportDryRunRequest request, CancellationToken cancellationToken = default)
+    public Task<LocalImportDryRunResponse?> DryRunAsync(LocalImportDryRunRequest request, CancellationToken cancellationToken = default)
         => _client.PostAsync<LocalImportDryRunRequest, LocalImportDryRunResponse>(
             $"api/workspaces/{_session.WorkspaceId:N}/import/dry-run",
             request,
             cancellationToken);
 
-    public Task<LocalImportCommitResponse> CommitAsync(LocalImportCommitRequest request, CancellationToken cancellationToken = default)
+    public Task<LocalImportCommitResponse?> CommitAsync(LocalImportCommitRequest request, CancellationToken cancellationToken = default)
         => _client.PostAsync<LocalImportCommitRequest, LocalImportCommitResponse>(
             $"api/workspaces/{_session.WorkspaceId:N}/import/commit",
             request,

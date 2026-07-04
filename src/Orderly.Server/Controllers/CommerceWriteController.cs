@@ -40,6 +40,15 @@ public class CommerceWriteController : CloudControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPost("orders/{orderId:guid}/notes")]
+    public async Task<ActionResult<CloudOrderDto>> AddOrderNoteAsync(Guid workspaceId, Guid orderId, [FromBody] OrderNoteCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        command.OrderId = orderId;
+        var result = await _commandService.AddOrderNoteAsync(workspaceId, orderId, command);
+        return Ok(result.Value);
+    }
+
     [HttpPost("orders/{orderId:guid}/stage")]
     public Task<ActionResult<CloudOrderDto>> StageOrderAsync(Guid workspaceId, Guid orderId, [FromBody] OrderStageCommand command)
         => UpdateOrderStageAsync(workspaceId, orderId, command, "sales");
@@ -132,6 +141,15 @@ public class CommerceWriteController : CloudControllerBase
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var result = await _commandService.AddCustomerNoteAsync(workspaceId, customerId, command);
+        return Ok(result.Value);
+    }
+
+    [HttpPost("business-tasks/{taskId:guid}/status")]
+    public async Task<ActionResult<CloudBusinessTaskDto>> UpdateBusinessTaskStatusAsync(Guid workspaceId, Guid taskId, [FromBody] UpdateBusinessTaskStatusCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        command.BusinessTaskId = taskId;
+        var result = await _commandService.UpdateBusinessTaskStatusAsync(workspaceId, taskId, command);
         return Ok(result.Value);
     }
 
