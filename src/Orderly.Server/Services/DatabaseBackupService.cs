@@ -25,13 +25,12 @@ public sealed class DatabaseBackupService : IDatabaseBackupService
         var pgUser = _options.PostgresUser;
         var pgPassword = _options.PostgresPassword;
 
-        var tempSql = Path.ChangeExtension(outputPath, ".sql");
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
         var startInfo = new ProcessStartInfo
         {
             FileName = "pg_dump",
-            Arguments = $"-h {pgHost} -p {pgPort} -U {pgUser} -F p -f \"{tempSql}\" {pgDatabase}",
+            Arguments = $"-h \"{pgHost}\" -p {pgPort} -U \"{pgUser}\" -F c -f \"{outputPath}\" \"{pgDatabase}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -50,15 +49,6 @@ public sealed class DatabaseBackupService : IDatabaseBackupService
             throw new InvalidOperationException($"pg_dump failed with exit code {process.ExitCode}: {error}");
         }
 
-        // GZip the output file.
-        await using (var inputStream = File.OpenRead(tempSql))
-        await using (var outputStream = File.Create(outputPath))
-        using (var gzipStream = new System.IO.Compression.GZipStream(outputStream, System.IO.Compression.CompressionLevel.Optimal))
-        {
-            await inputStream.CopyToAsync(gzipStream, cancellationToken);
-        }
-
-        File.Delete(tempSql);
         return outputPath;
     }
 }

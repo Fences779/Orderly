@@ -41,8 +41,8 @@ public sealed class BackupBackgroundService : BackgroundService
             var blobStorage = scope.ServiceProvider.GetRequiredService<IBlobStorage>();
 
             var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-            var fileName = $"orderly_{timestamp}.sql.gz";
-            var localDir = Path.Combine(Path.GetTempPath(), "orderly-backups");
+            var fileName = $"orderly_{timestamp}.dump";
+            var localDir = options.LocalBackupDirectory;
             Directory.CreateDirectory(localDir);
             var localPath = Path.Combine(localDir, fileName);
 
@@ -50,11 +50,7 @@ public sealed class BackupBackgroundService : BackgroundService
 
             if (blobStorage.IsEnabled)
             {
-                var key = $"{options.OssBackupPrefix}{DateTime.UtcNow:yyyy/MM/dd}/{fileName}".Replace("//", "/");
-                if (!key.EndsWith('/'))
-                {
-                    key = key.TrimStart('/');
-                }
+                var key = $"{NormalizePrefix(options.OssBackupPrefix)}{DateTime.UtcNow:yyyy/MM/dd}/{fileName}";
 
                 await using var uploadStream = File.OpenRead(localPath);
                 await blobStorage.UploadAsync(key, uploadStream, cancellationToken);
@@ -62,7 +58,7 @@ public sealed class BackupBackgroundService : BackgroundService
                 await CleanupOldBackupsAsync(blobStorage, options, cancellationToken);
             }
 
-            File.Delete(localPath);
+            CleanupOldLocalBackups(localDir, options.BackupRetentionDays);
         }
         catch (Exception ex)
         {
@@ -79,17 +75,9 @@ public sealed class BackupBackgroundService : BackgroundService
             foreach (var key in keys)
             {
                 // Heuristic: delete keys that contain a timestamp older than the cutoff.
-                // Backup keys look like: backups/2025/01/15/orderly_20250115020000.sql.gz
+                // Backup keys look like: backups/2025/01/15/orderly_20250115020000.dump
                 var fileName = Path.GetFileName(key);
-                if (fileName.StartsWith("orderly_", StringComparison.Ordinal)
-                    && fileName.EndsWith(".sql.gz", StringComparison.Ordinal)
-                    && DateTime.TryParseExact(
-                        fileName[8..^7],
-                        "yyyyMMddHHmmss",
-                        null,
-                        System.Globalization.DateTimeStyles.None,
-                        out var backupTime)
-                    && backupTime < cutoff)
+                if (TryParseBackupTimestamp(fileName, out var backupTime) && backupTime < cutoff)
                 {
                     await blobStorage.DeleteAsync(key, cancellationToken);
                 }
@@ -99,5 +87,63 @@ public sealed class BackupBackgroundService : BackgroundService
         {
             Console.Error.WriteLine($"Backup cleanup failed: {ex.Message}");
         }
+    }
+
+    private static void CleanupOldLocalBackups(string localDir, int retentionDays)
+    {
+        try
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-retentionDays);
+            foreach (var path in Directory.EnumerateFiles(localDir, "orderly_*.*", SearchOption.TopDirectoryOnly))
+            {
+                var fileName = Path.GetFileName(path);
+                if (TryParseBackupTimestamp(fileName, out var backupTime) && backupTime < cutoff)
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Local backup cleanup failed: {ex.Message}");
+        }
+    }
+
+    private static bool TryParseBackupTimestamp(string fileName, out DateTime backupTime)
+    {
+        backupTime = default;
+        if (!fileName.StartsWith("orderly_", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var suffix = fileName.EndsWith(".dump", StringComparison.Ordinal)
+            ? ".dump"
+            : fileName.EndsWith(".sql.gz", StringComparison.Ordinal)
+                ? ".sql.gz"
+                : null;
+        if (suffix is null)
+        {
+            return false;
+        }
+
+        var timestamp = fileName.Substring("orderly_".Length, fileName.Length - "orderly_".Length - suffix.Length);
+        return DateTime.TryParseExact(
+            timestamp,
+            "yyyyMMddHHmmss",
+            null,
+            System.Globalization.DateTimeStyles.None,
+            out backupTime);
+    }
+
+    private static string NormalizePrefix(string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(prefix))
+        {
+            return string.Empty;
+        }
+
+        var normalized = prefix.Trim().TrimStart('/');
+        return normalized.EndsWith("/", StringComparison.Ordinal) ? normalized : normalized + "/";
     }
 }
