@@ -88,6 +88,7 @@ git status --short
 - `miniprogram/` 与 `cloudfunctions/` 不属于本主线交付范围
 
 ## 文件状态
+- `Dockerfile`、`.dockerignore`、`docker-compose.yml`、`deploy/Caddyfile`、`deploy/orderly.env.example`、`README.md`（新增/已修改）：云端第 8 个缺口已收口。仓库已补齐服务端 Docker 镜像、PostgreSQL、Caddy HTTPS 反代和上线环境变量样例；容器内已安装 `pg_dump` 所需 PostgreSQL 客户端，备份目录挂载到 `/opt/orderly/backups`，上线前复制 `deploy/orderly.env.example` 为根目录 `.env` 并替换域名、密码、JWT key、OSS 配置即可启动。
 - `src/Orderly.Server/Services/DatabaseBackupService.cs`、`src/Orderly.Server/Services/BackupBackgroundService.cs`、`src/Orderly.Server/Models/ServerOptions.cs`、`src/Orderly.Server/Program.cs`、`README.md`（已修改）：云端第 7 个缺口已收口。服务端备份改为 `pg_dump -Fc` 自定义格式 `.dump` 文件；本机默认保留目录为 `/opt/orderly/backups`，可用 `ORDERLY_LOCAL_BACKUP_DIR` 覆盖；每天备份后本机文件不再立即删除，OSS 上传和本机目录都会按 `BackupRetentionDays` 清理旧备份，并兼容清理历史 `.sql.gz` 文件。
 - `src/Orderly.Server/Services/ExportService.cs`、`src/Orderly.Server/Controllers/ExportController.cs`、`src/Orderly.Contracts/Commerce/CloudExportJobDto.cs`、`README.md`（已修改）：云端第 6 个缺口已收口。业务导出 ZIP 现在包含订单、客户、商品、库存、现金流、改价申请、审计日志、归档记录 8 个 Excel 文件；导出任务的 `FileName` 存真实 zip 文件名，`FilePath` 存 OSS key 或本地落盘路径，`DownloadUrl` 只返回下载 API；下载接口按 `FilePath` 取文件，本地 fallback 还会限制路径必须在导出目录内。
 - `src/Orderly.Server/Controllers/EmergencyDraftController.cs`、`README.md`（已修改）：云端第 5 个缺口已收口。离线应急草稿仍只允许客户备注、订单备注、订单阶段、业务任务状态 4 类；服务端提交入口现在会当场校验允许类型必须带有效目标实体 Id，非法或格式错误直接返回明确 400，避免用户以为草稿已提交、实际后台才失败。
