@@ -20,6 +20,21 @@ public sealed class RemoteOrderRepository : RemoteCommerceRepositoryBase<Order, 
 
     public override async Task<Order> CreateAsync(Order entity, CancellationToken cancellationToken = default)
     {
+        await Task.CompletedTask.ConfigureAwait(false);
+        throw new InvalidOperationException("Remote orders must be created with line items.");
+    }
+
+    public async Task<Order> CreateAsync(Order entity, IEnumerable<OrderItem> items, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        ArgumentNullException.ThrowIfNull(items);
+
+        var lineItems = items.ToList();
+        if (lineItems.Count == 0)
+        {
+            throw new InvalidOperationException("Remote orders must contain at least one line item.");
+        }
+
         var command = new CreateOrderCommand
         {
             ClientRequestId = Guid.NewGuid().ToString("N"),
@@ -30,7 +45,8 @@ public sealed class RemoteOrderRepository : RemoteCommerceRepositoryBase<Order, 
             PaymentStage = entity.PaymentStage,
             FulfillmentStage = entity.FulfillmentStage,
             OrderedAtUtc = entity.OrderedAt,
-            Note = entity.Note
+            Note = entity.Note,
+            Items = lineItems.Select(MapItem).ToList()
         };
 
         var dto = await Client.PostAsync<CreateOrderCommand, CloudOrderDto>(
@@ -40,6 +56,18 @@ public sealed class RemoteOrderRepository : RemoteCommerceRepositoryBase<Order, 
 
         return dto?.ToEntity() ?? entity;
     }
+
+    private static CreateOrderItemCommand MapItem(OrderItem item) => new()
+    {
+        ProductId = item.ProductId,
+        ProductVariantId = item.ProductVariantId,
+        InventoryItemId = item.InventoryItemId,
+        UnitId = item.UnitId,
+        Description = item.Description ?? string.Empty,
+        Quantity = item.Quantity,
+        UnitPrice = item.UnitPrice.Amount,
+        UnitCost = item.UnitCost.Amount
+    };
 
     public override async Task UpdateAsync(Order entity, CancellationToken cancellationToken = default)
     {

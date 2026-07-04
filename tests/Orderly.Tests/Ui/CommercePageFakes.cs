@@ -95,7 +95,11 @@ internal abstract class FakeCommerceRepositoryBase<TEntity> : ICommerceRepositor
     public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
 
-internal sealed class FakeCommerceOrderRepository : FakeCommerceRepositoryBase<CommerceOrder>, ICommerceOrderRepository { }
+internal sealed class FakeCommerceOrderRepository : FakeCommerceRepositoryBase<CommerceOrder>, ICommerceOrderRepository
+{
+    public Task<CommerceOrder> CreateAsync(CommerceOrder entity, IEnumerable<OrderItem> items, CancellationToken cancellationToken = default)
+        => CreateAsync(entity, cancellationToken);
+}
 
 internal sealed class FakeInventoryItemRepository : FakeCommerceRepositoryBase<InventoryItem>, IInventoryItemRepository { }
 

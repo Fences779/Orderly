@@ -43,7 +43,11 @@ public interface ICommerceCustomerRepository : ICommerceRepository<Customer> { }
 public interface ICustomerContactRepository : ICommerceRepository<CustomerContact> { }
 
 /// <summary>Repository for <see cref="Order"/> records.</summary>
-public interface ICommerceOrderRepository : ICommerceRepository<Order> { }
+public interface ICommerceOrderRepository : ICommerceRepository<Order>
+{
+    /// <summary>Creates an order together with its line items.</summary>
+    Task<Order> CreateAsync(Order entity, IEnumerable<OrderItem> items, CancellationToken cancellationToken = default);
+}
 
 /// <summary>Repository for <see cref="OrderItem"/> records.</summary>
 public interface IOrderItemRepository : ICommerceRepository<OrderItem> { }

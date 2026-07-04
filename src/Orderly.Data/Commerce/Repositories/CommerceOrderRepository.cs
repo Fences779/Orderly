@@ -9,10 +9,12 @@ namespace Orderly.Data.Commerce.Repositories;
 public sealed class CommerceOrderRepository : CommerceRepositoryBase<Order>, ICommerceOrderRepository
 {
     private const string Table = "CommerceOrders";
+    private readonly SqliteConnectionFactory _connectionFactory;
 
     public CommerceOrderRepository(SqliteConnectionFactory connectionFactory)
         : base(connectionFactory)
     {
+        _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
     }
 
     protected override string TableName => Table;
@@ -66,4 +68,46 @@ public sealed class CommerceOrderRepository : CommerceRepositoryBase<Order>, ICo
             CustomFieldsJson = GetStringNullable(reader, "CustomFieldsJson"),
         };
     }
+
+    public async Task<Order> CreateAsync(Order entity, IEnumerable<OrderItem> items, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        ArgumentNullException.ThrowIfNull(items);
+
+        var lineItems = items.ToList();
+        if (lineItems.Count == 0)
+        {
+            throw new InvalidOperationException("订单必须包含至少一个订单项。");
+        }
+
+        using CoreWriteTransaction transaction = CoreWriteTransaction.Begin(_connectionFactory);
+        await CreateAsync(entity, cancellationToken).ConfigureAwait(false);
+
+        var itemRepository = new OrderItemRepository(_connectionFactory);
+        foreach (OrderItem item in lineItems)
+        {
+            await itemRepository.CreateAsync(CloneForOrder(entity, item), cancellationToken).ConfigureAwait(false);
+        }
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return entity;
+    }
+
+    private static OrderItem CloneForOrder(Order order, OrderItem item) => new()
+    {
+        Id = item.Id,
+        CreatedAt = item.CreatedAt,
+        WorkspaceId = order.WorkspaceId,
+        OrderId = order.Id,
+        ProductId = item.ProductId,
+        ProductVariantId = item.ProductVariantId,
+        InventoryItemId = item.InventoryItemId,
+        UnitId = item.UnitId,
+        Description = item.Description,
+        Quantity = item.Quantity,
+        UnitPrice = item.UnitPrice,
+        UnitCost = item.UnitCost,
+        LineTotal = item.LineTotal,
+        CustomFieldsJson = item.CustomFieldsJson
+    };
 }
