@@ -10,11 +10,13 @@ public sealed class WorkspaceHub : Hub
 {
     public async Task JoinWorkspace(Guid workspaceId)
     {
+        EnsureRequestedWorkspace(workspaceId);
         await Groups.AddToGroupAsync(Context.ConnectionId, workspaceId.ToString("N"));
     }
 
     public async Task LeaveWorkspace(Guid workspaceId)
     {
+        EnsureRequestedWorkspace(workspaceId);
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, workspaceId.ToString("N"));
     }
 
@@ -66,4 +68,12 @@ public sealed class WorkspaceHub : Hub
         Context.User?.FindFirst(ClaimTypes.Name)?.Value
         ?? Context.User?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Name)?.Value
         ?? string.Empty;
+
+    private void EnsureRequestedWorkspace(Guid requestedWorkspaceId)
+    {
+        if (!TryGetWorkspaceId(out var claimWorkspaceId) || claimWorkspaceId != requestedWorkspaceId)
+        {
+            throw new HubException("Workspace access denied.");
+        }
+    }
 }

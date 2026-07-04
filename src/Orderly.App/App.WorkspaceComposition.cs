@@ -289,6 +289,7 @@ public partial class App
             new EmergencyEnableService(localAccountRepository, localAuthService, sessionContextService, securityAuditService);
 
         IAppUpdateService appUpdateService = new VelopackAppUpdateService();
+        var canViewCommerceCosts = sessionContextService.Current?.Role == LocalAccountRole.Owner;
 
         _mainViewModel = new MainViewModel(
             customerRepository,
@@ -337,9 +338,9 @@ public partial class App
         // (Req 7.1, 7.3). Settings (设置) and Me (我的) remain served by their existing delimited
         // MainViewModel partials. Page binding and load-on-navigation are completed by task 19.3.
         _mainViewModel.AttachCommercePages(
-            new Orderly.App.ViewModels.Pages.WorkbenchPageViewModel(commerceDashboardService),
+            new Orderly.App.ViewModels.Pages.WorkbenchPageViewModel(commerceDashboardService, canViewCommerceCosts),
             new Orderly.App.ViewModels.Pages.OrdersPageViewModel(commerceOrderService, commerceOrderRepository),
-            new Orderly.App.ViewModels.Pages.ProductsPageViewModel(commerceProductService),
+            new Orderly.App.ViewModels.Pages.ProductsPageViewModel(commerceProductService, canViewCommerceCosts),
             new Orderly.App.ViewModels.Pages.InventoryPageViewModel(commerceInventoryService, commerceInventoryItemRepository),
             new Orderly.App.ViewModels.Pages.CustomersPageViewModel(commerceCustomerService, commerceCustomerRepository, settingRepository),
             new Orderly.App.ViewModels.Pages.CashflowPageViewModel(commerceCashFlowService, commerceCashFlowRepository),

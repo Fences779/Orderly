@@ -1,6 +1,7 @@
 <UserControl x:Class="Orderly.App.Views.Sections.ProductsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:Orderly.App.Helpers"
              AutomationProperties.AutomationId="Page_Products">
     <!--
         ProductsView.xaml — 成交销售页（commerce-settings-ui-rebuild / 任务 5.1）
@@ -105,12 +106,18 @@
                   Style="{StaticResource UiDataGridStyle}"
                   ItemsSource="{Binding Products}"
                   Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <DataGrid.Resources>
+                <helpers:BindingProxy x:Key="ProductsPageProxy" Data="{Binding}" />
+            </DataGrid.Resources>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="名称" Binding="{Binding Name}" Width="*" />
                 <DataGridTextColumn Header="编码" Binding="{Binding Code}" Width="Auto" />
                 <DataGridTextColumn Header="类型" Binding="{Binding ProductType, Converter={StaticResource CommerceEnumLabelConverter}}" Width="Auto" />
                 <DataGridTextColumn Header="售价" Binding="{Binding DefaultPrice, StringFormat=¥{0}}" Width="Auto" />
-                <DataGridTextColumn Header="成本" Binding="{Binding DefaultCost, StringFormat=¥{0}}" Width="Auto" />
+                <DataGridTextColumn Header="成本"
+                                    Binding="{Binding DefaultCost, StringFormat=¥{0}}"
+                                    Visibility="{Binding Data.CanViewCosts, Source={StaticResource ProductsPageProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Width="Auto" />
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

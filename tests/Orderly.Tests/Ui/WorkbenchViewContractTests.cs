@@ -41,6 +41,7 @@ public sealed class WorkbenchViewContractTests
     //   * 状态四标志 + 错误/重试：ShowLoading / HasError / IsEmpty / ShowContent / ErrorMessage / RefreshCommand。
     //   * 关键指标：TotalOrders / CompletedOrders / TotalRevenue / GrossProfit /
     //               OutstandingReceivable / NetCashFlow / CustomerCount / LowStockItemCount。
+    //   * 成本权限：CanViewCosts；Data 为 DataGridColumn 绑定代理根。
     //   * 趋势集合：Trend。
     //   * 行字段（WorkbenchTrendRow）：Date / CompletedOrderCount / Revenue / CashInflow / CashOutflow。
     private static readonly HashSet<string> AllowedBindingPaths = new(StringComparer.Ordinal)
@@ -60,6 +61,8 @@ public sealed class WorkbenchViewContractTests
         "NetCashFlow",
         "CustomerCount",
         "LowStockItemCount",
+        "CanViewCosts",
+        "Data",
         "Trend",
         "Date",
         "CompletedOrderCount",

@@ -13,7 +13,7 @@ public interface ICloudAuthService
     Task<CloudUserRecord?> CreateUserAsync(CreateUserRequest request, Guid actorUserId);
     Task<bool> DisableUserAsync(Guid userId, Guid actorUserId);
     Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword);
-    Task<bool> ResetPasswordAsync(Guid userId, string newPassword, Guid actorUserId);
+    Task<bool> ResetPasswordAsync(Guid userId, string newPassword, Guid actorUserId, string? clientRequestId = null);
     Task InvalidateSessionsAsync(Guid userId);
     Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid workspaceId);
     Task EnsureBootstrapAdminAsync(string bootstrapToken);

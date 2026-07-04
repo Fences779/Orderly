@@ -55,6 +55,7 @@ public sealed class ProductsViewContractTests
         "IsEmpty",
         "HasError",
         "ErrorMessage",
+        "Data.CanViewCosts",
         // 行级（ProductRow 投影字段）：DataGrid 列绑定。
         "Name",
         "Code",

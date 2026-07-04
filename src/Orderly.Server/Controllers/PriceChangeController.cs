@@ -33,13 +33,21 @@ public class PriceChangeController : CloudControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var membership = await GetMembershipAsync();
+        if (membership.WorkspaceId != workspaceId) return Forbid();
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         pageSize = Math.Clamp(pageSize, 1, 200);
         var offset = (page - 1) * pageSize;
 
         var where = @"WHERE r.""WorkspaceId"" = @workspaceId";
+        Guid? requesterId = null;
+        if (!Permissions.IsAdmin(membership))
+        {
+            requesterId = UserId;
+            where += @" AND r.""RequestedByUserId"" = @requesterId";
+        }
+
         if (!string.IsNullOrWhiteSpace(status))
             where += @" AND r.""Status"" = @status";
 
@@ -62,8 +70,8 @@ public class PriceChangeController : CloudControllerBase
             ORDER BY r.""RequestedAt"" DESC
             LIMIT @pageSize OFFSET @offset;";
 
-        var total = await connection.ExecuteScalarAsync<long>(countSql, new { workspaceId, status });
-        var rows = await connection.QueryAsync(itemsSql, new { workspaceId, status, pageSize, offset });
+        var total = await connection.ExecuteScalarAsync<long>(countSql, new { workspaceId, status, requesterId });
+        var rows = await connection.QueryAsync(itemsSql, new { workspaceId, status, requesterId, pageSize, offset });
 
         var items = rows.Select(r => new CloudPriceChangeRequestDto
         {

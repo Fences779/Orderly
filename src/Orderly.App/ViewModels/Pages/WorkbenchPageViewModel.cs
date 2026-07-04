@@ -14,8 +14,8 @@ public sealed record WorkbenchTrendRow(
     DateOnly Date,
     int CompletedOrderCount,
     string Revenue,
-    string CashInflow,
-    string CashOutflow);
+    string? CashInflow,
+    string? CashOutflow);
 
 /// <summary>
 /// Dedicated ViewModel for the Workbench (工作台) page. Sources dashboard metrics and the dense
@@ -25,6 +25,7 @@ public sealed record WorkbenchTrendRow(
 public sealed partial class WorkbenchPageViewModel : CommercePageViewModel
 {
     private readonly IDashboardService _dashboardService;
+    private readonly bool _canViewCosts;
 
     [ObservableProperty]
     private int _totalOrders;
@@ -54,13 +55,16 @@ public sealed partial class WorkbenchPageViewModel : CommercePageViewModel
 
     /// <summary>Creates the Workbench page ViewModel over the dashboard service.</summary>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="dashboardService"/> is null.</exception>
-    public WorkbenchPageViewModel(IDashboardService dashboardService)
+    public WorkbenchPageViewModel(IDashboardService dashboardService, bool canViewCosts = true)
     {
         _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
+        _canViewCosts = canViewCosts;
     }
 
     /// <inheritdoc />
     public override string PageKey => MainViewModel.SectionWorkbench;
+
+    public bool CanViewCosts => _canViewCosts;
 
     /// <summary>The dense 7-day dashboard trend series (Req 4.13).</summary>
     public ObservableCollection<WorkbenchTrendRow> Trend { get; } = new();
@@ -79,9 +83,9 @@ public sealed partial class WorkbenchPageViewModel : CommercePageViewModel
         TotalOrders = metrics.TotalOrders;
         CompletedOrders = metrics.CompletedOrders;
         TotalRevenue = metrics.TotalRevenue.ToString();
-        GrossProfit = metrics.GrossProfit.ToString();
+        GrossProfit = _canViewCosts ? metrics.GrossProfit.ToString() : string.Empty;
         OutstandingReceivable = metrics.OutstandingReceivable.ToString();
-        NetCashFlow = metrics.NetCashFlow.ToString();
+        NetCashFlow = _canViewCosts ? metrics.NetCashFlow.ToString() : string.Empty;
         CustomerCount = metrics.CustomerCount;
         LowStockItemCount = metrics.LowStockItemCount;
 
@@ -92,8 +96,8 @@ public sealed partial class WorkbenchPageViewModel : CommercePageViewModel
                 point.Date,
                 point.CompletedOrderCount,
                 point.Revenue.ToString(),
-                point.CashInflow.ToString(),
-                point.CashOutflow.ToString()));
+                _canViewCosts ? point.CashInflow.ToString() : null,
+                _canViewCosts ? point.CashOutflow.ToString() : null));
         }
 
         _hasSnapshot = true;

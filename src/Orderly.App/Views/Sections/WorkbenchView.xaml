@@ -1,6 +1,7 @@
 <UserControl x:Class="Orderly.App.Views.Sections.WorkbenchView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:Orderly.App.Helpers"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              AutomationProperties.AutomationId="Page_Workbench">
     <!--
@@ -174,7 +175,8 @@
                             <TextBlock Text="{Binding TotalRevenue, StringFormat=¥{0}}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WbMetricCardStyle}">
+                    <Border Style="{StaticResource WbMetricCardStyle}"
+                            Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="毛利" Style="{StaticResource WbMetricCaptionStyle}" />
                             <TextBlock Text="{Binding GrossProfit, StringFormat=¥{0}}" Style="{StaticResource WbMetricValueStyle}" />
@@ -186,7 +188,8 @@
                             <TextBlock Text="{Binding OutstandingReceivable, StringFormat=¥{0}}" Style="{StaticResource WbMetricValueStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource WbMetricCardStyle}">
+                    <Border Style="{StaticResource WbMetricCardStyle}"
+                            Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="净现金流" Style="{StaticResource WbMetricCaptionStyle}" />
                             <TextBlock Text="{Binding NetCashFlow, StringFormat=¥{0}}" Style="{StaticResource WbMetricValueStyle}" />
@@ -211,6 +214,9 @@
 
                 <!-- 趋势明细（舒适档 + UI 虚拟化，统一 DataGrid 令牌样式） -->
                 <DataGrid ItemsSource="{Binding Trend}" Style="{StaticResource UiDataGridStyle}">
+                    <DataGrid.Resources>
+                        <helpers:BindingProxy x:Key="WorkbenchPageProxy" Data="{Binding}" />
+                    </DataGrid.Resources>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="日期"
                                             Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}"
@@ -223,9 +229,11 @@
                                             Width="Auto" />
                         <DataGridTextColumn Header="现金流入"
                                             Binding="{Binding CashInflow, StringFormat=¥{0}}"
+                                            Visibility="{Binding Data.CanViewCosts, Source={StaticResource WorkbenchPageProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             Width="Auto" />
                         <DataGridTextColumn Header="现金流出"
                                             Binding="{Binding CashOutflow, StringFormat=¥{0}}"
+                                            Visibility="{Binding Data.CanViewCosts, Source={StaticResource WorkbenchPageProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                             Width="Auto" />
                     </DataGrid.Columns>
                 </DataGrid>

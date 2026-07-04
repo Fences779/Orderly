@@ -45,11 +45,13 @@ public sealed class CloudAuthService : ICloudAuthService
 
         if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
         {
+            await AuditLoginFailureAsync(connection, user, "AccountLocked", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
         if (!user.IsEnabled)
         {
+            await AuditLoginFailureAsync(connection, user, "AccountDisabled", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
@@ -60,12 +62,14 @@ public sealed class CloudAuthService : ICloudAuthService
             await connection.ExecuteAsync(
                 "UPDATE \"CloudUsers\" SET \"FailedLoginCount\" = @failedCount, \"LockedUntil\" = @lockedUntil, \"UpdatedAt\" = @now WHERE \"Id\" = @id;",
                 new { failedCount, lockedUntil, now = DateTime.UtcNow, id = user.Id });
+            await AuditLoginFailureAsync(connection, user, "BadPassword", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
         var membership = await GetMembershipForUserAsync(connection, user.Id);
         if (membership == null || !membership.IsEnabled)
         {
+            await AuditLoginFailureAsync(connection, user, "WorkspaceMembershipDisabled", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
@@ -106,7 +110,16 @@ public sealed class CloudAuthService : ICloudAuthService
             "SELECT * FROM \"CloudRefreshTokens\" WHERE \"TokenHash\" = @tokenHash;",
             new { tokenHash });
 
-        if (tokenRecord == null || tokenRecord.RevokedAt.HasValue || tokenRecord.ExpiresAt <= DateTime.UtcNow)
+        if (tokenRecord == null)
+            return null;
+
+        if (tokenRecord.RevokedAt.HasValue)
+        {
+            await RevokeRefreshTokenFamilyAsync(connection, tokenRecord, "RefreshTokenReuse");
+            return null;
+        }
+
+        if (tokenRecord.ExpiresAt <= DateTime.UtcNow)
             return null;
 
         var user = await connection.QueryFirstOrDefaultAsync<CloudUserRecord>(
@@ -190,6 +203,18 @@ public sealed class CloudAuthService : ICloudAuthService
             VALUES (@workspaceId, @userId, @role, @label, 1, TRUE, @createdBy, @now, @createdBy, @now);",
             new { workspaceId = actorMembership.WorkspaceId, userId, role = request.CloudRole, label = request.BusinessLabel, createdBy = actorUserId, now }, tx);
 
+        await _auditLogService.LogAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            "UserCreated",
+            "user",
+            userId,
+            null,
+            null,
+            reason: null,
+            request.ClientRequestId);
+
         await tx.CommitAsync();
         return await GetUserAsync(userId);
     }
@@ -212,21 +237,34 @@ public sealed class CloudAuthService : ICloudAuthService
         var targetRole = await connection.QueryFirstOrDefaultAsync<string>(
             "SELECT \"CloudRole\" FROM \"CloudWorkspaceMembers\" WHERE \"WorkspaceId\" = @workspaceId AND \"UserId\" = @userId;",
             new { workspaceId = actorMembership.WorkspaceId, userId });
+        if (targetRole == null) return false;
         if (targetRole == CloudRole.Admin && adminCount <= 1) return false;
 
         var now = DateTime.UtcNow;
+        await using var tx = await connection.BeginTransactionAsync();
         await connection.ExecuteAsync(
             @"UPDATE ""CloudWorkspaceMembers"" SET ""IsEnabled"" = FALSE, ""UpdatedByUserId"" = @actor, ""UpdatedAt"" = @now
               WHERE ""WorkspaceId"" = @workspaceId AND ""UserId"" = @userId;",
-            new { actor = actorUserId, now, workspaceId = actorMembership.WorkspaceId, userId });
+            new { actor = actorUserId, now, workspaceId = actorMembership.WorkspaceId, userId }, tx);
         await connection.ExecuteAsync(
             @"UPDATE ""CloudUsers"" SET ""IsEnabled"" = FALSE, ""DisabledAt"" = @now, ""DisabledByUserId"" = @actor, ""UpdatedAt"" = @now
               WHERE ""Id"" = @userId;",
-            new { now, actor = actorUserId, userId });
+            new { now, actor = actorUserId, userId }, tx);
         // Revoke refresh tokens
         await connection.ExecuteAsync(
             "UPDATE \"CloudRefreshTokens\" SET \"RevokedAt\" = @now, \"RevokedReason\" = 'AccountDisabled' WHERE \"UserId\" = @userId AND \"RevokedAt\" IS NULL;",
-            new { now, userId });
+            new { now, userId }, tx);
+        await _auditLogService.LogAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            "UserDisabled",
+            "user",
+            userId,
+            null,
+            null,
+            reason: null);
+        await tx.CommitAsync();
         return true;
     }
 
@@ -239,9 +277,44 @@ public sealed class CloudAuthService : ICloudAuthService
         return true;
     }
 
-    public async Task<bool> ResetPasswordAsync(Guid userId, string newPassword, Guid actorUserId)
+    public async Task<bool> ResetPasswordAsync(Guid userId, string newPassword, Guid actorUserId, string? clientRequestId = null)
     {
-        await SetPasswordAsync(userId, newPassword);
+        if (string.IsNullOrWhiteSpace(newPassword)) return false;
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
+        if (actorMembership == null) return false;
+
+        var targetMembership = await connection.QueryFirstOrDefaultAsync<CloudWorkspaceMemberRecord>(
+            @"SELECT * FROM ""CloudWorkspaceMembers""
+              WHERE ""WorkspaceId"" = @workspaceId AND ""UserId"" = @userId;",
+            new { workspaceId = actorMembership.WorkspaceId, userId });
+        if (targetMembership == null) return false;
+
+        var hash = _passwordHasher.HashPassword(newPassword);
+        var now = DateTime.UtcNow;
+        await using var tx = await connection.BeginTransactionAsync();
+        var affected = await connection.ExecuteAsync(
+            @"UPDATE ""CloudUsers"" SET ""PasswordHash"" = @hash, ""TokenVersion"" = ""TokenVersion"" + 1,
+               ""PasswordChangedAt"" = @now, ""UpdatedAt"" = @now WHERE ""Id"" = @id;",
+            new { hash, now, id = userId }, tx);
+        if (affected == 0) return false;
+
+        await connection.ExecuteAsync(
+            "UPDATE \"CloudRefreshTokens\" SET \"RevokedAt\" = @now, \"RevokedReason\" = 'PasswordReset' WHERE \"UserId\" = @userId AND \"RevokedAt\" IS NULL;",
+            new { now, userId }, tx);
+        await _auditLogService.LogAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            "UserPasswordReset",
+            "user",
+            userId,
+            null,
+            null,
+            reason: null,
+            clientRequestId);
+        await tx.CommitAsync();
         return true;
     }
 
@@ -324,6 +397,58 @@ public sealed class CloudAuthService : ICloudAuthService
         return await connection.QueryFirstOrDefaultAsync<CloudWorkspaceMemberRecord>(
             "SELECT * FROM \"CloudWorkspaceMembers\" WHERE \"UserId\" = @userId AND \"IsEnabled\" = TRUE;",
             new { userId });
+    }
+
+    private async Task<CloudWorkspaceMemberRecord?> GetAnyMembershipForUserAsync(System.Data.Common.DbConnection connection, Guid userId)
+    {
+        return await connection.QueryFirstOrDefaultAsync<CloudWorkspaceMemberRecord>(
+            "SELECT * FROM \"CloudWorkspaceMembers\" WHERE \"UserId\" = @userId ORDER BY \"CreatedAt\" LIMIT 1;",
+            new { userId });
+    }
+
+    private async Task AuditLoginFailureAsync(
+        System.Data.Common.DbConnection connection,
+        CloudUserRecord user,
+        string reason,
+        string? clientRequestId,
+        string ipAddress,
+        string userAgent)
+    {
+        var membership = await GetAnyMembershipForUserAsync(connection, user.Id);
+        if (membership == null) return;
+
+        await _auditLogService.LogAsync(
+            connection,
+            null,
+            membership.WorkspaceId,
+            "LoginFailed",
+            "user",
+            user.Id,
+            null,
+            null,
+            reason,
+            clientRequestId,
+            ipAddress,
+            userAgent);
+    }
+
+    private static async Task RevokeRefreshTokenFamilyAsync(
+        System.Data.Common.DbConnection connection,
+        CloudRefreshTokenRecord tokenRecord,
+        string reason)
+    {
+        var now = DateTime.UtcNow;
+        await using var tx = await connection.BeginTransactionAsync();
+        await connection.ExecuteAsync(
+            @"UPDATE ""CloudRefreshTokens""
+              SET ""RevokedAt"" = COALESCE(""RevokedAt"", @now),
+                  ""RevokedReason"" = CASE WHEN ""RevokedAt"" IS NULL THEN @reason ELSE ""RevokedReason"" END
+              WHERE ""TokenFamilyId"" = @familyId;",
+            new { now, reason, familyId = tokenRecord.TokenFamilyId }, tx);
+        await connection.ExecuteAsync(
+            "UPDATE \"CloudUsers\" SET \"TokenVersion\" = \"TokenVersion\" + 1, \"UpdatedAt\" = @now WHERE \"Id\" = @userId;",
+            new { now, userId = tokenRecord.UserId }, tx);
+        await tx.CommitAsync();
     }
 
     private async Task<(string accessToken, string refreshToken)> GenerateTokensAsync(System.Data.Common.DbConnection connection, CloudUserRecord user)

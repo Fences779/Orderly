@@ -15,7 +15,7 @@ public sealed record ProductRow(
     string? Code,
     ProductType ProductType,
     string DefaultPrice,
-    string DefaultCost);
+    string? DefaultCost);
 
 /// <summary>
 /// Dedicated ViewModel for the Products (商品) page. Product data is sourced exclusively from the
@@ -24,16 +24,20 @@ public sealed record ProductRow(
 public sealed partial class ProductsPageViewModel : CommercePageViewModel
 {
     private readonly IProductService _productService;
+    private readonly bool _canViewCosts;
 
     /// <summary>Creates the Products page ViewModel over the product service.</summary>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="productService"/> is null.</exception>
-    public ProductsPageViewModel(IProductService productService)
+    public ProductsPageViewModel(IProductService productService, bool canViewCosts = true)
     {
         _productService = productService ?? throw new ArgumentNullException(nameof(productService));
+        _canViewCosts = canViewCosts;
     }
 
     /// <inheritdoc />
     public override string PageKey => MainViewModel.SectionProducts;
+
+    public bool CanViewCosts => _canViewCosts;
 
     /// <summary>The active products displayed on the page.</summary>
     public ObservableCollection<ProductRow> Products { get; } = new();
@@ -57,7 +61,7 @@ public sealed partial class ProductsPageViewModel : CommercePageViewModel
                 product.Code,
                 product.ProductType,
                 product.DefaultPrice.ToString(),
-                product.DefaultCost.ToString()));
+                _canViewCosts ? product.DefaultCost.ToString() : null));
         }
 
         NotifyEmptyStateChanged();

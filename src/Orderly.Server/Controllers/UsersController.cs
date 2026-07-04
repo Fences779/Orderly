@@ -47,4 +47,19 @@ public class UsersController : CloudControllerBase
         if (!ok) return BadRequest(new { Error = "Cannot disable the last admin or yourself." });
         return NoContent();
     }
+
+    [HttpPost("users/{userId:guid}/reset-password")]
+    public async Task<IActionResult> ResetPasswordAsync(Guid userId, [FromBody] ResetPasswordRequest request)
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        if (request.UserId != Guid.Empty && request.UserId != userId)
+        {
+            return BadRequest(new { Error = "Request user id does not match route user id." });
+        }
+
+        var ok = await AuthService.ResetPasswordAsync(userId, request.NewPassword, UserId, request.ClientRequestId);
+        if (!ok) return BadRequest(new { Error = "Cannot reset password for this user." });
+        return NoContent();
+    }
 }
