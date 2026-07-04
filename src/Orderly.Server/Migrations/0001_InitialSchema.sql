@@ -152,6 +152,7 @@ CREATE INDEX IF NOT EXISTS ix_export_jobs_workspace ON "CloudExportJobs"("Worksp
 CREATE TABLE IF NOT EXISTS "CloudEmergencyDrafts" (
     "Id" UUID PRIMARY KEY,
     "WorkspaceId" UUID NOT NULL REFERENCES "CloudWorkspaces"("Id"),
+    "SubmittedByUserId" UUID NOT NULL REFERENCES "CloudUsers"("Id"),
     "EntityType" TEXT NOT NULL,
     "EntityId" UUID NULL,
     "OperationType" TEXT NOT NULL,

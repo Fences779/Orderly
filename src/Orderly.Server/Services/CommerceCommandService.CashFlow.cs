@@ -140,6 +140,83 @@ public partial class CommerceCommandService
             cancellationToken);
     }
 
+    public async Task<CommandResult<CloudCashFlowEntryDto>> UpdateCashFlowEntryAsync(Guid workspaceId, Guid entryId, UpdateCashFlowEntryCommand command, CancellationToken cancellationToken = default)
+    {
+        var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
+        var membership = await GetMembershipAsync(userId);
+
+        if (!_permissions.CanManageCashFlow(membership))
+            throw new UnauthorizedAccessException("没有现金流管理权限。");
+
+        return await ExecuteWithIdempotencyAsync<UpdateCashFlowEntryCommand, CloudCashFlowEntryDto>(
+            workspaceId,
+            "cashflow:update",
+            command,
+            async (connection, transaction, sequence, ct) =>
+            {
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCashFlowEntries", entryId, command.ExpectedRevision, ct);
+
+                var before = await LoadCashFlowDtoAsync(connection, transaction, workspaceId, entryId, ct);
+                var beforeJson = await SnapshotJsonAsync(before);
+
+                var entryRow = await connection.QueryFirstOrDefaultAsync(
+                    "SELECT * FROM \"CommerceCashFlowEntries\" WHERE \"Id\" = @entryId;",
+                    new { entryId },
+                    transaction)
+                    ?? throw new InvalidOperationException($"现金流条目 {entryId} 不存在。");
+
+                var direction = command.Direction ?? (CashFlowDirection)(int)entryRow.Direction;
+                var amount = command.Amount.HasValue ? RoundMoney(command.Amount.Value) : (decimal)entryRow.Amount;
+                var settled = (decimal)entryRow.SettledAmount;
+                var newSettled = Math.Min(settled, amount);
+                var dueDate = command.DueDateUtc ?? (entryRow.DueDate as DateTime?);
+                var occurredAt = command.OccurredAtUtc ?? (DateTime)entryRow.OccurredAt;
+                var newStatus = ResolveSettlementStatus(newSettled, amount, dueDate, DateTime.UtcNow);
+
+                await connection.ExecuteAsync(
+                    @"UPDATE ""CommerceCashFlowEntries""
+                     SET ""Direction"" = @direction,
+                         ""Amount"" = @amount,
+                         ""SettledAmount"" = @newSettled,
+                         ""SettlementStatus"" = @newStatus,
+                         ""OccurredAt"" = @occurredAt,
+                         ""DueDate"" = @dueDate,
+                         ""CategoryName"" = COALESCE(NULLIF(@categoryName, ''), ""CategoryName""),
+                         ""OrderId"" = COALESCE(@orderId, ""OrderId""),
+                         ""BusinessKey"" = COALESCE(@businessKey, ""BusinessKey""),
+                         ""Revision"" = ""Revision"" + 1,
+                         ""UpdatedAt"" = @now,
+                         ""UpdatedByUserId"" = @updatedBy,
+                         ""LastChangeSequence"" = @sequence
+                     WHERE ""Id"" = @entryId;",
+                    new
+                    {
+                        direction = (int)direction,
+                        amount,
+                        newSettled = RoundMoney(newSettled),
+                        newStatus = (int)newStatus,
+                        occurredAt,
+                        dueDate,
+                        categoryName = command.CategoryName,
+                        orderId = command.OrderId,
+                        businessKey = command.BusinessKey,
+                        now = DateTime.UtcNow,
+                        updatedBy = userId,
+                        sequence,
+                        entryId
+                    },
+                    transaction);
+
+                var dto = await LoadCashFlowDtoAsync(connection, transaction, workspaceId, entryId, ct);
+                var afterJson = await SnapshotJsonAsync(dto);
+                await AuditAsync(connection, transaction, workspaceId, "CashFlowUpdated", EntityType.CashFlowEntry, entryId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
+                await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.CashFlowEntry, entryId, "updated", dto.Revision);
+
+                return (dto, EntityType.CashFlowEntry, entryId);
+            },
+            cancellationToken);
+    }
+
     private static CashFlowSettlementStatus ResolveInitialStatus(DateTime occurredAt, DateTime? dueDate)
         => dueDate.HasValue && dueDate.Value < occurredAt ? CashFlowSettlementStatus.Overdue : CashFlowSettlementStatus.Pending;
 

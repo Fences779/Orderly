@@ -37,6 +37,7 @@ public class EmergencyDraftController : CloudControllerBase
         {
             Id = Guid.TryParse(draft.Id, out var parsedId) ? parsedId : Guid.NewGuid(),
             WorkspaceId = workspaceId,
+            SubmittedByUserId = UserId,
             EntityType = draft.EntityType,
             EntityId = string.IsNullOrWhiteSpace(draft.EntityId) ? null : Guid.Parse(draft.EntityId),
             OperationType = draft.OperationType,

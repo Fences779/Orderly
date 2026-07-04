@@ -19,11 +19,21 @@ public interface IWorkspaceSyncQueryService
 public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
 {
     private readonly PostgresConnectionFactory _connectionFactory;
+    private readonly ICurrentUserContext _currentUser;
+    private readonly ICloudAuthService _authService;
+    private readonly ICloudPermissionService _permissions;
     private const int DefaultPageSize = 200;
 
-    public WorkspaceSyncQueryService(PostgresConnectionFactory connectionFactory)
+    public WorkspaceSyncQueryService(
+        PostgresConnectionFactory connectionFactory,
+        ICurrentUserContext currentUser,
+        ICloudAuthService authService,
+        ICloudPermissionService permissions)
     {
         _connectionFactory = connectionFactory;
+        _currentUser = currentUser;
+        _authService = authService;
+        _permissions = permissions;
     }
 
     public async Task<SnapshotTokenResponse> CreateSnapshotAsync(Guid workspaceId, string? entityType, CancellationToken cancellationToken = default)
@@ -59,6 +69,14 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         var workspaceId = payload.WorkspaceId;
         var entityType = payload.EntityType;
 
+        var membership = await GetMembershipAsync(cancellationToken);
+        if (membership == null || membership.WorkspaceId != workspaceId)
+        {
+            throw new UnauthorizedAccessException("Workspace access denied.");
+        }
+
+        var canViewCosts = _permissions.CanViewCosts(membership);
+
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
         var table = ResolveTableName(entityType);
@@ -74,7 +92,7 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         var offset = (page - 1) * pageSize;
         var rows = await connection.QueryAsync(itemsSql, new { workspaceId, pageSize, offset });
 
-        var items = rows.Select(r => MapRow(entityType, r)).Cast<object>().ToList();
+        var items = rows.Select(r => MapRow(entityType, r, canViewCosts)).Cast<object>().ToList();
 
         return new SnapshotPageResponse<object>
         {
@@ -91,6 +109,12 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
     public async Task<ChangesResponse> GetChangesAsync(Guid workspaceId, long afterSequence, int maxCount, CancellationToken cancellationToken = default)
     {
         maxCount = Math.Clamp(maxCount, 1, 1000);
+
+        var membership = await GetMembershipAsync(cancellationToken);
+        if (membership == null || membership.WorkspaceId != workspaceId)
+        {
+            throw new UnauthorizedAccessException("Workspace access denied.");
+        }
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
         const string sql = @"
@@ -123,6 +147,17 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
             FullResyncRequired = false,
             Changes = entries
         };
+    }
+
+    private async Task<CloudWorkspaceMemberRecord?> GetMembershipAsync(CancellationToken cancellationToken)
+    {
+        var userId = _currentUser.UserId;
+        if (userId == null)
+        {
+            return null;
+        }
+
+        return await _authService.GetMembershipAsync(userId.Value);
     }
 
     private static async Task<long> GetLatestSequenceAsync(System.Data.IDbConnection connection, Guid workspaceId)
@@ -161,14 +196,14 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         };
     }
 
-    private static object MapRow(string? entityType, dynamic r)
+    private static object MapRow(string? entityType, dynamic r, bool canViewCosts)
     {
         var key = entityType?.ToLowerInvariant() ?? "order";
         return key switch
         {
-            "order" or "orders" => MapOrder(r),
-            "product" or "products" => MapProduct(r),
-            "inventoryitem" or "inventory" => MapInventoryItem(r),
+            "order" or "orders" => MapOrder(r, canViewCosts),
+            "product" or "products" => MapProduct(r, canViewCosts),
+            "inventoryitem" or "inventory" => MapInventoryItem(r, canViewCosts),
             "customer" or "customers" => MapCustomer(r),
             "cashflow" or "cashflowentry" => MapCashFlowEntry(r),
             "businessinsight" or "insight" => MapInsight(r),
@@ -176,7 +211,7 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         };
     }
 
-    private static CloudOrderDto MapOrder(dynamic r) => new()
+    private static CloudOrderDto MapOrder(dynamic r, bool canViewCosts) => new()
     {
         Id = r.Id,
         Revision = r.Revision,
@@ -194,19 +229,19 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         FulfillmentStage = (OrderFulfillmentStage)(int)r.FulfillmentStage,
         Subtotal = r.Subtotal,
         Total = r.Total,
-        Cost = r.Cost,
-        GrossProfit = r.GrossProfit,
-        GrossMargin = r.GrossMargin,
+        Cost = canViewCosts ? (decimal?)r.Cost : null,
+        GrossProfit = canViewCosts ? (decimal?)r.GrossProfit : null,
+        GrossMargin = canViewCosts ? (decimal?)r.GrossMargin : null,
         PaidAmount = r.PaidAmount,
         ReceivableAmount = r.ReceivableAmount,
         OrderedAtUtc = r.OrderedAt,
         Note = r.Note,
-        AssignedToUserId = r.AssignedToUserId,
+        AssignedToUserId = r.AssignedByUserId,
         ArchivedByUserId = r.ArchivedByUserId,
         ArchiveReason = r.ArchiveReason
     };
 
-    private static CloudProductDto MapProduct(dynamic r) => new()
+    private static CloudProductDto MapProduct(dynamic r, bool canViewCosts) => new()
     {
         Id = r.Id,
         Revision = r.Revision,
@@ -224,10 +259,10 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         DefaultUnitId = r.DefaultUnitId,
         SupplierId = r.SupplierId,
         DefaultPrice = r.DefaultPrice,
-        DefaultCost = r.DefaultCost
+        DefaultCost = canViewCosts ? (decimal?)r.DefaultCost : null
     };
 
-    private static CloudInventoryItemDto MapInventoryItem(dynamic r) => new()
+    private static CloudInventoryItemDto MapInventoryItem(dynamic r, bool canViewCosts) => new()
     {
         Id = r.Id,
         Revision = r.Revision,
@@ -245,7 +280,7 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         UnitId = r.UnitId,
         QuantityAvailable = r.QuantityAvailable,
         ReorderThreshold = r.ReorderThreshold,
-        UnitCost = r.UnitCost
+        UnitCost = canViewCosts ? (decimal?)r.UnitCost : null
     };
 
     private static CloudCustomerDto MapCustomer(dynamic r) => new()

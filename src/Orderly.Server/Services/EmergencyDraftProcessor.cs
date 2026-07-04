@@ -13,12 +13,12 @@ public interface IEmergencyDraftProcessor
 public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
 {
     private readonly IEmergencyDraftRepository _repository;
-    private readonly CommerceCommandService _commandService;
+    private readonly IServiceProvider _serviceProvider;
 
-    public EmergencyDraftProcessor(IEmergencyDraftRepository repository, CommerceCommandService commandService)
+    public EmergencyDraftProcessor(IEmergencyDraftRepository repository, IServiceProvider serviceProvider)
     {
         _repository = repository;
-        _commandService = commandService;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task ProcessWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default)
@@ -45,23 +45,46 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
 
     private async Task ProcessDraftAsync(CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
     {
-        var key = $"{draft.EntityType}/{draft.OperationType}";
-
         if (!draft.EntityId.HasValue)
         {
             await MarkFailedAsync(draft, "草稿缺少目标实体 Id。", cancellationToken);
             return;
         }
 
+        using var scope = _serviceProvider.CreateScope();
+        var authService = scope.ServiceProvider.GetRequiredService<ICloudAuthService>();
+        var currentUser = scope.ServiceProvider.GetRequiredService<ICurrentUserContext>();
+
+        var user = await authService.GetUserAsync(draft.SubmittedByUserId);
+        var membership = await authService.GetMembershipAsync(draft.SubmittedByUserId);
+
+        if (user == null || membership == null || !user.IsEnabled || !membership.IsEnabled)
+        {
+            await MarkFailedAsync(draft, "提交人账号或成员身份已失效，无法重放。", cancellationToken);
+            return;
+        }
+
+        currentUser.Set(
+            user.Id,
+            user.Username,
+            user.DisplayName,
+            membership.CloudRole,
+            membership.BusinessLabel,
+            membership.WorkspaceId,
+            user.TokenVersion);
+
+        var commandService = scope.ServiceProvider.GetRequiredService<CommerceCommandService>();
+        var key = $"{draft.EntityType}/{draft.OperationType}";
+
         if (string.Equals(key, EmergencyDraftAllowedOperations.CustomerNote, StringComparison.OrdinalIgnoreCase))
         {
-            await ExecuteCustomerNoteAsync(draft, cancellationToken);
+            await ExecuteCustomerNoteAsync(commandService, draft, cancellationToken);
             return;
         }
 
         if (string.Equals(key, EmergencyDraftAllowedOperations.OrderStage, StringComparison.OrdinalIgnoreCase))
         {
-            await ExecuteOrderStageAsync(draft, cancellationToken);
+            await ExecuteOrderStageAsync(commandService, draft, cancellationToken);
             return;
         }
 
@@ -75,7 +98,7 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
         await MarkFailedAsync(draft, $"{key} 不是允许的应急草稿类型。", cancellationToken);
     }
 
-    private async Task ExecuteCustomerNoteAsync(CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    private async Task ExecuteCustomerNoteAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
     {
         var command = JsonSerializer.Deserialize<CustomerNoteCommand>(draft.PayloadJson)
             ?? throw new InvalidOperationException("无法反序列化客户备注命令。");
@@ -83,7 +106,7 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
         command.ClientRequestId = draft.Id.ToString("N");
         command.ExpectedRevision = draft.BaseRevision ?? command.ExpectedRevision;
 
-        await _commandService.AddCustomerNoteAsync(
+        await commandService.AddCustomerNoteAsync(
             draft.WorkspaceId,
             draft.EntityId!.Value,
             command,
@@ -92,7 +115,7 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
         await MarkSubmittedAsync(draft, cancellationToken);
     }
 
-    private async Task ExecuteOrderStageAsync(CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    private async Task ExecuteOrderStageAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
     {
         var command = JsonSerializer.Deserialize<OrderStageCommand>(draft.PayloadJson)
             ?? throw new InvalidOperationException("无法反序列化订单阶段命令。");
@@ -107,7 +130,7 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
             return;
         }
 
-        await _commandService.UpdateOrderStageAsync(
+        await commandService.UpdateOrderStageAsync(
             draft.WorkspaceId,
             draft.EntityId!.Value,
             command,

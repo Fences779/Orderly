@@ -183,6 +183,19 @@ public class CommerceReadController : CloudControllerBase
         });
     }
 
+    [HttpGet("products/{productId:guid}")]
+    public async Task<ActionResult<CloudProductDto>> GetProductAsync(Guid workspaceId, Guid productId)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var membership = await GetMembershipAsync();
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var row = await connection.QueryFirstOrDefaultAsync(
+            "SELECT * FROM \"CommerceProducts\" WHERE \"WorkspaceId\" = @workspaceId AND \"Id\" = @productId;",
+            new { workspaceId, productId });
+        if (row == null) return NotFound();
+        return Ok(MapProduct(row, Permissions.CanViewCosts(membership)));
+    }
+
     [HttpGet("inventory/items")]
     public async Task<ActionResult<PagedList<CloudInventoryItemDto>>> ListInventoryAsync(
         Guid workspaceId,
@@ -191,6 +204,7 @@ public class CommerceReadController : CloudControllerBase
         [FromQuery] string? search = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var membership = await GetMembershipAsync();
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
 
         pageSize = Math.Clamp(pageSize, 1, 200);
@@ -208,12 +222,25 @@ public class CommerceReadController : CloudControllerBase
 
         return Ok(new PagedList<CloudInventoryItemDto>
         {
-            Items = rows.Select(MapInventoryItem).Cast<CloudInventoryItemDto>().ToList(),
+            Items = rows.Select(r => MapInventoryItem(r, Permissions.CanViewCosts(membership))).Cast<CloudInventoryItemDto>().ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
+    }
+
+    [HttpGet("inventory/items/{itemId:guid}")]
+    public async Task<ActionResult<CloudInventoryItemDto>> GetInventoryItemAsync(Guid workspaceId, Guid itemId)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var membership = await GetMembershipAsync();
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var row = await connection.QueryFirstOrDefaultAsync(
+            "SELECT * FROM \"CommerceInventoryItems\" WHERE \"WorkspaceId\" = @workspaceId AND \"Id\" = @itemId;",
+            new { workspaceId, itemId });
+        if (row == null) return NotFound();
+        return Ok(MapInventoryItem(row, Permissions.CanViewCosts(membership)));
     }
 
     [HttpGet("customers")]
@@ -247,6 +274,18 @@ public class CommerceReadController : CloudControllerBase
             TotalCount = total,
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
+    }
+
+    [HttpGet("customers/{customerId:guid}")]
+    public async Task<ActionResult<CloudCustomerDto>> GetCustomerAsync(Guid workspaceId, Guid customerId)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var row = await connection.QueryFirstOrDefaultAsync(
+            "SELECT * FROM \"CommerceCustomers\" WHERE \"WorkspaceId\" = @workspaceId AND \"Id\" = @customerId;",
+            new { workspaceId, customerId });
+        if (row == null) return NotFound();
+        return Ok(MapCustomer(row));
     }
 
     [HttpGet("cashflow/summary")]
@@ -309,6 +348,21 @@ public class CommerceReadController : CloudControllerBase
             TotalCount = total,
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
+    }
+
+    [HttpGet("cashflow/entries/{entryId:guid}")]
+    public async Task<ActionResult<CloudCashFlowEntryDto>> GetCashFlowEntryAsync(Guid workspaceId, Guid entryId)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanViewCosts(membership)) return Forbid();
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var row = await connection.QueryFirstOrDefaultAsync(
+            "SELECT * FROM \"CommerceCashFlowEntries\" WHERE \"WorkspaceId\" = @workspaceId AND \"Id\" = @entryId;",
+            new { workspaceId, entryId });
+        if (row == null) return NotFound();
+        return Ok(MapCashFlowEntry(row));
     }
 
     [HttpGet("insights")]
@@ -483,7 +537,7 @@ public class CommerceReadController : CloudControllerBase
         DefaultCost = canViewCosts ? (decimal?)r.DefaultCost : null
     };
 
-    private static CloudInventoryItemDto MapInventoryItem(dynamic r) => new()
+    private static CloudInventoryItemDto MapInventoryItem(dynamic r, bool canViewCosts) => new()
     {
         Id = r.Id,
         Revision = r.Revision,
@@ -501,7 +555,7 @@ public class CommerceReadController : CloudControllerBase
         UnitId = r.UnitId,
         QuantityAvailable = r.QuantityAvailable,
         ReorderThreshold = r.ReorderThreshold,
-        UnitCost = r.UnitCost
+        UnitCost = canViewCosts ? (decimal?)r.UnitCost : null
     };
 
     private static CloudCustomerDto MapCustomer(dynamic r) => new()

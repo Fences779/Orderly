@@ -43,8 +43,31 @@ public sealed class RemoteCashFlowEntryRepository : RemoteCommerceRepositoryBase
         return dto?.ToEntity() ?? entity;
     }
 
-    public override Task UpdateAsync(CashFlowEntry entity, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Cloud cash-flow entries cannot be updated directly; use settlement or archive instead.");
+    public override async Task UpdateAsync(CashFlowEntry entity, CancellationToken cancellationToken = default)
+    {
+        var latest = await Client.GetAsync<CloudCashFlowEntryDto>(
+            $"api/workspaces/{Session.WorkspaceId:N}/cashflow/entries/{entity.Id:N}",
+            cancellationToken).ConfigureAwait(false);
+
+        var command = new UpdateCashFlowEntryCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = latest?.Revision ?? 0L,
+            CashFlowEntryId = entity.Id,
+            Direction = entity.Direction,
+            Amount = entity.Amount.Amount,
+            OccurredAtUtc = entity.OccurredAt,
+            DueDateUtc = entity.DueDate,
+            CategoryName = entity.CategoryName,
+            OrderId = entity.OrderId,
+            BusinessKey = entity.BusinessKey
+        };
+
+        await Client.PutAsync<UpdateCashFlowEntryCommand>(
+            $"api/workspaces/{Session.WorkspaceId:N}/cashflow/{entity.Id:N}",
+            command,
+            cancellationToken).ConfigureAwait(false);
+    }
 
     public override async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {

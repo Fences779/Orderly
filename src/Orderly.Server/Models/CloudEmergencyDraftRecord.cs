@@ -4,6 +4,7 @@ public sealed class CloudEmergencyDraftRecord
 {
     public Guid Id { get; set; }
     public Guid WorkspaceId { get; set; }
+    public Guid SubmittedByUserId { get; set; }
     public string EntityType { get; set; } = string.Empty;
     public Guid? EntityId { get; set; }
     public string OperationType { get; set; } = string.Empty;

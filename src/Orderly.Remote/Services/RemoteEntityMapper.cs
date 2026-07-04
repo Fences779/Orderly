@@ -126,6 +126,71 @@ public static class RemoteEntityMapper
         return insight;
     }
 
+    public static CloudProductDto ToDto(this Product entity) => new()
+    {
+        Id = entity.Id,
+        WorkspaceId = entity.WorkspaceId,
+        Name = entity.Name,
+        Code = entity.Code ?? string.Empty,
+        ProductType = entity.ProductType,
+        Description = entity.Description,
+        DefaultUnitId = entity.DefaultUnitId,
+        SupplierId = entity.SupplierId,
+        DefaultPrice = entity.DefaultPrice.Amount,
+        DefaultCost = entity.DefaultCost.Amount,
+        Revision = 0L,
+        CreatedAtUtc = entity.CreatedAt,
+        UpdatedAtUtc = entity.UpdatedAt,
+        CreatedByUserId = null,
+        UpdatedByUserId = null,
+        Lifecycle = entity.Lifecycle,
+        CustomFieldsJson = entity.CustomFieldsJson
+    };
+
+    public static CloudInventoryItemDto ToDto(this InventoryItem entity) => new()
+    {
+        Id = entity.Id,
+        WorkspaceId = entity.WorkspaceId,
+        Name = entity.Name,
+        Sku = entity.Sku,
+        ProductId = entity.ProductId,
+        ProductVariantId = entity.ProductVariantId,
+        UnitId = entity.UnitId,
+        QuantityAvailable = entity.QuantityAvailable,
+        ReorderThreshold = entity.ReorderThreshold,
+        UnitCost = entity.UnitCost.Amount,
+        Revision = 0L,
+        CreatedAtUtc = entity.CreatedAt,
+        UpdatedAtUtc = entity.UpdatedAt,
+        CreatedByUserId = null,
+        UpdatedByUserId = null,
+        Lifecycle = entity.Lifecycle,
+        CustomFieldsJson = entity.CustomFieldsJson
+    };
+
+    public static CloudCashFlowEntryDto ToDto(this CashFlowEntry entity) => new()
+    {
+        Id = entity.Id,
+        WorkspaceId = entity.WorkspaceId,
+        Direction = entity.Direction,
+        Amount = entity.Amount.Amount,
+        SettledAmount = entity.SettledAmount.Amount,
+        SettlementStatus = entity.SettlementStatus,
+        OccurredAtUtc = entity.OccurredAt,
+        DueDateUtc = entity.DueDate,
+        CategoryName = entity.CategoryName ?? string.Empty,
+        OrderId = entity.OrderId,
+        PaymentRecordId = entity.PaymentRecordId,
+        BusinessKey = entity.BusinessKey,
+        Revision = 0L,
+        CreatedAtUtc = entity.CreatedAt,
+        UpdatedAtUtc = entity.UpdatedAt,
+        CreatedByUserId = null,
+        UpdatedByUserId = null,
+        Lifecycle = entity.Lifecycle,
+        CustomFieldsJson = entity.CustomFieldsJson
+    };
+
     public static DashboardSnapshot ToSnapshot(this CloudDashboardDto dto)
     {
         return new DashboardSnapshot

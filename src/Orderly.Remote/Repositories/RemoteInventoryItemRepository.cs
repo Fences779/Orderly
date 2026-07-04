@@ -18,11 +18,56 @@ public sealed class RemoteInventoryItemRepository : RemoteCommerceRepositoryBase
     protected override string CacheEntityType => EntityType.InventoryItem;
     protected override InventoryItem Map(CloudInventoryItemDto dto) => dto.ToEntity();
 
-    public override Task<InventoryItem> CreateAsync(InventoryItem entity, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Inventory items are created indirectly through products or stocktake adjustments in the cloud runtime.");
+    public override async Task<InventoryItem> CreateAsync(InventoryItem entity, CancellationToken cancellationToken = default)
+    {
+        var command = new CreateInventoryItemCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = 0L,
+            Name = entity.Name,
+            Sku = entity.Sku,
+            ProductId = entity.ProductId,
+            ProductVariantId = entity.ProductVariantId,
+            UnitId = entity.UnitId,
+            QuantityAvailable = entity.QuantityAvailable,
+            ReorderThreshold = entity.ReorderThreshold,
+            UnitCost = entity.UnitCost.Amount
+        };
 
-    public override Task UpdateAsync(InventoryItem entity, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Inventory item master data updates are not exposed remotely; use inventory movements to adjust quantity.");
+        var dto = await Client.PostAsync<CreateInventoryItemCommand, CloudInventoryItemDto>(
+            $"api/workspaces/{Session.WorkspaceId:N}/inventory/items",
+            command,
+            cancellationToken).ConfigureAwait(false);
+
+        return dto?.ToEntity() ?? entity;
+    }
+
+    public override async Task UpdateAsync(InventoryItem entity, CancellationToken cancellationToken = default)
+    {
+        var latest = await Client.GetAsync<CloudInventoryItemDto>(
+            $"api/workspaces/{Session.WorkspaceId:N}/inventory/items/{entity.Id:N}",
+            cancellationToken).ConfigureAwait(false);
+
+        var command = new UpdateInventoryItemCommand
+        {
+            ClientRequestId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = latest?.Revision ?? 0L,
+            InventoryItemId = entity.Id,
+            Name = entity.Name,
+            Sku = entity.Sku,
+            ProductId = entity.ProductId,
+            ProductVariantId = entity.ProductVariantId,
+            UnitId = entity.UnitId,
+            QuantityAvailable = entity.QuantityAvailable,
+            ReorderThreshold = entity.ReorderThreshold,
+            UnitCost = entity.UnitCost.Amount
+        };
+
+        await Client.PutAsync<UpdateInventoryItemCommand>(
+            $"api/workspaces/{Session.WorkspaceId:N}/inventory/items/{entity.Id:N}",
+            command,
+            cancellationToken).ConfigureAwait(false);
+    }
 
     public override async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {

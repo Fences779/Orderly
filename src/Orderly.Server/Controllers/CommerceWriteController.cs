@@ -59,6 +59,40 @@ public class CommerceWriteController : CloudControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPost("products")]
+    public async Task<ActionResult<CloudProductDto>> CreateProductAsync(Guid workspaceId, [FromBody] CreateProductCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.CreateProductAsync(workspaceId, command);
+        return Ok(result.Value);
+    }
+
+    [HttpPut("products/{productId:guid}")]
+    public async Task<ActionResult<CloudProductDto>> UpdateProductAsync(Guid workspaceId, Guid productId, [FromBody] UpdateProductCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        command.ProductId = productId;
+        var result = await _commandService.UpdateProductAsync(workspaceId, productId, command);
+        return Ok(result.Value);
+    }
+
+    [HttpPost("inventory/items")]
+    public async Task<ActionResult<CloudInventoryItemDto>> CreateInventoryItemAsync(Guid workspaceId, [FromBody] CreateInventoryItemCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        var result = await _commandService.CreateInventoryItemAsync(workspaceId, command);
+        return Ok(result.Value);
+    }
+
+    [HttpPut("inventory/items/{itemId:guid}")]
+    public async Task<ActionResult<CloudInventoryItemDto>> UpdateInventoryItemAsync(Guid workspaceId, Guid itemId, [FromBody] UpdateInventoryItemCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        command.InventoryItemId = itemId;
+        var result = await _commandService.UpdateInventoryItemAsync(workspaceId, itemId, command);
+        return Ok(result.Value);
+    }
+
     [HttpPost("inventory/movements")]
     public async Task<ActionResult<CloudInventoryMovementDto>> RecordMovementAsync(Guid workspaceId, [FromBody] InventoryMovementCommand command)
     {
@@ -121,6 +155,15 @@ public class CommerceWriteController : CloudControllerBase
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var result = await _commandService.RecordCashFlowAsync(workspaceId, command, kind);
+        return Ok(result.Value);
+    }
+
+    [HttpPut("cashflow/{entryId:guid}")]
+    public async Task<ActionResult<CloudCashFlowEntryDto>> UpdateCashFlowEntryAsync(Guid workspaceId, Guid entryId, [FromBody] UpdateCashFlowEntryCommand command)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
+        command.CashFlowEntryId = entryId;
+        var result = await _commandService.UpdateCashFlowEntryAsync(workspaceId, entryId, command);
         return Ok(result.Value);
     }
 
