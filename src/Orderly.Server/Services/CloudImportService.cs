@@ -60,7 +60,7 @@ public sealed class CloudImportService : ICloudImportService
         await using var transaction = await BeginTransactionAsync(connection, cancellationToken);
 
         await InsertBatchAsync(connection, transaction, batchId, workspaceId, request.SourceInstanceId, fingerprint, report, userId, now);
-        var (resolved, existingMapped, issues) = await ResolveTargetsAsync(connection, transaction, workspaceId, request.SourceInstanceId, request.Package, batchId);
+        var (resolved, existingMapped, issues) = await ResolveTargetsAsync(connection, transaction, workspaceId, request.SourceInstanceId, request.Package, batchId, persistEntityMap: false);
 
         await transaction.CommitAsync(cancellationToken);
 
@@ -95,19 +95,41 @@ public sealed class CloudImportService : ICloudImportService
 
         try
         {
+            await using (var validationTransaction = await BeginTransactionAsync(connection, cancellationToken))
+            {
+                var (_, _, validationIssues) = await ResolveTargetsAsync(connection, validationTransaction, workspaceId, request.SourceInstanceId, report.Package, batch.Id, persistEntityMap: false);
+                if (validationIssues.Count > 0)
+                {
+                    await validationTransaction.RollbackAsync(cancellationToken);
+                    await using var failedTransaction = await BeginTransactionAsync(connection, cancellationToken);
+                    await UpdateBatchStatusAsync(connection, failedTransaction, batch.Id, "Failed", "导入校验未通过。");
+                    await failedTransaction.CommitAsync(cancellationToken);
+
+                    return new LocalImportCommitResponse
+                    {
+                        BatchId = batch.Id,
+                        Status = "Failed",
+                        Imported = new LocalImportCounts(),
+                        Failures = validationIssues
+                    };
+                }
+            }
+
             await using var transaction = await BeginTransactionAsync(connection, cancellationToken);
 
             var sequence = await _syncService.AllocateSequenceAsync(connection, transaction, workspaceId);
-            var (resolved, _, issues) = await ResolveTargetsAsync(connection, transaction, workspaceId, request.SourceInstanceId, report.Package, batch.Id);
+            var (resolved, existingMapped, issues) = await ResolveTargetsAsync(connection, transaction, workspaceId, request.SourceInstanceId, report.Package, batch.Id, persistEntityMap: true);
+            if (issues.Count > 0)
+            {
+                throw new InvalidOperationException("导入校验未通过。");
+            }
 
             await InsertEntitiesAsync(connection, transaction, workspaceId, resolved, report.Package, userId, sequence, batch.Id);
             await UpdateBatchStatusAsync(connection, transaction, batch.Id, "Committed", null);
 
             await transaction.CommitAsync(cancellationToken);
 
-            var counts = ComputeCounts(resolved, report.Package, 0);
-            counts.ExistingMapped = 0; // committed rows are the imported new records
-            counts.NewRecords = counts.Products + counts.Customers + counts.InventoryItems + counts.Orders + counts.OrderItems + counts.PaymentRecords + counts.CashFlowEntries;
+            var counts = ComputeCounts(resolved, report.Package, existingMapped);
 
             await _auditLog.LogAsync(
                 workspaceId,
@@ -253,7 +275,8 @@ public sealed class CloudImportService : ICloudImportService
         Guid workspaceId,
         Guid sourceInstanceId,
         LocalImportPackage package,
-        Guid batchId)
+        Guid batchId,
+        bool persistEntityMap)
     {
         var resolved = new ResolvedImport();
         var issues = new List<LocalImportIssue>();
@@ -278,7 +301,8 @@ public sealed class CloudImportService : ICloudImportService
                         @"SELECT ""Id"" FROM ""CommerceProducts"" WHERE ""WorkspaceId"" = @workspaceId AND ""Code"" = @code AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0;",
                         new { workspaceId, code = dto.Code.Trim() }, transaction);
                 },
-                batchId);
+                batchId,
+                persistEntityMap);
 
             resolved.Products[dto.SourceLocalEntityId] = targetId;
             if (isExisting) existingMapped++;
@@ -302,7 +326,8 @@ public sealed class CloudImportService : ICloudImportService
                         @"SELECT ""Id"" FROM ""CommerceCustomers"" WHERE ""WorkspaceId"" = @workspaceId AND ""Phone"" = @phone AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0;",
                         new { workspaceId, phone = dto.Phone.Trim() }, transaction);
                 },
-                batchId);
+                batchId,
+                persistEntityMap);
 
             resolved.Customers[dto.SourceLocalEntityId] = targetId;
             if (isExisting) existingMapped++;
@@ -326,7 +351,8 @@ public sealed class CloudImportService : ICloudImportService
                         @"SELECT ""Id"" FROM ""CommerceInventoryItems"" WHERE ""WorkspaceId"" = @workspaceId AND ""Sku"" = @sku AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0;",
                         new { workspaceId, sku = dto.Sku.Trim() }, transaction);
                 },
-                batchId);
+                batchId,
+                persistEntityMap);
 
             resolved.InventoryItems[dto.SourceLocalEntityId] = targetId;
             if (isExisting) existingMapped++;
@@ -350,7 +376,8 @@ public sealed class CloudImportService : ICloudImportService
                         @"SELECT ""Id"" FROM ""CommerceOrders"" WHERE ""WorkspaceId"" = @workspaceId AND ""OrderNo"" = @orderNo AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0;",
                         new { workspaceId, orderNo = dto.OrderNo.Trim() }, transaction);
                 },
-                batchId);
+                batchId,
+                persistEntityMap);
 
             resolved.Orders[dto.SourceLocalEntityId] = targetId;
             if (isExisting) existingMapped++;
@@ -364,13 +391,15 @@ public sealed class CloudImportService : ICloudImportService
                 continue;
             }
 
-            var (targetId, _) = await ResolveByMapOrStableKeyAsync(
+            var (targetId, isExisting) = await ResolveByMapOrStableKeyAsync(
                 connection, transaction, workspaceId, sourceInstanceId, "orderItem", dto.SourceLocalEntityId,
                 existingMap,
                 () => Task.FromResult<Guid?>(null),
-                batchId);
+                batchId,
+                persistEntityMap);
 
             resolved.OrderItems[dto.SourceLocalEntityId] = targetId;
+            if (isExisting) existingMapped++;
         }
 
         foreach (var dto in package.PaymentRecords)
@@ -381,13 +410,15 @@ public sealed class CloudImportService : ICloudImportService
                 continue;
             }
 
-            var (targetId, _) = await ResolveByMapOrStableKeyAsync(
+            var (targetId, isExisting) = await ResolveByMapOrStableKeyAsync(
                 connection, transaction, workspaceId, sourceInstanceId, "paymentRecord", dto.SourceLocalEntityId,
                 existingMap,
                 () => Task.FromResult<Guid?>(null),
-                batchId);
+                batchId,
+                persistEntityMap);
 
             resolved.PaymentRecords[dto.SourceLocalEntityId] = targetId;
+            if (isExisting) existingMapped++;
         }
 
         foreach (var dto in package.CashFlowEntries)
@@ -408,12 +439,14 @@ public sealed class CloudImportService : ICloudImportService
                         @"SELECT ""Id"" FROM ""CommerceCashFlowEntries"" WHERE ""WorkspaceId"" = @workspaceId AND ""BusinessKey"" = @businessKey AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0;",
                         new { workspaceId, businessKey = dto.BusinessKey.Trim() }, transaction);
                 },
-                batchId);
+                batchId,
+                persistEntityMap);
 
             resolved.CashFlowEntries[dto.SourceLocalEntityId] = targetId;
             if (isExisting) existingMapped++;
         }
 
+        ValidateReferences(package, resolved, issues);
         return (resolved, existingMapped, issues);
     }
 
@@ -437,7 +470,8 @@ public sealed class CloudImportService : ICloudImportService
         string sourceLocalEntityId,
         Dictionary<string, Guid> existingMap,
         Func<Task<Guid?>> findByStableKey,
-        Guid batchId)
+        Guid batchId,
+        bool persistEntityMap)
     {
         var key = $"{entityType}:{sourceLocalEntityId}";
         if (existingMap.TryGetValue(key, out var mappedId))
@@ -446,15 +480,104 @@ public sealed class CloudImportService : ICloudImportService
         var stableId = await findByStableKey();
         if (stableId.HasValue)
         {
-            await UpsertMapAsync(connection, transaction, workspaceId, sourceInstanceId, entityType, sourceLocalEntityId, stableId.Value, batchId);
+            if (persistEntityMap)
+            {
+                await UpsertMapAsync(connection, transaction, workspaceId, sourceInstanceId, entityType, sourceLocalEntityId, stableId.Value, batchId);
+            }
+
             existingMap[key] = stableId.Value;
             return (stableId.Value, true);
         }
 
         var newId = Guid.NewGuid();
-        await UpsertMapAsync(connection, transaction, workspaceId, sourceInstanceId, entityType, sourceLocalEntityId, newId, batchId);
+        if (persistEntityMap)
+        {
+            await UpsertMapAsync(connection, transaction, workspaceId, sourceInstanceId, entityType, sourceLocalEntityId, newId, batchId);
+        }
+
         existingMap[key] = newId;
         return (newId, false);
+    }
+
+    private static void ValidateReferences(LocalImportPackage package, ResolvedImport resolved, List<LocalImportIssue> issues)
+    {
+        foreach (var dto in package.Orders)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.SourceCustomerLocalEntityId)
+                && !resolved.Customers.ContainsKey(dto.SourceCustomerLocalEntityId))
+            {
+                issues.Add(new LocalImportIssue
+                {
+                    EntityType = EntityType.Order,
+                    SourceLocalEntityId = dto.SourceLocalEntityId,
+                    Message = "订单引用的客户不存在。"
+                });
+            }
+        }
+
+        foreach (var dto in package.OrderItems)
+        {
+            if (string.IsNullOrWhiteSpace(dto.SourceOrderLocalEntityId)
+                || !resolved.Orders.ContainsKey(dto.SourceOrderLocalEntityId))
+            {
+                issues.Add(new LocalImportIssue
+                {
+                    EntityType = "orderItem",
+                    SourceLocalEntityId = dto.SourceLocalEntityId,
+                    Message = "订单明细引用的订单不存在。"
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.SourceProductLocalEntityId)
+                && !resolved.Products.ContainsKey(dto.SourceProductLocalEntityId))
+            {
+                issues.Add(new LocalImportIssue
+                {
+                    EntityType = "orderItem",
+                    SourceLocalEntityId = dto.SourceLocalEntityId,
+                    Message = "订单明细引用的商品不存在。"
+                });
+            }
+        }
+
+        foreach (var dto in package.CashFlowEntries)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.SourceOrderLocalEntityId)
+                && !resolved.Orders.ContainsKey(dto.SourceOrderLocalEntityId))
+            {
+                issues.Add(new LocalImportIssue
+                {
+                    EntityType = EntityType.CashFlowEntry,
+                    SourceLocalEntityId = dto.SourceLocalEntityId,
+                    Message = "现金流引用的订单不存在。"
+                });
+            }
+        }
+
+        foreach (var dto in package.PaymentRecords)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.SourceOrderLocalEntityId)
+                && !resolved.Orders.ContainsKey(dto.SourceOrderLocalEntityId))
+            {
+                issues.Add(new LocalImportIssue
+                {
+                    EntityType = "paymentRecord",
+                    SourceLocalEntityId = dto.SourceLocalEntityId,
+                    Message = "付款记录引用的订单不存在。"
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.SourceCashFlowEntryLocalEntityId)
+                && !resolved.CashFlowEntries.ContainsKey(dto.SourceCashFlowEntryLocalEntityId))
+            {
+                issues.Add(new LocalImportIssue
+                {
+                    EntityType = "paymentRecord",
+                    SourceLocalEntityId = dto.SourceLocalEntityId,
+                    Message = "付款记录引用的现金流不存在。"
+                });
+            }
+        }
     }
 
     private static async Task UpsertMapAsync(
