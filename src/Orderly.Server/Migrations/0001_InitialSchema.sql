@@ -147,6 +147,24 @@ CREATE TABLE IF NOT EXISTS "CloudExportJobs" (
 CREATE INDEX IF NOT EXISTS ix_export_jobs_workspace ON "CloudExportJobs"("WorkspaceId", "CreatedAt" DESC);
 
 -- ---------------------------------------------------------------------------
+-- Emergency drafts
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "CloudEmergencyDrafts" (
+    "Id" UUID PRIMARY KEY,
+    "WorkspaceId" UUID NOT NULL REFERENCES "CloudWorkspaces"("Id"),
+    "EntityType" TEXT NOT NULL,
+    "EntityId" UUID NULL,
+    "OperationType" TEXT NOT NULL,
+    "PayloadJson" TEXT NOT NULL,
+    "BaseRevision" BIGINT NULL,
+    "Status" TEXT NOT NULL,
+    "LastSubmitError" TEXT NULL,
+    "CreatedAt" TIMESTAMPTZ NOT NULL,
+    "SubmittedAt" TIMESTAMPTZ NULL
+);
+CREATE INDEX IF NOT EXISTS ix_emergency_drafts_workspace_status ON "CloudEmergencyDrafts"("WorkspaceId", "Status", "CreatedAt");
+
+-- ---------------------------------------------------------------------------
 -- Sync, idempotency, import
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS "CloudWorkspaceSyncState" (

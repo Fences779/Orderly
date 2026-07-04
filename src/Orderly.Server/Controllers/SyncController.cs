@@ -5,22 +5,63 @@ using Orderly.Server.Services;
 namespace Orderly.Server.Controllers;
 
 [Route("api/workspaces/{workspaceId:guid}/sync")]
+[ApiController]
 public class SyncController : CloudControllerBase
 {
-    public SyncController(ICurrentUserContext currentUser, ICloudAuthService authService, ICloudPermissionService permissions)
+    private readonly IWorkspaceSyncQueryService _syncQueryService;
+
+    public SyncController(
+        ICurrentUserContext currentUser,
+        ICloudAuthService authService,
+        ICloudPermissionService permissions,
+        IWorkspaceSyncQueryService syncQueryService)
         : base(currentUser, authService, permissions)
     {
+        _syncQueryService = syncQueryService;
     }
 
     [HttpPost("snapshots")]
-    public Task<ActionResult<SnapshotTokenResponse>> CreateSnapshotAsync(Guid workspaceId, [FromBody] SnapshotRequest request)
-        => Task.FromResult<ActionResult<SnapshotTokenResponse>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<SnapshotTokenResponse>> CreateSnapshotAsync(Guid workspaceId, [FromBody] SnapshotRequest request, CancellationToken cancellationToken)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId))
+        {
+            return Forbid();
+        }
+
+        var response = await _syncQueryService.CreateSnapshotAsync(workspaceId, request.EntityType, cancellationToken);
+        return Ok(response);
+    }
 
     [HttpGet("snapshots/{snapshotToken}")]
-    public Task<IActionResult> GetSnapshotPageAsync(Guid workspaceId, string snapshotToken, [FromQuery] string entityType, [FromQuery] int page = 1, [FromQuery] int pageSize = 100)
-        => Task.FromResult<IActionResult>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<SnapshotPageResponse<object>>> GetSnapshotPageAsync(
+        Guid workspaceId,
+        string snapshotToken,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 200,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId))
+        {
+            return Forbid();
+        }
+
+        var response = await _syncQueryService.GetSnapshotPageAsync(snapshotToken, page, pageSize, cancellationToken);
+        return Ok(response);
+    }
 
     [HttpGet("changes")]
-    public Task<ActionResult<ChangesResponse>> GetChangesAsync(Guid workspaceId, [FromQuery] long afterSequence, [FromQuery] int limit = 500)
-        => Task.FromResult<ActionResult<ChangesResponse>>(StatusCode(501, new { Error = "Not implemented in this stage." }));
+    public async Task<ActionResult<ChangesResponse>> GetChangesAsync(
+        Guid workspaceId,
+        [FromQuery] long afterSequence = 0,
+        [FromQuery] int maxCount = 200,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await EnsureWorkspaceAccessAsync(workspaceId))
+        {
+            return Forbid();
+        }
+
+        var response = await _syncQueryService.GetChangesAsync(workspaceId, afterSequence, maxCount, cancellationToken);
+        return Ok(response);
+    }
 }

@@ -27,6 +27,12 @@ serverOptions.JwtSigningKey = GetEnvOrConfig("ORDERLY_JWT_SIGNING_KEY", serverOp
 serverOptions.BootstrapAdminToken = GetEnvOrConfig("ORDERLY_BOOTSTRAP_ADMIN_TOKEN", serverOptions.BootstrapAdminToken);
 serverOptions.AllowedOrigins = GetEnvOrConfig("ORDERLY_ALLOWED_ORIGINS", serverOptions.AllowedOrigins);
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_BACKUP_RETENTION_DAYS"), out var retention)) serverOptions.BackupRetentionDays = retention;
+serverOptions.OssEndpoint = GetEnvOrConfig("ORDERLY_OSS_ENDPOINT", serverOptions.OssEndpoint);
+serverOptions.OssBucketName = GetEnvOrConfig("ORDERLY_OSS_BUCKET", serverOptions.OssBucketName);
+serverOptions.OssAccessKeyId = GetEnvOrConfig("ORDERLY_OSS_ACCESS_KEY_ID", serverOptions.OssAccessKeyId);
+serverOptions.OssAccessKeySecret = GetEnvOrConfig("ORDERLY_OSS_ACCESS_KEY_SECRET", serverOptions.OssAccessKeySecret);
+serverOptions.OssBackupPrefix = GetEnvOrConfig("ORDERLY_OSS_BACKUP_PREFIX", serverOptions.OssBackupPrefix);
+serverOptions.OssExportPrefix = GetEnvOrConfig("ORDERLY_OSS_EXPORT_PREFIX", serverOptions.OssExportPrefix);
 
 builder.Services.AddSingleton(serverOptions);
 
@@ -39,8 +45,17 @@ builder.Services.AddScoped<ICloudAuthService, CloudAuthService>();
 builder.Services.AddScoped<ICloudPermissionService, CloudPermissionService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IWorkspaceSyncService, WorkspaceSyncService>();
+builder.Services.AddScoped<IWorkspaceSyncQueryService, WorkspaceSyncQueryService>();
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
 builder.Services.AddScoped<CommerceCommandService>();
+builder.Services.AddScoped<IEmergencyDraftRepository, EmergencyDraftRepository>();
+builder.Services.AddScoped<IEmergencyDraftProcessor, EmergencyDraftProcessor>();
+builder.Services.AddHostedService<EmergencyDraftBackgroundService>();
+builder.Services.AddSingleton<IBlobStorage, AliyunOssBlobStorage>();
+builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddHostedService<ExportBackgroundService>();
+builder.Services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
+builder.Services.AddHostedService<BackupBackgroundService>();
 builder.Services.AddSingleton<ISignalRNotifier, SignalRNotifier>();
 
 // Auth

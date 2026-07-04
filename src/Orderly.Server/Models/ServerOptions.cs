@@ -19,6 +19,18 @@ public sealed class ServerOptions
     public string? BootstrapAdminToken { get; set; }
     public string AllowedOrigins { get; set; } = "*";
 
+    // Object storage (Aliyun OSS) settings for backups and exports.
+    public string OssEndpoint { get; set; } = string.Empty;
+    public string OssBucketName { get; set; } = string.Empty;
+    public string OssAccessKeyId { get; set; } = string.Empty;
+    public string OssAccessKeySecret { get; set; } = string.Empty;
+    public string OssBackupPrefix { get; set; } = "backups/";
+    public string OssExportPrefix { get; set; } = "exports/";
+    public bool OssEnabled => !string.IsNullOrWhiteSpace(OssEndpoint)
+        && !string.IsNullOrWhiteSpace(OssBucketName)
+        && !string.IsNullOrWhiteSpace(OssAccessKeyId)
+        && !string.IsNullOrWhiteSpace(OssAccessKeySecret);
+
     public string GetConnectionString()
     {
         var builder = new Npgsql.NpgsqlConnectionStringBuilder
