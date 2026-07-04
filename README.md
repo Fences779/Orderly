@@ -88,6 +88,7 @@ git status --short
 - `miniprogram/` 与 `cloudfunctions/` 不属于本主线交付范围
 
 ## 文件状态
+- `src/Orderly.Server/Controllers/EmergencyDraftController.cs`、`README.md`（已修改）：云端第 5 个缺口已收口。离线应急草稿仍只允许客户备注、订单备注、订单阶段、业务任务状态 4 类；服务端提交入口现在会当场校验允许类型必须带有效目标实体 Id，非法或格式错误直接返回明确 400，避免用户以为草稿已提交、实际后台才失败。
 - `src/Orderly.Server/Services/WorkspaceSyncQueryService.cs`、`src/Orderly.Server/Controllers/SyncController.cs`、`README.md`（已修改）：云端第 4 个缺口已收口。Snapshot token 改为 30 分钟过期；同一个 token 可按实体分页拉取，分页查询固定在创建 token 时的 `SnapshotSequence`，只返回 `LastChangeSequence <= SnapshotSequence` 的数据；`changes` 支持文档里的 `limit` 参数，并在本地序号太旧、超出 30 天保留窗口或变更日志缺口时返回 `FullResyncRequired`；业务任务也补齐 snapshot DTO 映射。
 - `src/Orderly.Server/Services/CloudImportService.cs`、`README.md`（已修改）：云端第 3 个缺口已收口。本地旧数据导入的 DryRun 现在只生成批次报告和问题清单，不再提前写正式导入映射；Commit 会先做一次无副作用校验，发现缺失本地 ID、订单明细找不到订单、付款记录找不到订单/现金流等问题时直接失败，不写业务数据；重复导入时正确区分已有映射和新增记录数量。
 - `src/Orderly.Server/Services/CloudAuthService.cs`、`src/Orderly.Server/Controllers/UsersController.cs`、`src/Orderly.Server/Hubs/WorkspaceHub.cs`、`src/Orderly.Server/Controllers/PriceChangeController.cs`、`src/Orderly.App/ViewModels/Pages/ProductsPageViewModel.cs`、`WorkbenchPageViewModel.cs`、`src/Orderly.App/Views/Sections/ProductsView.xaml`、`WorkbenchView.xaml`、`src/Orderly.App/Helpers/BindingProxy.cs`、`tests/Orderly.Tests/Ui/ProductsViewContractTests.cs`、`WorkbenchViewContractTests.cs`（新增/已修改）：云端第 1 个缺口已收口。管理员可通过服务端接口重置成员密码；登录失败、账号创建、禁用与重置密码进入审计；refresh token 被重复使用时整组会话作废并提升 token 版本；SignalR 只能加入自己 token 所属工作区；店员只能看自己的改价申请；WPF 店员视角隐藏商品成本、毛利、净现金流与趋势现金流列。

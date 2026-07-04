@@ -31,6 +31,22 @@ public class EmergencyDraftController : CloudControllerBase
         }
 
         var isAllowed = EmergencyDraftAllowedOperations.IsAllowed(draft.EntityType, draft.OperationType);
+        if (isAllowed && string.IsNullOrWhiteSpace(draft.EntityId))
+        {
+            return BadRequest(new { Error = "应急草稿缺少目标实体 Id。" });
+        }
+
+        Guid? entityId = null;
+        if (!string.IsNullOrWhiteSpace(draft.EntityId))
+        {
+            if (!Guid.TryParse(draft.EntityId, out var parsedEntityId))
+            {
+                return BadRequest(new { Error = "应急草稿目标实体 Id 格式不正确。" });
+            }
+
+            entityId = parsedEntityId;
+        }
+
         var status = isAllowed ? EmergencyDraftStatus.Pending : EmergencyDraftStatus.Rejected;
 
         var record = new CloudEmergencyDraftRecord
@@ -39,7 +55,7 @@ public class EmergencyDraftController : CloudControllerBase
             WorkspaceId = workspaceId,
             SubmittedByUserId = UserId,
             EntityType = draft.EntityType,
-            EntityId = string.IsNullOrWhiteSpace(draft.EntityId) ? null : Guid.Parse(draft.EntityId),
+            EntityId = entityId,
             OperationType = draft.OperationType,
             PayloadJson = draft.PayloadJson,
             BaseRevision = draft.BaseRevision,
