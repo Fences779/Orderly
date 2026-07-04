@@ -8,6 +8,7 @@ public interface ICloudCacheStore
 {
     Task<CloudCacheEntryDto?> GetAsync(string entityType, string entityId, CancellationToken cancellationToken = default);
     Task SetAsync(CloudCacheEntryDto entry, CancellationToken cancellationToken = default);
+    Task ReplaceAllAsync(IEnumerable<CloudCacheEntryDto> entries, CancellationToken cancellationToken = default);
     Task RemoveAsync(string entityType, string entityId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CloudCacheEntryDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task ClearAsync(CancellationToken cancellationToken = default);

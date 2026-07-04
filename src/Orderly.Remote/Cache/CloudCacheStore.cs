@@ -19,6 +19,17 @@ public sealed class CloudCacheStore : ICloudCacheStore
         return Task.CompletedTask;
     }
 
+    public Task ReplaceAllAsync(IEnumerable<CloudCacheEntryDto> entries, CancellationToken cancellationToken = default)
+    {
+        _entries.Clear();
+        foreach (var entry in entries)
+        {
+            _entries[GetKey(entry.EntityType, entry.EntityId)] = entry;
+        }
+
+        return Task.CompletedTask;
+    }
+
     public Task RemoveAsync(string entityType, string entityId, CancellationToken cancellationToken = default)
     {
         _entries.TryRemove(GetKey(entityType, entityId), out _);

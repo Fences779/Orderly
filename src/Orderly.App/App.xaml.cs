@@ -73,6 +73,7 @@ public partial class App : System.Windows.Application
     private Orderly.Remote.Clients.RemoteAuthClient? _cloudAuthClient;
     private Orderly.Remote.Realtime.WorkspaceRealtimeClient? _cloudRealtimeClient;
     private Orderly.Remote.Offline.RemoteEmergencyDraftSubmitter? _emergencyDraftSubmitter;
+    private Orderly.Remote.Sync.RemoteWorkspaceSyncClient? _cloudSyncClient;
 
     internal void SetCloudAuthSession(Orderly.Remote.Auth.CloudAuthSession session) => _cloudAuthSession = session;
     private string? _databasePath;
@@ -545,6 +546,7 @@ public partial class App : System.Windows.Application
 
         _loginView?.Close();
         _emergencyDraftSubmitter?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
+        _cloudSyncClient?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
 
         _hotkeyService?.Dispose();
         _trayIconService?.Dispose();

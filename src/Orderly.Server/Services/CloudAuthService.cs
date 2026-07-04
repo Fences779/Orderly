@@ -39,19 +39,19 @@ public sealed class CloudAuthService : ICloudAuthService
 
         if (user == null)
         {
-            // Audit failure without workspace? We need workspace. Use system? For login fail we can log against a system workspace? Simpler: no audit yet.
+            await RecordLoginFailureAsync(connection, null, request.Username, "UserNotFound", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
         if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
         {
-            await AuditLoginFailureAsync(connection, user, "AccountLocked", request.ClientRequestId, ipAddress, userAgent);
+            await RecordLoginFailureAsync(connection, user, request.Username, "AccountLocked", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
         if (!user.IsEnabled)
         {
-            await AuditLoginFailureAsync(connection, user, "AccountDisabled", request.ClientRequestId, ipAddress, userAgent);
+            await RecordLoginFailureAsync(connection, user, request.Username, "AccountDisabled", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
@@ -62,14 +62,14 @@ public sealed class CloudAuthService : ICloudAuthService
             await connection.ExecuteAsync(
                 "UPDATE \"CloudUsers\" SET \"FailedLoginCount\" = @failedCount, \"LockedUntil\" = @lockedUntil, \"UpdatedAt\" = @now WHERE \"Id\" = @id;",
                 new { failedCount, lockedUntil, now = DateTime.UtcNow, id = user.Id });
-            await AuditLoginFailureAsync(connection, user, "BadPassword", request.ClientRequestId, ipAddress, userAgent);
+            await RecordLoginFailureAsync(connection, user, request.Username, "BadPassword", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
         var membership = await GetMembershipForUserAsync(connection, user.Id);
         if (membership == null || !membership.IsEnabled)
         {
-            await AuditLoginFailureAsync(connection, user, "WorkspaceMembershipDisabled", request.ClientRequestId, ipAddress, userAgent);
+            await RecordLoginFailureAsync(connection, user, request.Username, "WorkspaceMembershipDisabled", request.ClientRequestId, ipAddress, userAgent);
             return null;
         }
 
@@ -345,6 +345,22 @@ public sealed class CloudAuthService : ICloudAuthService
         return rows.ToList();
     }
 
+    public async Task<IReadOnlyList<CloudLoginFailureDto>> ListLoginFailuresAsync(Guid workspaceId, int limit = 100)
+    {
+        limit = Math.Clamp(limit, 1, 500);
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var rows = await connection.QueryAsync<CloudLoginFailureDto>(
+            @"SELECT ""Id"", ""WorkspaceId"", ""UserId"", ""Username"", ""Reason"", ""ClientRequestId"",
+                     ""IpAddress"", ""UserAgent"", ""OccurredAt"" AS ""OccurredAtUtc""
+              FROM ""CloudLoginFailures""
+              WHERE ""WorkspaceId"" = @workspaceId OR ""WorkspaceId"" IS NULL
+              ORDER BY ""OccurredAt"" DESC
+              LIMIT @limit;",
+            new { workspaceId, limit });
+        return rows.ToList();
+    }
+
     public async Task EnsureBootstrapAdminAsync(string bootstrapToken)
     {
         if (string.IsNullOrEmpty(_options.BootstrapAdminToken)) return;
@@ -406,16 +422,42 @@ public sealed class CloudAuthService : ICloudAuthService
             new { userId });
     }
 
-    private async Task AuditLoginFailureAsync(
+    private async Task RecordLoginFailureAsync(
         System.Data.Common.DbConnection connection,
-        CloudUserRecord user,
+        CloudUserRecord? user,
+        string username,
         string reason,
         string? clientRequestId,
         string ipAddress,
         string userAgent)
     {
-        var membership = await GetAnyMembershipForUserAsync(connection, user.Id);
-        if (membership == null) return;
+        var membership = user == null
+            ? null
+            : await GetAnyMembershipForUserAsync(connection, user.Id);
+        Guid? workspaceId = membership?.WorkspaceId;
+        Guid? userId = user?.Id;
+
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudLoginFailures"" (
+                ""Id"", ""WorkspaceId"", ""UserId"", ""Username"", ""Reason"",
+                ""ClientRequestId"", ""IpAddress"", ""UserAgent"", ""OccurredAt"")
+              VALUES (
+                @id, @workspaceId, @userId, @username, @reason,
+                @clientRequestId, @ipAddress, @userAgent, @occurredAt);",
+            new
+            {
+                id = Guid.NewGuid(),
+                workspaceId,
+                userId,
+                username = string.IsNullOrWhiteSpace(username) ? "(empty)" : username.Trim(),
+                reason,
+                clientRequestId,
+                ipAddress,
+                userAgent,
+                occurredAt = DateTime.UtcNow
+            });
+
+        if (membership == null || user == null) return;
 
         await _auditLogService.LogAsync(
             connection,

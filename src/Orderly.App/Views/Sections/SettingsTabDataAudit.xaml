@@ -135,5 +135,78 @@
                                 </StackPanel>
                             </Border>
 
+                            <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
+                                <StackPanel>
+                                    <Grid Margin="{StaticResource SettingsHeaderGridMargin}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="本地旧数据导入云端" Style="{StaticResource SettingsGroupTitleStyle}" Margin="{StaticResource SettingsHeaderTitleMargin}" />
+                                            <TextBlock Text="{Binding CloudImportDetailText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="{StaticResource SettingsStatusBadgeRadius}" Padding="{StaticResource SettingsStatusBadgePadding}" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding CloudImportWorkflowStatusText}" Style="{StaticResource SettingsItemTitleStyle}" FontSize="{DynamicResource UiFontSize12_5}" />
+                                        </Border>
+                                    </Grid>
+
+                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="34" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="{StaticResource SettingsStepBadgeRadius}" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="{StaticResource SettingsStepBadgeMargin}">
+                                                <TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="预检查" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="{Binding CloudImportSummaryText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                <UniformGrid Columns="2" Margin="{StaticResource SettingsSectionSpacingSm}">
+                                                    <StackPanel Margin="{StaticResource SettingsPreviewCellMarginWithRightGap}">
+                                                        <TextBlock Text="数据量" Style="{StaticResource SettingsFieldLabelStyle}" />
+                                                        <TextBlock Text="{Binding CloudImportCountsText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <StackPanel Margin="{StaticResource SettingsPreviewCellMarginBottom}">
+                                                        <TextBlock Text="问题" Style="{StaticResource SettingsFieldLabelStyle}" />
+                                                        <TextBlock Text="{Binding CloudImportIssuesText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </UniformGrid>
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="预检查" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                    Command="{Binding PreviewCloudImportCommand}"
+                                                    AutomationProperties.AutomationId="Btn_PreviewCloudImport" />
+                                        </Grid>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="34" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="{StaticResource SettingsStepBadgeRadius}" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="{StaticResource SettingsStepBadgeMargin}">
+                                                <TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="确认导入" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="{Binding CloudImportStatusText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                <CheckBox Margin="{StaticResource SettingsSectionSpacingSm}"
+                                                          Content="{Binding CloudImportConfirmationText}"
+                                                          IsChecked="{Binding IsCloudImportCommitConfirmed}"
+                                                          IsEnabled="{Binding CloudImportDryRun.CanCommit}"
+                                                          AutomationProperties.AutomationId="Chk_CloudImportConfirm" />
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Content="{Binding CloudImportPrimaryActionText}" Style="{StaticResource ToolbarPrimaryButtonStyle}" Height="34" Padding="{StaticResource SettingsPrimaryButtonPadding}"
+                                                    Command="{Binding CommitCloudImportCommand}"
+                                                    AutomationProperties.AutomationId="Btn_CommitCloudImport" />
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
     </StackPanel>
 </UserControl>

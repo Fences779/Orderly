@@ -683,7 +683,8 @@ public sealed class CloudImportService : ICloudImportService
             var dto = package.OrderItems.First(p => p.SourceLocalEntityId == kvp.Key);
             var orderId = resolved.Orders[dto.SourceOrderLocalEntityId];
             var productId = ResolveReference(dto.SourceProductLocalEntityId, dto.ProductId, resolved.Products);
-            await InsertOrderItemAsync(connection, transaction, workspaceId, kvp.Value, dto, orderId, productId, userId, sequence);
+            var inventoryItemId = ResolveReference(dto.SourceInventoryItemLocalEntityId, dto.InventoryItemId, resolved.InventoryItems);
+            await InsertOrderItemAsync(connection, transaction, workspaceId, kvp.Value, dto, orderId, productId, inventoryItemId, userId, sequence);
         }
 
         foreach (var kvp in resolved.CashFlowEntries)
@@ -840,7 +841,7 @@ public sealed class CloudImportService : ICloudImportService
         }, transaction);
     }
 
-    private static async Task InsertOrderItemAsync(IDbConnection connection, IDbTransaction transaction, Guid workspaceId, Guid id, LocalOrderItemDto dto, Guid orderId, Guid? productId, Guid userId, long sequence)
+    private static async Task InsertOrderItemAsync(IDbConnection connection, IDbTransaction transaction, Guid workspaceId, Guid id, LocalOrderItemDto dto, Guid orderId, Guid? productId, Guid? inventoryItemId, Guid userId, long sequence)
     {
         const string sql = @"
             INSERT INTO ""CommerceOrderItems"" (
@@ -864,7 +865,7 @@ public sealed class CloudImportService : ICloudImportService
             orderId,
             productId,
             productVariantId = dto.ProductVariantId,
-            inventoryItemId = dto.InventoryItemId,
+            inventoryItemId,
             unitId = dto.UnitId,
             description = dto.Description,
             quantity = RoundQuantity(dto.Quantity),

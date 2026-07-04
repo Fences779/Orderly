@@ -16,5 +16,6 @@ public interface ICloudAuthService
     Task<bool> ResetPasswordAsync(Guid userId, string newPassword, Guid actorUserId, string? clientRequestId = null);
     Task InvalidateSessionsAsync(Guid userId);
     Task<IReadOnlyList<UserSummaryDto>> ListUsersAsync(Guid workspaceId);
+    Task<IReadOnlyList<CloudLoginFailureDto>> ListLoginFailuresAsync(Guid workspaceId, int limit = 100);
     Task EnsureBootstrapAdminAsync(string bootstrapToken);
 }

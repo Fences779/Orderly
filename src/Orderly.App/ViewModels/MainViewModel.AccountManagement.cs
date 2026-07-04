@@ -90,7 +90,10 @@ public partial class MainViewModel
             SelectBackupFileCommand,
             ExportBackupCommand,
             ValidateBackupCommand,
-            RestoreBackupCommand);
+            RestoreBackupCommand,
+            PreviewCloudImportCommand,
+            CommitCloudImportCommand);
+        NotifyCloudImportStateChanged();
     }
 
     partial void OnSelectedManagedAccountChanged(LocalAccountSummary? value)

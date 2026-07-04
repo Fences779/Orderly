@@ -47,8 +47,42 @@ public sealed class SqliteCloudCacheStore : ICloudCacheStore
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        await UpsertAsync(connection, null, entry, cancellationToken);
+    }
+
+    public async Task ReplaceAllAsync(IEnumerable<CloudCacheEntryDto> entries, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = connection.BeginTransaction();
+
+        await using (var delete = connection.CreateCommand())
+        {
+            delete.Transaction = transaction;
+            delete.CommandText = "DELETE FROM CloudCacheEntries;";
+            await delete.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        foreach (var entry in entries)
+        {
+            await UpsertAsync(connection, transaction, entry, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static async Task UpsertAsync(
+        SqliteConnection connection,
+        SqliteTransaction? transaction,
+        CloudCacheEntryDto entry,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
 
         await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO CloudCacheEntries (EntityType, EntityId, PayloadJson, Revision, CachedAtUtc)
             VALUES ($entityType, $entityId, $payloadJson, $revision, $cachedAtUtc)

@@ -85,6 +85,7 @@ public sealed class LocalOrderItemDto
     public string SourceLocalEntityId { get; set; } = string.Empty;
     public string SourceOrderLocalEntityId { get; set; } = string.Empty;
     public string? SourceProductLocalEntityId { get; set; }
+    public string? SourceInventoryItemLocalEntityId { get; set; }
     public Guid? ProductId { get; set; }
     public Guid? ProductVariantId { get; set; }
     public Guid? InventoryItemId { get; set; }

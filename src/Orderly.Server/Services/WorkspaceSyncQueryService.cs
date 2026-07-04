@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Dapper;
 using Orderly.Contracts.Commerce;
+using Orderly.Contracts.Permissions;
 using Orderly.Contracts.Sync;
 using Orderly.Core.Commerce;
 using Orderly.Server.Data;
@@ -92,6 +93,19 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         }
 
         var canViewCosts = _permissions.CanViewCosts(membership);
+        if (!CanSyncEntityType(requestedEntityType, canViewCosts))
+        {
+            return new SnapshotPageResponse<object>
+            {
+                SnapshotToken = snapshotToken,
+                EntityType = requestedEntityType,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = 0,
+                Items = Array.Empty<object>(),
+                SnapshotSequence = payload.Sequence
+            };
+        }
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
@@ -131,6 +145,7 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         {
             throw new UnauthorizedAccessException("Workspace access denied.");
         }
+        var canViewCosts = _permissions.CanViewCosts(membership);
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
         var lastSequence = await GetLatestSequenceAsync(connection, workspaceId);
@@ -145,15 +160,26 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
             };
         }
 
-        const string sql = @"
+        var restrictedWhere = canViewCosts
+            ? string.Empty
+            : @" AND ""EntityType"" <> @cashFlowEntityType AND ""EntityType"" <> @businessInsightEntityType";
+        var sql = $@"
             SELECT ""Sequence"", ""EntityType"", ""EntityId"", ""Action"", ""Revision"", ""ActorUserId"", ""OccurredAt"", ""PayloadHintJson""
             FROM ""CloudChangeLog""
             WHERE ""WorkspaceId"" = @workspaceId AND ""Sequence"" > @afterSequence
+            {restrictedWhere}
             ORDER BY ""Sequence"" ASC
             LIMIT @maxCount;";
 
-        var rows = await connection.QueryAsync(sql, new { workspaceId, afterSequence, maxCount });
-        var entries = rows.Select(r => new ChangeLogEntryDto
+        var rows = await connection.QueryAsync(sql, new
+        {
+            workspaceId,
+            afterSequence,
+            maxCount,
+            cashFlowEntityType = EntityType.CashFlowEntry,
+            businessInsightEntityType = EntityType.BusinessInsight
+        });
+        List<ChangeLogEntryDto> entries = rows.Select(r => new ChangeLogEntryDto
         {
             Sequence = (long)r.Sequence,
             EntityType = r.EntityType,
@@ -165,7 +191,7 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
             PayloadHintJson = r.PayloadHintJson
         }).ToList();
 
-        var toSequence = entries.Count > 0 ? entries[^1].Sequence : afterSequence;
+        var toSequence = entries.Count > 0 ? entries[^1].Sequence : lastSequence;
 
         return new ChangesResponse
         {
@@ -235,6 +261,16 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
             "task" => "CommerceBusinessTasks",
             _ => throw new InvalidOperationException($"Unsupported snapshot entity type: {entityType}")
         };
+    }
+
+    private static bool CanSyncEntityType(string entityType, bool canViewCosts)
+    {
+        if (canViewCosts)
+        {
+            return true;
+        }
+
+        return entityType is not ("cashflow" or "insight");
     }
 
     private static async Task<bool> RequiresFullResyncAsync(System.Data.IDbConnection connection, Guid workspaceId, long afterSequence, long lastSequence)
@@ -314,7 +350,7 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         ReceivableAmount = r.ReceivableAmount,
         OrderedAtUtc = r.OrderedAt,
         Note = r.Note,
-        AssignedToUserId = r.AssignedByUserId,
+        AssignedToUserId = r.AssignedToUserId,
         ArchivedByUserId = r.ArchivedByUserId,
         ArchiveReason = r.ArchiveReason
     };

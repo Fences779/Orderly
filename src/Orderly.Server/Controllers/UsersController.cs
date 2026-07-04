@@ -20,6 +20,15 @@ public class UsersController : CloudControllerBase
         return Ok(users);
     }
 
+    [HttpGet("users/login-failures")]
+    public async Task<ActionResult<IReadOnlyList<CloudLoginFailureDto>>> ListLoginFailuresAsync([FromQuery] int limit = 100)
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        var failures = await AuthService.ListLoginFailuresAsync(membership.WorkspaceId, limit);
+        return Ok(failures);
+    }
+
     [HttpPost("users")]
     public async Task<ActionResult<CloudUserDto>> CreateUserAsync([FromBody] CreateUserRequest request)
     {

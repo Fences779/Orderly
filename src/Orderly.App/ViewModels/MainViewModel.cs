@@ -3,6 +3,8 @@ using Orderly.Core.Commerce.Repositories;
 using Orderly.Core.Models;
 using Orderly.Core.Repositories;
 using Orderly.Core.Services;
+using Orderly.Data.Cloud;
+using Orderly.Remote.Services;
 
 namespace Orderly.App.ViewModels;
 
@@ -72,6 +74,8 @@ public partial class MainViewModel : ObservableObject
     private readonly ILocalAccountManagementService? _localAccountManagementService;
     private readonly ISessionContextService? _sessionContextService;
     private readonly IAppUpdateService? _appUpdateService;
+    private readonly IRemoteImportService? _remoteImportService;
+    private readonly ILocalImportPackageBuilder? _localImportPackageBuilder;
 
     /// <summary>「我的页」专属 ViewModel（设计 §8.1 / BC-8），经组合暴露给视图绑定。</summary>
     public MeProfileViewModel MeProfile { get; }
@@ -118,7 +122,9 @@ public partial class MainViewModel : ObservableObject
         IEmergencyEnableService? emergencyEnableService = null,
         ICommerceOrderRepository? commerceOrderRepository = null,
         IQuickLoginService? quickLoginService = null,
-        IAppUpdateService? appUpdateService = null)
+        IAppUpdateService? appUpdateService = null,
+        IRemoteImportService? remoteImportService = null,
+        ILocalImportPackageBuilder? localImportPackageBuilder = null)
         : this(
             customerRepository,
             orderRepository,
@@ -155,7 +161,9 @@ public partial class MainViewModel : ObservableObject
             emergencyEnableService,
             commerceOrderRepository,
             quickLoginService,
-            appUpdateService)
+            appUpdateService,
+            remoteImportService,
+            localImportPackageBuilder)
     {
     }
 
@@ -195,7 +203,9 @@ public partial class MainViewModel : ObservableObject
         IEmergencyEnableService? emergencyEnableService = null,
         ICommerceOrderRepository? commerceOrderRepository = null,
         IQuickLoginService? quickLoginService = null,
-        IAppUpdateService? appUpdateService = null)
+        IAppUpdateService? appUpdateService = null,
+        IRemoteImportService? remoteImportService = null,
+        ILocalImportPackageBuilder? localImportPackageBuilder = null)
     {
         _customerRepository = customerRepository;
         _orderRepository = orderRepository;
@@ -223,6 +233,8 @@ public partial class MainViewModel : ObservableObject
         _localAccountManagementService = localAccountManagementService;
         _sessionContextService = sessionContextService;
         _appUpdateService = appUpdateService;
+        _remoteImportService = remoteImportService;
+        _localImportPackageBuilder = localImportPackageBuilder;
         DatabasePath = databasePath;
         InitializeFilterOptions();
 

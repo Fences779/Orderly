@@ -11,6 +11,11 @@ public abstract class RemoteCommerceRepositoryBase<TEntity, TDto>
     where TEntity : CommerceEntity
     where TDto : CloudEntityDto
 {
+    private static readonly JsonSerializerOptions CacheJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     protected RemoteCommerceClient Client { get; }
     protected CloudAuthSession Session { get; }
     private readonly ICloudCacheStore? _cacheStore;
@@ -107,7 +112,7 @@ public abstract class RemoteCommerceRepositoryBase<TEntity, TDto>
         {
             EntityType = CacheEntityType,
             EntityId = entityId,
-            PayloadJson = JsonSerializer.Serialize(dto),
+            PayloadJson = JsonSerializer.Serialize(dto, CacheJsonOptions),
             Revision = dto.Revision,
             CachedAtUtc = DateTime.UtcNow
         };
@@ -125,8 +130,8 @@ public abstract class RemoteCommerceRepositoryBase<TEntity, TDto>
         {
             EntityType = CacheEntityType,
             EntityId = "all",
-            PayloadJson = JsonSerializer.Serialize(paged.Items),
-            Revision = paged.Items.Max(static x => x.Revision),
+            PayloadJson = JsonSerializer.Serialize(paged.Items, CacheJsonOptions),
+            Revision = paged.Items.Count > 0 ? paged.Items.Max(static x => x.Revision) : paged.LatestSequence,
             CachedAtUtc = DateTime.UtcNow
         };
         await _cacheStore.SetAsync(entry, cancellationToken);
@@ -145,7 +150,7 @@ public abstract class RemoteCommerceRepositoryBase<TEntity, TDto>
             return null;
         }
 
-        return JsonSerializer.Deserialize<TDto>(entry.PayloadJson);
+        return JsonSerializer.Deserialize<TDto>(entry.PayloadJson, CacheJsonOptions);
     }
 
     private async Task<IReadOnlyList<TDto>?> TryGetCachedListAsync(CancellationToken cancellationToken)
@@ -161,6 +166,6 @@ public abstract class RemoteCommerceRepositoryBase<TEntity, TDto>
             return null;
         }
 
-        return JsonSerializer.Deserialize<List<TDto>>(entry.PayloadJson);
+        return JsonSerializer.Deserialize<List<TDto>>(entry.PayloadJson, CacheJsonOptions);
     }
 }

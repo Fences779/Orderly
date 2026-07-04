@@ -59,18 +59,18 @@ public sealed class RemoteBusinessTaskService : IBusinessTaskService
             $"api/workspaces/{_session.WorkspaceId:N}/business-tasks/{taskId:N}",
             cancellationToken).ConfigureAwait(false);
 
-        var command = new BusinessTaskStatusCommand
+        var command = new UpdateBusinessTaskStatusCommand
         {
             ClientRequestId = Guid.NewGuid().ToString("N"),
             ExpectedRevision = latest?.Revision ?? 0L,
-            TaskId = taskId,
+            BusinessTaskId = taskId,
             NewStatus = newStatus,
             CompletedAtUtc = completedAtUtc
         };
 
         try
         {
-            var dto = await _client.PostAsync<BusinessTaskStatusCommand, CloudBusinessTaskDto>(
+            var dto = await _client.PostAsync<UpdateBusinessTaskStatusCommand, CloudBusinessTaskDto>(
                 $"api/workspaces/{_session.WorkspaceId:N}/business-tasks/{taskId:N}/status",
                 command,
                 cancellationToken).ConfigureAwait(false);

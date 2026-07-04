@@ -20,8 +20,7 @@ public sealed class RemoteOrderRepository : RemoteCommerceRepositoryBase<Order, 
 
     public override async Task<Order> CreateAsync(Order entity, CancellationToken cancellationToken = default)
     {
-        await Task.CompletedTask.ConfigureAwait(false);
-        throw new InvalidOperationException("Remote orders must be created with line items.");
+        return await CreateAsync(entity, Array.Empty<OrderItem>(), cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Order> CreateAsync(Order entity, IEnumerable<OrderItem> items, CancellationToken cancellationToken = default)
@@ -30,10 +29,6 @@ public sealed class RemoteOrderRepository : RemoteCommerceRepositoryBase<Order, 
         ArgumentNullException.ThrowIfNull(items);
 
         var lineItems = items.ToList();
-        if (lineItems.Count == 0)
-        {
-            throw new InvalidOperationException("Remote orders must contain at least one line item.");
-        }
 
         var command = new CreateOrderCommand
         {

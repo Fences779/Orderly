@@ -23,6 +23,7 @@ using Orderly.Remote.Clients;
 using Orderly.Remote.Realtime;
 using Orderly.Remote.Repositories;
 using Orderly.Remote.Services;
+using Orderly.Remote.Sync;
 
 namespace Orderly.App;
 
@@ -178,6 +179,8 @@ public partial class App
         Orderly.Core.Commerce.Repositories.IInventoryItemRepository commerceInventoryItemRepository;
         Orderly.Core.Commerce.Repositories.ICommerceCustomerRepository commerceCustomerRepository;
         Orderly.Core.Commerce.Repositories.ICashFlowEntryRepository commerceCashFlowRepository;
+        IRemoteImportService? remoteImportService = null;
+        ILocalImportPackageBuilder? localImportPackageBuilder = null;
 
         if (string.Equals(runtime, "Cloud", StringComparison.OrdinalIgnoreCase) && _cloudAuthSession?.IsAuthenticated == true)
         {
@@ -194,10 +197,13 @@ public partial class App
             commerceDashboardService = new RemoteDashboardService(remoteClient, _cloudAuthSession);
             commerceOrderService = new RemoteOrderService(remoteClient, _cloudAuthSession, emergencyDraftQueue);
             commerceInventoryService = new RemoteInventoryService(remoteClient, _cloudAuthSession, emergencyDraftQueue);
-            commerceCustomerService = new RemoteCustomerService(remoteClient, _cloudAuthSession);
+            commerceCustomerService = new RemoteCustomerService(remoteClient, _cloudAuthSession, emergencyDraftQueue);
             commerceCashFlowService = new RemoteCashFlowService(remoteClient, _cloudAuthSession, emergencyDraftQueue);
             commerceBusinessInsightService = new RemoteBusinessInsightService(remoteClient, _cloudAuthSession);
             commerceProductService = new RemoteProductService(remoteClient, _cloudAuthSession);
+            _cloudSyncClient = new RemoteWorkspaceSyncClient(remoteClient, _cloudAuthSession, cloudCacheStore);
+            remoteImportService = new RemoteImportService(remoteClient, _cloudAuthSession);
+            localImportPackageBuilder = new LocalImportPackageBuilder(connectionFactory, databasePath);
 
             _emergencyDraftSubmitter = new Orderly.Remote.Offline.RemoteEmergencyDraftSubmitter(
                 remoteClient,
@@ -327,9 +333,12 @@ public partial class App
             emergencyEnableService,
             commerceOrderRepository,
             _quickLoginService,
-            appUpdateService);
+            appUpdateService,
+            remoteImportService,
+            localImportPackageBuilder);
         _mainViewModel.ConfigureEmergencyDraftSubmitter(_emergencyDraftSubmitter);
         _emergencyDraftSubmitter?.Start();
+        _cloudSyncClient?.Start();
 
         _mainViewModel.LockSessionRequested += HandleLockSessionRequested;
         _mainViewModel.LogoutRequested += HandleLogoutRequested;
@@ -362,7 +371,16 @@ public partial class App
                 {
                     _mainViewModel.MarkCommercePageDirty(section);
                 }
+
+                _ = _cloudSyncClient?.TriggerSyncAsync();
             };
+            if (_cloudSyncClient != null)
+            {
+                _cloudSyncClient.CacheChanged += () =>
+                {
+                    Dispatcher.Invoke(() => _mainViewModel.MarkAllCommercePagesDirty());
+                };
+            }
             _cloudRealtimeClient.ForcedLogout += () =>
             {
                 Dispatcher.Invoke(() =>

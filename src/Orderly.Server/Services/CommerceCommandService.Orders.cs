@@ -18,9 +18,6 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
-        if (!command.Items.Any())
-            throw new InvalidOperationException("订单必须包含至少一个订单项。");
-
         return await ExecuteWithIdempotencyAsync<CreateOrderCommand, CloudOrderDto>(
             workspaceId,
             "order:create",
@@ -29,15 +26,18 @@ public partial class CommerceCommandService
             {
                 var now = DateTime.UtcNow;
                 var orderId = Guid.NewGuid();
+                var orderNo = string.IsNullOrWhiteSpace(command.OrderNo)
+                    ? $"ORD-{now:yyyyMMddHHmmss}-{Guid.NewGuid().ToString("N")[..6]}"
+                    : command.OrderNo.Trim();
 
                 // Ensure order number uniqueness within the workspace.
                 var existingOrder = await connection.ExecuteScalarAsync<Guid?>(
                     @"SELECT ""Id"" FROM ""CommerceOrders""
                      WHERE ""WorkspaceId"" = @workspaceId AND ""OrderNo"" = @orderNo AND ""DeletedAt"" IS NULL;",
-                    new { workspaceId, command.OrderNo },
+                    new { workspaceId, orderNo },
                     transaction);
                 if (existingOrder.HasValue)
-                    throw new InvalidOperationException($"订单编号 {command.OrderNo} 已存在。");
+                    throw new InvalidOperationException($"订单编号 {orderNo} 已存在。");
 
                 var (subtotal, total, cost, grossProfit, grossMargin) = ComputeOrderTotals(command.Items);
 
@@ -62,7 +62,7 @@ public partial class CommerceCommandService
                         createdBy = userId,
                         updatedBy = userId,
                         sequence,
-                        command.OrderNo,
+                        OrderNo = orderNo,
                         command.CustomerId,
                         salesStage = (int)command.SalesStage,
                         paymentStage = (int)command.PaymentStage,
