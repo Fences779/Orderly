@@ -8,6 +8,43 @@
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/LoginResources.A.xaml" />
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/LoginResources.B.xaml" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- 新增复制图标按钮样式 -->
+            <Style x:Key="CopyIconButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="#86868B" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="bg" Background="Transparent" CornerRadius="8" SnapsToDevicePixels="True">
+                                <Viewbox Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Canvas Width="24" Height="24">
+                                        <Path x:Name="iconBack" Data="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1Z" Fill="{TemplateBinding Foreground}" />
+                                        <Path x:Name="iconFront" Data="M19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" Fill="{TemplateBinding Foreground}" />
+                                    </Canvas>
+                                </Viewbox>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="bg" Property="Background" Value="#EBEBEF" />
+                                    <Setter Property="Foreground" Value="#1D1D1F" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="bg" Property="Background" Value="#DFDFE3" />
+                                    <Setter Property="Foreground" Value="#000000" />
+                                    <Setter TargetName="bg" Property="RenderTransform">
+                                        <Setter.Value>
+                                            <ScaleTransform ScaleX="0.95" ScaleY="0.95" CenterX="16" CenterY="16" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid Margin="42,28,28,28">
@@ -62,7 +99,7 @@
 
         <Border x:Name="RecoveryPanel"
                 Grid.RowSpan="3"
-                Background="#66FFFFFF"
+                Background="#B3000000"
                 CornerRadius="24"
                 Visibility="Collapsed">
             <Grid>
@@ -86,24 +123,27 @@
                                    FontSize="14"
                                    TextWrapping="Wrap" />
 
-                        <Border Margin="0,24,0,0"
-                                Padding="18"
-                                Background="#F5F5F7"
-                                CornerRadius="14">
-                            <TextBlock x:Name="TxtRecoveryKeyValue"
-                                       FontFamily="Consolas"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="#000000"
-                                       TextWrapping="Wrap" />
-                        </Border>
-
-                        <Button x:Name="BtnCopyRecoveryKey"
-                                Content="复制密钥"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                HorizontalAlignment="Left"
-                                Margin="0,12,0,0"
-                                Click="BtnCopyRecoveryKey_Click" />
+                        <Grid Margin="0,24,0,0">
+                            <Border Padding="18,18,52,18"
+                                    Background="#F5F5F7"
+                                    CornerRadius="14">
+                                <TextBlock x:Name="TxtRecoveryKeyValue"
+                                           FontFamily="Consolas"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           Foreground="#000000"
+                                           TextWrapping="Wrap" />
+                            </Border>
+                            <Button x:Name="BtnCopyRecoveryKey"
+                                    Style="{StaticResource CopyIconButtonStyle}"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,12,0"
+                                    Width="32"
+                                    Height="32"
+                                    ToolTip="复制密钥"
+                                    Click="BtnCopyRecoveryKey_Click" />
+                        </Grid>
 
                         <TextBlock x:Name="TxtCopyRecoveryKeyStatus"
                                    Margin="2,8,0,0"
@@ -122,33 +162,10 @@
 
                         <Button x:Name="BtnContinueAfterRecovery"
                                 Content="确认并进入系统"
-                                Height="48"
+                                Style="{StaticResource PremiumButtonStyle}"
                                 Margin="0,24,0,0"
                                 IsEnabled="False"
-                                Click="BtnContinueAfterRecovery_Click">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Background" Value="#000000"/>
-                                    <Setter Property="Foreground" Value="#FFFFFF"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" CornerRadius="12">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsEnabled" Value="False">
-                                            <Setter Property="Background" Value="#E5E5EA"/>
-                                            <Setter Property="Foreground" Value="#A1A1A6"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                                Click="BtnContinueAfterRecovery_Click" />
                     </StackPanel>
                 </Border>
             </Grid>
