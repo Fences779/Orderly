@@ -400,9 +400,77 @@
                                                 <RowDefinition Height="Auto" />
                                             </Grid.RowDefinitions>
                                             <TextBlock Grid.Row="0" Text="校验日志详情" Style="{StaticResource SettingsItemTitleStyle}" Margin="{StaticResource SettingsFieldHeaderMargin}" />
-                                            <Border Grid.Row="1" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" CornerRadius="{StaticResource SettingsPathPanelRadius}" Padding="{StaticResource SettingsLogPanelPadding}">
-                                                <TextBlock Text="{Binding DatabaseHealthDetailText}" FontSize="{DynamicResource UiFontSize12}" FontFamily="Consolas, Courier New" Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" LineHeight="18" />
-                                            </Border>
+                                            <Border Grid.Row="1"
+                                                     Background="#141416"
+                                                     BorderBrush="#252529"
+                                                     BorderThickness="1"
+                                                     CornerRadius="10"
+                                                     ClipToBounds="True"
+                                                     Margin="0,4,0,0">
+                                                 <Grid>
+                                                     <Grid.RowDefinitions>
+                                                         <RowDefinition Height="30" />
+                                                         <RowDefinition Height="Auto" />
+                                                     </Grid.RowDefinitions>
+                                                     
+                                                     <!-- 终端顶部控制栏 -->
+                                                     <Border Grid.Row="0" Background="#1B1B1F" BorderBrush="#252529" BorderThickness="0,0,0,1">
+                                                         <Grid Margin="12,0">
+                                                             <!-- Mac 三色按钮 -->
+                                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                                 <Ellipse Width="8" Height="8" Fill="#FF5F56" Margin="0,0,6,0" />
+                                                                 <Ellipse Width="8" Height="8" Fill="#FFBD2E" Margin="0,0,6,0" />
+                                                                 <Ellipse Width="8" Height="8" Fill="#27C93F" />
+                                                             </StackPanel>
+                                                             
+                                                             <!-- 标题小字 -->
+                                                             <TextBlock Text="DATABASE VERIFICATION LOGS"
+                                                                        HorizontalAlignment="Right"
+                                                                        VerticalAlignment="Center"
+                                                                        FontSize="10"
+                                                                        FontWeight="Bold"
+                                                                        FontFamily="Consolas, Monaco"
+                                                                        Foreground="#6272A4"
+                                                                        Opacity="0.8" />
+                                                         </Grid>
+                                                     </Border>
+                                                     
+                                                     <!-- 终端内容区 -->
+                                                     <Border Grid.Row="1" Background="#141416" Padding="14,12">
+                                                         <TextBlock FontFamily="Consolas, Cascadia Code, Monaco, monospace"
+                                                                    FontSize="12"
+                                                                    Foreground="#F8F8F2"
+                                                                    TextWrapping="Wrap"
+                                                                    LineHeight="18"
+                                                                    VerticalAlignment="Center">
+                                                             <Run Text="orderly-db:~ $ " Foreground="#FF79C6" FontWeight="SemiBold" />
+                                                             <Run Text="{Binding DatabaseHealthDetailText, Mode=OneWay}" />
+                                                             <InlineUIContainer>
+                                                                 <Border x:Name="TermCursor"
+                                                                         Width="6"
+                                                                         Height="12"
+                                                                         Background="#50FA7B"
+                                                                         Margin="2,2,0,0"
+                                                                         VerticalAlignment="Center">
+                                                                     <Border.Triggers>
+                                                                         <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                                                             <BeginStoryboard>
+                                                                                 <Storyboard>
+                                                                                     <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                                      From="1.0" To="0.0"
+                                                                                                      Duration="0:0:0.8"
+                                                                                                      AutoReverse="True"
+                                                                                                      RepeatBehavior="Forever" />
+                                                                                 </Storyboard>
+                                                                             </BeginStoryboard>
+                                                                         </EventTrigger>
+                                                                     </Border.Triggers>
+                                                                 </Border>
+                                                             </InlineUIContainer>
+                                                         </TextBlock>
+                                                     </Border>
+                                                 </Grid>
+                                             </Border>
                                         </Grid>
                                     </Border>
                                 </StackPanel>
