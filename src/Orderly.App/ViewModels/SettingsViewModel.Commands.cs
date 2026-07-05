@@ -58,6 +58,7 @@ public partial class SettingsViewModel
                 var (status, detail) = await CheckDatabaseHealthAsync();
                 DatabaseHealthStatusText = status;
                 DatabaseHealthDetailText = detail;
+                ShowMessageDialog("数据完整性校验", $"数据库健康状态检查已完成。\n\n检测结果：{status}\n详情：{detail}", status == "正常" ? Views.MessageDialogType.Success : Views.MessageDialogType.Warning);
             });
     }
 
@@ -453,6 +454,30 @@ public partial class SettingsViewModel
         }
         catch (UnauthorizedAccessException)
         {
+        }
+    }
+
+    private void ShowMessageDialog(string title, string message, Views.MessageDialogType type)
+    {
+        var dispatcher = System.Windows.Application.Current.MainWindow?.Dispatcher
+            ?? System.Windows.Application.Current.Dispatcher;
+
+        void Show()
+        {
+            var dialog = new Views.MessageDialog(title, message, type)
+            {
+                Owner = GetDialogOwner()
+            };
+            dialog.ShowDialog();
+        }
+
+        if (dispatcher.CheckAccess())
+        {
+            Show();
+        }
+        else
+        {
+            dispatcher.Invoke(Show);
         }
     }
 }

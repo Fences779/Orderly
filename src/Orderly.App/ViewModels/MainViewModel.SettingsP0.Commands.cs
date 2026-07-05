@@ -40,6 +40,7 @@ public partial class MainViewModel
                 var (status, detail) = await CheckDatabaseHealthAsync();
                 DatabaseHealthStatusText = status;
                 DatabaseHealthDetailText = $"[{DateTime.Now:HH:mm:ss}] {detail}";
+                ShowMessageDialog("数据完整性校验", $"数据库健康状态检查已完成。\n\n检测结果：{status}\n详情：{detail}", status == "正常" ? Views.MessageDialogType.Success : Views.MessageDialogType.Warning);
             });
     }
 
@@ -444,6 +445,31 @@ public partial class MainViewModel
                 var info = new FileInfo(DatabasePath);
                 DatabaseSizeText = info.Exists ? FormatFileSize(info.Length) : "数据库文件不存在";
                 DatabaseHealthDetailText = $"[{DateTime.Now:HH:mm:ss}] 数据库优化完成。优化前：{FormatFileSize(sizeBefore)}；优化后：{DatabaseSizeText}。";
+                ShowMessageDialog("数据库优化", $"数据库优化与压缩完成！\n成功优化 {DatabaseSizeText}", Views.MessageDialogType.Success);
             });
+    }
+
+    private void ShowMessageDialog(string title, string message, Views.MessageDialogType type)
+    {
+        var dispatcher = System.Windows.Application.Current.MainWindow?.Dispatcher
+            ?? System.Windows.Application.Current.Dispatcher;
+
+        void Show()
+        {
+            var dialog = new Views.MessageDialog(title, message, type)
+            {
+                Owner = GetDialogOwner()
+            };
+            dialog.ShowDialog();
+        }
+
+        if (dispatcher.CheckAccess())
+        {
+            Show();
+        }
+        else
+        {
+            dispatcher.Invoke(Show);
+        }
     }
 }
