@@ -39,6 +39,7 @@ public partial class LoginOwnerCreatePanel : System.Windows.Controls.UserControl
         TxtRecoveryKeyValue.Text = _viewModel.GeneratedRecoveryKey;
         ChkRecoverySaved.IsChecked = _viewModel.IsRecoveryKeyConfirmed;
         BtnContinueAfterRecovery.IsEnabled = _viewModel.IsRecoveryConfirmationReady;
+        TxtCopyRecoveryKeyStatus.Visibility = Visibility.Collapsed;
     }
 
     private async void BtnCreateOwner_Click(object sender, RoutedEventArgs e)
@@ -58,6 +59,35 @@ public partial class LoginOwnerCreatePanel : System.Windows.Controls.UserControl
     private void BtnContinueAfterRecovery_Click(object sender, RoutedEventArgs e)
     {
         _viewModel?.ConfirmRecoveryKeyAndContinue();
+    }
+
+    private void BtnCopyRecoveryKey_Click(object sender, RoutedEventArgs e)
+    {
+        var recoveryKey = TxtRecoveryKeyValue.Text;
+        if (string.IsNullOrWhiteSpace(recoveryKey))
+        {
+            ShowCopyRecoveryKeyStatus("当前没有可复制的密钥。", isError: true);
+            return;
+        }
+
+        try
+        {
+            System.Windows.Clipboard.SetText(recoveryKey);
+            ShowCopyRecoveryKeyStatus("已复制到剪贴板。");
+        }
+        catch (Exception ex)
+        {
+            ShowCopyRecoveryKeyStatus($"复制失败：{ex.Message}", isError: true);
+        }
+    }
+
+    private void ShowCopyRecoveryKeyStatus(string message, bool isError = false)
+    {
+        TxtCopyRecoveryKeyStatus.Text = message;
+        TxtCopyRecoveryKeyStatus.Foreground = isError
+            ? System.Windows.Media.Brushes.Firebrick
+            : System.Windows.Media.Brushes.ForestGreen;
+        TxtCopyRecoveryKeyStatus.Visibility = Visibility.Visible;
     }
 
     private void ChkRecoverySaved_OnChanged(object sender, RoutedEventArgs e)
