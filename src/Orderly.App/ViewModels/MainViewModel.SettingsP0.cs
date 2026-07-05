@@ -489,6 +489,46 @@ public partial class MainViewModel
 
     public string CurrentThemeLabel => ThemeModeInput switch
     {
+
+    partial void OnFontSizePresetInputChanged(double value)
+    {
+        Orderly.App.Helpers.FontSizeHelper.ApplyFontScale(value);
+
+        _fontSizeSaveCts?.Cancel();
+        _fontSizeSaveCts = new System.Threading.CancellationTokenSource();
+        var token = _fontSizeSaveCts.Token;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(500, token);
+                if (token.IsCancellationRequested) return;
+
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    _ = SaveP0SettingsAsync();
+                });
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        });
+    }
+
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        ThemeModeInput = ThemeModeInput switch
+        {
+            "浅色" => "深色",
+            "深色" => "跟随系统",
+            _ => "浅色"
+        };
+    }
+
+    public string CurrentThemeLabel => ThemeModeInput switch
+    {
         "浅色" => "浅色模式",
         "深色" => "深色模式",
         _ => "跟随系统"
