@@ -22,6 +22,41 @@ public partial class MainViewModel
     [ObservableProperty]
     private string defaultAiModelInput = string.Empty;
 
+    public ObservableCollection<string> AiModelOptions { get; } = new([
+        "deepseek-chat",
+        "deepseek-reasoner",
+        "gpt-4o",
+        "gpt-4o-mini",
+        "claude-3-5-sonnet",
+        "gemini-1.5-pro",
+        "gemini-1.5-flash",
+        "自定义..."
+    ]);
+
+    private string _selectedAiModelOption = "deepseek-chat";
+    public string SelectedAiModelOption
+    {
+        get => _selectedAiModelOption;
+        set
+        {
+            if (SetProperty(ref _selectedAiModelOption, value))
+            {
+                OnPropertyChanged(nameof(IsCustomAiModelActive));
+                if (value != "自定义...")
+                {
+                    DefaultAiModelInput = value;
+                }
+                else if (string.IsNullOrEmpty(DefaultAiModelInput) || AiModelOptions.Contains(DefaultAiModelInput))
+                {
+                    DefaultAiModelInput = "custom-model";
+                }
+            }
+        }
+    }
+
+    public bool IsCustomAiModelActive => SelectedAiModelOption == "自定义...";
+
+
     [ObservableProperty]
     private int aiTimeoutSecondsInput = 15;
 
@@ -150,4 +185,17 @@ public partial class MainViewModel
                 ? "已保存默认模型偏好；若运行时未配置模型，下一次 AI 请求将使用该偏好。"
                 : "已保存默认模型偏好；下一次 AI 请求会优先使用设置页模型覆盖运行时模型。";
     }
+
+    partial void OnDefaultAiModelInputChanged(string value)
+    {
+        if (AiModelOptions.Contains(value))
+        {
+            SelectedAiModelOption = value;
+        }
+        else
+        {
+            SelectedAiModelOption = "自定义...";
+        }
+    }
 }
+

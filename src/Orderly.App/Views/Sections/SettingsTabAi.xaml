@@ -19,6 +19,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <!-- ===== 派生 Thickness 布局令牌（对齐 Shape.xaml 的 UiSpace 4pt 栅格 4/8/12/16/24/32） ===== -->
         <Thickness x:Key="SettingsScrollPadding">0,24,0,24</Thickness>
         <Thickness x:Key="SettingsContentMargin">0,0,24,0</Thickness>
@@ -168,11 +169,19 @@
                                     <TextBlock Text="AI 默认大语言模型" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="优先请求并用于话术推荐的大模型名称" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
-                                         MinWidth="{StaticResource SettingsControlMinWidthWide}"
-                                         Text="{Binding DefaultAiModelInput, UpdateSourceTrigger=PropertyChanged}"
-                                         LostFocus="SettingsTextInput_LostFocus"
-                                         AutomationProperties.AutomationId="Txt_DefaultAiModel" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <ComboBox Style="{StaticResource SettingsRowComboBoxStyle}"
+                                              ItemsSource="{Binding AiModelOptions}"
+                                              SelectedItem="{Binding SelectedAiModelOption, UpdateSourceTrigger=PropertyChanged}"
+                                              LostFocus="SettingsTextInput_LostFocus"
+                                              AutomationProperties.AutomationId="Cbo_DefaultAiModel" />
+                                    <TextBox Style="{StaticResource SettingsRowTextBoxStyle}"
+                                             MinWidth="{StaticResource SettingsControlMinWidthWide}"
+                                             Text="{Binding DefaultAiModelInput, UpdateSourceTrigger=PropertyChanged}"
+                                             LostFocus="SettingsTextInput_LostFocus"
+                                             Visibility="{Binding IsCustomAiModelActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                             AutomationProperties.AutomationId="Txt_DefaultAiModel" />
+                                </StackPanel>
                             </Grid>
                         </Border>
 

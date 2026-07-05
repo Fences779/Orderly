@@ -13,17 +13,42 @@ public partial class SettingsTabAi : System.Windows.Controls.UserControl
 
     private void SettingsTextInput_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (DataContext is not MainViewModel vm || sender is not System.Windows.Controls.TextBox textBox)
+        if (DataContext is not MainViewModel vm)
         {
             return;
         }
 
-        var binding = textBox.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty);
-        binding?.UpdateSource();
+        System.Windows.Data.BindingExpression? binding = null;
+        bool hasError = false;
+        string? validationError = null;
 
-        if (System.Windows.Controls.Validation.GetHasError(textBox))
+        if (sender is System.Windows.Controls.TextBox textBox)
         {
-            var validationError = System.Windows.Controls.Validation.GetErrors(textBox).FirstOrDefault()?.ErrorContent?.ToString();
+            binding = textBox.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty);
+            binding?.UpdateSource();
+            hasError = System.Windows.Controls.Validation.GetHasError(textBox);
+            if (hasError)
+            {
+                validationError = System.Windows.Controls.Validation.GetErrors(textBox).FirstOrDefault()?.ErrorContent?.ToString();
+            }
+        }
+        else if (sender is System.Windows.Controls.ComboBox comboBox)
+        {
+            binding = comboBox.GetBindingExpression(System.Windows.Controls.ComboBox.TextProperty);
+            binding?.UpdateSource();
+            hasError = System.Windows.Controls.Validation.GetHasError(comboBox);
+            if (hasError)
+            {
+                validationError = System.Windows.Controls.Validation.GetErrors(comboBox).FirstOrDefault()?.ErrorContent?.ToString();
+            }
+        }
+        else
+        {
+            return;
+        }
+
+        if (hasError)
+        {
             vm.ReportDeferredSettingsAutoSaveValidationError(
                 string.IsNullOrWhiteSpace(validationError)
                     ? "当前输入无效，未自动保存。"
@@ -33,4 +58,5 @@ public partial class SettingsTabAi : System.Windows.Controls.UserControl
 
         vm.CommitDeferredSettingsAutoSave();
     }
+
 }
