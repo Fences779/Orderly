@@ -20,6 +20,170 @@
             <Thickness x:Key="SettingsLogPanelPadding">12</Thickness>
             <CornerRadius x:Key="SettingsPathPanelRadius">8</CornerRadius>
             <CornerRadius x:Key="SettingsStatusBadgeRadius">6</CornerRadius>
+
+            <!-- 异步操作按钮专用的现代化微动画与 Loading 样式 -->
+            <Style x:Key="AsyncLoadingActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SettingsRowActionButtonStyle}">
+                <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+                <Setter Property="RenderTransform">
+                    <Setter.Value>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Chrome"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="8"
+                                    SnapsToDevicePixels="True">
+                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!-- 旋转加载环 -->
+                                        <Grid x:Name="LoadingSpinner"
+                                              Width="0"
+                                              Height="14"
+                                              Opacity="0"
+                                              Margin="0"
+                                              RenderTransformOrigin="0.5,0.5"
+                                              VerticalAlignment="Center">
+                                            <Grid.RenderTransform>
+                                                <RotateTransform x:Name="SpinnerTransform" Angle="0" />
+                                            </Grid.RenderTransform>
+                                            <!-- 背景淡环 -->
+                                            <Ellipse Stroke="{DynamicResource BorderBrushSoft}" StrokeThickness="2" Width="12" Height="12" Opacity="0.3" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <!-- 主色前景弧 -->
+                                            <Ellipse Stroke="{TemplateBinding Foreground}" StrokeThickness="2" StrokeDashArray="3 1.5" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Grid>
+                                        
+                                        <!-- 按钮内容 -->
+                                        <ContentPresenter x:Name="Presenter"
+                                                          Content="{TemplateBinding Content}"
+                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                          ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                                          VerticalAlignment="Center"
+                                                          RecognizesAccessKey="True" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Chrome" Property="Background" Value="#ECECF1" />
+                                    <Setter Property="Cursor" Value="Hand" />
+                                </Trigger>
+                                
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Chrome" Property="Background" Value="#E2E2E7" />
+                                </Trigger>
+                                
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="Chrome" Property="Background" Value="#F5F2EA" />
+                                    <Setter Property="Foreground" Value="#8B908B" />
+                                    <Setter Property="Cursor" Value="Arrow" />
+                                </Trigger>
+                                
+                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Command.IsRunning}" Value="True">
+                                    <Setter TargetName="Chrome" Property="Background" Value="#F5F2EA" />
+                                    <Setter Property="Foreground" Value="#8B908B" />
+                                    <Setter Property="IsEnabled" Value="False" />
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard x:Name="StartLoading">
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="LoadingSpinner"
+                                                                 Storyboard.TargetProperty="Width"
+                                                                 To="14" Duration="0:0:0.25">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <QuadraticEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <ThicknessAnimation Storyboard.TargetName="LoadingSpinner"
+                                                                    Storyboard.TargetProperty="Margin"
+                                                                    To="0,0,6,0" Duration="0:0:0.25">
+                                                    <ThicknessAnimation.EasingFunction>
+                                                        <QuadraticEase EasingMode="EaseOut" />
+                                                    </ThicknessAnimation.EasingFunction>
+                                                </ThicknessAnimation>
+                                                <DoubleAnimation Storyboard.TargetName="LoadingSpinner"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="1" Duration="0:0:0.2" />
+                                                <DoubleAnimation Storyboard.TargetName="SpinnerTransform"
+                                                                 Storyboard.TargetProperty="Angle"
+                                                                 From="0" To="360" Duration="0:0:1.0"
+                                                                 RepeatBehavior="Forever" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <RemoveStoryboard BeginStoryboardName="StartLoading" />
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="LoadingSpinner"
+                                                                 Storyboard.TargetProperty="Width"
+                                                                 To="0" Duration="0:0:0.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <QuadraticEase EasingMode="EaseIn" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <ThicknessAnimation Storyboard.TargetName="LoadingSpinner"
+                                                                    Storyboard.TargetProperty="Margin"
+                                                                    To="0" Duration="0:0:0.2">
+                                                    <ThicknessAnimation.EasingFunction>
+                                                        <QuadraticEase EasingMode="EaseIn" />
+                                                    </ThicknessAnimation.EasingFunction>
+                                                </ThicknessAnimation>
+                                                <DoubleAnimation Storyboard.TargetName="LoadingSpinner"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0" Duration="0:0:0.15" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Trigger.EnterActions>
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                     To="0.94" Duration="0:0:0.1">
+                                        <DoubleAnimation.EasingFunction>
+                                            <QuadraticEase EasingMode="EaseOut" />
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                     To="0.94" Duration="0:0:0.1">
+                                        <DoubleAnimation.EasingFunction>
+                                            <QuadraticEase EasingMode="EaseOut" />
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </Trigger.EnterActions>
+                        <Trigger.ExitActions>
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                     To="1.0" Duration="0:0:0.25">
+                                        <DoubleAnimation.EasingFunction>
+                                            <BackEase EasingMode="EaseOut" Amplitude="0.5" />
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                     To="1.0" Duration="0:0:0.25">
+                                        <DoubleAnimation.EasingFunction>
+                                            <BackEase EasingMode="EaseOut" Amplitude="0.5" />
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </Trigger.ExitActions>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
     <!--
@@ -174,8 +338,8 @@
                                                 <TextBlock Text="数据库优化与压缩" Style="{StaticResource SettingsItemTitleStyle}" />
                                                 <TextBlock Text="整理碎片空间以提升性能" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
-                                            <Button Grid.Column="1" Content="立即优化" Style="{StaticResource SettingsRowActionButtonStyle}"
-                                                    Command="{Binding OptimizeDatabaseCommand}" />
+                                             <Button Grid.Column="1" Content="立即优化" Style="{StaticResource AsyncLoadingActionButtonStyle}"
+                                                     Command="{Binding OptimizeDatabaseCommand}" />
                                         </Grid>
                                     </Border>
 
@@ -221,7 +385,7 @@
                                                         </TextBlock.Style>
                                                     </TextBlock>
                                                 </Border>
-                                                <Button Content="开始检查" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                <Button Content="开始检查" Style="{StaticResource AsyncLoadingActionButtonStyle}"
                                                         Command="{Binding RunDatabaseHealthCheckCommand}"
                                                         AutomationProperties.AutomationId="Btn_CheckDatabaseHealth" />
                                             </StackPanel>
