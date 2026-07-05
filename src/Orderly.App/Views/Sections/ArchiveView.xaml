@@ -18,24 +18,12 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
+        <!-- Actions -->
         <Grid Grid.Row="0" Margin="0,0,0,24">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="归档数据"
-                           FontSize="{DynamicResource UiFontTitle}"
-                           FontFamily="{StaticResource UiFontFamilyCjk}"
-                           FontWeight="{StaticResource UiFontWeightBold}"
-                           Foreground="{DynamicResource HeadingBrush}" />
-                <TextBlock Text="查看已归档的数据并恢复"
-                           FontSize="{DynamicResource UiFontCaption}"
-                           FontFamily="{StaticResource UiFontFamilyCjk}"
-                           Foreground="{DynamicResource SecondaryTextBrush}"
-                           Margin="0,4,0,0" />
-            </StackPanel>
             <Button Grid.Column="1"
                     Content="刷新"
                     Command="{Binding RefreshCommand}"

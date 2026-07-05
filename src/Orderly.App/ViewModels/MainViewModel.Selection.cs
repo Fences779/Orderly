@@ -166,4 +166,19 @@ public partial class MainViewModel
         SelectedOrderItem = Orders.FirstOrDefault(order => order.Id == orderId)
             ?? _allOrders.FirstOrDefault(order => order.Id == orderId);
     }
+
+    [RelayCommand]
+    private async System.Threading.Tasks.Task OpenArchiveDataDialogAsync()
+    {
+        if (ArchivePage != null)
+        {
+            await ArchivePage.LoadAsync();
+            var dialog = new Views.ArchiveDataDialog()
+            {
+                Owner = System.Windows.Application.Current.MainWindow,
+                DataContext = this
+            };
+            dialog.ShowDialog();
+        }
+    }
 }

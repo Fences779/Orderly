@@ -110,8 +110,7 @@
                                                 <TextBlock Text="查看已归档的数据，并按需恢复" Style="{StaticResource SettingsItemDescStyle}" />
                                             </StackPanel>
                                             <Button Grid.Column="1" Content="查看归档" Style="{StaticResource SettingsRowActionButtonStyle}"
-                                                    Command="{Binding SelectSectionCommand}"
-                                                    CommandParameter="归档数据"
+                                                    Command="{Binding OpenArchiveDataDialogCommand}"
                                                     AutomationProperties.AutomationId="Btn_OpenArchiveData" />
                                         </Grid>
                                     </Border>
