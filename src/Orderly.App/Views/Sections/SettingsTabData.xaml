@@ -97,6 +97,25 @@
                                         </Grid>
                                     </Border>
 
+                                    <!-- 归档数据 - Admin only -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}"
+                                            Visibility="{Binding IsCurrentUserOwner, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="归档数据" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="查看已归档的数据，并按需恢复" Style="{StaticResource SettingsItemDescStyle}" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Content="查看归档" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                    Command="{Binding SelectSectionCommand}"
+                                                    CommandParameter="归档数据"
+                                                    AutomationProperties.AutomationId="Btn_OpenArchiveData" />
+                                        </Grid>
+                                    </Border>
+
                                     <!-- 手动导出备份 - Admin only -->
                                     <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0"
                                             Visibility="{Binding DataContext.IsCurrentUserOwner, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
