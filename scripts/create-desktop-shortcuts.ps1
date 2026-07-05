@@ -11,7 +11,7 @@ $startDescription = 'Orderly Start'
 $shortcuts = @(
   @{
     Name = $devShortcutName
-    TargetPath = Join-Path $repoRoot 'dev-watch.bat'
+    TargetPath = Join-Path $repoRoot 'dev-watch-qa.bat'
     Description = $devDescription
   },
   @{

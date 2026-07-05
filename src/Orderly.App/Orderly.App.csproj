@@ -11,6 +11,10 @@
     <Nullable>enable</Nullable>
     <ApplicationIcon>Assets\Brand\Orderly Logo.ico</ApplicationIcon>
     <StartupObject>Orderly.App.Program</StartupObject>
+    <Version>0.1.4</Version>
+    <FileVersion>0.1.4.0</FileVersion>
+    <AssemblyVersion>0.1.4.0</AssemblyVersion>
+    <InformationalVersion>0.1.4</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

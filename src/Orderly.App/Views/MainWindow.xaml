@@ -159,27 +159,6 @@
                 </Border>
             </Border>
 
-            <TextBlock Grid.Row="2" Text="{Binding CloudStatusBarText}" Foreground="{DynamicResource MutedBrush}" Margin="0,12,0,0">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Visibility" Value="Visible" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedSection}" Value="工作台">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedSection}" Value="订单履约">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedSection}" Value="异常处理">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedSection}" Value="设置">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
             <!-- 通用 Toast 气泡提示（由复制成功提示泛化而来，按 ToastSeverity 着色；复制提示与设置保存提示统一经其呈现，详见 design §5.3 / BC-7） -->
             <Popup x:Name="Popup_Toast" Placement="Mouse" AllowsTransparency="True" HorizontalOffset="10" VerticalOffset="10">
                 <Border x:Name="Border_Toast" Background="#222224" CornerRadius="8" Padding="12,6" BorderThickness="0">
@@ -195,4 +174,3 @@
         </Grid>
     </Grid>
 </Window>
-
