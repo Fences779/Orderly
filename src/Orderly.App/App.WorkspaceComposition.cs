@@ -343,6 +343,20 @@ public partial class App
             {
                 Dispatcher.Invoke(() => _mainViewModel.SetCloudSyncStatus(status));
             };
+            _cloudSyncClient.ConnectivityChanged += isOnline =>
+            {
+                Dispatcher.Invoke(() => _mainViewModel.SetCloudConnectivity(isOnline));
+            };
+        }
+        if (_emergencyDraftSubmitter is not null && _cloudSyncClient is not null)
+        {
+            _emergencyDraftSubmitter.ConnectivityChanged += isOnline =>
+            {
+                if (isOnline)
+                {
+                    _ = _cloudSyncClient.TriggerSyncAsync();
+                }
+            };
         }
         _emergencyDraftSubmitter?.Start();
         _cloudSyncClient?.Start();

@@ -28,6 +28,7 @@ public sealed class RemoteWorkspaceSyncClient : IAsyncDisposable
 
     public event Action? CacheChanged;
     public event Action<string>? SyncStatusChanged;
+    public event Action<bool>? ConnectivityChanged;
 
     public RemoteWorkspaceSyncClient(
         RemoteCommerceClient client,
@@ -63,13 +64,29 @@ public sealed class RemoteWorkspaceSyncClient : IAsyncDisposable
         try
         {
             PublishStatus("正在补同步");
+            await MarkSyncAttemptAsync(cancellationToken).ConfigureAwait(false);
             await SyncOnceAsync(cancellationToken).ConfigureAwait(false);
+            await MarkSyncSuccessAsync(cancellationToken).ConfigureAwait(false);
+            ConnectivityChanged?.Invoke(true);
             PublishStatus("缓存可看");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
-            PublishStatus("同步失败，继续使用本地缓存");
+            var failureCount = await MarkSyncFailureAsync(ex.Message, cancellationToken).ConfigureAwait(false);
+            ConnectivityChanged?.Invoke(false);
+            PublishStatus(failureCount > 1
+                ? $"同步失败 {failureCount} 次，继续使用本地缓存"
+                : "同步失败，继续使用本地缓存");
             throw;
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            var failureCount = await MarkSyncFailureAsync("同步请求超时。", cancellationToken).ConfigureAwait(false);
+            ConnectivityChanged?.Invoke(false);
+            PublishStatus(failureCount > 1
+                ? $"同步失败 {failureCount} 次，继续使用本地缓存"
+                : "同步失败，继续使用本地缓存");
+            throw new HttpRequestException("同步请求超时。", ex);
         }
         finally
         {
@@ -219,7 +236,15 @@ public sealed class RemoteWorkspaceSyncClient : IAsyncDisposable
             });
         }
 
-        entries.Add(CreateStateEntry(latestSequence));
+        entries.Add(CreateStateEntry(new SyncState
+        {
+            LastSequence = latestSequence,
+            LastAttemptAtUtc = DateTime.UtcNow,
+            LastSuccessfulSyncAtUtc = DateTime.UtcNow,
+            LastFullResyncAtUtc = DateTime.UtcNow,
+            ConsecutiveFailureCount = 0,
+            LastError = null
+        }));
         await _cacheStore.ReplaceAllAsync(entries, cancellationToken).ConfigureAwait(false);
         CacheChanged?.Invoke();
     }
@@ -355,14 +380,46 @@ public sealed class RemoteWorkspaceSyncClient : IAsyncDisposable
     }
 
     private Task SaveStateAsync(long sequence, CancellationToken cancellationToken)
-        => _cacheStore.SetAsync(CreateStateEntry(sequence), cancellationToken);
+        => UpdateStateAsync(state => state.LastSequence = Math.Max(state.LastSequence, sequence), cancellationToken);
 
-    private static CloudCacheEntryDto CreateStateEntry(long sequence) => new()
+    private Task MarkSyncAttemptAsync(CancellationToken cancellationToken)
+        => UpdateStateAsync(state => state.LastAttemptAtUtc = DateTime.UtcNow, cancellationToken);
+
+    private Task MarkSyncSuccessAsync(CancellationToken cancellationToken)
+        => UpdateStateAsync(state =>
+        {
+            state.LastSuccessfulSyncAtUtc = DateTime.UtcNow;
+            state.ConsecutiveFailureCount = 0;
+            state.LastError = null;
+        }, cancellationToken);
+
+    private async Task<int> MarkSyncFailureAsync(string error, CancellationToken cancellationToken)
+    {
+        var failureCount = 1;
+        await UpdateStateAsync(state =>
+        {
+            state.LastAttemptAtUtc = DateTime.UtcNow;
+            state.ConsecutiveFailureCount++;
+            state.LastError = error;
+            failureCount = state.ConsecutiveFailureCount;
+        }, cancellationToken).ConfigureAwait(false);
+
+        return failureCount;
+    }
+
+    private async Task UpdateStateAsync(Action<SyncState> mutate, CancellationToken cancellationToken)
+    {
+        var state = await LoadStateAsync(cancellationToken).ConfigureAwait(false);
+        mutate(state);
+        await _cacheStore.SetAsync(CreateStateEntry(state), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static CloudCacheEntryDto CreateStateEntry(SyncState state) => new()
     {
         EntityType = SyncStateEntityType,
         EntityId = SyncStateEntityId,
-        PayloadJson = JsonSerializer.Serialize(new SyncState { LastSequence = sequence }, CacheJsonOptions),
-        Revision = sequence,
+        PayloadJson = JsonSerializer.Serialize(state, CacheJsonOptions),
+        Revision = state.LastSequence,
         CachedAtUtc = DateTime.UtcNow
     };
 
@@ -491,5 +548,10 @@ public sealed class RemoteWorkspaceSyncClient : IAsyncDisposable
     private sealed class SyncState
     {
         public long LastSequence { get; set; }
+        public DateTime? LastAttemptAtUtc { get; set; }
+        public DateTime? LastSuccessfulSyncAtUtc { get; set; }
+        public DateTime? LastFullResyncAtUtc { get; set; }
+        public int ConsecutiveFailureCount { get; set; }
+        public string? LastError { get; set; }
     }
 }

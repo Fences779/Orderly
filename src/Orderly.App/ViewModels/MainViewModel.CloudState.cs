@@ -100,6 +100,11 @@ public partial class MainViewModel
         CloudSyncStatusText = string.IsNullOrWhiteSpace(status) ? "缓存可看" : status;
     }
 
+    public void SetCloudConnectivity(bool isOnline)
+    {
+        ApplyConnectivity(isOnline);
+    }
+
     public void ConfigureEmergencyDraftSubmitter(IEmergencyDraftSubmitter? submitter)
     {
         if (_emergencyDraftSubmitter is not null)
