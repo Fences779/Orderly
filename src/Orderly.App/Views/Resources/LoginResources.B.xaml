@@ -98,6 +98,202 @@
     <Setter Property="Margin" Value="2,0,0,8" />
             </Style>
 
+            <!-- Apple 风格精美复选框样式 -->
+            <Style x:Key="PremiumCheckBoxStyle" TargetType="CheckBox">
+                <Setter Property="Foreground" Value="#1D1D1F" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="CheckBox">
+                            <StackPanel Orientation="Horizontal" Background="Transparent">
+                                <Border x:Name="box"
+                                        Width="18"
+                                        Height="18"
+                                        CornerRadius="5"
+                                        BorderThickness="1.5"
+                                        BorderBrush="#DFE3EA"
+                                        Background="#FFFFFF"
+                                        SnapsToDevicePixels="True"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,10,0">
+                                    <Path x:Name="checkMark"
+                                          Width="10"
+                                          Height="8"
+                                          Stretch="Uniform"
+                                          Data="M 0 3.5 L 3.5 7 L 10 0"
+                                          Stroke="#FFFFFF"
+                                          StrokeThickness="2.2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Visibility="Collapsed" />
+                                </Border>
+                                <ContentPresenter x:Name="contentPresenter"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True" />
+                            </StackPanel>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="box" Property="BorderBrush" Value="#8A9AB5" />
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="box" Property="Background" Value="#17181C" />
+                                    <Setter TargetName="box" Property="BorderBrush" Value="#17181C" />
+                                    <Setter TargetName="checkMark" Property="Visibility" Value="Visible" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="box" Property="Background" Value="#F1F2F5" />
+                                    <Setter TargetName="box" Property="BorderBrush" Value="#DFE3EA" />
+                                    <Setter TargetName="contentPresenter" Property="TextElement.Foreground" Value="#A0A5AF" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Apple 风格精美圆形复选框样式 -->
+            <Style x:Key="PremiumRoundCheckBoxStyle" TargetType="CheckBox">
+                <Setter Property="Foreground" Value="#1D1D1F" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="CheckBox">
+                            <StackPanel Orientation="Horizontal" Background="Transparent">
+                                <Grid Width="18"
+                                      Height="18"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,10,0">
+                                    <!-- 1. 默认状态（未选中，未悬浮） -->
+                                    <Border x:Name="defaultBox"
+                                            Width="18"
+                                            Height="18"
+                                            CornerRadius="9"
+                                            BorderThickness="1.5"
+                                            BorderBrush="#DFE3EA"
+                                            Background="#FFFFFF"
+                                            SnapsToDevicePixels="True" />
+                                            
+                                    <!-- 2. 悬浮状态（用于渐变过渡） -->
+                                    <Border x:Name="hoverBox"
+                                            Width="18"
+                                            Height="18"
+                                            CornerRadius="9"
+                                            BorderThickness="1.5"
+                                            BorderBrush="#8A9AB5"
+                                            Background="#FFFFFF"
+                                            Opacity="0"
+                                            SnapsToDevicePixels="True" />
+                                            
+                                    <!-- 3. 选中状态（深色背景 + 勾号） -->
+                                    <Border x:Name="checkedBox"
+                                            Width="18"
+                                            Height="18"
+                                            CornerRadius="9"
+                                            BorderThickness="1.5"
+                                            BorderBrush="#17181C"
+                                            Background="#17181C"
+                                            Opacity="0"
+                                            SnapsToDevicePixels="True">
+                                        <Path x:Name="checkMark"
+                                              Width="10"
+                                              Height="8"
+                                              Stretch="Uniform"
+                                              Data="M 0 3.5 L 3.5 7 L 10 0"
+                                              Stroke="#FFFFFF"
+                                              StrokeThickness="2.2"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round" />
+                                    </Border>
+                                </Grid>
+                                <ContentPresenter x:Name="contentPresenter"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True" />
+                            </StackPanel>
+                            <ControlTemplate.Triggers>
+                                <!-- 悬浮状态动画 -->
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="hoverBox"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="1"
+                                                                 Duration="0:0:0.25">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="hoverBox"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0"
+                                                                 Duration="0:0:0.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                                
+                                <!-- 选中状态动画 -->
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="checkedBox"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="1"
+                                                                 Duration="0:0:0.2">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="checkedBox"
+                                                                 Storyboard.TargetProperty="Opacity"
+                                                                 To="0"
+                                                                 Duration="0:0:0.18">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                                
+                                <!-- 禁用状态控制 -->
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="defaultBox" Property="Background" Value="#F1F2F5" />
+                                    <Setter TargetName="defaultBox" Property="BorderBrush" Value="#DFE3EA" />
+                                    <Setter TargetName="contentPresenter" Property="TextElement.Foreground" Value="#A0A5AF" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <Style x:Key="LinkButtonStyle" TargetType="Button">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="#5F6674" />

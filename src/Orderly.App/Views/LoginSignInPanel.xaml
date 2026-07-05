@@ -126,6 +126,10 @@
                             <TextBlock Text="主密码" Style="{StaticResource FieldLabel}" FontWeight="Bold" Foreground="#1D1D1F" />
                             <PasswordBox x:Name="TxtSignInPassword" Width="320" HorizontalAlignment="Left" KeyDown="TxtSignInPassword_KeyDown" />
                             <CheckBox Margin="0,12,0,0"
+                                      Style="{StaticResource PremiumRoundCheckBoxStyle}"
+                                      FontSize="12"
+                                      FontWeight="Normal"
+                                      Foreground="#606773"
                                       Content="开机后允许快速登录（PIN / Windows Hello）"
                                       IsChecked="{Binding EnableQuickLoginThisBoot}"
                                       Visibility="{Binding ShouldShowQuickLoginOptIn, Converter={StaticResource BooleanToVisibilityConverter}}"

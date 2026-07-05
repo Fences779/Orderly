@@ -131,13 +131,13 @@
         </Setter>
         <Style.Triggers>
             <DataTrigger Binding="{Binding}" Value="默认绿">
-                <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                <Setter Property="Background" Value="#176B47"/>
             </DataTrigger>
             <DataTrigger Binding="{Binding}" Value="茶金">
-                <Setter Property="Background" Value="{DynamicResource WarmTextBrush}"/>
+                <Setter Property="Background" Value="#9A5B00"/>
             </DataTrigger>
             <DataTrigger Binding="{Binding}" Value="雾蓝">
-                <Setter Property="Background" Value="{DynamicResource BlueTextBrush}"/>
+                <Setter Property="Background" Value="#1A5FB4"/>
             </DataTrigger>
         </Style.Triggers>
     </Style>
