@@ -27,6 +27,8 @@
         <Thickness x:Key="SettingsRowPadding">0,12,0,12</Thickness>
         <Thickness x:Key="SettingsRowDescMargin">0,4,0,0</Thickness>
         <Thickness x:Key="SettingsControlLeftMargin">16,0,0,0</Thickness>
+        <Thickness x:Key="SettingsSubRowLeftMargin">24,0,0,0</Thickness>
+        <Thickness x:Key="SettingsModelIconMargin">0,0,8,0</Thickness>
         <Thickness x:Key="SettingsSeparatorThickness">0,0,0,1</Thickness>
         <Thickness x:Key="SettingsZeroThickness">0</Thickness>
 
@@ -169,19 +171,80 @@
                                     <TextBlock Text="AI 默认大语言模型" Style="{StaticResource SettingsRowLabelStyle}" />
                                     <TextBlock Text="优先请求并用于话术推荐的大模型名称" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <ComboBox Style="{StaticResource SettingsRowComboBoxStyle}"
-                                              ItemsSource="{Binding AiModelOptions}"
-                                              SelectedItem="{Binding SelectedAiModelOption, UpdateSourceTrigger=PropertyChanged}"
-                                              LostFocus="SettingsTextInput_LostFocus"
-                                              AutomationProperties.AutomationId="Cbo_DefaultAiModel" />
-                                    <TextBox Style="{StaticResource SettingsRowTextBoxStyle}"
-                                             MinWidth="{StaticResource SettingsControlMinWidthWide}"
-                                             Text="{Binding DefaultAiModelInput, UpdateSourceTrigger=PropertyChanged}"
-                                             LostFocus="SettingsTextInput_LostFocus"
-                                             Visibility="{Binding IsCustomAiModelActive, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                             AutomationProperties.AutomationId="Txt_DefaultAiModel" />
+                                <ComboBox Grid.Column="1" Style="{StaticResource SettingsRowComboBoxStyle}"
+                                          SelectedValue="{Binding SelectedAiModelOption, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectedValuePath="Tag"
+                                          LostFocus="SettingsTextInput_LostFocus"
+                                          AutomationProperties.AutomationId="Cbo_DefaultAiModel">
+                                    <ComboBoxItem Tag="deepseek-chat">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource PurpleTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SettingsModelIconMargin}" />
+                                            <TextBlock Text="deepseek-chat" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Tag="deepseek-reasoner">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource PurpleTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SettingsModelIconMargin}" />
+                                            <TextBlock Text="deepseek-reasoner" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Tag="gpt-4o">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SettingsModelIconMargin}" />
+                                            <TextBlock Text="gpt-4o" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Tag="gpt-4o-mini">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SettingsModelIconMargin}" />
+                                            <TextBlock Text="gpt-4o-mini" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Tag="claude-3-5-sonnet">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource WarmTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SettingsModelIconMargin}" />
+                                            <TextBlock Text="claude-3-5-sonnet" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Tag="gemini-1.5-pro">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource BlueTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SettingsModelIconMargin}" />
+                                            <TextBlock Text="gemini-1.5-pro" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Tag="gemini-1.5-flash">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource BlueTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SettingsModelIconMargin}" />
+                                            <TextBlock Text="gemini-1.5-flash" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </ComboBoxItem>
+                                    <ComboBoxItem Tag="自定义...">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{DynamicResource GreyTextBrush}" VerticalAlignment="Center" Margin="{StaticResource SettingsModelIconMargin}" />
+                                            <TextBlock Text="自定义..." VerticalAlignment="Center" FontWeight="Bold" />
+                                        </StackPanel>
+                                    </ComboBoxItem>
+                                </ComboBox>
+                            </Grid>
+                        </Border>
+
+                        <!-- 自定义大模型名称（缩进联动配置行） -->
+                        <Border Style="{StaticResource SettingsRowStyle}"
+                                Visibility="{Binding IsCustomAiModelActive, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="{StaticResource SettingsSubRowLeftMargin}">
+                                    <TextBlock Text="自定义模型标识符" Style="{StaticResource SettingsRowLabelStyle}" />
+                                    <TextBlock Text="输入您的私有模型或第三方未列出的模型名称" Style="{StaticResource SettingsRowDescStyle}" />
                                 </StackPanel>
+                                <TextBox Grid.Column="1" Style="{StaticResource SettingsRowTextBoxStyle}"
+                                         MinWidth="{StaticResource SettingsControlMinWidthWide}"
+                                         Text="{Binding DefaultAiModelInput, UpdateSourceTrigger=PropertyChanged}"
+                                         LostFocus="SettingsTextInput_LostFocus"
+                                         AutomationProperties.AutomationId="Txt_DefaultAiModel" />
                             </Grid>
                         </Border>
 

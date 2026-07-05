@@ -34,7 +34,7 @@ public partial class SettingsTabAi : System.Windows.Controls.UserControl
         }
         else if (sender is System.Windows.Controls.ComboBox comboBox)
         {
-            binding = comboBox.GetBindingExpression(System.Windows.Controls.ComboBox.TextProperty);
+            binding = comboBox.GetBindingExpression(System.Windows.Controls.ComboBox.SelectedValueProperty);
             binding?.UpdateSource();
             hasError = System.Windows.Controls.Validation.GetHasError(comboBox);
             if (hasError)
