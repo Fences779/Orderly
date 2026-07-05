@@ -42,6 +42,10 @@ services:
       ORDERLY_BACKUP_RETENTION_DAYS: ${ORDERLY_BACKUP_RETENTION_DAYS:-30}
       ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP: ${ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP:-true}
       ORDERLY_LOCAL_BACKUP_DIR: /opt/orderly/backups
+      ORDERLY_LOCAL_EXPORT_DIR: /opt/orderly/exports
+      ORDERLY_EXPORT_RETENTION_HOURS: ${ORDERLY_EXPORT_RETENTION_HOURS:-24}
+      ORDERLY_EXPORT_MAX_RETRY_COUNT: ${ORDERLY_EXPORT_MAX_RETRY_COUNT:-2}
+      ORDERLY_EXPORT_MAX_LOCAL_BYTES: ${ORDERLY_EXPORT_MAX_LOCAL_BYTES:-2147483648}
       ORDERLY_OSS_ENDPOINT: ${ORDERLY_OSS_ENDPOINT:-}
       ORDERLY_OSS_BUCKET: ${ORDERLY_OSS_BUCKET:-}
       ORDERLY_OSS_ACCESS_KEY_ID: ${ORDERLY_OSS_ACCESS_KEY_ID:-}
@@ -50,6 +54,7 @@ services:
       ORDERLY_OSS_EXPORT_PREFIX: ${ORDERLY_OSS_EXPORT_PREFIX:-exports/}
     volumes:
       - orderly-backups:/opt/orderly/backups
+      - orderly-exports:/opt/orderly/exports
     expose:
       - "8080"
     healthcheck:
@@ -78,5 +83,6 @@ services:
 volumes:
   orderly-postgres-data:
   orderly-backups:
+  orderly-exports:
   orderly-caddy-data:
   orderly-caddy-config:

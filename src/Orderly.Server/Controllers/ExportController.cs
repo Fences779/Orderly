@@ -10,15 +10,18 @@ namespace Orderly.Server.Controllers;
 public class ExportController : CloudControllerBase
 {
     private readonly IExportService _exportService;
+    private readonly ServerOptions _options;
 
     public ExportController(
         ICurrentUserContext currentUser,
         ICloudAuthService authService,
         ICloudPermissionService permissions,
-        IExportService exportService)
+        IExportService exportService,
+        ServerOptions options)
         : base(currentUser, authService, permissions)
     {
         _exportService = exportService;
+        _options = options;
     }
 
     [HttpPost("business-package")]
@@ -35,8 +38,15 @@ public class ExportController : CloudControllerBase
             return Forbid();
         }
 
-        var job = await _exportService.CreateJobAsync(workspaceId, UserId, "business-package", cancellationToken);
-        return Accepted(job);
+        try
+        {
+            var job = await _exportService.CreateJobAsync(workspaceId, UserId, "business-package", cancellationToken);
+            return Accepted(job);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("导出目录", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(StatusCodes.Status507InsufficientStorage, new { Error = ex.Message });
+        }
     }
 
     [HttpGet("{exportId:guid}")]
@@ -94,13 +104,18 @@ public class ExportController : CloudControllerBase
                 return NotFound();
             }
 
+            await _exportService.RecordDownloadAsync(
+                workspaceId,
+                exportId,
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Request.Headers.UserAgent.ToString(),
+                cancellationToken);
             return File(stream, "application/zip", job.FileName);
         }
 
-        // Local file fallback.
-        var expectedRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "orderly-exports", workspaceId.ToString("N")));
+        var expectedRoot = Path.GetFullPath(Path.Combine(_options.LocalExportDirectory, workspaceId.ToString("N")));
         var localPath = Path.GetFullPath(job.FilePath);
-        if (!localPath.StartsWith(expectedRoot, StringComparison.OrdinalIgnoreCase))
+        if (!IsUnderDirectory(localPath, expectedRoot))
         {
             return NotFound();
         }
@@ -111,6 +126,21 @@ public class ExportController : CloudControllerBase
         }
 
         var fileStream = System.IO.File.OpenRead(localPath);
+        await _exportService.RecordDownloadAsync(
+            workspaceId,
+            exportId,
+            HttpContext.Connection.RemoteIpAddress?.ToString(),
+            Request.Headers.UserAgent.ToString(),
+            cancellationToken);
         return File(fileStream, "application/zip", job.FileName);
+    }
+
+    private static bool IsUnderDirectory(string path, string root)
+    {
+        var normalizedRoot = Path.GetFullPath(root)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        var normalizedPath = Path.GetFullPath(path);
+        return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
     }
 }

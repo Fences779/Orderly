@@ -10,5 +10,7 @@ public sealed class CloudExportJobDto : CloudEntityDto
     public string? FilePath { get; set; }
     public string? DownloadUrl { get; set; }
     public string? ErrorMessage { get; set; }
+    public int AttemptCount { get; set; }
+    public DateTime? LastAttemptAtUtc { get; set; }
     public DateTime? CompletedAtUtc { get; set; }
 }

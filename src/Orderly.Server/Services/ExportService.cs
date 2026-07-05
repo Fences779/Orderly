@@ -4,6 +4,7 @@ using ClosedXML.Excel;
 using Dapper;
 using Orderly.Contracts.Commerce;
 using Orderly.Contracts.Offline;
+using Orderly.Contracts.Permissions;
 using Orderly.Server.Data;
 using Orderly.Server.Models;
 
@@ -13,6 +14,7 @@ public interface IExportService
 {
     Task<CloudExportJobDto> CreateJobAsync(Guid workspaceId, Guid userId, string scope, CancellationToken cancellationToken = default);
     Task<CloudExportJobDto?> GetJobAsync(Guid workspaceId, Guid exportId, CancellationToken cancellationToken = default);
+    Task RecordDownloadAsync(Guid workspaceId, Guid exportId, string? ipAddress, string? userAgent, CancellationToken cancellationToken = default);
     Task ProcessPendingJobsAsync(CancellationToken cancellationToken = default);
 }
 
@@ -21,16 +23,25 @@ public sealed class ExportService : IExportService
     private readonly PostgresConnectionFactory _connectionFactory;
     private readonly IBlobStorage _blobStorage;
     private readonly ServerOptions _options;
+    private readonly IAuditLogService _auditLogService;
 
-    public ExportService(PostgresConnectionFactory connectionFactory, IBlobStorage blobStorage, ServerOptions options)
+    public ExportService(
+        PostgresConnectionFactory connectionFactory,
+        IBlobStorage blobStorage,
+        ServerOptions options,
+        IAuditLogService auditLogService)
     {
         _connectionFactory = connectionFactory;
         _blobStorage = blobStorage;
         _options = options;
+        _auditLogService = auditLogService;
     }
 
     public async Task<CloudExportJobDto> CreateJobAsync(Guid workspaceId, Guid userId, string scope, CancellationToken cancellationToken = default)
     {
+        await CleanupExpiredExportsAsync(cancellationToken);
+        EnsureLocalExportCapacity(extraBytes: 0);
+
         var job = new CloudExportJobDto
         {
             Id = Guid.NewGuid(),
@@ -41,13 +52,16 @@ public sealed class ExportService : IExportService
         };
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         const string sql = @"
             INSERT INTO ""CloudExportJobs"" (
                 ""Id"", ""WorkspaceId"", ""RequestedByUserId"", ""Scope"", ""Status"",
-                ""FileName"", ""FilePath"", ""ErrorMessage"", ""CreatedAt"", ""CompletedAt"")
+                ""FileName"", ""FilePath"", ""ErrorMessage"", ""AttemptCount"", ""LastAttemptAt"",
+                ""CreatedAt"", ""CompletedAt"")
             VALUES (
                 @Id, @WorkspaceId, @RequestedByUserId, @Scope, @Status,
-                @FileName, @FilePath, @ErrorMessage, @CreatedAt, @CompletedAt);";
+                @FileName, @FilePath, @ErrorMessage, @AttemptCount, @LastAttemptAt,
+                @CreatedAt, @CompletedAt);";
 
         await connection.ExecuteAsync(sql, new
         {
@@ -59,9 +73,23 @@ public sealed class ExportService : IExportService
             FileName = (string?)null,
             FilePath = (string?)null,
             ErrorMessage = (string?)null,
+            AttemptCount = 0,
+            LastAttemptAt = (DateTime?)null,
             CreatedAt = DateTime.UtcNow,
             CompletedAt = (DateTime?)null
-        });
+        }, transaction);
+
+        await _auditLogService.LogAsync(
+            connection,
+            transaction,
+            workspaceId,
+            "ExportRequested",
+            EntityType.ExportJob,
+            job.Id,
+            null,
+            JsonSerializer.Serialize(new { scope }));
+
+        await transaction.CommitAsync(cancellationToken);
 
         return job;
     }
@@ -79,27 +107,49 @@ public sealed class ExportService : IExportService
         return MapJob(row);
     }
 
+    public async Task RecordDownloadAsync(Guid workspaceId, Guid exportId, string? ipAddress, string? userAgent, CancellationToken cancellationToken = default)
+    {
+        await _auditLogService.LogAsync(
+            workspaceId,
+            "ExportDownloaded",
+            EntityType.ExportJob,
+            exportId,
+            null,
+            null,
+            ipAddress: ipAddress,
+            userAgent: userAgent);
+    }
+
     public async Task ProcessPendingJobsAsync(CancellationToken cancellationToken = default)
     {
+        await CleanupExpiredExportsAsync(cancellationToken);
+
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
         const string sql = @"
             SELECT * FROM ""CloudExportJobs""
             WHERE ""Status"" = @pending
+               OR (""Status"" = @failed AND ""AttemptCount"" < @maxRetryCount)
             ORDER BY ""CreatedAt"" ASC
             LIMIT 10;";
 
-        var rows = await connection.QueryAsync(sql, new { pending = EmergencyDraftStatus.Pending });
+        var rows = await connection.QueryAsync(sql, new
+        {
+            pending = EmergencyDraftStatus.Pending,
+            failed = EmergencyDraftStatus.Failed,
+            maxRetryCount = Math.Max(1, _options.ExportMaxRetryCount)
+        });
         var jobs = rows.Select(MapJob).ToList();
 
         foreach (var job in jobs)
         {
+            var attemptCount = await IncrementAttemptAsync(job.Id, cancellationToken);
             try
             {
                 await ProcessJobAsync(job, cancellationToken);
             }
             catch (Exception ex)
             {
-                await UpdateJobStatusAsync(job.Id, EmergencyDraftStatus.Failed, null, null, ex.Message, cancellationToken);
+                await MarkJobFailedAsync(job, attemptCount, ex.Message, cancellationToken);
             }
         }
     }
@@ -108,7 +158,8 @@ public sealed class ExportService : IExportService
     {
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
 
-        var tempFile = Path.GetTempFileName() + ".zip";
+        var tempDirectory = EnsureWorkspaceExportDirectory(job.WorkspaceId);
+        var tempFile = Path.Combine(tempDirectory, $"{job.Id:N}.tmp");
         try
         {
             using (var zipStream = new FileStream(tempFile, FileMode.Create, FileAccess.Write))
@@ -163,15 +214,20 @@ public sealed class ExportService : IExportService
             }
             else
             {
-                // If OSS is not configured, store locally and return a local API URL.
-                var localDir = Path.Combine(Path.GetTempPath(), "orderly-exports", job.WorkspaceId.ToString("N"));
-                Directory.CreateDirectory(localDir);
-                var localPath = Path.Combine(localDir, fileName);
+                EnsureLocalExportCapacity(new FileInfo(tempFile).Length);
+                var localPath = Path.Combine(tempDirectory, fileName);
                 File.Move(tempFile, localPath, overwrite: true);
                 filePath = localPath;
             }
 
             await UpdateJobStatusAsync(job.Id, EmergencyDraftStatus.Submitted, fileName, filePath, null, cancellationToken);
+            await _auditLogService.LogAsync(
+                job.WorkspaceId,
+                "ExportCompleted",
+                EntityType.ExportJob,
+                job.Id,
+                null,
+                JsonSerializer.Serialize(new { fileName, storage = _blobStorage.IsEnabled ? "oss" : "local" }));
         }
         finally
         {
@@ -374,6 +430,144 @@ public sealed class ExportService : IExportService
         });
     }
 
+    private async Task<int> IncrementAttemptAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        return await connection.ExecuteScalarAsync<int>(
+            @"UPDATE ""CloudExportJobs""
+              SET ""AttemptCount"" = ""AttemptCount"" + 1,
+                  ""LastAttemptAt"" = @now
+              WHERE ""Id"" = @id
+              RETURNING ""AttemptCount"";",
+            new { id, now = DateTime.UtcNow });
+    }
+
+    private async Task MarkJobFailedAsync(CloudExportJobDto job, int attemptCount, string error, CancellationToken cancellationToken)
+    {
+        await UpdateJobStatusAsync(job.Id, EmergencyDraftStatus.Failed, null, null, error, cancellationToken);
+        await _auditLogService.LogAsync(
+            job.WorkspaceId,
+            "ExportFailed",
+            EntityType.ExportJob,
+            job.Id,
+            null,
+            JsonSerializer.Serialize(new
+            {
+                attemptCount,
+                maxRetryCount = Math.Max(1, _options.ExportMaxRetryCount),
+                error
+            }));
+    }
+
+    private async Task CleanupExpiredExportsAsync(CancellationToken cancellationToken)
+    {
+        var retentionHours = Math.Max(1, _options.ExportRetentionHours);
+        var cutoff = DateTime.UtcNow.AddHours(-retentionHours);
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync(
+            @"SELECT * FROM ""CloudExportJobs""
+              WHERE ""Status"" = @submitted
+                AND ""CompletedAt"" IS NOT NULL
+                AND ""CompletedAt"" < @cutoff;",
+            new { submitted = EmergencyDraftStatus.Submitted, cutoff });
+
+        foreach (var row in rows)
+        {
+            var job = MapJob(row);
+            await DeleteExportFileAsync(job.FilePath, cancellationToken);
+            await connection.ExecuteAsync(
+                @"UPDATE ""CloudExportJobs""
+                  SET ""Status"" = @expired,
+                      ""FileName"" = NULL,
+                      ""FilePath"" = NULL,
+                      ""ErrorMessage"" = @error
+                  WHERE ""Id"" = @id;",
+                new { id = job.Id, expired = "Expired", error = $"导出文件已超过 {retentionHours} 小时保留期并清理。" });
+        }
+
+        CleanupLocalOrphans(cutoff);
+    }
+
+    private async Task DeleteExportFileAsync(string? filePath, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        if (_blobStorage.IsEnabled && !Path.IsPathRooted(filePath))
+        {
+            await _blobStorage.DeleteAsync(filePath, cancellationToken);
+            return;
+        }
+
+        var fullPath = Path.GetFullPath(filePath);
+        if (!IsUnderDirectory(fullPath, Path.GetFullPath(_options.LocalExportDirectory)))
+        {
+            return;
+        }
+
+        if (File.Exists(fullPath))
+        {
+            File.Delete(fullPath);
+        }
+    }
+
+    private void CleanupLocalOrphans(DateTime cutoff)
+    {
+        var root = Path.GetFullPath(_options.LocalExportDirectory);
+        if (!Directory.Exists(root))
+        {
+            return;
+        }
+
+        foreach (var path in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+        {
+            var file = new FileInfo(path);
+            if (file.LastWriteTimeUtc < cutoff && IsUnderDirectory(file.FullName, root))
+            {
+                file.Delete();
+            }
+        }
+    }
+
+    private string EnsureWorkspaceExportDirectory(Guid workspaceId)
+    {
+        var root = Path.GetFullPath(_options.LocalExportDirectory);
+        var workspaceDir = Path.Combine(root, workspaceId.ToString("N"));
+        Directory.CreateDirectory(workspaceDir);
+        return workspaceDir;
+    }
+
+    private void EnsureLocalExportCapacity(long extraBytes)
+    {
+        var maxBytes = _options.ExportMaxLocalBytes;
+        if (maxBytes <= 0)
+        {
+            return;
+        }
+
+        var root = Path.GetFullPath(_options.LocalExportDirectory);
+        Directory.CreateDirectory(root);
+        var currentBytes = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+            .Select(path => new FileInfo(path))
+            .Where(file => file.Exists)
+            .Sum(file => file.Length);
+
+        if (currentBytes + extraBytes > maxBytes)
+        {
+            throw new InvalidOperationException($"导出目录已超过容量上限，请清理 {root} 后重试。");
+        }
+    }
+
+    private static bool IsUnderDirectory(string path, string root)
+    {
+        var normalizedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var normalizedPath = Path.GetFullPath(path);
+        return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static CloudExportJobDto MapJob(dynamic row) => new()
     {
         Id = (Guid)row.Id,
@@ -385,6 +579,8 @@ public sealed class ExportService : IExportService
         FilePath = row.FilePath,
         DownloadUrl = row.FileName is null ? null : $"api/workspaces/{(Guid)row.WorkspaceId:N}/exports/{(Guid)row.Id:N}/download",
         ErrorMessage = row.ErrorMessage,
+        AttemptCount = (int)row.AttemptCount,
+        LastAttemptAtUtc = (DateTime?)row.LastAttemptAt,
         CompletedAtUtc = (DateTime?)row.CompletedAt
     };
 

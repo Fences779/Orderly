@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS "CloudExportJobs" (
     "FileName" TEXT NULL,
     "FilePath" TEXT NULL,
     "ErrorMessage" TEXT NULL,
+    "AttemptCount" INTEGER NOT NULL DEFAULT 0,
+    "LastAttemptAt" TIMESTAMPTZ NULL,
     "CreatedAt" TIMESTAMPTZ NOT NULL,
     "CompletedAt" TIMESTAMPTZ NULL
 );
