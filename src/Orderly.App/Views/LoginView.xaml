@@ -143,7 +143,7 @@
                     <!-- ============================ -->
                     <!-- 首次初始化面板 (Create Owner) -->
                     <!-- ============================ -->
-                    <views:LoginOwnerCreatePanel x:Name="OwnerCreatePanel" Grid.Column="1" Visibility="Collapsed" />
+                    <views:LoginOwnerCreatePanel x:Name="OwnerCreatePanel" Grid.Column="0" Grid.ColumnSpan="2" Visibility="Collapsed" />
 
                     <Grid Grid.ColumnSpan="2"
                           HorizontalAlignment="Stretch"
