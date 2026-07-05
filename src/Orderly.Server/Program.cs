@@ -27,6 +27,7 @@ serverOptions.JwtSigningKey = GetEnvOrConfig("ORDERLY_JWT_SIGNING_KEY", serverOp
 serverOptions.BootstrapAdminToken = GetEnvOrConfig("ORDERLY_BOOTSTRAP_ADMIN_TOKEN", serverOptions.BootstrapAdminToken);
 serverOptions.AllowedOrigins = GetEnvOrConfig("ORDERLY_ALLOWED_ORIGINS", serverOptions.AllowedOrigins);
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_BACKUP_RETENTION_DAYS"), out var retention)) serverOptions.BackupRetentionDays = retention;
+if (bool.TryParse(Environment.GetEnvironmentVariable("ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP"), out var requirePreMigrationBackup)) serverOptions.RequirePreMigrationBackup = requirePreMigrationBackup;
 serverOptions.LocalBackupDirectory = GetEnvOrConfig("ORDERLY_LOCAL_BACKUP_DIR", serverOptions.LocalBackupDirectory);
 serverOptions.OssEndpoint = GetEnvOrConfig("ORDERLY_OSS_ENDPOINT", serverOptions.OssEndpoint);
 serverOptions.OssBucketName = GetEnvOrConfig("ORDERLY_OSS_BUCKET", serverOptions.OssBucketName);
@@ -177,6 +178,29 @@ app.MapGet("/health/db", async (PostgresConnectionFactory factory) =>
     }
 });
 app.MapGet("/health/version", () => Results.Ok(new { Version = "0.2.0-cloud-preview", Build = "Orderly.Server" }));
+app.MapGet("/health/backups", () =>
+{
+    var health = BackupHealthState.Load(serverOptions);
+    var latestDump = Directory.Exists(serverOptions.LocalBackupDirectory)
+        ? Directory.EnumerateFiles(serverOptions.LocalBackupDirectory, "*.dump", SearchOption.TopDirectoryOnly)
+            .Select(path => new FileInfo(path))
+            .OrderByDescending(file => file.LastWriteTimeUtc)
+            .FirstOrDefault()
+        : null;
+
+    return Results.Ok(new
+    {
+        Status = latestDump is null ? "NoLocalBackup" : "Healthy",
+        LatestLocalBackup = latestDump is null ? null : new
+        {
+            latestDump.Name,
+            latestDump.FullName,
+            latestDump.Length,
+            LastWriteTimeUtc = latestDump.LastWriteTimeUtc
+        },
+        Health = health
+    });
+});
 
 app.Run();
 

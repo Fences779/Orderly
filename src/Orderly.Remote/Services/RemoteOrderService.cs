@@ -116,7 +116,7 @@ public sealed class RemoteOrderService : IOrderService
                 Status = "Pending"
             }, cancellationToken).ConfigureAwait(false);
 
-            throw new InvalidOperationException("当前离线，订单备注已保存为应急草稿，联网后自动提交。");
+            throw new InvalidOperationException("当前离线，订单备注已保存为应急草稿。联网后请到设置页确认提交。");
         }
     }
 
@@ -167,7 +167,7 @@ public sealed class RemoteOrderService : IOrderService
                 Status = "Pending"
             }, cancellationToken).ConfigureAwait(false);
 
-            throw new InvalidOperationException("当前离线，订单阶段已保存为应急草稿，联网后自动提交。");
+            throw new InvalidOperationException("当前离线，订单阶段已保存为应急草稿。联网后请到设置页确认提交。");
         }
     }
 

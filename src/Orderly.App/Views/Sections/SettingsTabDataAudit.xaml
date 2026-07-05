@@ -205,6 +205,49 @@
                                                     AutomationProperties.AutomationId="Btn_CommitCloudImport" />
                                         </Grid>
                                     </Border>
+
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="34" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Width="24" Height="24" CornerRadius="{StaticResource SettingsStepBadgeRadius}" Background="{DynamicResource SurfaceSoftBrush}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1" VerticalAlignment="Top" Margin="{StaticResource SettingsStepBadgeMargin}">
+                                                <TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{DynamicResource UiFontSize12}" FontWeight="SemiBold" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="离线草稿确认" Style="{StaticResource SettingsItemTitleStyle}" />
+                                                <TextBlock Text="{Binding EmergencyDraftReviewText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                <ListBox ItemsSource="{Binding EmergencyDrafts}"
+                                                         SelectedItem="{Binding SelectedEmergencyDraft}"
+                                                         MaxHeight="120"
+                                                         Margin="{StaticResource SettingsSectionSpacingSm}"
+                                                         AutomationProperties.AutomationId="List_EmergencyDrafts">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Summary}" Style="{StaticResource SettingsItemTitleStyle}" FontSize="{DynamicResource UiFontSize12_5}" />
+                                                                <TextBlock Text="{Binding StatusText}" Style="{StaticResource SettingsItemDescStyle}" TextWrapping="Wrap" />
+                                                                <TextBlock Text="{Binding CreatedAtText}" Style="{StaticResource SettingsFieldLabelStyle}" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <Button Content="刷新" Style="{StaticResource SettingsRowActionButtonStyle}"
+                                                        Command="{Binding RefreshEmergencyDraftsCommand}"
+                                                        AutomationProperties.AutomationId="Btn_RefreshEmergencyDrafts" />
+                                                <Button Content="提交选中" Style="{StaticResource SettingsRowActionButtonStyle}" Margin="{StaticResource SettingsRowGapXs}"
+                                                        Command="{Binding SubmitSelectedEmergencyDraftCommand}"
+                                                        AutomationProperties.AutomationId="Btn_SubmitEmergencyDraft" />
+                                                <Button Content="放弃选中" Style="{StaticResource SettingsRowActionButtonStyle}" Margin="{StaticResource SettingsRowGapXs}"
+                                                        Command="{Binding DiscardSelectedEmergencyDraftCommand}"
+                                                        AutomationProperties.AutomationId="Btn_DiscardEmergencyDraft" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
                             </Border>
 

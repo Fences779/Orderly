@@ -16,6 +16,7 @@ public interface ILocalImportPackageBuilder
 
 public sealed class LocalImportPackageBuilder : ILocalImportPackageBuilder
 {
+    private const string SourceInstanceStateKey = "LocalImportSourceInstanceId";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -34,6 +35,7 @@ public sealed class LocalImportPackageBuilder : ILocalImportPackageBuilder
     {
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
+        var sourceInstanceId = await GetOrCreateSourceInstanceIdAsync(connection, cancellationToken);
 
         var package = new LocalImportPackage
         {
@@ -48,7 +50,7 @@ public sealed class LocalImportPackageBuilder : ILocalImportPackageBuilder
 
         return new LocalImportDryRunRequest
         {
-            SourceInstanceId = BuildSourceInstanceId(_databasePath),
+            SourceInstanceId = sourceInstanceId,
             SourceFingerprint = ComputeFingerprint(package),
             Package = package
         };
@@ -311,10 +313,52 @@ public sealed class LocalImportPackageBuilder : ILocalImportPackageBuilder
         };
     }
 
-    private static Guid BuildSourceInstanceId(string databasePath)
+    private static async Task<Guid> GetOrCreateSourceInstanceIdAsync(SqliteConnection connection, CancellationToken cancellationToken)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(databasePath).ToLowerInvariant()));
-        return new Guid(bytes[..16]);
+        await using (var ensureCommand = connection.CreateCommand())
+        {
+            ensureCommand.CommandText = """
+                CREATE TABLE IF NOT EXISTS CloudClientState (
+                    Key TEXT PRIMARY KEY,
+                    Value TEXT NOT NULL,
+                    UpdatedAtUtc TEXT NOT NULL
+                );
+                """;
+            await ensureCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using (var readCommand = connection.CreateCommand())
+        {
+            readCommand.CommandText = """
+                SELECT Value
+                FROM CloudClientState
+                WHERE Key = $key;
+                """;
+            readCommand.Parameters.AddWithValue("$key", SourceInstanceStateKey);
+            var existing = await readCommand.ExecuteScalarAsync(cancellationToken) as string;
+            if (Guid.TryParse(existing, out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        var sourceInstanceId = Guid.NewGuid();
+        await using (var writeCommand = connection.CreateCommand())
+        {
+            writeCommand.CommandText = """
+                INSERT INTO CloudClientState (Key, Value, UpdatedAtUtc)
+                VALUES ($key, $value, $updatedAtUtc)
+                ON CONFLICT(Key) DO UPDATE SET
+                    Value = excluded.Value,
+                    UpdatedAtUtc = excluded.UpdatedAtUtc;
+                """;
+            writeCommand.Parameters.AddWithValue("$key", SourceInstanceStateKey);
+            writeCommand.Parameters.AddWithValue("$value", sourceInstanceId.ToString("N"));
+            writeCommand.Parameters.AddWithValue("$updatedAtUtc", DateTime.UtcNow.ToString("O"));
+            await writeCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        return sourceInstanceId;
     }
 
     private static string ComputeFingerprint(LocalImportPackage package)

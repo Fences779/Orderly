@@ -29,6 +29,14 @@ public static class CloudCacheSchemaInitializer
             """, cancellationToken);
 
         await ExecuteAsync(connection, """
+            CREATE TABLE IF NOT EXISTS CloudClientState (
+                Key TEXT PRIMARY KEY,
+                Value TEXT NOT NULL,
+                UpdatedAtUtc TEXT NOT NULL
+            );
+            """, cancellationToken);
+
+        await ExecuteAsync(connection, """
             CREATE TABLE IF NOT EXISTS EmergencyDrafts (
                 Id TEXT PRIMARY KEY,
                 EntityType TEXT NOT NULL,

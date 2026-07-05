@@ -337,6 +337,13 @@ public partial class App
             remoteImportService,
             localImportPackageBuilder);
         _mainViewModel.ConfigureEmergencyDraftSubmitter(_emergencyDraftSubmitter);
+        if (_cloudSyncClient is not null)
+        {
+            _cloudSyncClient.SyncStatusChanged += status =>
+            {
+                Dispatcher.Invoke(() => _mainViewModel.SetCloudSyncStatus(status));
+            };
+        }
         _emergencyDraftSubmitter?.Start();
         _cloudSyncClient?.Start();
 

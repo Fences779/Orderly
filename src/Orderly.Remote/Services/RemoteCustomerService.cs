@@ -68,7 +68,7 @@ public sealed class RemoteCustomerService : ICustomerService
                 Status = "Pending"
             }, cancellationToken).ConfigureAwait(false);
 
-            throw new InvalidOperationException("当前离线，客户备注已保存为应急草稿，联网后自动提交。");
+            throw new InvalidOperationException("当前离线，客户备注已保存为应急草稿。联网后请到设置页确认提交。");
         }
     }
 

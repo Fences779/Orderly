@@ -17,6 +17,7 @@ public sealed class ServerOptions
     public int RefreshTokenLifetimeDays { get; set; } = 30;
     public int BackupRetentionDays { get; set; } = 30;
     public string LocalBackupDirectory { get; set; } = "/opt/orderly/backups";
+    public bool RequirePreMigrationBackup { get; set; } = true;
     public string? BootstrapAdminToken { get; set; }
     public string AllowedOrigins { get; set; } = "*";
 

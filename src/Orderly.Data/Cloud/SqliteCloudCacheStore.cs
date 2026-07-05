@@ -53,21 +53,50 @@ public sealed class SqliteCloudCacheStore : ICloudCacheStore
     public async Task ReplaceAllAsync(IEnumerable<CloudCacheEntryDto> entries, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
+        var stagedEntries = entries.ToList();
 
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         await using var transaction = connection.BeginTransaction();
 
-        await using (var delete = connection.CreateCommand())
+        await using (var createStage = connection.CreateCommand())
         {
-            delete.Transaction = transaction;
-            delete.CommandText = "DELETE FROM CloudCacheEntries;";
-            await delete.ExecuteNonQueryAsync(cancellationToken);
+            createStage.Transaction = transaction;
+            createStage.CommandText = """
+                CREATE TEMP TABLE IF NOT EXISTS CloudCacheEntriesStage (
+                    EntityType TEXT NOT NULL,
+                    EntityId TEXT NOT NULL,
+                    PayloadJson TEXT NOT NULL,
+                    Revision INTEGER NOT NULL DEFAULT 0,
+                    CachedAtUtc TEXT NOT NULL,
+                    PRIMARY KEY (EntityType, EntityId)
+                );
+                """;
+            await createStage.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        foreach (var entry in entries)
+        await using (var clearStage = connection.CreateCommand())
         {
-            await UpsertAsync(connection, transaction, entry, cancellationToken);
+            clearStage.Transaction = transaction;
+            clearStage.CommandText = "DELETE FROM CloudCacheEntriesStage;";
+            await clearStage.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        foreach (var entry in stagedEntries)
+        {
+            await UpsertAsync(connection, transaction, "CloudCacheEntriesStage", entry, cancellationToken);
+        }
+
+        await using (var replace = connection.CreateCommand())
+        {
+            replace.Transaction = transaction;
+            replace.CommandText = """
+                DELETE FROM CloudCacheEntries;
+                INSERT INTO CloudCacheEntries (EntityType, EntityId, PayloadJson, Revision, CachedAtUtc)
+                SELECT EntityType, EntityId, PayloadJson, Revision, CachedAtUtc
+                FROM CloudCacheEntriesStage;
+                """;
+            await replace.ExecuteNonQueryAsync(cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -78,13 +107,21 @@ public sealed class SqliteCloudCacheStore : ICloudCacheStore
         SqliteTransaction? transaction,
         CloudCacheEntryDto entry,
         CancellationToken cancellationToken)
+        => await UpsertAsync(connection, transaction, "CloudCacheEntries", entry, cancellationToken);
+
+    private static async Task UpsertAsync(
+        SqliteConnection connection,
+        SqliteTransaction? transaction,
+        string tableName,
+        CloudCacheEntryDto entry,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = """
-            INSERT INTO CloudCacheEntries (EntityType, EntityId, PayloadJson, Revision, CachedAtUtc)
+        command.CommandText = $"""
+            INSERT INTO {tableName} (EntityType, EntityId, PayloadJson, Revision, CachedAtUtc)
             VALUES ($entityType, $entityId, $payloadJson, $revision, $cachedAtUtc)
             ON CONFLICT(EntityType, EntityId) DO UPDATE SET
                 PayloadJson = excluded.PayloadJson,

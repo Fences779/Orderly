@@ -68,6 +68,18 @@ try {
     & psql -h $PostgresHost -p $PostgresPort -U $PostgresUser -d $TempDatabase -v ON_ERROR_STOP=1 -c 'SELECT COUNT(*) AS workspaces FROM "CloudWorkspaces";'
 
     Write-Host "Restore drill passed."
+
+    $healthDir = if ($env:ORDERLY_LOCAL_BACKUP_DIR) { $env:ORDERLY_LOCAL_BACKUP_DIR } else { Split-Path -Parent $resolvedDump }
+    if (-not [string]::IsNullOrWhiteSpace($healthDir)) {
+        New-Item -ItemType Directory -Force -Path $healthDir | Out-Null
+        $healthPath = Join-Path $healthDir "restore-drill-health.json"
+        [pscustomobject]@{
+            lastRestoreDrillAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+            lastRestoreDrillStatus = "Passed"
+            lastRestoreDrillDatabase = $TempDatabase
+            updatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+        } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $healthPath -Encoding UTF8
+    }
 }
 finally {
     if (-not $KeepDatabase) {

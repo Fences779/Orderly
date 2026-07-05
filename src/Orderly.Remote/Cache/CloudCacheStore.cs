@@ -21,10 +21,11 @@ public sealed class CloudCacheStore : ICloudCacheStore
 
     public Task ReplaceAllAsync(IEnumerable<CloudCacheEntryDto> entries, CancellationToken cancellationToken = default)
     {
+        var replacement = entries.ToDictionary(static entry => GetKey(entry.EntityType, entry.EntityId));
         _entries.Clear();
-        foreach (var entry in entries)
+        foreach (var pair in replacement)
         {
-            _entries[GetKey(entry.EntityType, entry.EntityId)] = entry;
+            _entries[pair.Key] = pair.Value;
         }
 
         return Task.CompletedTask;

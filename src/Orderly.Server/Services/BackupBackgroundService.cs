@@ -48,21 +48,43 @@ public sealed class BackupBackgroundService : BackgroundService
 
             await backupService.BackupAsync(localPath, cancellationToken);
 
+            var ossUploaded = false;
+            string? ossKey = null;
             if (blobStorage.IsEnabled)
             {
                 var key = $"{NormalizePrefix(options.OssBackupPrefix)}{DateTime.UtcNow:yyyy/MM/dd}/{fileName}";
 
                 await using var uploadStream = File.OpenRead(localPath);
                 await blobStorage.UploadAsync(key, uploadStream, cancellationToken);
+                ossUploaded = true;
+                ossKey = key;
 
                 await CleanupOldBackupsAsync(blobStorage, options, cancellationToken);
             }
 
             CleanupOldLocalBackups(localDir, options.BackupRetentionDays);
+            BackupHealthState.Update(options, snapshot =>
+            {
+                snapshot.LastBackupAtUtc = DateTime.UtcNow;
+                snapshot.LastBackupFileName = fileName;
+                snapshot.LocalBackupPath = localPath;
+                snapshot.OssUploaded = ossUploaded;
+                snapshot.OssKey = ossKey;
+                snapshot.LastError = null;
+            });
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Database backup failed: {ex.Message}");
+            try
+            {
+                await using var scope = _serviceProvider.CreateAsyncScope();
+                var options = scope.ServiceProvider.GetRequiredService<ServerOptions>();
+                BackupHealthState.Update(options, snapshot => snapshot.LastError = ex.Message);
+            }
+            catch
+            {
+            }
         }
     }
 

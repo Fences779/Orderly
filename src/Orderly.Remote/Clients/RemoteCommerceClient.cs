@@ -92,7 +92,7 @@ public sealed class RemoteCommerceClient : IDisposable
         if (response.StatusCode == HttpStatusCode.Conflict)
         {
             var content = await response.Content.ReadAsStringAsync();
-            throw new RemoteConflictException(content);
+            throw RemoteConflictException.FromResponseContent(content);
         }
 
         var error = await response.Content.ReadAsStringAsync();
@@ -104,5 +104,71 @@ public sealed class RemoteCommerceClient : IDisposable
 
 public sealed class RemoteConflictException : Exception
 {
-    public RemoteConflictException(string message) : base(message) { }
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    public string? Detail { get; }
+    public string? ActorDisplayName { get; }
+    public DateTime? UpdatedAt { get; }
+    public long? LatestRevision { get; }
+    public string RawContent { get; }
+
+    public RemoteConflictException(string message) : this(message, null, null, null, null, message) { }
+
+    private RemoteConflictException(
+        string message,
+        string? detail,
+        string? actorDisplayName,
+        DateTime? updatedAt,
+        long? latestRevision,
+        string rawContent)
+        : base(message)
+    {
+        Detail = detail;
+        ActorDisplayName = actorDisplayName;
+        UpdatedAt = updatedAt;
+        LatestRevision = latestRevision;
+        RawContent = rawContent;
+    }
+
+    public static RemoteConflictException FromResponseContent(string content)
+    {
+        if (!string.IsNullOrWhiteSpace(content))
+        {
+            try
+            {
+                var payload = JsonSerializer.Deserialize<ConflictErrorPayload>(content, JsonOptions);
+                if (!string.IsNullOrWhiteSpace(payload?.Error))
+                {
+                    return new RemoteConflictException(
+                        payload.Error,
+                        payload.Detail,
+                        payload.ActorDisplayName,
+                        payload.UpdatedAt,
+                        payload.LatestRevision,
+                        content);
+                }
+            }
+            catch (JsonException)
+            {
+                // Fall back to a stable user-facing message below.
+            }
+        }
+
+        return new RemoteConflictException(
+            "云端数据已经被其他人更新，你的修改没有覆盖对方内容。请刷新后重新确认。",
+            content,
+            null,
+            null,
+            null,
+            content);
+    }
+
+    private sealed class ConflictErrorPayload
+    {
+        public string? Error { get; set; }
+        public string? Detail { get; set; }
+        public string? ActorDisplayName { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public long? LatestRevision { get; set; }
+    }
 }

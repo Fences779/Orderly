@@ -92,7 +92,7 @@ public sealed class RemoteBusinessTaskService : IBusinessTaskService
                 Status = "Pending"
             }, cancellationToken).ConfigureAwait(false);
 
-            throw new InvalidOperationException("当前离线，任务状态已保存为应急草稿，联网后自动提交。");
+            throw new InvalidOperationException("当前离线，任务状态已保存为应急草稿。联网后请到设置页确认提交。");
         }
     }
 }

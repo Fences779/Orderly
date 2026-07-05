@@ -1,5 +1,7 @@
 using System.Net.Http;
+using System.Text.Json;
 using Orderly.Contracts.Offline;
+using Orderly.Contracts.Permissions;
 using Orderly.Remote.Auth;
 using Orderly.Remote.Clients;
 
@@ -66,12 +68,66 @@ public sealed class RemoteEmergencyDraftSubmitter : IEmergencyDraftSubmitter
         await TrySubmitPendingAsync(linkedCts.Token).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<EmergencyDraftDto>> ListDraftsAsync(CancellationToken cancellationToken = default)
+    {
+        var drafts = await _queue.ListAsync(cancellationToken).ConfigureAwait(false);
+        DraftCountChanged?.Invoke(CountActionableDrafts(drafts));
+        return drafts;
+    }
+
+    public async Task SubmitDraftAsync(string draftId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(draftId))
+        {
+            throw new ArgumentException("草稿 Id 不能为空。", nameof(draftId));
+        }
+
+        var draft = await _queue.GetAsync(draftId, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("草稿不存在或已处理。");
+
+        try
+        {
+            await EnsureBaseRevisionStillCurrentAsync(draft, cancellationToken).ConfigureAwait(false);
+            await SubmitDraftAsync(draft, cancellationToken).ConfigureAwait(false);
+            await _queue.RemoveAsync(draft.Id, cancellationToken).ConfigureAwait(false);
+            ConnectivityChanged?.Invoke(true);
+        }
+        catch (HttpRequestException ex)
+        {
+            await _queue.UpdateStatusAsync(draft.Id, EmergencyDraftStatus.Pending, ex.Message, cancellationToken).ConfigureAwait(false);
+            ConnectivityChanged?.Invoke(false);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await _queue.UpdateStatusAsync(draft.Id, EmergencyDraftStatus.Failed, ex.Message, cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+        finally
+        {
+            var drafts = await _queue.ListAsync(cancellationToken).ConfigureAwait(false);
+            DraftCountChanged?.Invoke(CountActionableDrafts(drafts));
+        }
+    }
+
+    public async Task DiscardDraftAsync(string draftId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(draftId))
+        {
+            return;
+        }
+
+        await _queue.RemoveAsync(draftId, cancellationToken).ConfigureAwait(false);
+        var drafts = await _queue.ListAsync(cancellationToken).ConfigureAwait(false);
+        DraftCountChanged?.Invoke(CountActionableDrafts(drafts));
+    }
+
     private async Task RunLoopAsync(CancellationToken cancellationToken)
     {
         using var timer = new PeriodicTimer(_pollingInterval);
         do
         {
-            await TrySubmitPendingAsync(cancellationToken).ConfigureAwait(false);
+            await RefreshDraftCountAsync(cancellationToken).ConfigureAwait(false);
         }
         while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false));
     }
@@ -81,7 +137,7 @@ public sealed class RemoteEmergencyDraftSubmitter : IEmergencyDraftSubmitter
         try
         {
             var drafts = await _queue.ListAsync(cancellationToken).ConfigureAwait(false);
-            var pending = drafts.Where(d => string.Equals(d.Status, EmergencyDraftStatus.Pending, StringComparison.OrdinalIgnoreCase)).ToList();
+            var pending = drafts.Where(IsActionableDraft).ToList();
 
             DraftCountChanged?.Invoke(pending.Count);
 
@@ -139,11 +195,92 @@ public sealed class RemoteEmergencyDraftSubmitter : IEmergencyDraftSubmitter
 
     private async Task SubmitDraftAsync(EmergencyDraftDto draft, CancellationToken cancellationToken)
     {
-        // Placeholder endpoint: the server-side EmergencyDraftController is not implemented yet.
-        // Once it exists, this single POST will hand the draft off for server-side replay/validation.
         await _client.PostAsync<EmergencyDraftDto>(
             $"api/workspaces/{_session.WorkspaceId:N}/emergency-drafts",
             draft,
             cancellationToken).ConfigureAwait(false);
     }
+
+    private async Task RefreshDraftCountAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var drafts = await _queue.ListAsync(cancellationToken).ConfigureAwait(false);
+            DraftCountChanged?.Invoke(CountActionableDrafts(drafts));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            ConnectivityChanged?.Invoke(false);
+            Console.Error.WriteLine($"Emergency draft count refresh failed: {ex}");
+        }
+    }
+
+    private async Task EnsureBaseRevisionStillCurrentAsync(EmergencyDraftDto draft, CancellationToken cancellationToken)
+    {
+        if (draft.BaseRevision is null || string.IsNullOrWhiteSpace(draft.EntityId))
+        {
+            return;
+        }
+
+        if (!Guid.TryParse(draft.EntityId, out var entityId))
+        {
+            throw new InvalidOperationException("草稿目标实体 Id 格式不正确。");
+        }
+
+        var path = BuildEntityPath(draft.EntityType, entityId);
+        if (path is null)
+        {
+            return;
+        }
+
+        var latest = await _client.GetAsync<JsonElement>(path, cancellationToken).ConfigureAwait(false);
+        if (latest.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            throw new InvalidOperationException("云端目标数据不存在，请刷新后重新确认。");
+        }
+
+        if (TryGetRevision(latest, out var latestRevision) && latestRevision != draft.BaseRevision.Value)
+        {
+            throw new InvalidOperationException("云端数据已变化，请刷新页面后重新确认是否提交该草稿。");
+        }
+    }
+
+    private string? BuildEntityPath(string entityType, Guid entityId)
+    {
+        var path = entityType switch
+        {
+            EntityType.Order => $"orders/{entityId:N}",
+            EntityType.Customer => $"customers/{entityId:N}",
+            EntityType.BusinessTask => $"business-tasks/{entityId:N}",
+            _ => null
+        };
+
+        return path is null ? null : $"api/workspaces/{_session.WorkspaceId:N}/{path}";
+    }
+
+    private static bool TryGetRevision(JsonElement element, out long revision)
+    {
+        if (element.TryGetProperty("revision", out var camel) && camel.TryGetInt64(out revision))
+        {
+            return true;
+        }
+
+        if (element.TryGetProperty("Revision", out var pascal) && pascal.TryGetInt64(out revision))
+        {
+            return true;
+        }
+
+        revision = default;
+        return false;
+    }
+
+    private static int CountActionableDrafts(IEnumerable<EmergencyDraftDto> drafts)
+        => drafts.Count(IsActionableDraft);
+
+    private static bool IsActionableDraft(EmergencyDraftDto draft)
+        => string.Equals(draft.Status, EmergencyDraftStatus.Pending, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(draft.Status, EmergencyDraftStatus.Failed, StringComparison.OrdinalIgnoreCase);
 }
