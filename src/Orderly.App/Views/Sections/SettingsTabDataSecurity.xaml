@@ -191,7 +191,8 @@
         「数据安全与隐私」+「本地数据库维护」+「系统日志记录」三张卡片
         （「系统日志记录」原属 SettingsTabDataAudit，按 §7.1 迁入此处的安全与日志宿主）。
     -->
-    <StackPanel>
+    <Grid>
+        <StackPanel>
                             <Border Style="{StaticResource SettingsGroupCardStyle}" Margin="{StaticResource SettingsCardSpacing}">
                                 <StackPanel>
                                     <TextBlock Text="数据安全与隐私" Style="{StaticResource SettingsGroupTitleStyle}" />
@@ -392,87 +393,6 @@
                                         </Grid>
                                     </Border>
 
-                                    <!-- 检查详细结果 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-                                            <TextBlock Grid.Row="0" Text="校验日志详情" Style="{StaticResource SettingsItemTitleStyle}" Margin="{StaticResource SettingsFieldHeaderMargin}" />
-                                            <Border Grid.Row="1"
-                                                     Background="#141416"
-                                                     BorderBrush="#252529"
-                                                     BorderThickness="1"
-                                                     CornerRadius="10"
-                                                     ClipToBounds="True"
-                                                     Margin="0,4,0,0">
-                                                 <Grid>
-                                                     <Grid.RowDefinitions>
-                                                         <RowDefinition Height="30" />
-                                                         <RowDefinition Height="Auto" />
-                                                     </Grid.RowDefinitions>
-                                                     
-                                                     <!-- 终端顶部控制栏 -->
-                                                     <Border Grid.Row="0" Background="#1B1B1F" BorderBrush="#252529" BorderThickness="0,0,0,1">
-                                                         <Grid Margin="12,0">
-                                                             <!-- Mac 三色按钮 -->
-                                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                                 <Ellipse Width="8" Height="8" Fill="#FF5F56" Margin="0,0,6,0" />
-                                                                 <Ellipse Width="8" Height="8" Fill="#FFBD2E" Margin="0,0,6,0" />
-                                                                 <Ellipse Width="8" Height="8" Fill="#27C93F" />
-                                                             </StackPanel>
-                                                             
-                                                             <!-- 标题小字 -->
-                                                             <TextBlock Text="DATABASE VERIFICATION LOGS"
-                                                                        HorizontalAlignment="Right"
-                                                                        VerticalAlignment="Center"
-                                                                        FontSize="10"
-                                                                        FontWeight="Bold"
-                                                                        FontFamily="Consolas, Monaco"
-                                                                        Foreground="#6272A4"
-                                                                        Opacity="0.8" />
-                                                         </Grid>
-                                                     </Border>
-                                                     
-                                                     <!-- 终端内容区 -->
-                                                     <Border Grid.Row="1" Background="#141416" Padding="14,12">
-                                                         <TextBlock FontFamily="Consolas, Cascadia Code, Monaco, monospace"
-                                                                    FontSize="12"
-                                                                    Foreground="#F8F8F2"
-                                                                    TextWrapping="Wrap"
-                                                                    LineHeight="18"
-                                                                    VerticalAlignment="Center">
-                                                             <Run Text="orderly-db:~ $ " Foreground="#FF79C6" FontWeight="SemiBold" />
-                                                             <Run Text="{Binding DatabaseHealthDetailText, Mode=OneWay}" />
-                                                             <InlineUIContainer>
-                                                                 <Border x:Name="TermCursor"
-                                                                         Width="6"
-                                                                         Height="12"
-                                                                         Background="#50FA7B"
-                                                                         Margin="2,2,0,0"
-                                                                         VerticalAlignment="Center">
-                                                                     <Border.Triggers>
-                                                                         <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                                                                             <BeginStoryboard>
-                                                                                 <Storyboard>
-                                                                                     <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                                                      From="1.0" To="0.0"
-                                                                                                      Duration="0:0:0.8"
-                                                                                                      AutoReverse="True"
-                                                                                                      RepeatBehavior="Forever" />
-                                                                                 </Storyboard>
-                                                                             </BeginStoryboard>
-                                                                         </EventTrigger>
-                                                                     </Border.Triggers>
-                                                                 </Border>
-                                                             </InlineUIContainer>
-                                                         </TextBlock>
-                                                     </Border>
-                                                 </Grid>
-                                             </Border>
-                                        </Grid>
-                                    </Border>
                                 </StackPanel>
                             </Border>
 
@@ -575,4 +495,181 @@
                                 </StackPanel>
                             </Border>
     </StackPanel>
+    
+    <!-- 模态进度弹窗遮罩 -->
+    <Grid Visibility="{Binding IsProgressDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+          Background="#40000000"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch">
+        <Grid.Triggers>
+            <!-- 遮罩层淡入 -->
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Grid.Triggers>
+        
+        <!-- 弹窗本体 -->
+        <Border Width="360"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="#FFFFFF"
+                CornerRadius="16"
+                Padding="24"
+                RenderTransformOrigin="0.5,0.5">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="2" Opacity="0.15" />
+            </Border.Effect>
+            <Border.RenderTransform>
+                <ScaleTransform x:Name="DialogScale" ScaleX="1" ScaleY="1" />
+            </Border.RenderTransform>
+            <Border.Triggers>
+                <!-- 弹窗弹出弹性缩放动效 -->
+                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" From="0.85" To="1" Duration="0:0:0.3">
+                                <DoubleAnimation.EasingFunction>
+                                    <BackEase EasingMode="EaseOut" Amplitude="0.6" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="0.85" To="1" Duration="0:0:0.3">
+                                <DoubleAnimation.EasingFunction>
+                                    <BackEase EasingMode="EaseOut" Amplitude="0.6" />
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Border.Triggers>
+            
+            <Grid>
+                <!-- 1. 加载中视图 -->
+                <StackPanel x:Name="LoadingView">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Visible" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsProgressDialogCompleted}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    
+                    <!-- 弹窗标题 -->
+                    <TextBlock Text="{Binding ProgressDialogTitle}"
+                               HorizontalAlignment="Center"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource HeadingBrush}"
+                               Margin="0,0,0,20" />
+                               
+                    <!-- 旋转 Logo -->
+                    <Grid Width="48" Height="48" HorizontalAlignment="Center" Margin="0,0,0,16" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <RotateTransform x:Name="SpinnerAngle" Angle="0" />
+                        </Grid.RenderTransform>
+                        <Grid.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                         From="0" To="360" Duration="0:0:0.9"
+                                                         RepeatBehavior="Forever" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Grid.Triggers>
+                        <!-- 渐变灰色背景圆 -->
+                        <Ellipse Stroke="#E4E7ED" StrokeThickness="4" />
+                        <!-- 主色淡蓝旋转弧 -->
+                        <Ellipse Stroke="{DynamicResource PrimaryBrush}" StrokeThickness="4" StrokeDashArray="3 1.5" />
+                    </Grid>
+                    
+                    <!-- 百分比数字 -->
+                    <TextBlock Text="{Binding ProgressDialogPercent, StringFormat={}{0}%}"
+                               HorizontalAlignment="Center"
+                               FontSize="26"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource HeadingBrush}"
+                               Margin="0,0,0,10" />
+                               
+                    <!-- 细扁水平进度条 -->
+                    <ProgressBar Minimum="0"
+                                 Maximum="100"
+                                 Height="5"
+                                 Value="{Binding ProgressDialogPercent}"
+                                 Foreground="{DynamicResource PrimaryBrush}"
+                                 Background="#F2F3F5"
+                                 BorderThickness="0"
+                                 HorizontalAlignment="Stretch"
+                                 Margin="10,0,10,16" />
+                                 
+                    <!-- 当前服务文案步骤提示 -->
+                    <TextBlock Text="{Binding ProgressDialogStatus}"
+                               HorizontalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center" />
+                </StackPanel>
+                
+                <!-- 2. 执行完成视图 -->
+                <StackPanel x:Name="CompletedView">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsProgressDialogCompleted}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    
+                    <!-- 完成打勾 Logo -->
+                    <Canvas Width="48" Height="48" HorizontalAlignment="Center" Margin="0,0,0,14">
+                        <Ellipse Width="48" Height="48" Fill="#F0F9EB" Stroke="#67C23A" StrokeThickness="1.5" />
+                        <Path Data="M 15 24 L 21 30 L 32 18" Stroke="#67C23A" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                    </Canvas>
+                    
+                    <!-- 完成状态提示 -->
+                    <TextBlock Text="{Binding ProgressDialogStatus}"
+                               HorizontalAlignment="Center"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="#67C23A"
+                               Margin="0,0,0,16" />
+                               
+                    <!-- 服务内容与日志结果 -->
+                    <Border Background="#F7F9FA"
+                            BorderBrush="#EAECEF"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12"
+                            Margin="0,0,0,20">
+                        <TextBlock Text="{Binding ProgressDialogResultText}"
+                                   FontFamily="Consolas, PingFang SC"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   TextWrapping="Wrap"
+                                   LineHeight="18" />
+                    </Border>
+                    
+                    <!-- 确定关闭按钮 -->
+                    <Button Content="确定"
+                            Style="{StaticResource AsyncLoadingActionButtonStyle}"
+                            Command="{Binding CloseProgressDialogCommand}"
+                            HorizontalAlignment="Center"
+                            MinWidth="100"
+                            Height="36" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Grid>
 </UserControl>

@@ -443,7 +443,52 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(CurrentThemeIcon));
     }
 
+    partial void OnAccentColorInputChanged(string value)
+    {
+        Orderly.App.Helpers.ThemeHelper.ApplyAccentColor(value);
+    }
+
     private System.Threading.CancellationTokenSource? _fontSizeSaveCts;
+
+    partial void OnFontSizePresetInputChanged(double value)
+    {
+        Orderly.App.Helpers.FontSizeHelper.ApplyFontScale(value);
+
+        _fontSizeSaveCts?.Cancel();
+        _fontSizeSaveCts = new System.Threading.CancellationTokenSource();
+        var token = _fontSizeSaveCts.Token;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(500, token);
+                if (token.IsCancellationRequested) return;
+
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    _ = SaveP0SettingsAsync();
+                });
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        });
+    }
+
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        ThemeModeInput = ThemeModeInput switch
+        {
+            "浅色" => "深色",
+            "深色" => "跟随系统",
+            _ => "浅色"
+        };
+    }
+
+    public string CurrentThemeLabel => ThemeModeInput switch
+    {
 
     partial void OnFontSizePresetInputChanged(double value)
     {
@@ -495,4 +540,28 @@ public partial class MainViewModel
         "深色" => "\xE708",
         _ => "\xE7F4"
     };
+
+    [ObservableProperty]
+    private bool isProgressDialogOpen;
+
+    [ObservableProperty]
+    private string progressDialogTitle = string.Empty;
+
+    [ObservableProperty]
+    private int progressDialogPercent;
+
+    [ObservableProperty]
+    private string progressDialogStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool isProgressDialogCompleted;
+
+    [ObservableProperty]
+    private string progressDialogResultText = string.Empty;
+
+    [RelayCommand]
+    private void CloseProgressDialog()
+    {
+        IsProgressDialogOpen = false;
+    }
 }
