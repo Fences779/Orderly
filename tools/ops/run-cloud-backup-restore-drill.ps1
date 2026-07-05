@@ -19,6 +19,28 @@ function Require-Command {
     }
 }
 
+function Write-DrillHealth {
+    param(
+        [string]$Status,
+        [string]$Database,
+        [string]$ErrorMessage
+    )
+
+    if ([string]::IsNullOrWhiteSpace($script:HealthDir)) {
+        return
+    }
+
+    New-Item -ItemType Directory -Force -Path $script:HealthDir | Out-Null
+    $healthPath = Join-Path $script:HealthDir "restore-drill-health.json"
+    [pscustomobject]@{
+        lastRestoreDrillAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+        lastRestoreDrillStatus = $Status
+        lastRestoreDrillDatabase = $Database
+        lastRestoreDrillError = $ErrorMessage
+        updatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+    } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $healthPath -Encoding UTF8
+}
+
 Require-Command "createdb"
 Require-Command "pg_restore"
 Require-Command "psql"
@@ -41,6 +63,7 @@ if ([string]::IsNullOrWhiteSpace($DumpPath)) {
 }
 
 $resolvedDump = Resolve-Path -LiteralPath $DumpPath
+$script:HealthDir = if ($env:ORDERLY_LOCAL_BACKUP_DIR) { $env:ORDERLY_LOCAL_BACKUP_DIR } else { Split-Path -Parent $resolvedDump }
 if ([string]::IsNullOrWhiteSpace($TempDatabase)) {
     $TempDatabase = "orderly_restore_drill_{0}" -f (Get-Date -Format "yyyyMMddHHmmss")
 }
@@ -68,18 +91,11 @@ try {
     & psql -h $PostgresHost -p $PostgresPort -U $PostgresUser -d $TempDatabase -v ON_ERROR_STOP=1 -c 'SELECT COUNT(*) AS workspaces FROM "CloudWorkspaces";'
 
     Write-Host "Restore drill passed."
-
-    $healthDir = if ($env:ORDERLY_LOCAL_BACKUP_DIR) { $env:ORDERLY_LOCAL_BACKUP_DIR } else { Split-Path -Parent $resolvedDump }
-    if (-not [string]::IsNullOrWhiteSpace($healthDir)) {
-        New-Item -ItemType Directory -Force -Path $healthDir | Out-Null
-        $healthPath = Join-Path $healthDir "restore-drill-health.json"
-        [pscustomobject]@{
-            lastRestoreDrillAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-            lastRestoreDrillStatus = "Passed"
-            lastRestoreDrillDatabase = $TempDatabase
-            updatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-        } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $healthPath -Encoding UTF8
-    }
+    Write-DrillHealth -Status "Passed" -Database $TempDatabase -ErrorMessage $null
+}
+catch {
+    Write-DrillHealth -Status "Failed" -Database $TempDatabase -ErrorMessage $_.Exception.Message
+    throw
 }
 finally {
     if (-not $KeepDatabase) {

@@ -17,6 +17,7 @@ public sealed class BackupHealthSnapshot
     public DateTime? LastRestoreDrillAtUtc { get; set; }
     public string? LastRestoreDrillStatus { get; set; }
     public string? LastRestoreDrillDatabase { get; set; }
+    public string? LastRestoreDrillError { get; set; }
     public string? LastError { get; set; }
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 }
@@ -40,6 +41,7 @@ public static class BackupHealthState
             snapshot.LastRestoreDrillAtUtc = restoreDrill.LastRestoreDrillAtUtc;
             snapshot.LastRestoreDrillStatus = restoreDrill.LastRestoreDrillStatus;
             snapshot.LastRestoreDrillDatabase = restoreDrill.LastRestoreDrillDatabase;
+            snapshot.LastRestoreDrillError = restoreDrill.LastRestoreDrillError;
         }
 
         return snapshot;

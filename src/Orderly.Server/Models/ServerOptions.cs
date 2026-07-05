@@ -17,6 +17,8 @@ public sealed class ServerOptions
     public int RefreshTokenLifetimeDays { get; set; } = 30;
     public int BackupRetentionDays { get; set; } = 30;
     public string LocalBackupDirectory { get; set; } = "/opt/orderly/backups";
+    public bool RestoreDrillEnabled { get; set; } = true;
+    public int RestoreDrillIntervalHours { get; set; } = 24;
     public string LocalExportDirectory { get; set; } = "/opt/orderly/exports";
     public int ExportRetentionHours { get; set; } = 24;
     public int ExportMaxRetryCount { get; set; } = 2;

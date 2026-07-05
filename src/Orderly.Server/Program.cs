@@ -29,6 +29,8 @@ serverOptions.AllowedOrigins = GetEnvOrConfig("ORDERLY_ALLOWED_ORIGINS", serverO
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_BACKUP_RETENTION_DAYS"), out var retention)) serverOptions.BackupRetentionDays = retention;
 if (bool.TryParse(Environment.GetEnvironmentVariable("ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP"), out var requirePreMigrationBackup)) serverOptions.RequirePreMigrationBackup = requirePreMigrationBackup;
 if (bool.TryParse(Environment.GetEnvironmentVariable("ORDERLY_REQUIRE_PRE_IMPORT_BACKUP"), out var requirePreImportBackup)) serverOptions.RequirePreImportBackup = requirePreImportBackup;
+if (bool.TryParse(Environment.GetEnvironmentVariable("ORDERLY_RESTORE_DRILL_ENABLED"), out var restoreDrillEnabled)) serverOptions.RestoreDrillEnabled = restoreDrillEnabled;
+if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_RESTORE_DRILL_INTERVAL_HOURS"), out var restoreDrillIntervalHours)) serverOptions.RestoreDrillIntervalHours = restoreDrillIntervalHours;
 serverOptions.LocalBackupDirectory = GetEnvOrConfig("ORDERLY_LOCAL_BACKUP_DIR", serverOptions.LocalBackupDirectory);
 serverOptions.LocalExportDirectory = GetEnvOrConfig("ORDERLY_LOCAL_EXPORT_DIR", serverOptions.LocalExportDirectory);
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_EXPORT_RETENTION_HOURS"), out var exportRetentionHours)) serverOptions.ExportRetentionHours = exportRetentionHours;
@@ -63,6 +65,7 @@ builder.Services.AddSingleton<IBlobStorage, AliyunOssBlobStorage>();
 builder.Services.AddScoped<IExportService, ExportService>();
 builder.Services.AddHostedService<ExportBackgroundService>();
 builder.Services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
+builder.Services.AddScoped<IRestoreDrillService, DatabaseRestoreDrillService>();
 builder.Services.AddHostedService<BackupBackgroundService>();
 builder.Services.AddSingleton<ISignalRNotifier, SignalRNotifier>();
 
@@ -195,13 +198,18 @@ app.MapGet("/health/backups", () =>
 
     return Results.Ok(new
     {
-        Status = latestDump is null ? "NoLocalBackup" : "Healthy",
+        Status = GetBackupHealthStatus(latestDump, health, serverOptions),
         LatestLocalBackup = latestDump is null ? null : new
         {
             latestDump.Name,
             latestDump.FullName,
             latestDump.Length,
             LastWriteTimeUtc = latestDump.LastWriteTimeUtc
+        },
+        RestoreDrill = new
+        {
+            Enabled = serverOptions.RestoreDrillEnabled,
+            IntervalHours = serverOptions.RestoreDrillIntervalHours
         },
         Health = health
     });
@@ -211,3 +219,36 @@ app.Run();
 
 static string GetEnvOrConfig(string envName, string fallback) =>
     Environment.GetEnvironmentVariable(envName) ?? fallback;
+
+static string GetBackupHealthStatus(FileInfo? latestDump, BackupHealthSnapshot health, ServerOptions options)
+{
+    if (latestDump is null)
+    {
+        return "NoLocalBackup";
+    }
+
+    if (!options.RestoreDrillEnabled)
+    {
+        return "Healthy";
+    }
+
+    if (string.Equals(health.LastRestoreDrillStatus, "Running", StringComparison.OrdinalIgnoreCase))
+    {
+        return "RestoreDrillRunning";
+    }
+
+    if (string.Equals(health.LastRestoreDrillStatus, "Failed", StringComparison.OrdinalIgnoreCase))
+    {
+        return "RestoreDrillFailed";
+    }
+
+    if (!health.LastRestoreDrillAtUtc.HasValue)
+    {
+        return "RestoreDrillMissing";
+    }
+
+    var staleAfterHours = Math.Max(1, options.RestoreDrillIntervalHours) * 2;
+    return health.LastRestoreDrillAtUtc.Value < DateTime.UtcNow.AddHours(-staleAfterHours)
+        ? "RestoreDrillStale"
+        : "Healthy";
+}

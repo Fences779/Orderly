@@ -38,6 +38,7 @@ public sealed class BackupBackgroundService : BackgroundService
             await using var scope = _serviceProvider.CreateAsyncScope();
             var options = scope.ServiceProvider.GetRequiredService<ServerOptions>();
             var backupService = scope.ServiceProvider.GetRequiredService<IDatabaseBackupService>();
+            var restoreDrillService = scope.ServiceProvider.GetRequiredService<IRestoreDrillService>();
             var blobStorage = scope.ServiceProvider.GetRequiredService<IBlobStorage>();
 
             var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
@@ -72,6 +73,8 @@ public sealed class BackupBackgroundService : BackgroundService
                 snapshot.OssKey = ossKey;
                 snapshot.LastError = null;
             });
+
+            await RunRestoreDrillIfDueAsync(options, restoreDrillService, localPath, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -85,6 +88,55 @@ public sealed class BackupBackgroundService : BackgroundService
             catch
             {
             }
+        }
+    }
+
+    private static async Task RunRestoreDrillIfDueAsync(
+        ServerOptions options,
+        IRestoreDrillService restoreDrillService,
+        string dumpPath,
+        CancellationToken cancellationToken)
+    {
+        if (!options.RestoreDrillEnabled)
+        {
+            return;
+        }
+
+        var health = BackupHealthState.Load(options);
+        var intervalHours = Math.Max(1, options.RestoreDrillIntervalHours);
+        if (health.LastRestoreDrillAtUtc.HasValue
+            && health.LastRestoreDrillAtUtc.Value > DateTime.UtcNow.AddHours(-intervalHours))
+        {
+            return;
+        }
+
+        BackupHealthState.Update(options, snapshot =>
+        {
+            snapshot.LastRestoreDrillStatus = "Running";
+            snapshot.LastRestoreDrillDatabase = null;
+            snapshot.LastRestoreDrillError = null;
+        });
+
+        try
+        {
+            var result = await restoreDrillService.RunAsync(dumpPath, cancellationToken);
+            BackupHealthState.Update(options, snapshot =>
+            {
+                snapshot.LastRestoreDrillAtUtc = result.CompletedAtUtc;
+                snapshot.LastRestoreDrillStatus = "Passed";
+                snapshot.LastRestoreDrillDatabase = result.DatabaseName;
+                snapshot.LastRestoreDrillError = null;
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Restore drill failed: {ex.Message}");
+            BackupHealthState.Update(options, snapshot =>
+            {
+                snapshot.LastRestoreDrillAtUtc = DateTime.UtcNow;
+                snapshot.LastRestoreDrillStatus = "Failed";
+                snapshot.LastRestoreDrillError = ex.Message;
+            });
         }
     }
 
