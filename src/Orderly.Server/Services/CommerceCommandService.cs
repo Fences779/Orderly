@@ -97,14 +97,46 @@ public partial class CommerceCommandService
         string? beforeJson,
         string? afterJson,
         string? reason,
-        string? clientRequestId)
-        => await _auditLog.LogAsync(connection, transaction, workspaceId, action, entityType, entityId, beforeJson, afterJson, reason, clientRequestId, null, null);
+        string? clientRequestId,
+        NotificationCollector? collector = null)
+    {
+        await _auditLog.LogAsync(connection, transaction, workspaceId, action, entityType, entityId, beforeJson, afterJson, reason, clientRequestId, null, null);
+
+        collector?.Add(RealtimeEvent.AuditLogCreated, new RealtimeEventPayload
+        {
+            WorkspaceId = workspaceId,
+            EntityType = entityType,
+            EntityId = entityId,
+            Sequence = null,
+            ActorUserId = _currentUser.UserId,
+            ActorDisplayName = _currentUser.DisplayName ?? string.Empty,
+            OccurredAtUtc = DateTime.UtcNow,
+            Action = action,
+            HintJson = reason
+        });
+    }
 
     private async Task<CommandResult<TDto>> ExecuteWithIdempotencyAsync<TCommand, TDto>(
         Guid workspaceId,
         string action,
         TCommand command,
         Func<System.Data.Common.DbConnection, NpgsqlTransaction, long, CancellationToken, Task<(TDto Dto, string EntityType, Guid EntityId)>> execute,
+        CancellationToken cancellationToken)
+        where TDto : notnull
+    {
+        return await ExecuteWithIdempotencyAsync<TCommand, TDto>(
+            workspaceId,
+            action,
+            command,
+            (connection, transaction, sequence, collector, ct) => execute(connection, transaction, sequence, ct),
+            cancellationToken);
+    }
+
+    private async Task<CommandResult<TDto>> ExecuteWithIdempotencyAsync<TCommand, TDto>(
+        Guid workspaceId,
+        string action,
+        TCommand command,
+        Func<System.Data.Common.DbConnection, NpgsqlTransaction, long, NotificationCollector, CancellationToken, Task<(TDto Dto, string EntityType, Guid EntityId)>> execute,
         CancellationToken cancellationToken)
         where TDto : notnull
     {
@@ -132,11 +164,17 @@ public partial class CommerceCommandService
                 }
 
                 var sequence = await AllocateSequenceAsync(connection, transaction, workspaceId);
-                var (dto, entityType, entityId) = await execute(connection, transaction, sequence, cancellationToken);
+                var collector = new NotificationCollector();
+                var (dto, entityType, entityId) = await execute(connection, transaction, sequence, collector, cancellationToken);
                 var responseJson = JsonSerializer.Serialize(dto, JsonOptions);
 
                 await _idempotency.CompleteAsync(workspaceId, userId, action, clientRequestId, 200, responseJson, entityType, entityId, connection, transaction, cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
+
+                foreach (var (eventName, payload) in collector.Payloads)
+                {
+                    await _notifier.NotifyAsync(payload.WorkspaceId, eventName, payload);
+                }
 
                 await BroadcastAsync(workspaceId, entityType, entityId, dto, sequence);
                 return new CommandResult<TDto>(dto, false);
@@ -151,6 +189,13 @@ public partial class CommerceCommandService
         throw new InvalidOperationException("命令执行失败，已超出最大重试次数。");
     }
 
+    private sealed class NotificationCollector
+    {
+        private readonly List<(string EventName, RealtimeEventPayload Payload)> _payloads = new();
+        public IReadOnlyList<(string EventName, RealtimeEventPayload Payload)> Payloads => _payloads;
+        public void Add(string eventName, RealtimeEventPayload payload) => _payloads.Add((eventName, payload));
+    }
+
     private async Task BroadcastAsync<TDto>(Guid workspaceId, string entityType, Guid entityId, TDto dto, long sequence)
         where TDto : notnull
     {
@@ -162,9 +207,10 @@ public partial class CommerceCommandService
             CloudInventoryMovementDto => "created",
             CloudPriceChangeRequestDto request => request.Status switch
             {
+                "Pending" => "priceChangeRequestCreated",
                 "Approved" => "approved",
                 "Rejected" => "rejected",
-                _ => "created"
+                _ => "updated"
             },
             _ => "updated"
         };
@@ -174,6 +220,7 @@ public partial class CommerceCommandService
             "archived" => RealtimeEvent.EntityArchived,
             "recovered" => RealtimeEvent.EntityRecovered,
             "created" => RealtimeEvent.EntityCreated,
+            "priceChangeRequestCreated" => RealtimeEvent.PriceChangeRequestCreated,
             "approved" or "rejected" => RealtimeEvent.PriceChangeRequestReviewed,
             _ => RealtimeEvent.EntityUpdated
         };

@@ -22,7 +22,7 @@ public partial class CommerceCommandService
             workspaceId,
             "price-change-request:create",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 var now = DateTime.UtcNow;
                 var requestId = Guid.NewGuid();
@@ -51,19 +51,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadPriceChangeRequestDtoAsync(connection, transaction, workspaceId, requestId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "PriceChangeRequestCreated", EntityType.PriceChangeRequest, requestId, null, afterJson, command.ChangeReason, command.ClientRequestId);
-
-                await _notifier.NotifyAsync(workspaceId, RealtimeEvent.PriceChangeRequestCreated, new RealtimeEventPayload
-                {
-                    WorkspaceId = workspaceId,
-                    EntityType = EntityType.PriceChangeRequest,
-                    EntityId = requestId,
-                    Sequence = sequence,
-                    ActorUserId = userId,
-                    ActorDisplayName = _currentUser.DisplayName ?? string.Empty,
-                    OccurredAtUtc = now,
-                    Action = "created"
-                });
+                await AuditAsync(connection, transaction, workspaceId, "PriceChangeRequestCreated", EntityType.PriceChangeRequest, requestId, null, afterJson, command.ChangeReason, command.ClientRequestId, collector);
 
                 return (dto, EntityType.PriceChangeRequest, requestId);
             },

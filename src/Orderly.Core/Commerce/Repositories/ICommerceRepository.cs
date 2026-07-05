@@ -39,4 +39,11 @@ public interface ICommerceRepository<TEntity>
 
     /// <summary>Soft-deletes the entity with the given id so it is excluded from active queries but remains recoverable.</summary>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Soft-deletes (archives) the entity and records the reason. Implementations that do not support
+    /// per-operation reasons fall back to <see cref="DeleteAsync(Guid, CancellationToken)"/>.
+    /// </summary>
+    Task DeleteAsync(Guid id, string? archiveReason, CancellationToken cancellationToken = default)
+        => DeleteAsync(id, cancellationToken);
 }

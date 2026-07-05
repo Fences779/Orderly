@@ -12,6 +12,13 @@ namespace Orderly.Data.Cloud;
 public interface ILocalImportPackageBuilder
 {
     Task<LocalImportDryRunRequest> BuildDryRunRequestAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Re-reads the local SQLite database and recomputes the source fingerprint.
+    /// This must be called immediately before Commit so the server can verify the data
+    /// has not changed since DryRun.
+    /// </summary>
+    Task<string> ComputeCurrentFingerprintAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class LocalImportPackageBuilder : ILocalImportPackageBuilder
@@ -36,8 +43,27 @@ public sealed class LocalImportPackageBuilder : ILocalImportPackageBuilder
         await using var connection = _connectionFactory.CreateConnection();
         await connection.OpenAsync(cancellationToken);
         var sourceInstanceId = await GetOrCreateSourceInstanceIdAsync(connection, cancellationToken);
+        var package = await ReadPackageAsync(connection, cancellationToken);
 
-        var package = new LocalImportPackage
+        return new LocalImportDryRunRequest
+        {
+            SourceInstanceId = sourceInstanceId,
+            SourceFingerprint = ComputeFingerprint(package),
+            Package = package
+        };
+    }
+
+    public async Task<string> ComputeCurrentFingerprintAsync(CancellationToken cancellationToken = default)
+    {
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        var package = await ReadPackageAsync(connection, cancellationToken);
+        return ComputeFingerprint(package);
+    }
+
+    private static async Task<LocalImportPackage> ReadPackageAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        return new LocalImportPackage
         {
             Products = await ReadProductsAsync(connection, cancellationToken),
             Customers = await ReadCustomersAsync(connection, cancellationToken),
@@ -46,13 +72,6 @@ public sealed class LocalImportPackageBuilder : ILocalImportPackageBuilder
             OrderItems = await ReadOrderItemsAsync(connection, cancellationToken),
             PaymentRecords = await ReadPaymentRecordsAsync(connection, cancellationToken),
             CashFlowEntries = await ReadCashFlowEntriesAsync(connection, cancellationToken)
-        };
-
-        return new LocalImportDryRunRequest
-        {
-            SourceInstanceId = sourceInstanceId,
-            SourceFingerprint = ComputeFingerprint(package),
-            Package = package
         };
     }
 

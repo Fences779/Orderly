@@ -47,6 +47,10 @@ public partial class MainViewModel
     [ObservableProperty]
     private BusinessAdvicePageViewModel? _businessAdvicePage;
 
+    /// <summary>Archive Data (归档数据) page ViewModel, backed by <c>IArchiveService</c>.</summary>
+    [ObservableProperty]
+    private ArchivePageViewModel? _archivePage;
+
     /// <summary>
     /// Attaches the dedicated per-page ViewModels constructed in the composition root from the
     /// Commerce Service Layer. Called once during workspace initialization.
@@ -58,7 +62,8 @@ public partial class MainViewModel
         InventoryPageViewModel inventoryPage,
         CustomersPageViewModel customersPage,
         CashflowPageViewModel cashflowPage,
-        BusinessAdvicePageViewModel businessAdvicePage)
+        BusinessAdvicePageViewModel businessAdvicePage,
+        ArchivePageViewModel? archivePage = null)
     {
         WorkbenchPage = workbenchPage;
         OrdersPage = ordersPage;
@@ -67,6 +72,7 @@ public partial class MainViewModel
         CustomersPage = customersPage;
         CashflowPage = cashflowPage;
         BusinessAdvicePage = businessAdvicePage;
+        ArchivePage = archivePage;
     }
 
     // Tracks which commerce pages have already loaded successfully, so navigating back to a page
@@ -89,6 +95,7 @@ public partial class MainViewModel
         SectionCustomers => CustomersPage,
         SectionCashflow => CashflowPage,
         SectionBusinessAdvice => BusinessAdvicePage,
+        SectionArchive => ArchivePage,
         _ => null
     };
 

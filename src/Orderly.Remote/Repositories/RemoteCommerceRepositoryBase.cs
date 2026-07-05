@@ -101,6 +101,9 @@ public abstract class RemoteCommerceRepositoryBase<TEntity, TDto>
     public virtual Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
+    public virtual Task DeleteAsync(Guid id, string? archiveReason, CancellationToken cancellationToken = default)
+        => DeleteAsync(id, cancellationToken);
+
     private async Task CacheEntryAsync(string entityId, TDto dto, CancellationToken cancellationToken)
     {
         if (_cacheStore is null)

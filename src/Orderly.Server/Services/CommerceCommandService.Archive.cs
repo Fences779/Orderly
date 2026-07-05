@@ -21,7 +21,7 @@ public partial class CommerceCommandService
             workspaceId,
             "archive",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 var row = await connection.QueryFirstOrDefaultAsync(
                     $"SELECT * FROM \"{tableName}\" WHERE \"Id\" = @entityId AND \"WorkspaceId\" = @workspaceId;",
@@ -69,7 +69,7 @@ public partial class CommerceCommandService
                 dto.Revision = revision + 1;
                 dto.UpdatedAtUtc = now;
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "Archived", entityTypeConstant, entityId, beforeJson, afterJson, command.ArchiveReason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "Archived", entityTypeConstant, entityId, beforeJson, afterJson, command.ArchiveReason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, entityTypeConstant, entityId, "archived", dto.Revision);
 
                 return (dto, entityTypeConstant, entityId);
@@ -91,7 +91,7 @@ public partial class CommerceCommandService
             workspaceId,
             "recover",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 await ThrowIfRevisionMismatchAsync(connection, transaction, tableName, entityId, command.ExpectedRevision, ct);
 
@@ -130,7 +130,7 @@ public partial class CommerceCommandService
                 dto.Revision = revision + 1;
                 dto.UpdatedAtUtc = now;
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "Recovered", entityTypeConstant, entityId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "Recovered", entityTypeConstant, entityId, beforeJson, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, entityTypeConstant, entityId, "recovered", dto.Revision);
 
                 return (dto, entityTypeConstant, entityId);

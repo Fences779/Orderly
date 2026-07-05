@@ -1,0 +1,71 @@
+<Window x:Class="Orderly.App.Views.SubmitPriceChangeRequestDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="提交改价申请"
+        Width="420"
+        Height="320"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        AutomationProperties.AutomationId="SubmitPriceChangeRequestDialog">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="提交改价申请"
+                   FontSize="{DynamicResource UiFontTitle}"
+                   FontFamily="{StaticResource UiFontFamilyCjk}"
+                   FontWeight="{StaticResource UiFontWeightBold}"
+                   Foreground="{DynamicResource HeadingBrush}"
+                   Margin="0,0,0,16" />
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+            <TextBlock Text="当前售价" Style="{StaticResource DialogFieldLabelStyle}" />
+            <TextBlock x:Name="CurrentPriceText"
+                       FontSize="{DynamicResource UiFontBody}"
+                       FontFamily="{StaticResource UiFontFamilyLatin}"
+                       Foreground="{DynamicResource SecondaryTextBrush}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="0,0,0,12">
+            <TextBlock Text="建议新售价 *" Style="{StaticResource DialogFieldLabelStyle}" />
+            <TextBox x:Name="ProposedPriceTextBox"
+                     AutomationProperties.AutomationId="SubmitPriceChangeRequestDialog_ProposedPrice"
+                     Style="{StaticResource UiTextBoxStyle}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Margin="0,0,0,12">
+            <TextBlock Text="改价原因 *" Style="{StaticResource DialogFieldLabelStyle}" />
+            <TextBox x:Name="ReasonTextBox"
+                     AutomationProperties.AutomationId="SubmitPriceChangeRequestDialog_Reason"
+                     Style="{StaticResource UiTextBoxStyle}"
+                     Height="60"
+                     TextWrapping="Wrap"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="5"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="取消"
+                    AutomationProperties.AutomationId="SubmitPriceChangeRequestDialog_Cancel"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    IsCancel="True"
+                    Margin="0,0,12,0"
+                    Click="CancelButton_Click" />
+            <Button Content="提交申请"
+                    AutomationProperties.AutomationId="SubmitPriceChangeRequestDialog_Confirm"
+                    Style="{StaticResource UiPrimaryButtonStyle}"
+                    IsDefault="True"
+                    Click="ConfirmButton_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

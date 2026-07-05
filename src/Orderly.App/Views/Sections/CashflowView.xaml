@@ -136,16 +136,34 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="现金流"
-                           FontSize="{DynamicResource UiFontTitle}"
-                           FontFamily="{StaticResource UiFontFamilyCjk}"
-                           FontWeight="{StaticResource UiFontWeightBold}"
-                           Foreground="{DynamicResource HeadingBrush}" />
-                <TextBlock Text="近 30 天收支、应收应付与现金流健康度"
-                           FontSize="{DynamicResource UiFontCaption}"
-                           FontFamily="{StaticResource UiFontFamilyCjk}"
-                           Foreground="{DynamicResource SecondaryTextBrush}"
-                           Margin="{StaticResource UiPresenterGapBottom}" />
+                <Grid>
+                    <TextBlock Text="现金流"
+                               FontSize="{DynamicResource UiFontTitle}"
+                               FontFamily="{StaticResource UiFontFamilyCjk}"
+                               FontWeight="{StaticResource UiFontWeightBold}"
+                               Foreground="{DynamicResource HeadingBrush}"
+                               Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <TextBlock Text="订单收款状态"
+                               FontSize="{DynamicResource UiFontTitle}"
+                               FontFamily="{StaticResource UiFontFamilyCjk}"
+                               FontWeight="{StaticResource UiFontWeightBold}"
+                               Foreground="{DynamicResource HeadingBrush}"
+                               Visibility="{Binding CanViewCosts, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                </Grid>
+                <Grid>
+                    <TextBlock Text="近 30 天收支、应收应付与现金流健康度"
+                               FontSize="{DynamicResource UiFontCaption}"
+                               FontFamily="{StaticResource UiFontFamilyCjk}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="{StaticResource UiPresenterGapBottom}"
+                               Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <TextBlock Text="仅展示订单相关的应收与已收状态"
+                               FontSize="{DynamicResource UiFontCaption}"
+                               FontFamily="{StaticResource UiFontFamilyCjk}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Margin="{StaticResource UiPresenterGapBottom}"
+                               Visibility="{Binding CanViewCosts, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                </Grid>
             </StackPanel>
             <Button Grid.Column="1"
                     Content="刷新"
@@ -186,9 +204,10 @@
                       VerticalScrollBarVisibility="Auto"
                       Visibility="{Binding ShowContent, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel>
-                <!-- 概览：收入/支出/净额（核心数字，数字字号阶）+ 应收/应付/健康度 -->
+                <!-- 概览：管理员看收入/支出/净额 + 应收/应付/健康度；员工只看订单收款状态 -->
                 <WrapPanel>
-                    <Border Style="{StaticResource CfMetricCardStyle}">
+                    <Border Style="{StaticResource CfMetricCardStyle}"
+                            Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="已实现收入" Style="{StaticResource CfMetricCaptionStyle}" />
                             <TextBlock Text="{Binding RealizedIncome, StringFormat=¥{0}}"
@@ -196,7 +215,8 @@
                                        Foreground="{DynamicResource AccentTextBrush}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CfMetricCardStyle}">
+                    <Border Style="{StaticResource CfMetricCardStyle}"
+                            Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="已实现支出" Style="{StaticResource CfMetricCaptionStyle}" />
                             <TextBlock Text="{Binding RealizedExpense, StringFormat=¥{0}}"
@@ -204,7 +224,8 @@
                                        Foreground="{DynamicResource DangerTextBrush}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CfMetricCardStyle}">
+                    <Border Style="{StaticResource CfMetricCardStyle}"
+                            Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="净现金流" Style="{StaticResource CfMetricCaptionStyle}" />
                             <TextBlock Text="{Binding NetCashFlow, StringFormat=¥{0}}"
@@ -213,19 +234,24 @@
                     </Border>
                     <Border Style="{StaticResource CfMetricCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="应收账款" Style="{StaticResource CfMetricCaptionStyle}" />
+                            <Grid>
+                                <TextBlock Text="应收账款" Style="{StaticResource CfMetricCaptionStyle}" Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBlock Text="订单应收" Style="{StaticResource CfMetricCaptionStyle}" Visibility="{Binding CanViewCosts, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                            </Grid>
                             <TextBlock Text="{Binding OutstandingReceivable, StringFormat=¥{0}}"
                                        Style="{StaticResource CfMetricValueSecondaryStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CfMetricCardStyle}">
+                    <Border Style="{StaticResource CfMetricCardStyle}"
+                            Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="应付账款" Style="{StaticResource CfMetricCaptionStyle}" />
                             <TextBlock Text="{Binding OutstandingPayable, StringFormat=¥{0}}"
                                        Style="{StaticResource CfMetricValueSecondaryStyle}" />
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource CfMetricCardStyle}">
+                    <Border Style="{StaticResource CfMetricCardStyle}"
+                            Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="现金流健康度" Style="{StaticResource CfMetricCaptionStyle}" />
                             <TextBlock Text="{Binding HealthScore}"
@@ -235,10 +261,19 @@
                 </WrapPanel>
 
                 <!-- 明细标题 -->
-                <TextBlock Text="近 30 天收支明细" Style="{StaticResource CfSectionTitleStyle}" />
+                <Grid>
+                    <TextBlock Text="近 30 天收支明细"
+                               Style="{StaticResource CfSectionTitleStyle}"
+                               Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <TextBlock Text="员工仅可查看订单收款状态，不展示现金流明细"
+                               Style="{StaticResource CfSectionTitleStyle}"
+                               Visibility="{Binding CanViewCosts, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                </Grid>
 
                 <!-- 明细表格（舒适档 + UI 虚拟化，统一 DataGrid 令牌样式） -->
-                <DataGrid ItemsSource="{Binding Entries}" Style="{StaticResource UiDataGridStyle}">
+                <DataGrid ItemsSource="{Binding Entries}"
+                          Style="{StaticResource UiDataGridStyle}"
+                          Visibility="{Binding CanViewCosts, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="发生时间"
                                             Binding="{Binding OccurredAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"

@@ -23,6 +23,25 @@
             <CornerRadius x:Key="SettingsPathPanelRadius">8</CornerRadius>
             <CornerRadius x:Key="SettingsStatusBadgeRadius">6</CornerRadius>
 
+            <!-- 模态弹窗与异步按钮的派生形状 / 间距令牌（Req 9.1/1.12） -->
+            <CornerRadius x:Key="SettingsAsyncButtonRadius">8</CornerRadius>
+            <CornerRadius x:Key="SettingsDialogRadius">16</CornerRadius>
+            <CornerRadius x:Key="SettingsDialogResultPanelRadius">8</CornerRadius>
+
+            <Thickness x:Key="SettingsAsyncButtonSpinnerMargin">0</Thickness>
+            <Thickness x:Key="SettingsDialogTitleMargin">0,0,0,20</Thickness>
+            <Thickness x:Key="SettingsDialogSpinnerMargin">0,0,0,16</Thickness>
+            <Thickness x:Key="SettingsDialogPercentMargin">0,0,0,10</Thickness>
+            <Thickness x:Key="SettingsDialogProgressMargin">10,0,10,16</Thickness>
+            <Thickness x:Key="SettingsDialogCompletedIconMargin">0,0,0,14</Thickness>
+            <Thickness x:Key="SettingsDialogCompletedStatusMargin">0,0,0,16</Thickness>
+            <Thickness x:Key="SettingsDialogResultPanelMargin">0,0,0,20</Thickness>
+            <Thickness x:Key="SettingsDialogPadding">24</Thickness>
+            <Thickness x:Key="SettingsDialogResultPanelPadding">12</Thickness>
+
+            <!-- 模态弹窗遮罩：使用命名颜色 + 透明度，避免在属性中写 hex（Req 9.1/1.12） -->
+            <SolidColorBrush x:Key="SettingsOverlayBackgroundBrush" Color="Black" Opacity="0.25" />
+
             <!-- 异步操作按钮专用的现代化微动画与 Loading 样式 -->
             <Style x:Key="AsyncLoadingActionButtonStyle" TargetType="Button" BasedOn="{StaticResource SettingsRowActionButtonStyle}">
                 <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
@@ -38,7 +57,7 @@
                                     Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="8"
+                                    CornerRadius="{StaticResource SettingsAsyncButtonRadius}"
                                     SnapsToDevicePixels="True">
                                 <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}">
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -47,7 +66,7 @@
                                               Width="0"
                                               Height="14"
                                               Opacity="0"
-                                              Margin="0"
+                                              Margin="{StaticResource SettingsAsyncButtonSpinnerMargin}"
                                               RenderTransformOrigin="0.5,0.5"
                                               VerticalAlignment="Center">
                                             <Grid.RenderTransform>
@@ -71,23 +90,23 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Chrome" Property="Background" Value="#ECECF1" />
+                                    <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource SidebarHoverBrush}" />
                                     <Setter Property="Cursor" Value="Hand" />
                                 </Trigger>
                                 
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Chrome" Property="Background" Value="#E2E2E7" />
+                                    <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource BorderBrushSoft}" />
                                 </Trigger>
                                 
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="Chrome" Property="Background" Value="#F5F2EA" />
-                                    <Setter Property="Foreground" Value="#8B908B" />
+                                    <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource WarmSoftBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
                                     <Setter Property="Cursor" Value="Arrow" />
                                 </Trigger>
                                 
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Command.IsRunning}" Value="True">
-                                    <Setter TargetName="Chrome" Property="Background" Value="#F5F2EA" />
-                                    <Setter Property="Foreground" Value="#8B908B" />
+                                    <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource WarmSoftBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource GreyTextBrush}" />
                                     <Setter Property="IsEnabled" Value="False" />
                                     <DataTrigger.EnterActions>
                                         <BeginStoryboard x:Name="StartLoading">
@@ -347,7 +366,7 @@
                                     </Border>
 
                                     <!-- 完整性检查 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}">
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -500,7 +519,7 @@
     
     <!-- 模态进度弹窗遮罩 -->
     <Grid Visibility="{Binding IsProgressDialogOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
-          Background="#40000000"
+          Background="{DynamicResource SettingsOverlayBackgroundBrush}"
           HorizontalAlignment="Stretch"
           VerticalAlignment="Stretch">
         <Grid.Triggers>
@@ -518,12 +537,12 @@
         <Border Width="360"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Background="#FFFFFF"
-                CornerRadius="16"
-                Padding="24"
+                Background="{DynamicResource SurfaceRaisedBrush}"
+                CornerRadius="{StaticResource SettingsDialogRadius}"
+                Padding="{StaticResource SettingsDialogPadding}"
                 RenderTransformOrigin="0.5,0.5">
             <Border.Effect>
-                <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="2" Opacity="0.15" />
+                <DropShadowEffect Color="Black" BlurRadius="20" ShadowDepth="2" Opacity="0.15" />
             </Border.Effect>
             <Border.RenderTransform>
                 <ScaleTransform x:Name="DialogScale" ScaleX="1" ScaleY="1" />
@@ -565,13 +584,13 @@
                     <!-- 弹窗标题 -->
                     <TextBlock Text="{Binding ProgressDialogTitle}"
                                HorizontalAlignment="Center"
-                               FontSize="16"
+                               FontSize="{DynamicResource UiFontSize16}"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource HeadingBrush}"
-                               Margin="0,0,0,20" />
+                               Margin="{StaticResource SettingsDialogTitleMargin}" />
                                
                     <!-- 旋转 Logo -->
-                    <Grid Width="48" Height="48" HorizontalAlignment="Center" Margin="0,0,0,16" RenderTransformOrigin="0.5,0.5">
+                    <Grid Width="48" Height="48" HorizontalAlignment="Center" Margin="{StaticResource SettingsDialogSpinnerMargin}" RenderTransformOrigin="0.5,0.5">
                         <Grid.RenderTransform>
                             <RotateTransform x:Name="SpinnerAngle" Angle="0" />
                         </Grid.RenderTransform>
@@ -587,7 +606,7 @@
                             </EventTrigger>
                         </Grid.Triggers>
                         <!-- 渐变灰色背景圆 -->
-                        <Ellipse Stroke="#E4E7ED" StrokeThickness="4" />
+                        <Ellipse Stroke="{DynamicResource BorderBrushSoft}" StrokeThickness="4" />
                         <!-- 主色淡蓝旋转弧 -->
                         <Ellipse Stroke="{DynamicResource PrimaryBrush}" StrokeThickness="4" StrokeDashArray="3 1.5" />
                     </Grid>
@@ -595,10 +614,10 @@
                     <!-- 百分比数字 -->
                     <TextBlock Text="{Binding ProgressDialogPercent, StringFormat={}{0}%}"
                                HorizontalAlignment="Center"
-                               FontSize="26"
+                               FontSize="{DynamicResource UiFontSize26}"
                                FontWeight="Bold"
                                Foreground="{DynamicResource HeadingBrush}"
-                               Margin="0,0,0,10" />
+                               Margin="{StaticResource SettingsDialogPercentMargin}" />
                                
                     <!-- 细扁水平进度条 -->
                     <ProgressBar Minimum="0"
@@ -606,15 +625,15 @@
                                  Height="5"
                                  Value="{Binding ProgressDialogPercent}"
                                  Foreground="{DynamicResource PrimaryBrush}"
-                                 Background="#F2F3F5"
+                                 Background="{DynamicResource GreySoftBrush}"
                                  BorderThickness="0"
                                  HorizontalAlignment="Stretch"
-                                 Margin="10,0,10,16" />
+                                 Margin="{StaticResource SettingsDialogProgressMargin}" />
                                  
                     <!-- 当前服务文案步骤提示 -->
                     <TextBlock Text="{Binding ProgressDialogStatus}"
                                HorizontalAlignment="Center"
-                               FontSize="12"
+                               FontSize="{DynamicResource UiFontSize12}"
                                Foreground="{DynamicResource SecondaryTextBrush}"
                                TextWrapping="Wrap"
                                TextAlignment="Center" />
@@ -634,29 +653,29 @@
                     </StackPanel.Style>
                     
                     <!-- 完成打勾 Logo -->
-                    <Canvas Width="48" Height="48" HorizontalAlignment="Center" Margin="0,0,0,14">
-                        <Ellipse Width="48" Height="48" Fill="#F0F9EB" Stroke="#67C23A" StrokeThickness="1.5" />
-                        <Path Data="M 15 24 L 21 30 L 32 18" Stroke="#67C23A" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                    <Canvas Width="48" Height="48" HorizontalAlignment="Center" Margin="{StaticResource SettingsDialogCompletedIconMargin}">
+                        <Ellipse Width="48" Height="48" Fill="{DynamicResource AccentSoftBrush}" Stroke="{DynamicResource AccentTextBrush}" StrokeThickness="1.5" />
+                        <Path Data="M 15 24 L 21 30 L 32 18" Stroke="{DynamicResource AccentTextBrush}" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                     </Canvas>
                     
                     <!-- 完成状态提示 -->
                     <TextBlock Text="{Binding ProgressDialogStatus}"
                                HorizontalAlignment="Center"
-                               FontSize="16"
+                               FontSize="{DynamicResource UiFontSize16}"
                                FontWeight="Bold"
-                               Foreground="#67C23A"
-                               Margin="0,0,0,16" />
+                               Foreground="{DynamicResource AccentTextBrush}"
+                               Margin="{StaticResource SettingsDialogCompletedStatusMargin}" />
                                
                     <!-- 服务内容与日志结果 -->
-                    <Border Background="#F7F9FA"
-                            BorderBrush="#EAECEF"
+                    <Border Background="{DynamicResource SurfaceSoftBrush}"
+                            BorderBrush="{DynamicResource BorderBrushSoft}"
                             BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="12"
-                            Margin="0,0,0,20">
+                            CornerRadius="{StaticResource SettingsDialogResultPanelRadius}"
+                            Padding="{StaticResource SettingsDialogResultPanelPadding}"
+                            Margin="{StaticResource SettingsDialogResultPanelMargin}">
                         <TextBlock Text="{Binding ProgressDialogResultText}"
                                    FontFamily="Consolas, PingFang SC"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource UiFontSize12}"
                                    Foreground="{DynamicResource SecondaryTextBrush}"
                                    TextWrapping="Wrap"
                                    LineHeight="18" />

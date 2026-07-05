@@ -70,6 +70,9 @@ public sealed class RemoteCashFlowEntryRepository : RemoteCommerceRepositoryBase
     }
 
     public override async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        => await DeleteAsync(id, null, cancellationToken).ConfigureAwait(false);
+
+    public override async Task DeleteAsync(Guid id, string? archiveReason, CancellationToken cancellationToken = default)
     {
         var latest = await Client.GetAsync<CloudCashFlowEntryDto>(
             $"api/workspaces/{Session.WorkspaceId:N}/cashflow/entries/{id:N}",
@@ -81,7 +84,7 @@ public sealed class RemoteCashFlowEntryRepository : RemoteCommerceRepositoryBase
             ExpectedRevision = latest?.Revision ?? 0L,
             EntityType = EntityType.CashFlowEntry,
             EntityId = id,
-            ArchiveReason = "Remote soft delete"
+            ArchiveReason = archiveReason ?? "Remote soft delete"
         };
 
         await Client.PostAsync<ArchiveCommand>(

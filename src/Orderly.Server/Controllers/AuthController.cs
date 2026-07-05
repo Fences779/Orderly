@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Orderly.Contracts.Auth;
+using Orderly.Contracts.Permissions;
 using Orderly.Server.Services;
 
 namespace Orderly.Server.Controllers;
@@ -11,11 +12,13 @@ public class AuthController : ControllerBase
 {
     private readonly ICloudAuthService _authService;
     private readonly ICurrentUserContext _currentUser;
+    private readonly ICloudPermissionService _permissions;
 
-    public AuthController(ICloudAuthService authService, ICurrentUserContext currentUser)
+    public AuthController(ICloudAuthService authService, ICurrentUserContext currentUser, ICloudPermissionService permissions)
     {
         _authService = authService;
         _currentUser = currentUser;
+        _permissions = permissions;
     }
 
     [HttpPost("login")]
@@ -88,6 +91,18 @@ public class AuthController : ControllerBase
         if (!_currentUser.IsAuthenticated) return Unauthorized();
         var ok = await _authService.ChangePasswordAsync(_currentUser.UserId.Value, request.CurrentPassword, request.NewPassword);
         if (!ok) return BadRequest(new { Error = "Current password is incorrect." });
+        return NoContent();
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPasswordAsync([FromBody] ResetPasswordRequest request)
+    {
+        if (!_currentUser.IsAuthenticated) return Unauthorized();
+        var membership = await _authService.GetMembershipAsync(_currentUser.UserId.Value);
+        if (membership == null || !_permissions.IsAdmin(membership)) return Forbid();
+
+        var ok = await _authService.ResetPasswordAsync(request.UserId, request.NewPassword, _currentUser.UserId.Value, request.ClientRequestId);
+        if (!ok) return BadRequest(new { Error = "Cannot reset password for this user." });
         return NoContent();
     }
 

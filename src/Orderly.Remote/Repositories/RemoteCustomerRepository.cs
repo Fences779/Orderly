@@ -62,6 +62,9 @@ public sealed class RemoteCustomerRepository : RemoteCommerceRepositoryBase<Cust
     }
 
     public override async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+        => await DeleteAsync(id, null, cancellationToken).ConfigureAwait(false);
+
+    public override async Task DeleteAsync(Guid id, string? archiveReason, CancellationToken cancellationToken = default)
     {
         var latest = await Client.GetAsync<CloudCustomerDto>(
             $"api/workspaces/{Session.WorkspaceId:N}/customers/{id:N}",
@@ -73,7 +76,7 @@ public sealed class RemoteCustomerRepository : RemoteCommerceRepositoryBase<Cust
             ExpectedRevision = latest?.Revision ?? 0L,
             EntityType = EntityType.Customer,
             EntityId = id,
-            ArchiveReason = "Remote soft delete"
+            ArchiveReason = archiveReason ?? "Remote soft delete"
         };
 
         await Client.PostAsync<ArchiveCommand>(

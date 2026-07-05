@@ -22,7 +22,7 @@ public partial class CommerceCommandService
             workspaceId,
             "price-change-request:approve",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 var requestRow = await connection.QueryFirstOrDefaultAsync(
                     @"SELECT * FROM ""CloudPriceChangeRequests""
@@ -80,10 +80,10 @@ public partial class CommerceCommandService
 
                 var productAfter = await LoadProductDtoAsync(connection, transaction, workspaceId, (Guid)requestRow.ProductId, membership, ct);
                 var productAfterJson = await SnapshotJsonAsync(productAfter);
-                await AuditAsync(connection, transaction, workspaceId, "PriceChangeApproved", EntityType.Product, (Guid)requestRow.ProductId, productBeforeJson, productAfterJson, command.ReviewNote, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "PriceChangeApproved", EntityType.Product, (Guid)requestRow.ProductId, productBeforeJson, productAfterJson, command.ReviewNote, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.Product, (Guid)requestRow.ProductId, "priceChanged", productAfter.Revision);
 
-                await _notifier.NotifyAsync(workspaceId, RealtimeEvent.EntityUpdated, new RealtimeEventPayload
+                collector.Add(RealtimeEvent.EntityUpdated, new RealtimeEventPayload
                 {
                     WorkspaceId = workspaceId,
                     EntityType = EntityType.Product,
@@ -98,7 +98,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadPriceChangeRequestDtoAsync(connection, transaction, workspaceId, requestId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "PriceChangeRequestApproved", EntityType.PriceChangeRequest, requestId, null, afterJson, command.ReviewNote, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "PriceChangeRequestApproved", EntityType.PriceChangeRequest, requestId, null, afterJson, command.ReviewNote, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.PriceChangeRequest, requestId, "approved", 0);
 
                 return (dto, EntityType.PriceChangeRequest, requestId);
@@ -118,7 +118,7 @@ public partial class CommerceCommandService
             workspaceId,
             "price-change-request:reject",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 var requestRow = await connection.QueryFirstOrDefaultAsync(
                     @"SELECT * FROM ""CloudPriceChangeRequests""
@@ -151,7 +151,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadPriceChangeRequestDtoAsync(connection, transaction, workspaceId, requestId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "PriceChangeRequestRejected", EntityType.PriceChangeRequest, requestId, null, afterJson, command.ReviewNote, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "PriceChangeRequestRejected", EntityType.PriceChangeRequest, requestId, null, afterJson, command.ReviewNote, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.PriceChangeRequest, requestId, "rejected", 0);
 
                 return (dto, EntityType.PriceChangeRequest, requestId);

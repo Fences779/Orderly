@@ -21,7 +21,7 @@ public partial class CommerceCommandService
             workspaceId,
             "customer:create",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 var now = DateTime.UtcNow;
                 var customerId = Guid.NewGuid();
@@ -53,7 +53,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadCustomerDtoAsync(connection, transaction, workspaceId, customerId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "CustomerCreated", EntityType.Customer, customerId, null, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "CustomerCreated", EntityType.Customer, customerId, null, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.Customer, customerId, "created", dto.Revision);
 
                 return (dto, EntityType.Customer, customerId);
@@ -70,7 +70,7 @@ public partial class CommerceCommandService
             workspaceId,
             "customer:update",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCustomers", customerId, command.ExpectedRevision, ct);
 
@@ -105,7 +105,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadCustomerDtoAsync(connection, transaction, workspaceId, customerId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "CustomerUpdated", EntityType.Customer, customerId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "CustomerUpdated", EntityType.Customer, customerId, beforeJson, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.Customer, customerId, "updated", dto.Revision);
 
                 return (dto, EntityType.Customer, customerId);
@@ -125,7 +125,7 @@ public partial class CommerceCommandService
             workspaceId,
             "customer:note",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCustomers", customerId, command.ExpectedRevision, ct);
 
@@ -161,7 +161,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadCustomerDtoAsync(connection, transaction, workspaceId, customerId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "CustomerNoteAdded", EntityType.Customer, customerId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "CustomerNoteAdded", EntityType.Customer, customerId, beforeJson, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.Customer, customerId, "noteAdded", dto.Revision);
 
                 return (dto, EntityType.Customer, customerId);

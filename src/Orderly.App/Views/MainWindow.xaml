@@ -96,6 +96,9 @@
             <!-- 经营建议 (机密页面：内容仅在通过本会话 PIN 门禁后渲染，Req 18.3 / 13.3 / 任务 19.1) -->
             <Sections:BusinessAdviceView Grid.Row="1" Visibility="{Binding SensitiveGuard.ShowBusinessAdviceContent, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
+            <!-- 归档数据 (Admin only) -->
+            <Sections:ArchiveView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=归档数据}" />
+
             <Sections:SettingsView Grid.Row="1" Visibility="{Binding SelectedSection, Converter={StaticResource SectionVisibilityConverter}, ConverterParameter=设置}" />
 
             <!-- ==================== “我的”板块 (Me/Profile Page) ==================== -->

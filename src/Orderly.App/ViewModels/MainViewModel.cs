@@ -19,6 +19,7 @@ public partial class MainViewModel : ObservableObject
     public const string SectionCustomers = "客户";          // Customers
     public const string SectionCashflow = "现金流";          // Cash Flow
     public const string SectionBusinessAdvice = "经营建议";   // Business Advice
+    public const string SectionArchive = "归档数据";          // Archive Data
     public const string SectionSettings = "设置";           // Settings
     public const string SectionMe = "我的";                 // Me / Account
 
@@ -37,6 +38,7 @@ public partial class MainViewModel : ObservableObject
         SectionCustomers,
         SectionCashflow,
         SectionBusinessAdvice,
+        SectionArchive,
         SectionSettings,
         SectionMe
     };

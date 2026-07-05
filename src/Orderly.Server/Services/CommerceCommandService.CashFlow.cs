@@ -30,7 +30,7 @@ public partial class CommerceCommandService
             workspaceId,
             $"cashflow:{kind}",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 var now = DateTime.UtcNow;
                 var entryId = Guid.NewGuid();
@@ -68,7 +68,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadCashFlowDtoAsync(connection, transaction, workspaceId, entryId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, $"CashFlow{kind}Created", EntityType.CashFlowEntry, entryId, null, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, $"CashFlow{kind}Created", EntityType.CashFlowEntry, entryId, null, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.CashFlowEntry, entryId, "created", dto.Revision);
 
                 return (dto, EntityType.CashFlowEntry, entryId);
@@ -91,7 +91,7 @@ public partial class CommerceCommandService
             workspaceId,
             "cashflow:settle",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCashFlowEntries", entryId, command.ExpectedRevision, ct);
 
@@ -132,7 +132,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadCashFlowDtoAsync(connection, transaction, workspaceId, entryId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "CashFlowSettled", EntityType.CashFlowEntry, entryId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "CashFlowSettled", EntityType.CashFlowEntry, entryId, beforeJson, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.CashFlowEntry, entryId, "settled", dto.Revision);
 
                 return (dto, EntityType.CashFlowEntry, entryId);
@@ -152,7 +152,7 @@ public partial class CommerceCommandService
             workspaceId,
             "cashflow:update",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCashFlowEntries", entryId, command.ExpectedRevision, ct);
 
@@ -209,7 +209,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadCashFlowDtoAsync(connection, transaction, workspaceId, entryId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "CashFlowUpdated", EntityType.CashFlowEntry, entryId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "CashFlowUpdated", EntityType.CashFlowEntry, entryId, beforeJson, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.CashFlowEntry, entryId, "updated", dto.Revision);
 
                 return (dto, EntityType.CashFlowEntry, entryId);

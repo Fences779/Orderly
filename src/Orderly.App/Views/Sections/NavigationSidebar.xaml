@@ -162,8 +162,9 @@
                     </Button.Style>
                 </Button>
 
-                <!-- 7. 经营建议 (Business Advice) -->
-                <Button x:Name="Tab_BusinessAdvice" AutomationProperties.AutomationId="Tab_BusinessAdvice" Content="经营建议" Tag="&#xE9D9;" Command="{Binding SelectSectionCommand}" CommandParameter="经营建议">
+                <!-- 7. 经营建议 (Business Advice) - Admin only -->
+                <Button x:Name="Tab_BusinessAdvice" AutomationProperties.AutomationId="Tab_BusinessAdvice" Content="经营建议" Tag="&#xE9D9;" Command="{Binding SelectSectionCommand}" CommandParameter="经营建议"
+                        Visibility="{Binding IsCurrentUserOwner, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
                             <Style.Triggers>
@@ -182,7 +183,28 @@
                     </Button.Style>
                 </Button>
 
-                <!-- 8. 设置 (Settings) -->
+                <!-- 8. 归档数据 (Archive Data) - Admin only -->
+                <Button x:Name="Tab_Archive" AutomationProperties.AutomationId="Tab_Archive" Content="归档数据" Tag="&#xE7B8;" Command="{Binding SelectSectionCommand}" CommandParameter="归档数据"
+                        Visibility="{Binding IsCurrentUserOwner, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSection}" Value="归档数据">
+                                    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource HeadingBrush}" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect BlurRadius="12" ShadowDepth="1.5" Direction="270" Color="#000000" Opacity="0.06"/>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- 9. 设置 (Settings) -->
                 <Button x:Name="Tab_Settings" AutomationProperties.AutomationId="Tab_Settings" Content="设置" Tag="&#xE713;" Command="{Binding SelectSectionCommand}" CommandParameter="设置">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource MainMenuButtonStyle}">

@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Repositories;
 using Orderly.Core.Commerce.Services;
@@ -35,6 +37,10 @@ public sealed partial class CustomersPageViewModel : CommercePageViewModel
     private readonly ICustomerService _customerService;
     private readonly ICommerceCustomerRepository _customerRepository;
     private readonly IAppSettingRepository? _settingRepository;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ArchiveCustomerCommand))]
+    private CustomerRow? _selectedCustomer;
 
     /// <summary>Creates the Customers page ViewModel over the customer service and customer repository.</summary>
     /// <exception cref="ArgumentNullException">Thrown when a dependency is null.</exception>
@@ -88,6 +94,35 @@ public sealed partial class CustomersPageViewModel : CommercePageViewModel
         }
 
         NotifyEmptyStateChanged();
+    }
+
+    private bool CanArchiveCustomer(CustomerRow? row) => row is not null;
+
+    [RelayCommand(CanExecute = nameof(CanArchiveCustomer))]
+    private async Task ArchiveCustomerAsync(CustomerRow? row)
+    {
+        var target = row ?? SelectedCustomer;
+        if (target is null)
+            return;
+
+        var dialog = new Views.ArchiveReasonDialog($"客户 {target.Name}")
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            await _customerRepository.DeleteAsync(target.CustomerId, dialog.Reason).ConfigureAwait(true);
+            Customers.Remove(target);
+            NotifyEmptyStateChanged();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"归档失败：{ex.Message}", "归档", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
     }
 
     private async Task<AppPreferences> GetPrivacyPreferencesAsync(CancellationToken cancellationToken)

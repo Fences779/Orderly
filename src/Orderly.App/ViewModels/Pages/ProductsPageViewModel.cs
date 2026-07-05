@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Orderly.Core.Commerce;
 using Orderly.Core.Commerce.Services;
+using System.Windows;
+using MessageBox = System.Windows.MessageBox;
 
 namespace Orderly.App.ViewModels.Pages;
 
@@ -24,20 +28,31 @@ public sealed record ProductRow(
 public sealed partial class ProductsPageViewModel : CommercePageViewModel
 {
     private readonly IProductService _productService;
+    private readonly IPriceChangeRequestService? _priceChangeRequestService;
     private readonly bool _canViewCosts;
+
+    [ObservableProperty]
+    private ProductRow? _selectedProduct;
 
     /// <summary>Creates the Products page ViewModel over the product service.</summary>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="productService"/> is null.</exception>
-    public ProductsPageViewModel(IProductService productService, bool canViewCosts = true)
+    public ProductsPageViewModel(
+        IProductService productService,
+        bool canViewCosts = true,
+        IPriceChangeRequestService? priceChangeRequestService = null)
     {
         _productService = productService ?? throw new ArgumentNullException(nameof(productService));
         _canViewCosts = canViewCosts;
+        _priceChangeRequestService = priceChangeRequestService;
     }
 
     /// <inheritdoc />
     public override string PageKey => MainViewModel.SectionProducts;
 
     public bool CanViewCosts => _canViewCosts;
+
+    /// <summary>Whether the current user can submit price-change requests (Employee only; Admin edits directly).</summary>
+    public bool CanSubmitPriceChangeRequest => !_canViewCosts && _priceChangeRequestService is not null;
 
     /// <summary>The active products displayed on the page.</summary>
     public ObservableCollection<ProductRow> Products { get; } = new();
@@ -65,5 +80,34 @@ public sealed partial class ProductsPageViewModel : CommercePageViewModel
         }
 
         NotifyEmptyStateChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSubmitPriceChangeRequest))]
+    private async Task SubmitPriceChangeRequestAsync(ProductRow? product)
+    {
+        var target = product ?? SelectedProduct;
+        if (target is null || _priceChangeRequestService is null)
+            return;
+
+        if (!decimal.TryParse(target.DefaultPrice, out var currentPrice))
+            currentPrice = 0m;
+
+        var dialog = new Views.SubmitPriceChangeRequestDialog(currentPrice)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            await _priceChangeRequestService.SubmitAsync(target.Id, dialog.ProposedPrice, dialog.Reason);
+            System.Windows.MessageBox.Show("改价申请已提交，等待管理员审批。", "提交改价申请", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"提交改价申请失败：{ex.Message}", "提交改价申请", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 }

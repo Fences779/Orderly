@@ -1,0 +1,63 @@
+<Window x:Class="Orderly.App.Views.ArchiveReasonDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="归档"
+        Width="420"
+        Height="220"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        AutomationProperties.AutomationId="ArchiveReasonDialog">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="确认归档"
+                   FontSize="{DynamicResource UiFontTitle}"
+                   FontFamily="{StaticResource UiFontFamilyCjk}"
+                   FontWeight="{StaticResource UiFontWeightBold}"
+                   Foreground="{DynamicResource HeadingBrush}"
+                   Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="1"
+                   x:Name="DescriptionText"
+                   Text="归档后数据将从默认列表中隐藏，管理员可在归档数据中恢复。"
+                   FontSize="{DynamicResource UiFontCaption}"
+                   FontFamily="{StaticResource UiFontFamilyCjk}"
+                   Foreground="{DynamicResource SecondaryTextBrush}"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,12" />
+
+        <StackPanel Grid.Row="2">
+            <TextBlock Text="归档原因" Style="{StaticResource DialogFieldLabelStyle}" />
+            <TextBox x:Name="ReasonTextBox"
+                     AutomationProperties.AutomationId="ArchiveReasonDialog_Reason"
+                     Style="{StaticResource UiTextBoxStyle}"
+                     Height="60"
+                     TextWrapping="Wrap"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right">
+            <Button Content="取消"
+                    AutomationProperties.AutomationId="ArchiveReasonDialog_Cancel"
+                    Style="{StaticResource UiSecondaryButtonStyle}"
+                    IsCancel="True"
+                    Margin="0,0,12,0"
+                    Click="CancelButton_Click" />
+            <Button Content="确认归档"
+                    AutomationProperties.AutomationId="ArchiveReasonDialog_Confirm"
+                    Style="{StaticResource UiPrimaryButtonStyle}"
+                    IsDefault="True"
+                    Click="ConfirmButton_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

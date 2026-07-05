@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Orderly.Contracts.Commerce;
 using Orderly.Contracts.Offline;
+using Orderly.Contracts.Realtime;
 using Orderly.Server.Models;
 
 namespace Orderly.Server.Services;
@@ -14,11 +15,13 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
 {
     private readonly IEmergencyDraftRepository _repository;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ISignalRNotifier _notifier;
 
-    public EmergencyDraftProcessor(IEmergencyDraftRepository repository, IServiceProvider serviceProvider)
+    public EmergencyDraftProcessor(IEmergencyDraftRepository repository, IServiceProvider serviceProvider, ISignalRNotifier notifier)
     {
         _repository = repository;
         _serviceProvider = serviceProvider;
+        _notifier = notifier;
     }
 
     public async Task ProcessWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default)
@@ -76,34 +79,36 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
         var commandService = scope.ServiceProvider.GetRequiredService<CommerceCommandService>();
         var key = $"{draft.EntityType}/{draft.OperationType}";
 
+        var displayName = user.DisplayName;
+
         if (string.Equals(key, EmergencyDraftAllowedOperations.CustomerNote, StringComparison.OrdinalIgnoreCase))
         {
-            await ExecuteCustomerNoteAsync(commandService, draft, cancellationToken);
+            await ExecuteCustomerNoteAsync(commandService, draft, displayName, cancellationToken);
             return;
         }
 
         if (string.Equals(key, EmergencyDraftAllowedOperations.OrderStage, StringComparison.OrdinalIgnoreCase))
         {
-            await ExecuteOrderStageAsync(commandService, draft, cancellationToken);
+            await ExecuteOrderStageAsync(commandService, draft, displayName, cancellationToken);
             return;
         }
 
         if (string.Equals(key, EmergencyDraftAllowedOperations.OrderNote, StringComparison.OrdinalIgnoreCase))
         {
-            await ExecuteOrderNoteAsync(commandService, draft, cancellationToken);
+            await ExecuteOrderNoteAsync(commandService, draft, displayName, cancellationToken);
             return;
         }
 
         if (string.Equals(key, EmergencyDraftAllowedOperations.BusinessTaskStatus, StringComparison.OrdinalIgnoreCase))
         {
-            await ExecuteBusinessTaskStatusAsync(commandService, draft, cancellationToken);
+            await ExecuteBusinessTaskStatusAsync(commandService, draft, displayName, cancellationToken);
             return;
         }
 
         await MarkFailedAsync(draft, $"{key} 不是允许的应急草稿类型。", cancellationToken);
     }
 
-    private async Task ExecuteCustomerNoteAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    private async Task ExecuteCustomerNoteAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, string displayName, CancellationToken cancellationToken)
     {
         var command = JsonSerializer.Deserialize<CustomerNoteCommand>(draft.PayloadJson)
             ?? throw new InvalidOperationException("无法反序列化客户备注命令。");
@@ -117,10 +122,10 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
             command,
             cancellationToken);
 
-        await MarkSubmittedAsync(draft, cancellationToken);
+        await MarkSubmittedAsync(draft, displayName, cancellationToken);
     }
 
-    private async Task ExecuteOrderStageAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    private async Task ExecuteOrderStageAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, string displayName, CancellationToken cancellationToken)
     {
         var command = JsonSerializer.Deserialize<OrderStageCommand>(draft.PayloadJson)
             ?? throw new InvalidOperationException("无法反序列化订单阶段命令。");
@@ -142,10 +147,10 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
             dimension,
             cancellationToken);
 
-        await MarkSubmittedAsync(draft, cancellationToken);
+        await MarkSubmittedAsync(draft, displayName, cancellationToken);
     }
 
-    private async Task ExecuteOrderNoteAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    private async Task ExecuteOrderNoteAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, string displayName, CancellationToken cancellationToken)
     {
         var command = JsonSerializer.Deserialize<OrderNoteCommand>(draft.PayloadJson)
             ?? throw new InvalidOperationException("无法反序列化订单备注命令。");
@@ -159,10 +164,10 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
             command,
             cancellationToken);
 
-        await MarkSubmittedAsync(draft, cancellationToken);
+        await MarkSubmittedAsync(draft, displayName, cancellationToken);
     }
 
-    private async Task ExecuteBusinessTaskStatusAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    private async Task ExecuteBusinessTaskStatusAsync(CommerceCommandService commandService, CloudEmergencyDraftRecord draft, string displayName, CancellationToken cancellationToken)
     {
         var command = JsonSerializer.Deserialize<BusinessTaskStatusCommand>(draft.PayloadJson)
             ?? throw new InvalidOperationException("无法反序列化任务状态命令。");
@@ -176,7 +181,7 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
             command,
             cancellationToken);
 
-        await MarkSubmittedAsync(draft, cancellationToken);
+        await MarkSubmittedAsync(draft, displayName, cancellationToken);
     }
 
     private static string? InferStageDimension(OrderStageCommand command)
@@ -187,9 +192,21 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
         return null;
     }
 
-    private async Task MarkSubmittedAsync(CloudEmergencyDraftRecord draft, CancellationToken cancellationToken)
+    private async Task MarkSubmittedAsync(CloudEmergencyDraftRecord draft, string displayName, CancellationToken cancellationToken)
     {
         await _repository.UpdateStatusAsync(draft.Id, EmergencyDraftStatus.Submitted, null, DateTime.UtcNow, cancellationToken);
+
+        await _notifier.NotifyAsync(draft.WorkspaceId, RealtimeEvent.EmergencyDraftSubmitted, new RealtimeEventPayload
+        {
+            WorkspaceId = draft.WorkspaceId,
+            EntityType = draft.EntityType,
+            EntityId = draft.EntityId,
+            ActorUserId = draft.SubmittedByUserId,
+            ActorDisplayName = displayName,
+            OccurredAtUtc = DateTime.UtcNow,
+            Action = "submitted",
+            HintJson = draft.OperationType
+        });
     }
 
     private async Task MarkFailedAsync(CloudEmergencyDraftRecord draft, string error, CancellationToken cancellationToken)

@@ -166,6 +166,35 @@ public partial class MainViewModel
     private void ShowErrorMessage(string title, Exception ex)
     {
         WriteDebugException(ex);
+
+        if (ex is Orderly.Remote.Clients.RemoteConflictException conflict)
+        {
+            var dialog = new Views.ConflictDialog(
+                conflict.Message,
+                conflict.ActorDisplayName,
+                conflict.UpdatedAt,
+                conflict.LatestRevision)
+            {
+                Owner = GetDialogOwner()
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                if (dialog.ConflictResult == Views.ConflictDialogResult.Refresh)
+                {
+                    MarkAllCommercePagesDirty();
+                    _ = EnsureCommercePageLoadedAsync(SelectedSection);
+                }
+                else if (dialog.ConflictResult == Views.ConflictDialogResult.ViewLatest)
+                {
+                    MarkAllCommercePagesDirty();
+                    _ = EnsureCommercePageLoadedAsync(SelectedSection);
+                }
+            }
+
+            return;
+        }
+
         System.Windows.MessageBox.Show(GetDialogOwner(), ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 

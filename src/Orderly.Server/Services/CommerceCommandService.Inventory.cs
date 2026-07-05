@@ -26,7 +26,7 @@ public partial class CommerceCommandService
             workspaceId,
             "inventory:movement",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 var now = DateTime.UtcNow;
 
@@ -113,7 +113,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadInventoryMovementDtoAsync(connection, transaction, workspaceId, movementId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, command.IsStocktake ? "StocktakeAdjustment" : "InventoryMovementCreated", EntityType.InventoryItem, command.InventoryItemId, null, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, command.IsStocktake ? "StocktakeAdjustment" : "InventoryMovementCreated", EntityType.InventoryItem, command.InventoryItemId, null, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.InventoryItem, command.InventoryItemId, command.IsStocktake ? "stocktakeAdjusted" : "movementCreated", inventoryRow.Revision + 1);
 
                 return (dto, EntityType.InventoryItem, command.InventoryItemId);

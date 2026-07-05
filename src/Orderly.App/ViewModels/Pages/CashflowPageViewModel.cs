@@ -32,6 +32,7 @@ public sealed partial class CashflowPageViewModel : CommercePageViewModel
 
     private readonly ICashFlowService _cashFlowService;
     private readonly ICashFlowEntryRepository _cashFlowEntryRepository;
+    private readonly bool _canViewCosts;
 
     [ObservableProperty]
     private string _realizedIncome = "0.00";
@@ -55,11 +56,16 @@ public sealed partial class CashflowPageViewModel : CommercePageViewModel
     /// <exception cref="ArgumentNullException">Thrown when a dependency is null.</exception>
     public CashflowPageViewModel(
         ICashFlowService cashFlowService,
-        ICashFlowEntryRepository cashFlowEntryRepository)
+        ICashFlowEntryRepository cashFlowEntryRepository,
+        bool canViewCosts = true)
     {
         _cashFlowService = cashFlowService ?? throw new ArgumentNullException(nameof(cashFlowService));
         _cashFlowEntryRepository = cashFlowEntryRepository ?? throw new ArgumentNullException(nameof(cashFlowEntryRepository));
+        _canViewCosts = canViewCosts;
     }
+
+    /// <summary>Whether the current user is allowed to view full cash-flow details (Admin only).</summary>
+    public bool CanViewCosts => _canViewCosts;
 
     /// <inheritdoc />
     public override string PageKey => MainViewModel.SectionCashflow;
@@ -82,31 +88,51 @@ public sealed partial class CashflowPageViewModel : CommercePageViewModel
         // responsive); the continuation resumes on the UI thread (ConfigureAwait(true)) where the
         // ObservableCollection update is safe. The full entry set is read once and reused both for the
         // period summary (via the shared calculator) and the recent-entries list — no second query.
-        IReadOnlyList<CashFlowEntry> entries = await Task
-            .Run(() => _cashFlowEntryRepository.GetAllAsync(cancellationToken), cancellationToken)
-            .ConfigureAwait(true);
-
-        CashFlowPeriodSummary summary = CashFlowSummaryCalculator.Compute(entries, period);
-
-        RealizedIncome = summary.RealizedIncome.ToString();
-        RealizedExpense = summary.RealizedExpense.ToString();
-        NetCashFlow = summary.NetCashFlow.ToString();
-        OutstandingReceivable = summary.OutstandingReceivable.ToString();
-        OutstandingPayable = summary.OutstandingPayable.ToString();
-        HealthScore = summary.HealthScore;
-
-        Entries.Clear();
-        foreach (CashFlowEntry entry in entries
-            .Where(e => period.Contains(e.OccurredAt))
-            .OrderByDescending(e => e.OccurredAt))
+        if (_canViewCosts)
         {
-            Entries.Add(new CashFlowRow(
-                entry.Id,
-                entry.Direction,
-                entry.Amount.ToString(),
-                entry.SettlementStatus,
-                entry.OccurredAt,
-                entry.CategoryName));
+            IReadOnlyList<CashFlowEntry> entries = await Task
+                .Run(() => _cashFlowEntryRepository.GetAllAsync(cancellationToken), cancellationToken)
+                .ConfigureAwait(true);
+
+            CashFlowPeriodSummary summary = CashFlowSummaryCalculator.Compute(entries, period);
+
+            RealizedIncome = summary.RealizedIncome.ToString();
+            RealizedExpense = summary.RealizedExpense.ToString();
+            NetCashFlow = summary.NetCashFlow.ToString();
+            OutstandingReceivable = summary.OutstandingReceivable.ToString();
+            OutstandingPayable = summary.OutstandingPayable.ToString();
+            HealthScore = summary.HealthScore;
+
+            Entries.Clear();
+            foreach (CashFlowEntry entry in entries
+                .Where(e => period.Contains(e.OccurredAt))
+                .OrderByDescending(e => e.OccurredAt))
+            {
+                Entries.Add(new CashFlowRow(
+                    entry.Id,
+                    entry.Direction,
+                    entry.Amount.ToString(),
+                    entry.SettlementStatus,
+                    entry.OccurredAt,
+                    entry.CategoryName));
+            }
+        }
+        else
+        {
+            // Employee view: order-related collection status only. The full cash-flow entries list
+            // is intentionally not loaded because employees are not allowed to browse cash-flow details.
+            CashFlowPeriodSummary summary = await _cashFlowService
+                .GetPeriodSummaryAsync(period, cancellationToken)
+                .ConfigureAwait(true);
+
+            RealizedIncome = "0.00";
+            RealizedExpense = "0.00";
+            NetCashFlow = "0.00";
+            OutstandingReceivable = summary.OutstandingReceivable.ToString();
+            OutstandingPayable = CommerceMoney.Zero.ToString();
+            HealthScore = 0;
+
+            Entries.Clear();
         }
 
         NotifyEmptyStateChanged();

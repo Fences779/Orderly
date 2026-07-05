@@ -22,7 +22,7 @@ public partial class CommerceCommandService
             workspaceId,
             "businessTask:status",
             command,
-            async (connection, transaction, sequence, ct) =>
+            async (connection, transaction, sequence, collector, ct) =>
             {
                 await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceBusinessTasks", taskId, command.ExpectedRevision, ct);
 
@@ -55,7 +55,7 @@ public partial class CommerceCommandService
 
                 var dto = await LoadBusinessTaskDtoAsync(connection, transaction, workspaceId, taskId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
-                await AuditAsync(connection, transaction, workspaceId, "BusinessTaskStatusChanged", EntityType.BusinessTask, taskId, beforeJson, afterJson, command.Reason, command.ClientRequestId);
+                await AuditAsync(connection, transaction, workspaceId, "BusinessTaskStatusChanged", EntityType.BusinessTask, taskId, beforeJson, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.BusinessTask, taskId, "statusChanged", dto.Revision);
 
                 return (dto, EntityType.BusinessTask, taskId);

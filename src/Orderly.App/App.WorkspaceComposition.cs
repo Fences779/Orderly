@@ -165,9 +165,9 @@ public partial class App
         // commerce pages are re-sourced through the universal Commerce Service Layer below.
 
         // --- Commerce Service Layer wiring (Req 7.3, 7.4) ---
-        // Cloud runtime: use remote services over HTTPS/SignalR when a cloud session is present.
-        // LocalDev runtime (default): keep the existing SQLite-backed Commerce services.
-        var runtime = Environment.GetEnvironmentVariable("ORDERLY_RUNTIME") ?? "LocalDev";
+        // Cloud runtime (default): use remote services over HTTPS/SignalR when a cloud session is present.
+        // LocalDev runtime: keep the existing SQLite-backed Commerce services for offline development.
+        var runtime = Environment.GetEnvironmentVariable("ORDERLY_RUNTIME") ?? "Cloud";
         Orderly.Core.Commerce.Services.IDashboardService commerceDashboardService;
         Orderly.Core.Commerce.Services.IOrderService commerceOrderService;
         Orderly.Core.Commerce.Services.IInventoryService commerceInventoryService;
@@ -181,6 +181,9 @@ public partial class App
         Orderly.Core.Commerce.Repositories.ICashFlowEntryRepository commerceCashFlowRepository;
         IRemoteImportService? remoteImportService = null;
         ILocalImportPackageBuilder? localImportPackageBuilder = null;
+        Orderly.Core.Commerce.Services.IPriceChangeRequestService? remotePriceChangeRequestService = null;
+        Orderly.Core.Commerce.Services.IArchiveService? remoteArchiveService = null;
+        Orderly.App.ViewModels.Pages.ArchivePageViewModel? archivePage = null;
 
         if (string.Equals(runtime, "Cloud", StringComparison.OrdinalIgnoreCase) && _cloudAuthSession?.IsAuthenticated == true)
         {
@@ -191,7 +194,7 @@ public partial class App
 
             // Cloud mode stores fetched snapshots and emergency drafts in the same SQLCipher workspace
             // database that is already protected by the account data key.
-            ICloudCacheStore cloudCacheStore = new SqliteCloudCacheStore(connectionFactory);
+            ICloudCacheStore cloudCacheStore = new CloudCacheStore(connectionFactory);
             IEmergencyDraftQueue emergencyDraftQueue = new SqliteEmergencyDraftQueue(connectionFactory);
 
             commerceDashboardService = new RemoteDashboardService(remoteClient, _cloudAuthSession);
@@ -201,6 +204,9 @@ public partial class App
             commerceCashFlowService = new RemoteCashFlowService(remoteClient, _cloudAuthSession, emergencyDraftQueue);
             commerceBusinessInsightService = new RemoteBusinessInsightService(remoteClient, _cloudAuthSession);
             commerceProductService = new RemoteProductService(remoteClient, _cloudAuthSession);
+            remotePriceChangeRequestService = new RemotePriceChangeRequestService(remoteClient, _cloudAuthSession);
+            remoteArchiveService = new RemoteArchiveService(remoteClient, _cloudAuthSession);
+            archivePage = new Orderly.App.ViewModels.Pages.ArchivePageViewModel(remoteArchiveService);
             _cloudSyncClient = new RemoteWorkspaceSyncClient(remoteClient, _cloudAuthSession, cloudCacheStore);
             remoteImportService = new RemoteImportService(remoteClient, _cloudAuthSession);
             localImportPackageBuilder = new LocalImportPackageBuilder(connectionFactory, databasePath);
@@ -370,11 +376,12 @@ public partial class App
         _mainViewModel.AttachCommercePages(
             new Orderly.App.ViewModels.Pages.WorkbenchPageViewModel(commerceDashboardService, canViewCommerceCosts),
             new Orderly.App.ViewModels.Pages.OrdersPageViewModel(commerceOrderService, commerceOrderRepository),
-            new Orderly.App.ViewModels.Pages.ProductsPageViewModel(commerceProductService, canViewCommerceCosts),
+            new Orderly.App.ViewModels.Pages.ProductsPageViewModel(commerceProductService, canViewCommerceCosts, remotePriceChangeRequestService),
             new Orderly.App.ViewModels.Pages.InventoryPageViewModel(commerceInventoryService, commerceInventoryItemRepository),
             new Orderly.App.ViewModels.Pages.CustomersPageViewModel(commerceCustomerService, commerceCustomerRepository, settingRepository),
-            new Orderly.App.ViewModels.Pages.CashflowPageViewModel(commerceCashFlowService, commerceCashFlowRepository),
-            new Orderly.App.ViewModels.Pages.BusinessAdvicePageViewModel(commerceBusinessInsightService));
+            new Orderly.App.ViewModels.Pages.CashflowPageViewModel(commerceCashFlowService, commerceCashFlowRepository, canViewCommerceCosts),
+            new Orderly.App.ViewModels.Pages.BusinessAdvicePageViewModel(commerceBusinessInsightService),
+            archivePage);
 
         // Cloud real-time: invalidate only the commerce page(s) affected by the server's change.
         // Unknown or cross-cutting events still fall back to refreshing all commerce pages.

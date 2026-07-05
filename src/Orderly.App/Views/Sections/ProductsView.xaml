@@ -118,6 +118,18 @@
                                     Binding="{Binding DefaultCost, StringFormat=¥{0}}"
                                     Visibility="{Binding Data.CanViewCosts, Source={StaticResource ProductsPageProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                     Width="Auto" />
+                <DataGridTemplateColumn Header="操作"
+                                        Visibility="{Binding Data.CanSubmitPriceChangeRequest, Source={StaticResource ProductsPageProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="提交改价申请"
+                                    Style="{StaticResource UiTextButtonStyle}"
+                                    Command="{Binding Data.SubmitPriceChangeRequestCommand, Source={StaticResource ProductsPageProxy}}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

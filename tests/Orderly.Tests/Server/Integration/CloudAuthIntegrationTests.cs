@@ -1,0 +1,169 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Dapper;
+using Microsoft.Extensions.DependencyInjection;
+using Orderly.Contracts.Auth;
+using Orderly.Contracts.Permissions;
+using Orderly.Server.Data;
+using Orderly.Server.Models;
+using Orderly.Server.Services;
+using Xunit;
+
+namespace Orderly.Tests.Server.Integration;
+
+[Collection("PostgresIntegration")]
+public sealed class CloudAuthIntegrationTests : IDisposable
+{
+    private readonly PostgresFixture _fixture;
+    private readonly ServerWebApplicationFactory _factory;
+
+    public CloudAuthIntegrationTests(PostgresFixture fixture)
+    {
+        _fixture = fixture;
+        Skip.IfNot(_fixture.IsAvailable, "Docker is not available; skipping PostgreSQL integration tests.");
+        _factory = new ServerWebApplicationFactory(fixture);
+    }
+
+    public void Dispose() => _factory.Dispose();
+
+    [SkippableFact]
+    public async Task Admin_can_create_employee_and_reset_employee_password()
+    {
+        var admin = await CreateAdminAsync("admin1", "Admin1Pwd!");
+        var client = CreateAuthenticatedClient(admin.Token);
+
+        var createResponse = await client.PostAsJsonAsync(
+            "api/users",
+            new CreateUserRequest
+            {
+                Username = "employee1",
+                DisplayName = "Employee One",
+                CloudRole = CloudRole.Employee,
+                BusinessLabel = BusinessLabel.Staff,
+                InitialPassword = "Employee1Pwd!"
+            });
+        createResponse.EnsureSuccessStatusCode();
+
+        var resetResponse = await client.PostAsJsonAsync(
+            "api/auth/reset-password",
+            new ResetPasswordRequest
+            {
+                UserId = await ExtractUserIdAsync(client, "employee1"),
+                NewPassword = "NewEmployee1Pwd!"
+            });
+        Assert.Equal(HttpStatusCode.NoContent, resetResponse.StatusCode);
+
+        var loginResponse = await _factory.CreateClient().PostAsJsonAsync(
+            "api/auth/login",
+            new LoginRequest { Username = "employee1", Password = "NewEmployee1Pwd!" });
+        loginResponse.EnsureSuccessStatusCode();
+    }
+
+    [SkippableFact]
+    public async Task Employee_cannot_access_export_endpoint()
+    {
+        var admin = await CreateAdminAsync("admin2", "Admin2Pwd!");
+        var employee = await CreateEmployeeAsync(admin.Token, admin.WorkspaceId, "employee2");
+        var client = CreateAuthenticatedClient(employee.Token);
+
+        var response = await client.PostAsync(
+            $"api/workspaces/{admin.WorkspaceId:N}/exports/business-package", null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [SkippableFact]
+    public async Task Employee_cannot_reset_other_users_password()
+    {
+        var admin = await CreateAdminAsync("admin3", "Admin3Pwd!");
+        var employee = await CreateEmployeeAsync(admin.Token, admin.WorkspaceId, "employee3");
+        var other = await CreateEmployeeAsync(admin.Token, admin.WorkspaceId, "other3");
+        var client = CreateAuthenticatedClient(employee.Token);
+
+        var response = await client.PostAsJsonAsync(
+            "api/auth/reset-password",
+            new ResetPasswordRequest
+            {
+                UserId = other.UserId,
+                NewPassword = "HackedPwd!"
+            });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private HttpClient CreateAuthenticatedClient(string token)
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        return client;
+    }
+
+    private async Task<(string Token, Guid UserId, Guid WorkspaceId)> CreateAdminAsync(string username, string password)
+    {
+        var options = _factory.Services.GetRequiredService<ServerOptions>();
+        var authService = _factory.Services.GetRequiredService<ICloudAuthService>();
+        var passwordHasher = _factory.Services.GetRequiredService<IPasswordHasher>();
+
+        await using var connection = (System.Data.Common.DbConnection)await _factory.Services.GetRequiredService<PostgresConnectionFactory>().OpenConnectionAsync();
+        var workspaceId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudWorkspaces"" (""Id"", ""Name"", ""CreatedAt"", ""UpdatedAt"") VALUES (@workspaceId, 'Test', @now, @now);",
+            new { workspaceId, now });
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudUsers"" (""Id"", ""Username"", ""DisplayName"", ""PasswordHash"", ""IsEnabled"", ""TokenVersion"", ""CreatedAt"", ""UpdatedAt"") 
+            VALUES (@userId, @username, @username, @hash, TRUE, 1, @now, @now);",
+            new { userId, username, hash = passwordHasher.HashPassword(password), now });
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudWorkspaceMembers"" (""Id"", ""WorkspaceId"", ""UserId"", ""CloudRole"", ""BusinessLabel"", ""IsEnabled"", ""CreatedAt"", ""UpdatedAt"") 
+            VALUES (@id, @workspaceId, @userId, @role, @label, TRUE, @now, @now);",
+            new { id = Guid.NewGuid(), workspaceId, userId, role = CloudRole.Admin, label = BusinessLabel.Operator, now });
+
+        var jwt = _factory.Services.GetRequiredService<IJwtService>();
+        var token = jwt.GenerateAccessToken(userId, username, username, 1);
+        return (token, userId, workspaceId);
+    }
+
+    private async Task<(string Token, Guid UserId)> CreateEmployeeAsync(string adminToken, Guid workspaceId, string username)
+    {
+        var client = CreateAuthenticatedClient(adminToken);
+        var createResponse = await client.PostAsJsonAsync(
+            $"api/workspaces/{workspaceId:N}/users",
+            new CreateUserRequest
+            {
+                Username = username,
+                DisplayName = username,
+                CloudRole = CloudRole.Employee,
+                BusinessLabel = BusinessLabel.Staff,
+                InitialPassword = $"{username}Pwd!"
+            });
+        createResponse.EnsureSuccessStatusCode();
+
+        var userId = await ExtractUserIdAsync(client, username);
+        var authService = _factory.Services.GetRequiredService<ICloudAuthService>();
+        var user = await authService.GetUserAsync(userId);
+        var jwt = _factory.Services.GetRequiredService<IJwtService>();
+        var token = jwt.GenerateAccessToken(userId, username, username, user!.TokenVersion);
+        return (token, userId);
+    }
+
+    private async Task<Guid> ExtractUserIdAsync(HttpClient client, string username)
+    {
+        var response = await client.GetAsync("api/users");
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        foreach (var element in doc.RootElement.EnumerateArray())
+        {
+            if (element.GetProperty("username").GetString() == username)
+            {
+                return Guid.Parse(element.GetProperty("id").GetString()!);
+            }
+        }
+
+        throw new InvalidOperationException($"User {username} not found.");
+    }
+}

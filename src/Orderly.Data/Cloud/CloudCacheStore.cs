@@ -7,13 +7,13 @@ namespace Orderly.Data.Cloud;
 /// <summary>
 /// SQLCipher-backed implementation of <see cref="ICloudCacheStore"/>.
 /// Stores cloud entity snapshots in the per-workspace encrypted database so the client can read
-/// previously fetched data while offline.
+/// previously fetched data while offline and across restarts.
 /// </summary>
-public sealed class SqliteCloudCacheStore : ICloudCacheStore
+public sealed class CloudCacheStore : ICloudCacheStore
 {
     private readonly SqliteConnectionFactory _connectionFactory;
 
-    public SqliteCloudCacheStore(SqliteConnectionFactory connectionFactory)
+    public CloudCacheStore(SqliteConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
     }

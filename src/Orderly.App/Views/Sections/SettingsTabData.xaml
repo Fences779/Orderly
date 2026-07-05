@@ -97,8 +97,9 @@
                                         </Grid>
                                     </Border>
 
-                                    <!-- 手动导出备份 -->
-                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0">
+                                    <!-- 手动导出备份 - Admin only -->
+                                    <Border Style="{StaticResource SettingsRowItemBorder}" BorderThickness="0"
+                                            Visibility="{Binding DataContext.IsCurrentUserOwner, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />

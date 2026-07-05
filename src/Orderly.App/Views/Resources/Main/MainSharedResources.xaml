@@ -6,6 +6,8 @@
     <conv:CommerceEnumLabelConverter x:Key="CommerceEnumLabelConverter" />
     <conv:SectionVisibilityConverter x:Key="SectionVisibilityConverter" />
     <conv:TimestampToDateTimeConverter x:Key="TimestampToDateTimeConverter" />
+    <conv:BooleanToStringConverter x:Key="BooleanToStringConverter" />
+    <conv:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
     <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
     <!-- Modern DropShadow -->
     <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="4" Direction="270" Color="#111216" Opacity="0.05" />

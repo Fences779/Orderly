@@ -102,7 +102,11 @@ public class CommerceReadController : CloudControllerBase
         Guid workspaceId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? sort = null,
+        [FromQuery] OrderSalesStage? salesStage = null,
+        [FromQuery] OrderPaymentStage? paymentStage = null,
+        [FromQuery] OrderFulfillmentStage? fulfillmentStage = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var membership = await GetMembershipAsync();
@@ -114,16 +118,32 @@ public class CommerceReadController : CloudControllerBase
         var where = @"WHERE ""WorkspaceId"" = @workspaceId AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0";
         if (!string.IsNullOrWhiteSpace(search))
             where += @" AND (""OrderNo"" ILIKE @search OR COALESCE(""Note"", '') ILIKE @search)";
+        if (salesStage.HasValue)
+            where += @" AND ""SalesStage"" = @salesStage";
+        if (paymentStage.HasValue)
+            where += @" AND ""PaymentStage"" = @paymentStage";
+        if (fulfillmentStage.HasValue)
+            where += @" AND ""FulfillmentStage"" = @fulfillmentStage";
+
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"OrderedAt\" DESC", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["orderedAt"] = "\"OrderedAt\"",
+            ["createdAt"] = "\"CreatedAt\"",
+            ["updatedAt"] = "\"UpdatedAt\"",
+            ["orderNo"] = "\"OrderNo\"",
+            ["total"] = "\"Total\"",
+            ["salesStage"] = "\"SalesStage\"",
+        });
 
         var countSql = $"SELECT COUNT(*) FROM \"CommerceOrders\" {where};";
         var itemsSql = $@"
             SELECT * FROM ""CommerceOrders""
             {where}
-            ORDER BY ""OrderedAt"" DESC
+            ORDER BY {orderBy}
             LIMIT @pageSize OFFSET @offset;";
 
-        var total = await connection.ExecuteScalarAsync<long>(countSql, new { workspaceId, search = $"%{search}%" });
-        var rows = await connection.QueryAsync(itemsSql, new { workspaceId, search = $"%{search}%", pageSize, offset });
+        var total = await connection.ExecuteScalarAsync<long>(countSql, new { workspaceId, search = $"%{search}%", salesStage, paymentStage, fulfillmentStage });
+        var rows = await connection.QueryAsync(itemsSql, new { workspaceId, search = $"%{search}%", pageSize, offset, salesStage, paymentStage, fulfillmentStage });
 
         var items = rows.Select(r => MapOrder(r, Permissions.CanViewCosts(membership))).Cast<CloudOrderDto>().ToList();
         return Ok(new PagedList<CloudOrderDto>
@@ -132,6 +152,8 @@ public class CommerceReadController : CloudControllerBase
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
+            Sort = CommerceListQueryHelper.BuildSortSummary(sort),
+            FilterSummary = BuildOrderFilterSummary(salesStage, paymentStage, fulfillmentStage),
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
     }
@@ -154,7 +176,9 @@ public class CommerceReadController : CloudControllerBase
         Guid workspaceId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? sort = null,
+        [FromQuery] ProductType? productType = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var membership = await GetMembershipAsync();
@@ -165,13 +189,24 @@ public class CommerceReadController : CloudControllerBase
         var where = @"WHERE ""WorkspaceId"" = @workspaceId AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0";
         if (!string.IsNullOrWhiteSpace(search))
             where += @" AND (""Name"" ILIKE @search OR ""Code"" ILIKE @search)";
+        if (productType.HasValue)
+            where += @" AND ""ProductType"" = @productType";
 
-        var total = await connection.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM \"CommerceProducts\" {where};", new { workspaceId, search = $"%{search}%" });
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"Name\"", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["name"] = "\"Name\"",
+            ["code"] = "\"Code\"",
+            ["defaultPrice"] = "\"DefaultPrice\"",
+            ["createdAt"] = "\"CreatedAt\"",
+            ["updatedAt"] = "\"UpdatedAt\"",
+        });
+
+        var total = await connection.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM \"CommerceProducts\" {where};", new { workspaceId, search = $"%{search}%", productType });
         var rows = await connection.QueryAsync($@"
             SELECT * FROM ""CommerceProducts""
             {where}
-            ORDER BY ""Name""
-            LIMIT @pageSize OFFSET @offset;", new { workspaceId, search = $"%{search}%", pageSize, offset });
+            ORDER BY {orderBy}
+            LIMIT @pageSize OFFSET @offset;", new { workspaceId, search = $"%{search}%", pageSize, offset, productType });
 
         return Ok(new PagedList<CloudProductDto>
         {
@@ -179,6 +214,8 @@ public class CommerceReadController : CloudControllerBase
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
+            Sort = CommerceListQueryHelper.BuildSortSummary(sort),
+            FilterSummary = productType.HasValue ? $"productType={productType.Value}" : null,
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
     }
@@ -201,7 +238,9 @@ public class CommerceReadController : CloudControllerBase
         Guid workspaceId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? sort = null,
+        [FromQuery] bool? lowStock = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var membership = await GetMembershipAsync();
@@ -212,12 +251,23 @@ public class CommerceReadController : CloudControllerBase
         var where = @"WHERE ""WorkspaceId"" = @workspaceId AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0";
         if (!string.IsNullOrWhiteSpace(search))
             where += @" AND (""Name"" ILIKE @search OR COALESCE(""Sku"", '') ILIKE @search)";
+        if (lowStock == true)
+            where += @" AND ""QuantityAvailable"" <= ""ReorderThreshold""";
+
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"Name\"", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["name"] = "\"Name\"",
+            ["sku"] = "\"Sku\"",
+            ["quantityAvailable"] = "\"QuantityAvailable\"",
+            ["createdAt"] = "\"CreatedAt\"",
+            ["updatedAt"] = "\"UpdatedAt\"",
+        });
 
         var total = await connection.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM \"CommerceInventoryItems\" {where};", new { workspaceId, search = $"%{search}%" });
         var rows = await connection.QueryAsync($@"
             SELECT * FROM ""CommerceInventoryItems""
             {where}
-            ORDER BY ""Name""
+            ORDER BY {orderBy}
             LIMIT @pageSize OFFSET @offset;", new { workspaceId, search = $"%{search}%", pageSize, offset });
 
         return Ok(new PagedList<CloudInventoryItemDto>
@@ -226,6 +276,8 @@ public class CommerceReadController : CloudControllerBase
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
+            Sort = CommerceListQueryHelper.BuildSortSummary(sort),
+            FilterSummary = lowStock == true ? "lowStock=true" : null,
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
     }
@@ -248,7 +300,8 @@ public class CommerceReadController : CloudControllerBase
         Guid workspaceId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? sort = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
@@ -259,11 +312,19 @@ public class CommerceReadController : CloudControllerBase
         if (!string.IsNullOrWhiteSpace(search))
             where += @" AND (""Name"" ILIKE @search OR COALESCE(""Phone"", '') ILIKE @search OR COALESCE(""WeChat"", '') ILIKE @search)";
 
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"Name\"", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["name"] = "\"Name\"",
+            ["createdAt"] = "\"CreatedAt\"",
+            ["updatedAt"] = "\"UpdatedAt\"",
+            ["lastOrderAt"] = "\"LastOrderAt\" NULLS LAST",
+        });
+
         var total = await connection.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM \"CommerceCustomers\" {where};", new { workspaceId, search = $"%{search}%" });
         var rows = await connection.QueryAsync($@"
             SELECT * FROM ""CommerceCustomers""
             {where}
-            ORDER BY ""Name""
+            ORDER BY {orderBy}
             LIMIT @pageSize OFFSET @offset;", new { workspaceId, search = $"%{search}%", pageSize, offset });
 
         return Ok(new PagedList<CloudCustomerDto>
@@ -272,6 +333,7 @@ public class CommerceReadController : CloudControllerBase
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
+            Sort = CommerceListQueryHelper.BuildSortSummary(sort),
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
     }
@@ -321,7 +383,10 @@ public class CommerceReadController : CloudControllerBase
     public async Task<ActionResult<PagedList<CloudCashFlowEntryDto>>> ListCashFlowEntriesAsync(
         Guid workspaceId,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50)
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? sort = null,
+        [FromQuery] CashFlowDirection? direction = null,
+        [FromQuery] CashFlowSettlementStatus? settlementStatus = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var membership = await GetMembershipAsync();
@@ -330,15 +395,34 @@ public class CommerceReadController : CloudControllerBase
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         pageSize = Math.Clamp(pageSize, 1, 200);
         var offset = (page - 1) * pageSize;
+
+        var where = @"WHERE ""WorkspaceId"" = @workspaceId AND ""Lifecycle"" = 0";
+        if (direction.HasValue)
+            where += @" AND ""Direction"" = @direction";
+        if (settlementStatus.HasValue)
+            where += @" AND ""SettlementStatus"" = @settlementStatus";
+
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"OccurredAt\" DESC", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["occurredAt"] = "\"OccurredAt\"",
+            ["createdAt"] = "\"CreatedAt\"",
+            ["updatedAt"] = "\"UpdatedAt\"",
+            ["amount"] = "\"Amount\"",
+        });
+
         var total = await connection.ExecuteScalarAsync<long>(
-            "SELECT COUNT(*) FROM \"CommerceCashFlowEntries\" WHERE \"WorkspaceId\" = @workspaceId AND \"Lifecycle\" = 0;",
-            new { workspaceId });
+            $"SELECT COUNT(*) FROM \"CommerceCashFlowEntries\" {where};",
+            new { workspaceId, direction, settlementStatus });
         var rows = await connection.QueryAsync(
-            @"SELECT * FROM ""CommerceCashFlowEntries""
-             WHERE ""WorkspaceId"" = @workspaceId AND ""Lifecycle"" = 0
-             ORDER BY ""OccurredAt"" DESC
+            $@"SELECT * FROM ""CommerceCashFlowEntries""
+             {where}
+             ORDER BY {orderBy}
              LIMIT @pageSize OFFSET @offset;",
-            new { workspaceId, pageSize, offset });
+            new { workspaceId, pageSize, offset, direction, settlementStatus });
+
+        var filterParts = new List<string>();
+        if (direction.HasValue) filterParts.Add($"direction={direction.Value}");
+        if (settlementStatus.HasValue) filterParts.Add($"settlementStatus={settlementStatus.Value}");
 
         return Ok(new PagedList<CloudCashFlowEntryDto>
         {
@@ -346,6 +430,8 @@ public class CommerceReadController : CloudControllerBase
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
+            Sort = CommerceListQueryHelper.BuildSortSummary(sort),
+            FilterSummary = filterParts.Count > 0 ? string.Join(";", filterParts) : null,
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
     }
@@ -369,7 +455,8 @@ public class CommerceReadController : CloudControllerBase
     public async Task<ActionResult<PagedList<CloudBusinessInsightDto>>> ListInsightsAsync(
         Guid workspaceId,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50)
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? sort = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var membership = await GetMembershipAsync();
@@ -381,10 +468,19 @@ public class CommerceReadController : CloudControllerBase
         var total = await connection.ExecuteScalarAsync<long>(
             "SELECT COUNT(*) FROM \"CommerceBusinessInsights\" WHERE \"WorkspaceId\" = @workspaceId AND \"Lifecycle\" = 0;",
             new { workspaceId });
+
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"GeneratedAt\" DESC", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["generatedAt"] = "\"GeneratedAt\"",
+            ["createdAt"] = "\"CreatedAt\"",
+            ["updatedAt"] = "\"UpdatedAt\"",
+            ["severity"] = "\"Severity\"",
+        });
+
         var rows = await connection.QueryAsync(
-            @"SELECT * FROM ""CommerceBusinessInsights""
+            $@"SELECT * FROM ""CommerceBusinessInsights""
              WHERE ""WorkspaceId"" = @workspaceId AND ""Lifecycle"" = 0
-             ORDER BY ""GeneratedAt"" DESC
+             ORDER BY {orderBy}
              LIMIT @pageSize OFFSET @offset;",
             new { workspaceId, pageSize, offset });
 
@@ -394,6 +490,7 @@ public class CommerceReadController : CloudControllerBase
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
+            Sort = CommerceListQueryHelper.BuildSortSummary(sort),
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
     }
@@ -403,7 +500,9 @@ public class CommerceReadController : CloudControllerBase
         Guid workspaceId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? sort = null,
+        [FromQuery] Orderly.Core.Commerce.TaskStatus? status = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
@@ -413,13 +512,24 @@ public class CommerceReadController : CloudControllerBase
         var where = @"WHERE ""WorkspaceId"" = @workspaceId AND ""DeletedAt"" IS NULL AND ""Lifecycle"" = 0";
         if (!string.IsNullOrWhiteSpace(search))
             where += @" AND (""Title"" ILIKE @search OR COALESCE(""Description"", '') ILIKE @search)";
+        if (status.HasValue)
+            where += @" AND ""Status"" = @status";
 
-        var total = await connection.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM \"CommerceBusinessTasks\" {where};", new { workspaceId, search = $"%{search}%" });
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"DueDate\" NULLS LAST, \"CreatedAt\" DESC", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["dueDate"] = "\"DueDate\" NULLS LAST",
+            ["createdAt"] = "\"CreatedAt\"",
+            ["updatedAt"] = "\"UpdatedAt\"",
+            ["status"] = "\"Status\"",
+            ["title"] = "\"Title\"",
+        });
+
+        var total = await connection.ExecuteScalarAsync<long>($"SELECT COUNT(*) FROM \"CommerceBusinessTasks\" {where};", new { workspaceId, search = $"%{search}%", status });
         var rows = await connection.QueryAsync($@"
             SELECT * FROM ""CommerceBusinessTasks""
             {where}
-            ORDER BY ""DueDate"" NULLS LAST, ""CreatedAt"" DESC
-            LIMIT @pageSize OFFSET @offset;", new { workspaceId, search = $"%{search}%", pageSize, offset });
+            ORDER BY {orderBy}
+            LIMIT @pageSize OFFSET @offset;", new { workspaceId, search = $"%{search}%", pageSize, offset, status });
 
         return Ok(new PagedList<CloudBusinessTaskDto>
         {
@@ -427,6 +537,8 @@ public class CommerceReadController : CloudControllerBase
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
+            Sort = CommerceListQueryHelper.BuildSortSummary(sort),
+            FilterSummary = status.HasValue ? $"status={status.Value}" : null,
             LatestSequence = await GetLatestSequenceAsync(connection, workspaceId)
         });
     }
@@ -444,7 +556,12 @@ public class CommerceReadController : CloudControllerBase
     }
 
     [HttpGet("archive/{entityType}")]
-    public async Task<ActionResult<object>> ListArchiveAsync(Guid workspaceId, string entityType, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    public async Task<ActionResult<object>> ListArchiveAsync(
+        Guid workspaceId,
+        string entityType,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? sort = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var membership = await GetMembershipAsync();
@@ -466,21 +583,29 @@ public class CommerceReadController : CloudControllerBase
         };
         if (table == null) return BadRequest(new { Error = "Unsupported entity type." });
 
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"UpdatedAt\" DESC", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["updatedAt"] = "\"UpdatedAt\"",
+            ["createdAt"] = "\"CreatedAt\"",
+            ["name"] = "\"Name\"",
+        });
+
         var total = await connection.ExecuteScalarAsync<long>(
             $"SELECT COUNT(*) FROM \"{table}\" WHERE \"WorkspaceId\" = @workspaceId AND \"Lifecycle\" = 1;",
             new { workspaceId });
         var rows = await connection.QueryAsync(
-            $"SELECT * FROM \"{table}\" WHERE \"WorkspaceId\" = @workspaceId AND \"Lifecycle\" = 1 ORDER BY \"UpdatedAt\" DESC LIMIT @pageSize OFFSET @offset;",
+            $"SELECT * FROM \"{table}\" WHERE \"WorkspaceId\" = @workspaceId AND \"Lifecycle\" = 1 ORDER BY {orderBy} LIMIT @pageSize OFFSET @offset;",
             new { workspaceId, pageSize, offset });
 
-        return Ok(new { Items = rows, Page = page, PageSize = pageSize, TotalCount = total });
+        return Ok(new { Items = rows, Page = page, PageSize = pageSize, TotalCount = total, Sort = CommerceListQueryHelper.BuildSortSummary(sort) });
     }
 
     [HttpGet("audit-logs")]
     public async Task<ActionResult<PagedList<CloudAuditLogDto>>> ListAuditLogsAsync(
         Guid workspaceId,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50)
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? sort = null)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var membership = await GetMembershipAsync();
@@ -489,13 +614,22 @@ public class CommerceReadController : CloudControllerBase
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         pageSize = Math.Clamp(pageSize, 1, 200);
         var offset = (page - 1) * pageSize;
+
+        var orderBy = CommerceListQueryHelper.BuildOrderBy(sort, "\"OccurredAt\" DESC", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["occurredAt"] = "\"OccurredAt\"",
+            ["action"] = "\"Action\"",
+            ["entityType"] = "\"EntityType\"",
+            ["actorDisplayName"] = "\"ActorDisplayName\"",
+        });
+
         var total = await connection.ExecuteScalarAsync<long>(
             "SELECT COUNT(*) FROM \"CloudAuditLogs\" WHERE \"WorkspaceId\" = @workspaceId;",
             new { workspaceId });
         var rows = await connection.QueryAsync(
-            @"SELECT * FROM ""CloudAuditLogs""
+            $@"SELECT * FROM ""CloudAuditLogs""
              WHERE ""WorkspaceId"" = @workspaceId
-             ORDER BY ""OccurredAt"" DESC
+             ORDER BY {orderBy}
              LIMIT @pageSize OFFSET @offset;",
             new { workspaceId, pageSize, offset });
 
@@ -519,8 +653,21 @@ public class CommerceReadController : CloudControllerBase
             }).ToList(),
             Page = page,
             PageSize = pageSize,
-            TotalCount = total
+            TotalCount = total,
+            Sort = CommerceListQueryHelper.BuildSortSummary(sort)
         });
+    }
+
+    private static string? BuildOrderFilterSummary(
+        OrderSalesStage? salesStage,
+        OrderPaymentStage? paymentStage,
+        OrderFulfillmentStage? fulfillmentStage)
+    {
+        var parts = new List<string>();
+        if (salesStage.HasValue) parts.Add($"salesStage={salesStage.Value}");
+        if (paymentStage.HasValue) parts.Add($"paymentStage={paymentStage.Value}");
+        if (fulfillmentStage.HasValue) parts.Add($"fulfillmentStage={fulfillmentStage.Value}");
+        return parts.Count > 0 ? string.Join(";", parts) : null;
     }
 
     private static async Task<long> GetLatestSequenceAsync(System.Data.Common.DbConnection connection, Guid workspaceId)

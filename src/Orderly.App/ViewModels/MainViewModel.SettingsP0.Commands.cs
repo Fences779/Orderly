@@ -429,22 +429,34 @@ public partial class MainViewModel
                 }
 
                 var sizeBefore = new FileInfo(DatabasePath).Length;
-                await using var connection = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+                try
                 {
-                    DataSource = DatabasePath,
-                    Mode = Microsoft.Data.Sqlite.SqliteOpenMode.ReadWrite
-                }.ToString());
-                await connection.OpenAsync();
-                SqliteConnectionKeying.ApplyRawKey(connection, _sessionContextService?.Current?.DataKey?.ToArray());
+                    await using var connection = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+                    {
+                        DataSource = DatabasePath,
+                        Mode = Microsoft.Data.Sqlite.SqliteOpenMode.ReadWrite
+                    }.ToString());
+                    await connection.OpenAsync();
+                    SqliteConnectionKeying.ApplyRawKey(connection, _sessionContextService?.Current?.DataKey?.ToArray());
 
-                await using var command = connection.CreateCommand();
-                command.CommandText = "VACUUM;";
-                await command.ExecuteNonQueryAsync();
+                    await using var command = connection.CreateCommand();
+                    command.CommandText = """
+                        PRAGMA busy_timeout = 5000;
+                        VACUUM;
+                        """;
+                    await command.ExecuteNonQueryAsync();
+                }
+                catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.SqliteErrorCode is 5 or 6)
+                {
+                    throw new InvalidOperationException("数据库当前正忙，可能有写入或同步任务正在进行。请稍后再试。", ex);
+                }
 
                 // 重新读取大小
                 var info = new FileInfo(DatabasePath);
                 DatabaseSizeText = info.Exists ? FormatFileSize(info.Length) : "数据库文件不存在";
-                DatabaseHealthDetailText = $"[{DateTime.Now:HH:mm:ss}] 数据库优化完成。优化前：{FormatFileSize(sizeBefore)}；优化后：{DatabaseSizeText}。";
+                var (status, detail) = await CheckDatabaseHealthAsync();
+                DatabaseHealthStatusText = status;
+                DatabaseHealthDetailText = $"[{DateTime.Now:HH:mm:ss}] 数据库优化完成。优化前：{FormatFileSize(sizeBefore)}；优化后：{DatabaseSizeText}。健康检查：{detail}";
                 ShowMessageDialog("数据库优化", $"数据库优化与压缩完成！\n成功优化 {DatabaseSizeText}", Views.MessageDialogType.Success);
             });
     }
