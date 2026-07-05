@@ -212,6 +212,7 @@ CREATE TABLE IF NOT EXISTS "CloudImportBatches" (
     "SourceInstanceId" UUID NOT NULL,
     "SourceFingerprint" TEXT NOT NULL,
     "SourceReportJson" TEXT NOT NULL,
+    "ResultJson" TEXT NULL,
     "Status" TEXT NOT NULL,
     "RequestedByUserId" UUID NOT NULL REFERENCES "CloudUsers"("Id"),
     "DryRunAt" TIMESTAMPTZ NOT NULL,

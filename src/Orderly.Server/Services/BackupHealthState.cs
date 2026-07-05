@@ -12,6 +12,8 @@ public sealed class BackupHealthSnapshot
     public string? OssKey { get; set; }
     public DateTime? LastPreMigrationBackupAtUtc { get; set; }
     public string? PreMigrationBackupPath { get; set; }
+    public DateTime? LastPreImportBackupAtUtc { get; set; }
+    public string? PreImportBackupPath { get; set; }
     public DateTime? LastRestoreDrillAtUtc { get; set; }
     public string? LastRestoreDrillStatus { get; set; }
     public string? LastRestoreDrillDatabase { get; set; }

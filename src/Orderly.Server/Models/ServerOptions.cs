@@ -22,6 +22,7 @@ public sealed class ServerOptions
     public int ExportMaxRetryCount { get; set; } = 2;
     public long ExportMaxLocalBytes { get; set; } = 2L * 1024 * 1024 * 1024;
     public bool RequirePreMigrationBackup { get; set; } = true;
+    public bool RequirePreImportBackup { get; set; } = true;
     public string? BootstrapAdminToken { get; set; }
     public string AllowedOrigins { get; set; } = "*";
 

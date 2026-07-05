@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS "CloudImportBatches"
+    ADD COLUMN IF NOT EXISTS "ResultJson" TEXT NULL;

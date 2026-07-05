@@ -31,19 +31,25 @@ public sealed class CloudImportService : ICloudImportService
     private readonly ICloudPermissionService _permissions;
     private readonly IWorkspaceSyncService _syncService;
     private readonly IAuditLogService _auditLog;
+    private readonly IDatabaseBackupService _backupService;
+    private readonly ServerOptions _options;
 
     public CloudImportService(
         PostgresConnectionFactory connectionFactory,
         ICurrentUserContext currentUser,
         ICloudPermissionService permissions,
         IWorkspaceSyncService syncService,
-        IAuditLogService auditLog)
+        IAuditLogService auditLog,
+        IDatabaseBackupService backupService,
+        ServerOptions options)
     {
         _connectionFactory = connectionFactory;
         _currentUser = currentUser;
         _permissions = permissions;
         _syncService = syncService;
         _auditLog = auditLog;
+        _backupService = backupService;
+        _options = options;
     }
 
     public async Task<LocalImportDryRunResponse> DryRunAsync(Guid workspaceId, LocalImportDryRunRequest request, CancellationToken cancellationToken = default)
@@ -85,10 +91,14 @@ public sealed class CloudImportService : ICloudImportService
         var batch = await GetBatchAsync(connection, request.DryRunBatchId, cancellationToken);
         if (batch == null || batch.WorkspaceId != workspaceId)
             throw new InvalidOperationException("Dry-run 批次不存在。");
-        if (batch.Status != "DryRun")
-            throw new InvalidOperationException($"批次状态为 {batch.Status}，不能提交。");
+        if (batch.SourceInstanceId != request.SourceInstanceId)
+            throw new InvalidOperationException("提交来源与 DryRun 批次不一致。");
         if (batch.SourceFingerprint != request.SourceFingerprint)
             throw new InvalidOperationException("本地数据自 DryRun 后已发生变化，请重新执行 DryRun。");
+        if (batch.Status == "Committed" || (batch.Status == "Failed" && !string.IsNullOrWhiteSpace(batch.ResultJson)))
+            return RestoreCommitResponse(batch);
+        if (batch.Status != "DryRun")
+            throw new InvalidOperationException($"批次状态为 {batch.Status}，不能提交。");
 
         var report = JsonSerializer.Deserialize<ImportBatchReport>(batch.SourceReportJson, JsonOptions)
             ?? throw new InvalidOperationException("Dry-run 报告损坏，无法提交。");
@@ -101,20 +111,24 @@ public sealed class CloudImportService : ICloudImportService
                 if (validationIssues.Count > 0)
                 {
                     await validationTransaction.RollbackAsync(cancellationToken);
-                    await using var failedTransaction = await BeginTransactionAsync(connection, cancellationToken);
-                    await UpdateBatchStatusAsync(connection, failedTransaction, batch.Id, "Failed", "导入校验未通过。");
-                    await failedTransaction.CommitAsync(cancellationToken);
-
-                    return new LocalImportCommitResponse
+                    var response = new LocalImportCommitResponse
                     {
                         BatchId = batch.Id,
                         Status = "Failed",
                         Imported = new LocalImportCounts(),
                         Failures = validationIssues
                     };
+
+                    await using var failedTransaction = await BeginTransactionAsync(connection, cancellationToken);
+                    await UpdateBatchStatusAsync(connection, failedTransaction, batch.Id, "Failed", "导入校验未通过。", SerializeCommitResult(response));
+                    await failedTransaction.CommitAsync(cancellationToken);
+                    await LogImportFailureAsync(workspaceId, batch.Id, request.SourceFingerprint, response.Failures);
+
+                    return response;
                 }
             }
 
+            var preImportBackupPath = await CreatePreImportBackupAsync(batch.Id, cancellationToken);
             await using var transaction = await BeginTransactionAsync(connection, cancellationToken);
 
             var sequence = await _syncService.AllocateSequenceAsync(connection, transaction, workspaceId);
@@ -125,36 +139,26 @@ public sealed class CloudImportService : ICloudImportService
             }
 
             await InsertEntitiesAsync(connection, transaction, workspaceId, resolved, report.Package, userId, sequence, batch.Id);
-            await UpdateBatchStatusAsync(connection, transaction, batch.Id, "Committed", null);
-
-            await transaction.CommitAsync(cancellationToken);
-
             var counts = ComputeCounts(resolved, report.Package, existingMapped);
-
-            await _auditLog.LogAsync(
-                workspaceId,
-                "LocalDataImported",
-                EntityType.Order,
-                batch.Id,
-                null,
-                JsonSerializer.Serialize(counts, JsonOptions),
-                clientRequestId: request.SourceFingerprint);
-
-            return new LocalImportCommitResponse
+            var committedResponse = new LocalImportCommitResponse
             {
                 BatchId = batch.Id,
                 Status = "Committed",
                 Imported = counts,
                 Failures = issues
             };
+
+            await UpdateBatchStatusAsync(connection, transaction, batch.Id, "Committed", null, SerializeCommitResult(committedResponse));
+
+            await transaction.CommitAsync(cancellationToken);
+
+            await LogImportSuccessAsync(workspaceId, batch.Id, request.SourceFingerprint, counts, preImportBackupPath);
+
+            return committedResponse;
         }
         catch (Exception ex)
         {
-            await using var transaction = await BeginTransactionAsync(connection, cancellationToken);
-            await UpdateBatchStatusAsync(connection, transaction, batch.Id, "Failed", ex.Message);
-            await transaction.CommitAsync(cancellationToken);
-
-            return new LocalImportCommitResponse
+            var response = new LocalImportCommitResponse
             {
                 BatchId = batch.Id,
                 Status = "Failed",
@@ -164,6 +168,13 @@ public sealed class CloudImportService : ICloudImportService
                     new() { EntityType = "batch", SourceLocalEntityId = batch.Id.ToString("N"), Message = ex.Message }
                 }
             };
+
+            await using var transaction = await BeginTransactionAsync(connection, cancellationToken);
+            await UpdateBatchStatusAsync(connection, transaction, batch.Id, "Failed", ex.Message, SerializeCommitResult(response));
+            await transaction.CommitAsync(cancellationToken);
+            await LogImportFailureAsync(workspaceId, batch.Id, request.SourceFingerprint, response.Failures);
+
+            return response;
         }
     }
 
@@ -233,10 +244,10 @@ public sealed class CloudImportService : ICloudImportService
         const string sql = @"
             INSERT INTO ""CloudImportBatches"" (
                 ""Id"", ""WorkspaceId"", ""SourceInstanceId"", ""SourceFingerprint"", ""SourceReportJson"",
-                ""Status"", ""RequestedByUserId"", ""DryRunAt"", ""CommittedAt"", ""RolledBackAt"", ""ErrorMessage"")
+                ""ResultJson"", ""Status"", ""RequestedByUserId"", ""DryRunAt"", ""CommittedAt"", ""RolledBackAt"", ""ErrorMessage"")
             VALUES (
                 @batchId, @workspaceId, @sourceInstanceId, @fingerprint, @reportJson,
-                'DryRun', @userId, @now, NULL, NULL, NULL);";
+                NULL, 'DryRun', @userId, @now, NULL, NULL, NULL);";
 
         await connection.ExecuteAsync(sql, new
         {
@@ -257,16 +268,105 @@ public sealed class CloudImportService : ICloudImportService
             new { batchId });
     }
 
-    private static async Task UpdateBatchStatusAsync(IDbConnection connection, IDbTransaction transaction, Guid batchId, string status, string? error)
+    private static async Task UpdateBatchStatusAsync(IDbConnection connection, IDbTransaction transaction, Guid batchId, string status, string? error, string? resultJson = null)
     {
         const string sql = @"
             UPDATE ""CloudImportBatches""
             SET ""Status"" = @status,
                 ""ErrorMessage"" = @error,
+                ""ResultJson"" = CASE WHEN @resultJson IS NULL THEN ""ResultJson"" ELSE @resultJson END,
                 ""CommittedAt"" = CASE WHEN @status = 'Committed' THEN @now ELSE ""CommittedAt"" END
             WHERE ""Id"" = @batchId;";
 
-        await connection.ExecuteAsync(sql, new { batchId, status, error, now = DateTime.UtcNow }, transaction);
+        await connection.ExecuteAsync(sql, new { batchId, status, error, resultJson, now = DateTime.UtcNow }, transaction);
+    }
+
+    private static LocalImportCommitResponse RestoreCommitResponse(CloudImportBatchRecord batch)
+    {
+        if (!string.IsNullOrWhiteSpace(batch.ResultJson))
+        {
+            var saved = JsonSerializer.Deserialize<LocalImportCommitResponse>(batch.ResultJson, JsonOptions);
+            if (saved != null)
+            {
+                return saved;
+            }
+        }
+
+        return new LocalImportCommitResponse
+        {
+            BatchId = batch.Id,
+            Status = batch.Status,
+            Imported = new LocalImportCounts(),
+            Failures = new List<LocalImportIssue>()
+        };
+    }
+
+    private static string SerializeCommitResult(LocalImportCommitResponse response)
+        => JsonSerializer.Serialize(response, JsonOptions);
+
+    private async Task<string?> CreatePreImportBackupAsync(Guid batchId, CancellationToken cancellationToken)
+    {
+        if (!_options.RequirePreImportBackup)
+        {
+            return null;
+        }
+
+        var now = DateTime.UtcNow;
+        var fileName = $"orderly_pre_import_{now:yyyyMMddHHmmss}_{batchId:N}.dump";
+        var outputPath = Path.Combine(_options.LocalBackupDirectory, fileName);
+        var backupPath = await _backupService.BackupAsync(outputPath, cancellationToken);
+        var file = new FileInfo(backupPath);
+        if (!file.Exists || file.Length == 0)
+        {
+            throw new InvalidOperationException("导入前备份未生成有效文件，已停止导入。");
+        }
+
+        BackupHealthState.Update(_options, snapshot =>
+        {
+            snapshot.LastPreImportBackupAtUtc = DateTime.UtcNow;
+            snapshot.PreImportBackupPath = backupPath;
+            snapshot.LastError = null;
+        });
+
+        return backupPath;
+    }
+
+    private async Task LogImportFailureAsync(Guid workspaceId, Guid batchId, string sourceFingerprint, List<LocalImportIssue> failures)
+    {
+        try
+        {
+            await _auditLog.LogAsync(
+                workspaceId,
+                "LocalDataImportFailed",
+                EntityType.Order,
+                batchId,
+                null,
+                JsonSerializer.Serialize(new { failures }, JsonOptions),
+                clientRequestId: sourceFingerprint);
+        }
+        catch
+        {
+            // Keep the original import failure visible even when audit logging fails.
+        }
+    }
+
+    private async Task LogImportSuccessAsync(Guid workspaceId, Guid batchId, string sourceFingerprint, LocalImportCounts counts, string? preImportBackupPath)
+    {
+        try
+        {
+            await _auditLog.LogAsync(
+                workspaceId,
+                "LocalDataImported",
+                EntityType.Order,
+                batchId,
+                null,
+                JsonSerializer.Serialize(new { imported = counts, preImportBackupPath }, JsonOptions),
+                clientRequestId: sourceFingerprint);
+        }
+        catch
+        {
+            // The import was already committed; audit failure must not change batch status.
+        }
     }
 
     private async Task<(ResolvedImport Resolved, int ExistingMapped, List<LocalImportIssue> Issues)> ResolveTargetsAsync(
@@ -983,6 +1083,7 @@ public sealed class CloudImportService : ICloudImportService
         public Guid SourceInstanceId { get; set; }
         public string SourceFingerprint { get; set; } = string.Empty;
         public string SourceReportJson { get; set; } = string.Empty;
+        public string? ResultJson { get; set; }
         public string Status { get; set; } = string.Empty;
         public string? ErrorMessage { get; set; }
     }

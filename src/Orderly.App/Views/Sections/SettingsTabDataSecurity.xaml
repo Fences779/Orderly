@@ -7,6 +7,8 @@
                 <ResourceDictionary Source="/Orderly.App;component/Views/Resources/MainWindowResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
             <!-- ===== 派生 Thickness 布局令牌（分量对齐 Shape.xaml 的 4pt 栅格 4/8/12/16/24/32，消除散落 Margin/Padding 字面量，Req 9.1/1.12） ===== -->
             <Thickness x:Key="SettingsCardSpacing">0,16,0,0</Thickness>            <!-- 上 UiSpaceMd(16)，卡片顶部间距 -->
             <Thickness x:Key="SettingsRowDescMargin">0,4,0,0</Thickness>           <!-- 上 UiSpaceXxs(4)，说明文字间距 -->

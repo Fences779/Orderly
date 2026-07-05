@@ -28,6 +28,7 @@ serverOptions.BootstrapAdminToken = GetEnvOrConfig("ORDERLY_BOOTSTRAP_ADMIN_TOKE
 serverOptions.AllowedOrigins = GetEnvOrConfig("ORDERLY_ALLOWED_ORIGINS", serverOptions.AllowedOrigins);
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_BACKUP_RETENTION_DAYS"), out var retention)) serverOptions.BackupRetentionDays = retention;
 if (bool.TryParse(Environment.GetEnvironmentVariable("ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP"), out var requirePreMigrationBackup)) serverOptions.RequirePreMigrationBackup = requirePreMigrationBackup;
+if (bool.TryParse(Environment.GetEnvironmentVariable("ORDERLY_REQUIRE_PRE_IMPORT_BACKUP"), out var requirePreImportBackup)) serverOptions.RequirePreImportBackup = requirePreImportBackup;
 serverOptions.LocalBackupDirectory = GetEnvOrConfig("ORDERLY_LOCAL_BACKUP_DIR", serverOptions.LocalBackupDirectory);
 serverOptions.LocalExportDirectory = GetEnvOrConfig("ORDERLY_LOCAL_EXPORT_DIR", serverOptions.LocalExportDirectory);
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_EXPORT_RETENTION_HOURS"), out var exportRetentionHours)) serverOptions.ExportRetentionHours = exportRetentionHours;
