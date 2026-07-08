@@ -1,7 +1,5 @@
 -- Cloud Sync v1 data lifecycle, attachment metadata, and entity version history.
 
-BEGIN;
-
 CREATE TABLE IF NOT EXISTS "CloudEntityVersions" (
     "Id" UUID PRIMARY KEY,
     "WorkspaceId" UUID NOT NULL REFERENCES "CloudWorkspaces"("Id"),
@@ -35,5 +33,3 @@ CREATE TABLE IF NOT EXISTS "CloudAttachments" (
 );
 CREATE INDEX IF NOT EXISTS ix_cloud_attachments_entity ON "CloudAttachments"("WorkspaceId", "EntityType", "EntityId", "CreatedAt" DESC);
 CREATE INDEX IF NOT EXISTS ix_cloud_attachments_workspace_active ON "CloudAttachments"("WorkspaceId", "ArchivedAt") WHERE "ArchivedAt" IS NULL;
-
-COMMIT;

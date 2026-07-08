@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 using Dapper;
 using Orderly.Contracts.Commerce;
 using Orderly.Contracts.Permissions;
@@ -23,6 +24,7 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
     private readonly ICurrentUserContext _currentUser;
     private readonly ICloudAuthService _authService;
     private readonly ICloudPermissionService _permissions;
+    private readonly ServerOptions _options;
     private const int DefaultPageSize = 200;
     private const int ChangeLogRetentionDays = 30;
     private static readonly TimeSpan SnapshotTokenLifetime = TimeSpan.FromMinutes(30);
@@ -31,12 +33,14 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         PostgresConnectionFactory connectionFactory,
         ICurrentUserContext currentUser,
         ICloudAuthService authService,
-        ICloudPermissionService permissions)
+        ICloudPermissionService permissions,
+        ServerOptions options)
     {
         _connectionFactory = connectionFactory;
         _currentUser = currentUser;
         _authService = authService;
         _permissions = permissions;
+        _options = options;
     }
 
     public async Task<SnapshotTokenResponse> CreateSnapshotAsync(Guid workspaceId, string? entityType, CancellationToken cancellationToken = default)
@@ -55,8 +59,7 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
             ExpiresAtUtc = now.Add(SnapshotTokenLifetime)
         };
 
-        var json = JsonSerializer.Serialize(tokenPayload);
-        var token = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+        var token = EncodeToken(tokenPayload);
 
         return new SnapshotTokenResponse
         {
@@ -221,11 +224,54 @@ public sealed class WorkspaceSyncQueryService : IWorkspaceSyncQueryService
         return sequence ?? 0;
     }
 
-    private static SnapshotTokenPayload DecodeToken(string snapshotToken)
+    private string EncodeToken(SnapshotTokenPayload payload)
     {
-        var json = Encoding.UTF8.GetString(Convert.FromBase64String(snapshotToken));
+        var json = JsonSerializer.Serialize(payload);
+        var payloadPart = Base64UrlEncode(Encoding.UTF8.GetBytes(json));
+        var signaturePart = Base64UrlEncode(Sign(payloadPart));
+        return $"{payloadPart}.{signaturePart}";
+    }
+
+    private SnapshotTokenPayload DecodeToken(string snapshotToken)
+    {
+        var parts = snapshotToken.Split('.', 2);
+        if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+        {
+            throw new InvalidOperationException("Invalid snapshot token.");
+        }
+
+        var expectedSignature = Sign(parts[0]);
+        var actualSignature = Base64UrlDecode(parts[1]);
+        if (!CryptographicOperations.FixedTimeEquals(expectedSignature, actualSignature))
+        {
+            throw new InvalidOperationException("Invalid snapshot token signature.");
+        }
+
+        var json = Encoding.UTF8.GetString(Base64UrlDecode(parts[0]));
         return JsonSerializer.Deserialize<SnapshotTokenPayload>(json)
             ?? throw new InvalidOperationException("Invalid snapshot token.");
+    }
+
+    private byte[] Sign(string payloadPart)
+    {
+        var keyBytes = Encoding.UTF8.GetBytes(_options.JwtSigningKey);
+        if (keyBytes.Length < 32)
+        {
+            throw new InvalidOperationException("Snapshot token signing key must be at least 32 bytes.");
+        }
+
+        using var hmac = new HMACSHA256(keyBytes);
+        return hmac.ComputeHash(Encoding.UTF8.GetBytes(payloadPart));
+    }
+
+    private static string Base64UrlEncode(byte[] bytes)
+        => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private static byte[] Base64UrlDecode(string value)
+    {
+        var padded = value.Replace('-', '+').Replace('_', '/');
+        padded = padded.PadRight(padded.Length + (4 - padded.Length % 4) % 4, '=');
+        return Convert.FromBase64String(padded);
     }
 
     private static string? NormalizeEntityType(string? entityType)

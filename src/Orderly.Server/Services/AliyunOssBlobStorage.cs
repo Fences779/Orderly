@@ -21,38 +21,40 @@ public sealed class AliyunOssBlobStorage : IBlobStorage
 
     public Task UploadAsync(string key, Stream stream, CancellationToken cancellationToken = default)
     {
-        EnsureEnabled();
-        _client.PutObject(_options.OssBucketName, key, stream);
+        var client = GetClient();
+        client.PutObject(_options.OssBucketName, key, stream);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
-        EnsureEnabled();
-        _client.DeleteObject(_options.OssBucketName, key);
+        var client = GetClient();
+        client.DeleteObject(_options.OssBucketName, key);
         return Task.CompletedTask;
     }
 
     public Task<IReadOnlyList<string>> ListAsync(string prefix, CancellationToken cancellationToken = default)
     {
-        EnsureEnabled();
-        var result = _client.ListObjects(_options.OssBucketName, prefix);
+        var client = GetClient();
+        var result = client.ListObjects(_options.OssBucketName, prefix);
         var keys = result.ObjectSummaries.Select(o => o.Key).ToList();
         return Task.FromResult<IReadOnlyList<string>>(keys);
     }
 
     public Task<Stream?> DownloadAsync(string key, CancellationToken cancellationToken = default)
     {
-        EnsureEnabled();
-        var result = _client.GetObject(_options.OssBucketName, key);
+        var client = GetClient();
+        var result = client.GetObject(_options.OssBucketName, key);
         return Task.FromResult<Stream?>(result.Content);
     }
 
-    private void EnsureEnabled()
+    private OssClient GetClient()
     {
-        if (!IsEnabled)
+        if (!IsEnabled || _client is null)
         {
             throw new InvalidOperationException("OSS is not configured.");
         }
+
+        return _client;
     }
 }

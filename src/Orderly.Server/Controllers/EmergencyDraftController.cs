@@ -49,9 +49,25 @@ public class EmergencyDraftController : CloudControllerBase
 
         var status = isAllowed ? EmergencyDraftStatus.Pending : EmergencyDraftStatus.Rejected;
 
+        if (!Guid.TryParse(draft.Id, out var draftId))
+        {
+            return BadRequest(new { Error = "应急草稿 Id 是必填的幂等键。" });
+        }
+
+        var existing = await _repository.GetAsync(draftId, cancellationToken);
+        if (existing != null)
+        {
+            if (existing.WorkspaceId != workspaceId)
+            {
+                return Forbid();
+            }
+
+            return Accepted(new { DraftId = existing.Id, Status = existing.Status });
+        }
+
         var record = new CloudEmergencyDraftRecord
         {
-            Id = Guid.TryParse(draft.Id, out var parsedId) ? parsedId : Guid.NewGuid(),
+            Id = draftId,
             WorkspaceId = workspaceId,
             SubmittedByUserId = UserId,
             EntityType = draft.EntityType,

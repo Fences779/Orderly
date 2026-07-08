@@ -1,4 +1,6 @@
 using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using ClosedXML.Excel;
 using Dapper;
@@ -12,7 +14,7 @@ namespace Orderly.Server.Services;
 
 public interface IExportService
 {
-    Task<CloudExportJobDto> CreateJobAsync(Guid workspaceId, Guid userId, string scope, CancellationToken cancellationToken = default);
+    Task<CloudExportJobDto> CreateJobAsync(Guid workspaceId, Guid userId, string scope, string clientRequestId, CancellationToken cancellationToken = default);
     Task<CloudExportJobDto?> GetJobAsync(Guid workspaceId, Guid exportId, CancellationToken cancellationToken = default);
     Task RecordDownloadAsync(Guid workspaceId, Guid exportId, string? ipAddress, string? userAgent, CancellationToken cancellationToken = default);
     Task ProcessPendingJobsAsync(CancellationToken cancellationToken = default);
@@ -24,21 +26,29 @@ public sealed class ExportService : IExportService
     private readonly IBlobStorage _blobStorage;
     private readonly ServerOptions _options;
     private readonly IAuditLogService _auditLogService;
+    private readonly IIdempotencyService _idempotencyService;
 
     public ExportService(
         PostgresConnectionFactory connectionFactory,
         IBlobStorage blobStorage,
         ServerOptions options,
-        IAuditLogService auditLogService)
+        IAuditLogService auditLogService,
+        IIdempotencyService idempotencyService)
     {
         _connectionFactory = connectionFactory;
         _blobStorage = blobStorage;
         _options = options;
         _auditLogService = auditLogService;
+        _idempotencyService = idempotencyService;
     }
 
-    public async Task<CloudExportJobDto> CreateJobAsync(Guid workspaceId, Guid userId, string scope, CancellationToken cancellationToken = default)
+    public async Task<CloudExportJobDto> CreateJobAsync(Guid workspaceId, Guid userId, string scope, string clientRequestId, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(clientRequestId))
+        {
+            throw new InvalidOperationException("Idempotency key is required.");
+        }
+
         await CleanupExpiredExportsAsync(cancellationToken);
         EnsureLocalExportCapacity(extraBytes: 0);
 
@@ -53,6 +63,15 @@ public sealed class ExportService : IExportService
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        var requestHash = ComputeRequestHash(new { scope });
+        var idempotency = await _idempotencyService.TryBeginAsync(workspaceId, userId, "export:create", clientRequestId, requestHash, connection, transaction, cancellationToken);
+        if (!idempotency.ShouldExecute)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return JsonSerializer.Deserialize<CloudExportJobDto>(idempotency.ResponseBodyJson ?? string.Empty)
+                ?? throw new InvalidOperationException("Idempotency replay could not be deserialized.");
+        }
+
         const string sql = @"
             INSERT INTO ""CloudExportJobs"" (
                 ""Id"", ""WorkspaceId"", ""RequestedByUserId"", ""Scope"", ""Status"",
@@ -87,7 +106,21 @@ public sealed class ExportService : IExportService
             EntityType.ExportJob,
             job.Id,
             null,
-            JsonSerializer.Serialize(new { scope }));
+            JsonSerializer.Serialize(new { scope }),
+            clientRequestId: clientRequestId);
+
+        await _idempotencyService.CompleteAsync(
+            workspaceId,
+            userId,
+            "export:create",
+            clientRequestId,
+            202,
+            JsonSerializer.Serialize(job),
+            EntityType.ExportJob,
+            job.Id,
+            connection,
+            transaction,
+            cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
 
@@ -568,6 +601,12 @@ public sealed class ExportService : IExportService
         return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string ComputeRequestHash<T>(T request)
+    {
+        var json = JsonSerializer.Serialize(request);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
+    }
+
     private static CloudExportJobDto MapJob(dynamic row) => new()
     {
         Id = (Guid)row.Id,
@@ -603,7 +642,7 @@ public sealed class ExportService : IExportService
         ["Id", "ProductId", "CurrentPrice", "ProposedPrice", "Reason", "Status", "RequestedByUserId", "RequestedAt", "ReviewedByUserId", "ReviewedAt", "ReviewNote", "AppliedProductRevision"];
 
     private static readonly string[] AuditLogHeaders =
-        ["Id", "ActorUserId", "ActorDisplayName", "ActorRole", "Action", "EntityType", "EntityId", "Reason", "ClientRequestId", "OccurredAt", "IpAddress", "UserAgent"];
+        ["Id", "ActorUserId", "ActorDisplayName", "ActorRole", "Action", "EntityType", "EntityId", "Reason", "ClientRequestId", "OccurredAt", "IpAddress", "UserAgent", "DeviceId", "Result", "CorrelationId"];
 
     private static readonly string[] ArchiveHeaders =
         ["EntityType", "Id", "UpdatedAt", "ArchivedByUserId", "ArchiveReason"];

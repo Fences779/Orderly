@@ -6,6 +6,11 @@ public abstract class CloudEntityDto
 {
     public Guid Id { get; set; }
     public long Revision { get; set; }
+    public long Version
+    {
+        get => Revision;
+        set => Revision = value;
+    }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
     public Guid? CreatedByUserId { get; set; }

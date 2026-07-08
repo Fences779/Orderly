@@ -38,9 +38,15 @@ public class ExportController : CloudControllerBase
             return Forbid();
         }
 
+        var clientRequestId = Request.Headers["Idempotency-Key"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(clientRequestId))
+        {
+            return BadRequest(new { Error = "Idempotency-Key header is required." });
+        }
+
         try
         {
-            var job = await _exportService.CreateJobAsync(workspaceId, UserId, "business-package", cancellationToken);
+            var job = await _exportService.CreateJobAsync(workspaceId, UserId, "business-package", clientRequestId, cancellationToken);
             return Accepted(job);
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("导出目录", StringComparison.OrdinalIgnoreCase))

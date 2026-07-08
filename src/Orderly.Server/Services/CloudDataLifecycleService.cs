@@ -18,6 +18,8 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
     private readonly IAuditLogService _auditLog;
     private readonly IWorkspaceSyncService _syncService;
     private readonly ICurrentUserContext _currentUser;
+    private readonly ICloudAuthService _authService;
+    private readonly ICloudPermissionService _permissions;
     private readonly ServerOptions _options;
 
     public CloudDataLifecycleService(
@@ -26,6 +28,8 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
         IAuditLogService auditLog,
         IWorkspaceSyncService syncService,
         ICurrentUserContext currentUser,
+        ICloudAuthService authService,
+        ICloudPermissionService permissions,
         ServerOptions options)
     {
         _connectionFactory = connectionFactory;
@@ -33,6 +37,8 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
         _auditLog = auditLog;
         _syncService = syncService;
         _currentUser = currentUser;
+        _authService = authService;
+        _permissions = permissions;
         _options = options;
     }
 
@@ -40,6 +46,11 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
     {
         var normalizedEntityType = ResolveEntityType(entityType);
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        if (!await CanReadEntityAsync(connection, workspaceId, normalizedEntityType, entityId, historyPayload: true))
+        {
+            throw new UnauthorizedAccessException("没有历史版本查看权限。");
+        }
+
         var rows = await connection.QueryAsync<CloudEntityVersionDto>(
             @"SELECT v.""Id"", v.""WorkspaceId"", v.""EntityType"", v.""EntityId"", v.""Revision"", v.""Action"",
                      v.""PayloadJson""::text AS ""PayloadJson"", v.""CreatedByUserId"",
@@ -50,6 +61,7 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
               WHERE v.""WorkspaceId"" = @workspaceId AND v.""EntityType"" = @entityType AND v.""EntityId"" = @entityId
               ORDER BY v.""Revision"" DESC, v.""CreatedAt"" DESC;",
             new { workspaceId, entityType = normalizedEntityType, entityId });
+        await _auditLog.LogAsync(workspaceId, "EntityHistoryViewed", normalizedEntityType, entityId, null, null, result: "Succeeded");
         return rows.ToList();
     }
 
@@ -57,11 +69,17 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
     {
         var normalizedEntityType = ResolveEntityType(entityType);
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        if (!await CanReadEntityAsync(connection, workspaceId, normalizedEntityType, entityId, historyPayload: false))
+        {
+            throw new UnauthorizedAccessException("没有附件列表查看权限。");
+        }
+
         var rows = await connection.QueryAsync<CloudAttachmentDto>(
             AttachmentSelectSql + @"
               WHERE ""WorkspaceId"" = @workspaceId AND ""EntityType"" = @entityType AND ""EntityId"" = @entityId
               ORDER BY ""CreatedAt"" DESC;",
             new { workspaceId, entityType = normalizedEntityType, entityId });
+        await _auditLog.LogAsync(workspaceId, "AttachmentListViewed", normalizedEntityType, entityId, null, null, result: "Succeeded");
         return rows.ToList();
     }
 
@@ -78,6 +96,10 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
         await EnsureEntityExistsAsync(connection, workspaceId, normalizedEntityType, entityId);
+        if (!await CanWriteEntityAsync(connection, workspaceId, normalizedEntityType, entityId))
+        {
+            throw new UnauthorizedAccessException("没有附件上传权限。");
+        }
 
         var activeBytes = await connection.ExecuteScalarAsync<long>(
             @"SELECT COALESCE(SUM(""SizeBytes""), 0) FROM ""CloudAttachments""
@@ -131,6 +153,10 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
               WHERE ""WorkspaceId"" = @workspaceId AND ""Id"" = @attachmentId AND ""ArchivedAt"" IS NULL;",
             new { workspaceId, attachmentId });
         if (record == null) throw new InvalidOperationException("附件不存在或已归档。");
+        if (!await CanReadEntityAsync(connection, workspaceId, record.EntityType, record.EntityId, historyPayload: false))
+        {
+            throw new UnauthorizedAccessException("没有附件下载权限。");
+        }
 
         var stream = await _blobStorage.DownloadAsync(record.BlobKey, cancellationToken)
             ?? throw new InvalidOperationException("附件文件不存在。");
@@ -145,6 +171,12 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
     {
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
+        var attachment = await GetAttachmentDtoAsync(connection, workspaceId, attachmentId);
+        if (attachment == null || !await CanWriteEntityAsync(connection, workspaceId, attachment.EntityType, attachment.EntityId))
+        {
+            return false;
+        }
+
         var now = DateTime.UtcNow;
         var affected = await connection.ExecuteAsync(
             @"UPDATE ""CloudAttachments""
@@ -153,7 +185,6 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
             new { userId, now, reason, workspaceId, attachmentId });
         if (affected == 0) return false;
 
-        var attachment = await GetAttachmentDtoAsync(connection, workspaceId, attachmentId);
         await _auditLog.LogAsync(workspaceId, "AttachmentArchived", attachment?.EntityType ?? "attachment", attachment?.EntityId, null, null, reason, clientRequestId);
         return true;
     }
@@ -240,6 +271,77 @@ public sealed class CloudDataLifecycleService : ICloudDataLifecycleService
                WHERE ""WorkspaceId"" = @workspaceId AND ""Id"" = @entityId AND ""DeletedAt"" IS NULL;",
             new { workspaceId, entityId });
         if (exists == 0) throw new InvalidOperationException("附件归属实体不存在。");
+    }
+
+    private async Task<bool> CanReadEntityAsync(IDbConnection connection, Guid workspaceId, string entityType, Guid entityId, bool historyPayload)
+    {
+        var membership = await GetMembershipAsync();
+        if (membership == null || membership.WorkspaceId != workspaceId)
+        {
+            return false;
+        }
+
+        if (_permissions.IsAdmin(membership))
+        {
+            return true;
+        }
+
+        if (historyPayload && IsSensitiveHistoryEntity(entityType))
+        {
+            return false;
+        }
+
+        return await IsUserScopedEntityAsync(connection, workspaceId, entityType, entityId, membership.UserId);
+    }
+
+    private async Task<bool> CanWriteEntityAsync(IDbConnection connection, Guid workspaceId, string entityType, Guid entityId)
+    {
+        var membership = await GetMembershipAsync();
+        if (membership == null || membership.WorkspaceId != workspaceId)
+        {
+            return false;
+        }
+
+        if (_permissions.IsAdmin(membership))
+        {
+            return true;
+        }
+
+        if (!_permissions.CanWriteBusinessData(membership))
+        {
+            return false;
+        }
+
+        return await IsUserScopedEntityAsync(connection, workspaceId, entityType, entityId, membership.UserId);
+    }
+
+    private async Task<CloudWorkspaceMemberRecord?> GetMembershipAsync()
+    {
+        var userId = _currentUser.UserId;
+        return userId.HasValue ? await _authService.GetMembershipAsync(userId.Value) : null;
+    }
+
+    private static bool IsSensitiveHistoryEntity(string entityType)
+        => entityType is EntityType.Order or EntityType.Product or EntityType.InventoryItem or EntityType.CashFlowEntry;
+
+    private static async Task<bool> IsUserScopedEntityAsync(IDbConnection connection, Guid workspaceId, string entityType, Guid entityId, Guid userId)
+    {
+        var tableName = ResolveEntityTable(entityType);
+        var hasAssignedTo = entityType is EntityType.Order or EntityType.Customer or EntityType.BusinessTask;
+        var assignedSelect = hasAssignedTo ? @"""AssignedToUserId""" : "NULL::uuid";
+        var row = await connection.QueryFirstOrDefaultAsync(
+            $@"SELECT ""CreatedByUserId"", {assignedSelect} AS ""AssignedToUserId""
+               FROM ""{tableName}""
+               WHERE ""WorkspaceId"" = @workspaceId AND ""Id"" = @entityId AND ""DeletedAt"" IS NULL;",
+            new { workspaceId, entityId });
+        if (row == null)
+        {
+            return false;
+        }
+
+        Guid? createdBy = row.CreatedByUserId;
+        Guid? assignedTo = row.AssignedToUserId;
+        return createdBy == userId || assignedTo == userId;
     }
 
     private static string ResolveEntityType(string entityType)

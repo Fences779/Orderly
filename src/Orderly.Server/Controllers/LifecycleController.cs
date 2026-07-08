@@ -23,16 +23,30 @@ public sealed class LifecycleController : CloudControllerBase
     public async Task<ActionResult<IReadOnlyList<CloudEntityVersionDto>>> ListHistoryAsync(Guid workspaceId, string entityType, Guid entityId, CancellationToken cancellationToken)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
-        var history = await _lifecycleService.ListHistoryAsync(workspaceId, entityType, entityId, cancellationToken);
-        return Ok(history);
+        try
+        {
+            var history = await _lifecycleService.ListHistoryAsync(workspaceId, entityType, entityId, cancellationToken);
+            return Ok(history);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpGet("attachments/{entityType}/{entityId:guid}")]
     public async Task<ActionResult<IReadOnlyList<CloudAttachmentDto>>> ListAttachmentsAsync(Guid workspaceId, string entityType, Guid entityId, CancellationToken cancellationToken)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
-        var attachments = await _lifecycleService.ListAttachmentsAsync(workspaceId, entityType, entityId, cancellationToken);
-        return Ok(attachments);
+        try
+        {
+            var attachments = await _lifecycleService.ListAttachmentsAsync(workspaceId, entityType, entityId, cancellationToken);
+            return Ok(attachments);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpPost("attachments/{entityType}/{entityId:guid}")]
@@ -57,6 +71,10 @@ public sealed class LifecycleController : CloudControllerBase
         {
             return BadRequest(new { Error = ex.Message });
         }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpGet("attachments/{attachmentId:guid}/download")]
@@ -72,6 +90,10 @@ public sealed class LifecycleController : CloudControllerBase
         catch (InvalidOperationException ex)
         {
             return NotFound(new { Error = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
     }
 

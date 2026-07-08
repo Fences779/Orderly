@@ -358,7 +358,7 @@ public class CommerceReadController : CloudControllerBase
         if (!Permissions.CanViewCosts(membership)) return Forbid();
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
-        var summary = await connection.QueryFirstOrDefaultAsync(
+        var summary = await connection.QuerySingleAsync(
             @"SELECT
                 COALESCE(SUM(""Amount"") FILTER (WHERE ""Direction"" = @income AND ""SettlementStatus"" = @settled), 0) AS RealizedIncome,
                 COALESCE(SUM(""Amount"") FILTER (WHERE ""Direction"" = @expense AND ""SettlementStatus"" = @settled), 0) AS RealizedExpense,
@@ -649,6 +649,11 @@ public class CommerceReadController : CloudControllerBase
                 AfterJson = r.AfterJson,
                 Reason = r.Reason,
                 ClientRequestId = r.ClientRequestId,
+                IpAddress = r.IpAddress,
+                UserAgent = r.UserAgent,
+                DeviceId = r.DeviceId,
+                Result = r.Result,
+                CorrelationId = r.CorrelationId,
                 OccurredAtUtc = r.OccurredAt
             }).ToList(),
             Page = page,

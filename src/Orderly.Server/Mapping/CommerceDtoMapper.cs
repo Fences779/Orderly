@@ -62,7 +62,7 @@ public static class CommerceDtoMapper
         };
     }
 
-    public static CloudInventoryItemDto ToInventoryItemDto(dynamic r)
+    public static CloudInventoryItemDto ToInventoryItemDto(dynamic r, bool canViewCosts)
     {
         return new CloudInventoryItemDto
         {
@@ -82,7 +82,7 @@ public static class CommerceDtoMapper
             UnitId = r.UnitId,
             QuantityAvailable = r.QuantityAvailable,
             ReorderThreshold = r.ReorderThreshold,
-            UnitCost = r.UnitCost
+            UnitCost = canViewCosts ? (decimal?)r.UnitCost : null
         };
     }
 

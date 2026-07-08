@@ -8,7 +8,18 @@ public sealed class CloudOutboxEntryDto
     public string OperationType { get; set; } = string.Empty;
     public string PayloadJson { get; set; } = "{}";
     public long? BaseRevision { get; set; }
+    public long? BaseVersion
+    {
+        get => BaseRevision;
+        set => BaseRevision = value;
+    }
     public string ClientRequestId { get; set; } = Guid.NewGuid().ToString("N");
+    public string IdempotencyKey
+    {
+        get => ClientRequestId;
+        set => ClientRequestId = value;
+    }
+    public List<string> ChangedFields { get; set; } = new();
     public string Status { get; set; } = CloudOutboxStatus.Pending;
     public int AttemptCount { get; set; }
     public DateTime? NextAttemptAtUtc { get; set; }

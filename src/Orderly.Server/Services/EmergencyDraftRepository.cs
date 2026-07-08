@@ -29,11 +29,12 @@ public sealed class EmergencyDraftRepository : IEmergencyDraftRepository
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
         const string sql = @"
             INSERT INTO ""CloudEmergencyDrafts"" (
-                ""Id"", ""WorkspaceId"", ""EntityType"", ""EntityId"", ""OperationType"",
+                ""Id"", ""WorkspaceId"", ""SubmittedByUserId"", ""EntityType"", ""EntityId"", ""OperationType"",
                 ""PayloadJson"", ""BaseRevision"", ""Status"", ""LastSubmitError"", ""CreatedAt"", ""SubmittedAt"")
             VALUES (
-                @Id, @WorkspaceId, @EntityType, @EntityId, @OperationType,
-                @PayloadJson, @BaseRevision, @Status, @LastSubmitError, @CreatedAt, @SubmittedAt);";
+                @Id, @WorkspaceId, @SubmittedByUserId, @EntityType, @EntityId, @OperationType,
+                @PayloadJson, @BaseRevision, @Status, @LastSubmitError, @CreatedAt, @SubmittedAt)
+            ON CONFLICT (""Id"") DO NOTHING;";
 
         await connection.ExecuteAsync(sql, draft);
     }

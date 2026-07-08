@@ -64,6 +64,32 @@ public sealed class CloudImportService : ICloudImportService
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction = await BeginTransactionAsync(connection, cancellationToken);
+        var existingBatch = await connection.QueryFirstOrDefaultAsync<CloudImportBatchRecord>(
+            @"SELECT * FROM ""CloudImportBatches""
+              WHERE ""WorkspaceId"" = @workspaceId
+                AND ""SourceInstanceId"" = @sourceInstanceId
+                AND ""SourceFingerprint"" = @fingerprint
+                AND ""Status"" = 'DryRun'
+              ORDER BY ""DryRunAt"" DESC
+              LIMIT 1;",
+            new { workspaceId, request.SourceInstanceId, fingerprint },
+            transaction);
+        if (existingBatch != null)
+        {
+            var existingReport = JsonSerializer.Deserialize<ImportBatchReport>(existingBatch.SourceReportJson, JsonOptions)
+                ?? throw new InvalidOperationException("Dry-run 报告损坏，无法回放。");
+            var (replayResolved, replayMapped, replayIssues) = await ResolveTargetsAsync(connection, transaction, workspaceId, request.SourceInstanceId, existingReport.Package, existingBatch.Id, persistEntityMap: false);
+            await transaction.CommitAsync(cancellationToken);
+            var existingCounts = ComputeCounts(replayResolved, existingReport.Package, replayMapped);
+            return new LocalImportDryRunResponse
+            {
+                DryRunBatchId = existingBatch.Id,
+                SourceFingerprint = fingerprint,
+                Counts = existingCounts,
+                Issues = replayIssues,
+                CanCommit = replayIssues.Count == 0 && existingCounts.NewRecords + existingCounts.ExistingMapped > 0
+            };
+        }
 
         await InsertBatchAsync(connection, transaction, batchId, workspaceId, request.SourceInstanceId, fingerprint, report, userId, now);
         var (resolved, existingMapped, issues) = await ResolveTargetsAsync(connection, transaction, workspaceId, request.SourceInstanceId, request.Package, batchId, persistEntityMap: false);
