@@ -95,6 +95,16 @@ public class UsersController : CloudControllerBase
         return NoContent();
     }
 
+    [HttpPost("users/devices/{deviceRecordId:guid}/reject")]
+    public async Task<IActionResult> RejectDeviceAsync(Guid deviceRecordId, [FromBody] ReviewUserApplicationRequest request)
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        var ok = await AuthService.RejectDeviceAsync(deviceRecordId, UserId, request.ClientRequestId);
+        if (!ok) return BadRequest(new { Error = "Pending device cannot be rejected." });
+        return NoContent();
+    }
+
     [HttpPost("users/devices/{deviceRecordId:guid}/revoke")]
     public async Task<IActionResult> RevokeDeviceAsync(Guid deviceRecordId, [FromBody] ReviewUserApplicationRequest request)
     {

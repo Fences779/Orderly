@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Orderly.Server.Models;
 
 namespace Orderly.Tests.Server.Integration;
@@ -13,10 +14,12 @@ namespace Orderly.Tests.Server.Integration;
 internal sealed class ServerWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly PostgresFixture _fixture;
+    private readonly Action<IServiceCollection>? _configureServices;
 
-    public ServerWebApplicationFactory(PostgresFixture fixture)
+    public ServerWebApplicationFactory(PostgresFixture fixture, Action<IServiceCollection>? configureServices = null)
     {
         _fixture = fixture;
+        _configureServices = configureServices;
         ApplyEnvironmentOverrides();
     }
 
@@ -56,6 +59,8 @@ internal sealed class ServerWebApplicationFactory : WebApplicationFactory<Progra
             {
                 services.Remove(descriptor);
             }
+
+            _configureServices?.Invoke(services);
         });
     }
 

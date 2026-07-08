@@ -26,6 +26,7 @@ public interface ICloudAuthService
     Task<CloudUserApplicationDto?> RejectApplicationAsync(Guid applicationId, Guid actorUserId, string? reason, string? clientRequestId = null);
     Task<IReadOnlyList<CloudDeviceDto>> ListDevicesAsync(Guid workspaceId, Guid actorUserId);
     Task<bool> ApproveDeviceAsync(Guid deviceRecordId, Guid actorUserId, string? clientRequestId = null);
+    Task<bool> RejectDeviceAsync(Guid deviceRecordId, Guid actorUserId, string? clientRequestId = null);
     Task<bool> RevokeDeviceAsync(Guid deviceRecordId, Guid actorUserId, string? clientRequestId = null);
     Task EnsureBootstrapAdminAsync(string bootstrapToken);
 }

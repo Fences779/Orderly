@@ -255,6 +255,17 @@ public sealed class CloudAuthService : ICloudAuthService
             null,
             reason: null,
             request.ClientRequestId);
+        await _auditLogService.LogAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            "WorkspaceMemberAuthorized",
+            "workspaceMember",
+            userId,
+            null,
+            JsonSerializer.Serialize(new { request.CloudRole, request.BusinessLabel }, JsonOptions),
+            reason: null,
+            request.ClientRequestId);
 
         var createdUser = await connection.QueryFirstOrDefaultAsync<CloudUserRecord>(
             "SELECT * FROM \"CloudUsers\" WHERE \"Id\" = @id;",
@@ -775,6 +786,17 @@ public sealed class CloudAuthService : ICloudAuthService
             new { invitationId = app.InvitationId }, tx);
         await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "UserApplicationApproved", "userApplication", applicationId, null, null, reason, clientRequestId);
         await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "UserCreated", "user", userId, null, null, reason: null, clientRequestId);
+        await _auditLogService.LogAsync(
+            connection,
+            tx,
+            app.WorkspaceId,
+            "WorkspaceMemberAuthorized",
+            "workspaceMember",
+            userId,
+            null,
+            JsonSerializer.Serialize(new { app.CloudRole, app.BusinessLabel }, JsonOptions),
+            reason: null,
+            clientRequestId);
         await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "DeviceApproved", "device", deviceRecordId, null, null, "First device from approved application.", clientRequestId);
         var approvedApplication = await GetApplicationDtoAsync(connection, applicationId)
             ?? throw new InvalidOperationException("Approved application could not be loaded.");
@@ -890,6 +912,58 @@ public sealed class CloudAuthService : ICloudAuthService
 
         await _auditLogService.LogAsync(connection, tx, actorMembership.WorkspaceId, "DeviceApproved", "device", deviceRecordId, null, null, reason: null, clientRequestId);
         await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "device:approve", clientRequestId, true, "device", deviceRecordId);
+        await tx.CommitAsync();
+        return true;
+    }
+
+    public async Task<bool> RejectDeviceAsync(Guid deviceRecordId, Guid actorUserId, string? clientRequestId = null)
+    {
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
+        if (actorMembership == null || !CanManageCloudAdministration(actorMembership))
+            return false;
+        if (string.IsNullOrWhiteSpace(clientRequestId)) return false;
+
+        var now = DateTime.UtcNow;
+        await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            actorUserId,
+            "device:reject",
+            clientRequestId,
+            new { deviceRecordId });
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<bool>(idempotency);
+        }
+
+        var affected = await connection.ExecuteAsync(
+            @"UPDATE ""CloudDevices""
+              SET ""Status"" = @status, ""RevokedByUserId"" = @actorUserId, ""RevokedAt"" = @now, ""UpdatedAt"" = @now
+              WHERE ""Id"" = @deviceRecordId
+                AND ""WorkspaceId"" = @workspaceId
+                AND ""Status"" = @pending;",
+            new
+            {
+                status = CloudDeviceStatus.Revoked,
+                actorUserId,
+                now,
+                deviceRecordId,
+                workspaceId = actorMembership.WorkspaceId,
+                pending = CloudDeviceStatus.Pending
+            },
+            tx);
+        if (affected == 0)
+        {
+            await tx.RollbackAsync();
+            return false;
+        }
+
+        await _auditLogService.LogAsync(connection, tx, actorMembership.WorkspaceId, "DeviceRejected", "device", deviceRecordId, null, null, reason: null, clientRequestId);
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "device:reject", clientRequestId, true, "device", deviceRecordId);
         await tx.CommitAsync();
         return true;
     }

@@ -100,8 +100,8 @@ public sealed class AdminController : CloudControllerBase
                 AND (@action IS NULL OR ""Action"" = @action)
                 AND (@entityType IS NULL OR ""EntityType"" = @entityType)
                 AND (@entityId IS NULL OR ""EntityId"" = @entityId)
-                AND (@fromUtc IS NULL OR ""OccurredAt"" >= @fromUtc)
-                AND (@toUtc IS NULL OR ""OccurredAt"" <= @toUtc)
+                AND (CAST(@fromUtc AS timestamptz) IS NULL OR ""OccurredAt"" >= CAST(@fromUtc AS timestamptz))
+                AND (CAST(@toUtc AS timestamptz) IS NULL OR ""OccurredAt"" <= CAST(@toUtc AS timestamptz))
               ORDER BY ""OccurredAt"" DESC
               LIMIT @limit;",
             new { workspaceId, action, entityType, entityId, fromUtc, toUtc, limit });
