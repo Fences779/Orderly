@@ -40,6 +40,15 @@ public sealed class CloudPermissionServiceTests
         Assert.True(_permissions.CanRecordInventoryMovement(employee));
     }
 
+    [Fact]
+    public void Admin_with_staff_label_cannot_manage_users()
+    {
+        var admin = Member(CloudRole.Admin, businessLabel: BusinessLabel.Staff);
+
+        Assert.True(_permissions.IsAdmin(admin));
+        Assert.False(_permissions.CanManageUsers(admin));
+    }
+
     [Theory]
     [InlineData(EntityType.Order)]
     [InlineData(EntityType.Customer)]
@@ -88,12 +97,12 @@ public sealed class CloudPermissionServiceTests
         Assert.False(_permissions.CanArchive(membership!, EntityType.Order, Guid.NewGuid(), null));
     }
 
-    private static CloudWorkspaceMemberRecord Member(string role, Guid? userId = null) => new()
+    private static CloudWorkspaceMemberRecord Member(string role, Guid? userId = null, string businessLabel = BusinessLabel.Operator) => new()
     {
         UserId = userId ?? Guid.NewGuid(),
         WorkspaceId = Guid.NewGuid(),
         CloudRole = role,
-        BusinessLabel = BusinessLabel.Operator,
+        BusinessLabel = businessLabel,
         IsEnabled = true
     };
 }

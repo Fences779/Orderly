@@ -8,10 +8,11 @@ public sealed class CurrentUserContext : ICurrentUserContext
     public string? Role { get; private set; }
     public string? BusinessLabel { get; private set; }
     public Guid? WorkspaceId { get; private set; }
+    public string? DeviceId { get; private set; }
     public int TokenVersion { get; private set; }
     public bool IsAuthenticated => UserId.HasValue;
 
-    public void Set(Guid userId, string username, string displayName, string role, string businessLabel, Guid workspaceId, int tokenVersion)
+    public void Set(Guid userId, string username, string displayName, string role, string businessLabel, Guid workspaceId, string deviceId, int tokenVersion)
     {
         UserId = userId;
         Username = username;
@@ -19,6 +20,7 @@ public sealed class CurrentUserContext : ICurrentUserContext
         Role = role;
         BusinessLabel = businessLabel;
         WorkspaceId = workspaceId;
+        DeviceId = deviceId;
         TokenVersion = tokenVersion;
     }
 
@@ -30,6 +32,7 @@ public sealed class CurrentUserContext : ICurrentUserContext
         Role = null;
         BusinessLabel = null;
         WorkspaceId = null;
+        DeviceId = null;
         TokenVersion = 0;
     }
 }

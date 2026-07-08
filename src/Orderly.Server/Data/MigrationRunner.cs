@@ -22,7 +22,7 @@ public sealed class MigrationRunner
             .PostgresqlDatabase(connectionString)
             .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly(), script => script.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
             .LogToConsole()
-            .WithTransactionPerScript()
+            .WithoutTransaction()
             .Build();
 
         if (engine.IsUpgradeRequired() && _options.RequirePreMigrationBackup)

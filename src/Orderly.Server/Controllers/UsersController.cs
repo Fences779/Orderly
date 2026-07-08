@@ -29,6 +29,80 @@ public class UsersController : CloudControllerBase
         return Ok(failures);
     }
 
+    [HttpGet("users/invitations")]
+    public async Task<ActionResult<IReadOnlyList<CloudInvitationDto>>> ListInvitationsAsync()
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        var invitations = await AuthService.ListInvitationsAsync(membership.WorkspaceId);
+        return Ok(invitations);
+    }
+
+    [HttpPost("users/invitations")]
+    public async Task<ActionResult<CloudInvitationDto>> CreateInvitationAsync([FromBody] CreateInvitationRequest request)
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        var invitation = await AuthService.CreateInvitationAsync(request, UserId);
+        if (invitation == null) return BadRequest(new { Error = "Invalid invitation request or duplicate code." });
+        return Ok(invitation);
+    }
+
+    [HttpGet("users/applications")]
+    public async Task<ActionResult<IReadOnlyList<CloudUserApplicationDto>>> ListApplicationsAsync([FromQuery] int limit = 100)
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        var applications = await AuthService.ListApplicationsAsync(membership.WorkspaceId, limit);
+        return Ok(applications);
+    }
+
+    [HttpPost("users/applications/{applicationId:guid}/approve")]
+    public async Task<ActionResult<CloudUserApplicationDto>> ApproveApplicationAsync(Guid applicationId, [FromBody] ReviewUserApplicationRequest request)
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        var application = await AuthService.ApproveApplicationAsync(applicationId, UserId, request.Reason, request.ClientRequestId);
+        if (application == null) return BadRequest(new { Error = "Application cannot be approved." });
+        return Ok(application);
+    }
+
+    [HttpPost("users/applications/{applicationId:guid}/reject")]
+    public async Task<ActionResult<CloudUserApplicationDto>> RejectApplicationAsync(Guid applicationId, [FromBody] ReviewUserApplicationRequest request)
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        var application = await AuthService.RejectApplicationAsync(applicationId, UserId, request.Reason, request.ClientRequestId);
+        if (application == null) return BadRequest(new { Error = "Application cannot be rejected." });
+        return Ok(application);
+    }
+
+    [HttpGet("users/devices")]
+    public async Task<ActionResult<IReadOnlyList<CloudDeviceDto>>> ListDevicesAsync()
+    {
+        var membership = await GetMembershipAsync();
+        var devices = await AuthService.ListDevicesAsync(membership.WorkspaceId, UserId);
+        return Ok(devices);
+    }
+
+    [HttpPost("users/devices/{deviceRecordId:guid}/approve")]
+    public async Task<IActionResult> ApproveDeviceAsync(Guid deviceRecordId, [FromBody] ReviewUserApplicationRequest request)
+    {
+        var membership = await GetMembershipAsync();
+        if (!Permissions.CanManageUsers(membership)) return Forbid();
+        var ok = await AuthService.ApproveDeviceAsync(deviceRecordId, UserId, request.ClientRequestId);
+        if (!ok) return BadRequest(new { Error = "Device cannot be approved." });
+        return NoContent();
+    }
+
+    [HttpPost("users/devices/{deviceRecordId:guid}/revoke")]
+    public async Task<IActionResult> RevokeDeviceAsync(Guid deviceRecordId, [FromBody] ReviewUserApplicationRequest request)
+    {
+        var ok = await AuthService.RevokeDeviceAsync(deviceRecordId, UserId, request.ClientRequestId);
+        if (!ok) return BadRequest(new { Error = "Device cannot be revoked." });
+        return NoContent();
+    }
+
     [HttpPost("users")]
     public async Task<ActionResult<CloudUserDto>> CreateUserAsync([FromBody] CreateUserRequest request)
     {

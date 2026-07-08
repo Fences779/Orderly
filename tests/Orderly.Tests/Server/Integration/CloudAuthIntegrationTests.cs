@@ -56,7 +56,7 @@ public sealed class CloudAuthIntegrationTests : IDisposable
 
         var loginResponse = await _factory.CreateClient().PostAsJsonAsync(
             "api/auth/login",
-            new LoginRequest { Username = "employee1", Password = "NewEmployee1Pwd!" });
+            new LoginRequest { Username = "employee1", Password = "NewEmployee1Pwd!", DeviceId = "employee1-device", DeviceName = "Employee One PC" });
         loginResponse.EnsureSuccessStatusCode();
     }
 
@@ -92,6 +92,96 @@ public sealed class CloudAuthIntegrationTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [SkippableFact]
+    public async Task Invitation_application_and_device_approval_gate_cloud_login()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var admin = await CreateAdminAsync($"invite-admin-{suffix}", "AdminInvitePwd!");
+        var adminClient = CreateAuthenticatedClient(admin.Token);
+        var inviteCode = $"INV-{suffix}";
+
+        var invitationResponse = await adminClient.PostAsJsonAsync(
+            "api/users/invitations",
+            new CreateInvitationRequest
+            {
+                Code = inviteCode,
+                CloudRole = CloudRole.Employee,
+                BusinessLabel = BusinessLabel.Staff,
+                MaxUses = 1
+            });
+        invitationResponse.EnsureSuccessStatusCode();
+
+        var username = $"invite-employee-{suffix}";
+        var password = "InviteEmployeePwd!";
+        var applicationResponse = await _factory.CreateClient().PostAsJsonAsync(
+            "api/auth/applications",
+            new SubmitUserApplicationRequest
+            {
+                InviteCode = inviteCode,
+                Username = username,
+                DisplayName = "Invite Employee",
+                InitialPassword = password,
+                DeviceId = $"{username}-device-a",
+                DeviceName = "Invite Employee PC A"
+            });
+        applicationResponse.EnsureSuccessStatusCode();
+        var application = await applicationResponse.Content.ReadFromJsonAsync<CloudUserApplicationDto>();
+        Assert.Equal(CloudUserApplicationStatus.Pending, application!.Status);
+
+        var approveResponse = await adminClient.PostAsJsonAsync(
+            $"api/users/applications/{application.Id:N}/approve",
+            new ReviewUserApplicationRequest { Reason = "verified" });
+        approveResponse.EnsureSuccessStatusCode();
+        var approved = await approveResponse.Content.ReadFromJsonAsync<CloudUserApplicationDto>();
+        Assert.Equal(CloudUserApplicationStatus.Approved, approved!.Status);
+
+        var firstDeviceLogin = await _factory.CreateClient().PostAsJsonAsync(
+            "api/auth/login",
+            new LoginRequest
+            {
+                Username = username,
+                Password = password,
+                DeviceId = $"{username}-device-a",
+                DeviceName = "Invite Employee PC A"
+            });
+        firstDeviceLogin.EnsureSuccessStatusCode();
+
+        var secondDeviceLogin = await _factory.CreateClient().PostAsJsonAsync(
+            "api/auth/login",
+            new LoginRequest
+            {
+                Username = username,
+                Password = password,
+                DeviceId = $"{username}-device-b",
+                DeviceName = "Invite Employee PC B"
+            });
+        Assert.Equal(HttpStatusCode.Unauthorized, secondDeviceLogin.StatusCode);
+
+        var devicesResponse = await adminClient.GetAsync("api/users/devices");
+        devicesResponse.EnsureSuccessStatusCode();
+        var devices = await devicesResponse.Content.ReadFromJsonAsync<List<CloudDeviceDto>>();
+        var pendingDevice = devices!.Single(device =>
+            device.Username == username
+            && device.DeviceId == $"{username}-device-b"
+            && device.Status == CloudDeviceStatus.Pending);
+
+        var approveDeviceResponse = await adminClient.PostAsJsonAsync(
+            $"api/users/devices/{pendingDevice.Id:N}/approve",
+            new ReviewUserApplicationRequest { Reason = "second device verified" });
+        Assert.Equal(HttpStatusCode.NoContent, approveDeviceResponse.StatusCode);
+
+        var secondDeviceLoginAfterApproval = await _factory.CreateClient().PostAsJsonAsync(
+            "api/auth/login",
+            new LoginRequest
+            {
+                Username = username,
+                Password = password,
+                DeviceId = $"{username}-device-b",
+                DeviceName = "Invite Employee PC B"
+            });
+        secondDeviceLoginAfterApproval.EnsureSuccessStatusCode();
+    }
+
     private HttpClient CreateAuthenticatedClient(string token)
     {
         var client = _factory.CreateClient();
@@ -121,9 +211,18 @@ public sealed class CloudAuthIntegrationTests : IDisposable
             @"INSERT INTO ""CloudWorkspaceMembers"" (""Id"", ""WorkspaceId"", ""UserId"", ""CloudRole"", ""BusinessLabel"", ""IsEnabled"", ""CreatedAt"", ""UpdatedAt"") 
             VALUES (@id, @workspaceId, @userId, @role, @label, TRUE, @now, @now);",
             new { id = Guid.NewGuid(), workspaceId, userId, role = CloudRole.Admin, label = BusinessLabel.Operator, now });
+        var deviceId = $"{username}-device";
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudDevices"" (
+                ""Id"", ""WorkspaceId"", ""UserId"", ""DeviceId"", ""DeviceName"", ""Status"",
+                ""FirstSeenAt"", ""LastSeenAt"", ""ApprovedByUserId"", ""ApprovedAt"", ""CreatedAt"", ""UpdatedAt"")
+              VALUES (
+                @id, @workspaceId, @userId, @deviceId, @deviceName, @status,
+                @now, @now, @userId, @now, @now, @now);",
+            new { id = Guid.NewGuid(), workspaceId, userId, deviceId, deviceName = $"{username} PC", status = CloudDeviceStatus.Approved, now });
 
         var jwt = _factory.Services.GetRequiredService<IJwtService>();
-        var token = jwt.GenerateAccessToken(userId, username, username, 1);
+        var token = jwt.GenerateAccessToken(userId, username, username, 1, deviceId);
         return (token, userId, workspaceId);
     }
 
@@ -131,7 +230,7 @@ public sealed class CloudAuthIntegrationTests : IDisposable
     {
         var client = CreateAuthenticatedClient(adminToken);
         var createResponse = await client.PostAsJsonAsync(
-            $"api/workspaces/{workspaceId:N}/users",
+            "api/users",
             new CreateUserRequest
             {
                 Username = username,
@@ -146,7 +245,18 @@ public sealed class CloudAuthIntegrationTests : IDisposable
         var authService = _factory.Services.GetRequiredService<ICloudAuthService>();
         var user = await authService.GetUserAsync(userId);
         var jwt = _factory.Services.GetRequiredService<IJwtService>();
-        var token = jwt.GenerateAccessToken(userId, username, username, user!.TokenVersion);
+        var deviceId = $"{username}-device";
+        await using var connection = (System.Data.Common.DbConnection)await _factory.Services.GetRequiredService<PostgresConnectionFactory>().OpenConnectionAsync();
+        var now = DateTime.UtcNow;
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudDevices"" (
+                ""Id"", ""WorkspaceId"", ""UserId"", ""DeviceId"", ""DeviceName"", ""Status"",
+                ""FirstSeenAt"", ""LastSeenAt"", ""ApprovedByUserId"", ""ApprovedAt"", ""CreatedAt"", ""UpdatedAt"")
+              VALUES (
+                @id, @workspaceId, @userId, @deviceId, @deviceName, @status,
+                @now, @now, @userId, @now, @now, @now);",
+            new { id = Guid.NewGuid(), workspaceId, userId, deviceId, deviceName = $"{username} PC", status = CloudDeviceStatus.Approved, now });
+        var token = jwt.GenerateAccessToken(userId, username, username, user!.TokenVersion, deviceId);
         return (token, userId);
     }
 

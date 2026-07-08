@@ -23,10 +23,12 @@ public sealed class CurrentUserContextMiddleware
             var role = context.User.FindFirstValue(ClaimTypes.Role);
             var businessLabel = context.User.FindFirstValue("business_label");
             var workspaceIdValue = context.User.FindFirstValue("workspace_id");
+            var deviceId = context.User.FindFirstValue("device_id");
 
             if (Guid.TryParse(userId, out var parsedUserId)
                 && Guid.TryParse(workspaceIdValue, out var parsedWorkspaceId)
-                && int.TryParse(tokenVersionValue, out var tokenVersion))
+                && int.TryParse(tokenVersionValue, out var tokenVersion)
+                && !string.IsNullOrWhiteSpace(deviceId))
             {
                 currentUser.Set(
                     parsedUserId,
@@ -35,6 +37,7 @@ public sealed class CurrentUserContextMiddleware
                     role ?? string.Empty,
                     businessLabel ?? string.Empty,
                     parsedWorkspaceId,
+                    deviceId,
                     tokenVersion);
             }
         }

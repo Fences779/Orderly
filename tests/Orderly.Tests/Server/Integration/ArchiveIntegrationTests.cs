@@ -95,9 +95,18 @@ public sealed class ArchiveIntegrationTests : IDisposable
             @"INSERT INTO ""CloudWorkspaceMembers"" (""Id"", ""WorkspaceId"", ""UserId"", ""CloudRole"", ""BusinessLabel"", ""IsEnabled"", ""CreatedAt"", ""UpdatedAt"") 
             VALUES (@id, @workspaceId, @userId, @role, @label, TRUE, @now, @now);",
             new { id = Guid.NewGuid(), workspaceId, userId, role = CloudRole.Admin, label = BusinessLabel.Operator, now });
+        var deviceId = $"{username}-device";
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudDevices"" (
+                ""Id"", ""WorkspaceId"", ""UserId"", ""DeviceId"", ""DeviceName"", ""Status"",
+                ""FirstSeenAt"", ""LastSeenAt"", ""ApprovedByUserId"", ""ApprovedAt"", ""CreatedAt"", ""UpdatedAt"")
+              VALUES (
+                @id, @workspaceId, @userId, @deviceId, @deviceName, @status,
+                @now, @now, @userId, @now, @now, @now);",
+            new { id = Guid.NewGuid(), workspaceId, userId, deviceId, deviceName = $"{username} PC", status = CloudDeviceStatus.Approved, now });
 
         var jwt = _factory.Services.GetRequiredService<IJwtService>();
-        var token = jwt.GenerateAccessToken(userId, username, username, 1);
+        var token = jwt.GenerateAccessToken(userId, username, username, 1, deviceId);
         return (token, userId, workspaceId);
     }
 
@@ -120,7 +129,18 @@ public sealed class ArchiveIntegrationTests : IDisposable
         var jwt = _factory.Services.GetRequiredService<IJwtService>();
         var authService = _factory.Services.GetRequiredService<ICloudAuthService>();
         var fullUser = await authService.GetUserAsync(user!.Id);
-        var token = jwt.GenerateAccessToken(user.Id, username, username, fullUser!.TokenVersion);
+        var deviceId = $"{username}-device";
+        await using var connection = (System.Data.Common.DbConnection)await _factory.Services.GetRequiredService<PostgresConnectionFactory>().OpenConnectionAsync();
+        var now = DateTime.UtcNow;
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudDevices"" (
+                ""Id"", ""WorkspaceId"", ""UserId"", ""DeviceId"", ""DeviceName"", ""Status"",
+                ""FirstSeenAt"", ""LastSeenAt"", ""ApprovedByUserId"", ""ApprovedAt"", ""CreatedAt"", ""UpdatedAt"")
+              VALUES (
+                @id, @workspaceId, @userId, @deviceId, @deviceName, @status,
+                @now, @now, @userId, @now, @now, @now);",
+            new { id = Guid.NewGuid(), workspaceId, userId = user.Id, deviceId, deviceName = $"{username} PC", status = CloudDeviceStatus.Approved, now });
+        var token = jwt.GenerateAccessToken(user.Id, username, username, fullUser!.TokenVersion, deviceId);
         return (token, user.Id);
     }
 

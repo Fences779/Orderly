@@ -20,7 +20,7 @@ public sealed class JwtService : IJwtService
         _signingKey = new SymmetricSecurityKey(keyBytes);
     }
 
-    public string GenerateAccessToken(Guid userId, string username, string displayName, int tokenVersion)
+    public string GenerateAccessToken(Guid userId, string username, string displayName, int tokenVersion, string deviceId)
     {
         var claims = new[]
         {
@@ -29,6 +29,7 @@ public sealed class JwtService : IJwtService
             new Claim(JwtRegisteredClaimNames.Name, displayName),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
             new Claim("token_version", tokenVersion.ToString()),
+            new Claim("device_id", deviceId),
         };
 
         var creds = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);

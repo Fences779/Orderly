@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using Orderly.Contracts.Auth;
 using Orderly.Remote.Auth;
 
@@ -43,6 +45,8 @@ public sealed class RemoteAuthClient : IDisposable
         {
             Username = username.Trim(),
             Password = password,
+            DeviceId = GetStableDeviceId(),
+            DeviceName = Environment.MachineName,
             ClientRequestId = Guid.NewGuid().ToString("N")
         };
 
@@ -231,6 +235,13 @@ public sealed class RemoteAuthClient : IDisposable
     private const string DefaultRefreshTokenKey = "refresh-default";
     private static string GetRefreshTokenKey(Guid workspaceId) => $"refresh-{workspaceId:N}";
     private static string GetDataKeyKey(Guid workspaceId) => $"datakey-{workspaceId:N}";
+
+    private static string GetStableDeviceId()
+    {
+        var source = $"{Environment.MachineName}|{Environment.UserDomainName}|{Environment.UserName}";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(source));
+        return "win-" + Convert.ToHexString(hash)[..32].ToLowerInvariant();
+    }
 
     private static async Task EnsureSuccessOrThrowAsync(HttpResponseMessage response)
     {

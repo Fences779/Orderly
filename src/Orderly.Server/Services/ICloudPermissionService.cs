@@ -26,10 +26,15 @@ public sealed class CloudPermissionService : ICloudPermissionService
 
     public bool CanViewCosts(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
     public bool CanExport(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
-    public bool CanManageUsers(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
+    public bool CanManageUsers(CloudWorkspaceMemberRecord membership) => IsCloudAdministrator(membership);
     public bool CanManageCashFlow(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
     public bool CanApprovePriceChange(CloudWorkspaceMemberRecord membership) => IsAdmin(membership);
     public bool CanRecordInventoryMovement(CloudWorkspaceMemberRecord membership) => IsAdmin(membership) || IsEmployee(membership);
+
+    private bool IsCloudAdministrator(CloudWorkspaceMemberRecord membership) =>
+        IsAdmin(membership)
+        && (string.Equals(membership.BusinessLabel, BusinessLabel.Operator, StringComparison.Ordinal)
+            || string.Equals(membership.BusinessLabel, BusinessLabel.Investor, StringComparison.Ordinal));
 
     public bool CanArchive(CloudWorkspaceMemberRecord membership, string entityType, Guid? createdByUserId, Guid? assignedToUserId)
     {

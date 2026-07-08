@@ -17,6 +17,7 @@ internal sealed class ServerWebApplicationFactory : WebApplicationFactory<Progra
     public ServerWebApplicationFactory(PostgresFixture fixture)
     {
         _fixture = fixture;
+        ApplyEnvironmentOverrides();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -56,5 +57,27 @@ internal sealed class ServerWebApplicationFactory : WebApplicationFactory<Progra
                 services.Remove(descriptor);
             }
         });
+    }
+
+    private void ApplyEnvironmentOverrides()
+    {
+        var connectionString = _fixture.ConnectionString;
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            return;
+        }
+
+        var pgBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+        Environment.SetEnvironmentVariable("ORDERLY_POSTGRES_HOST", pgBuilder.Host);
+        Environment.SetEnvironmentVariable("ORDERLY_POSTGRES_PORT", pgBuilder.Port.ToString());
+        Environment.SetEnvironmentVariable("ORDERLY_POSTGRES_DB", pgBuilder.Database);
+        Environment.SetEnvironmentVariable("ORDERLY_POSTGRES_USER", pgBuilder.Username);
+        Environment.SetEnvironmentVariable("ORDERLY_POSTGRES_PASSWORD", pgBuilder.Password);
+        Environment.SetEnvironmentVariable("ORDERLY_JWT_SIGNING_KEY", "ORDERLY_TEST_JWT_SIGNING_KEY_32BYTES");
+        Environment.SetEnvironmentVariable("ORDERLY_BOOTSTRAP_ADMIN_TOKEN", string.Empty);
+        Environment.SetEnvironmentVariable("ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP", "false");
+        Environment.SetEnvironmentVariable("ORDERLY_REQUIRE_PRE_IMPORT_BACKUP", "false");
+        Environment.SetEnvironmentVariable("ORDERLY_RESTORE_DRILL_ENABLED", "false");
+        Environment.SetEnvironmentVariable("ORDERLY_OSS_ENDPOINT", string.Empty);
     }
 }

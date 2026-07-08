@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Dapper;
 using Orderly.Contracts.Auth;
 using Orderly.Contracts.Permissions;
@@ -73,11 +74,17 @@ public sealed class CloudAuthService : ICloudAuthService
             return null;
         }
 
+        var device = await EnsureApprovedLoginDeviceAsync(connection, user, membership, request, ipAddress, userAgent);
+        if (device == null)
+        {
+            return null;
+        }
+
         await connection.ExecuteAsync(
             "UPDATE \"CloudUsers\" SET \"FailedLoginCount\" = 0, \"LockedUntil\" = NULL, \"UpdatedAt\" = @now WHERE \"Id\" = @id;",
             new { now = DateTime.UtcNow, id = user.Id });
 
-        var (accessToken, refreshToken) = await GenerateTokensAsync(connection, user);
+        var (accessToken, refreshToken) = await GenerateTokensAsync(connection, user, device.DeviceId);
 
         await _auditLogService.LogAsync(
             membership.WorkspaceId,
@@ -131,6 +138,12 @@ public sealed class CloudAuthService : ICloudAuthService
         var membership = await GetMembershipForUserAsync(connection, user.Id);
         if (membership == null || !membership.IsEnabled) return null;
 
+        if (string.IsNullOrWhiteSpace(tokenRecord.DeviceId)
+            || !await ValidateDeviceAccessAsync(user.Id, tokenRecord.DeviceId))
+        {
+            return null;
+        }
+
         // Rotate refresh token: revoke old, create new
         var newRefreshPlain = GenerateRefreshToken();
         var newRefreshHash = HashToken(newRefreshPlain);
@@ -142,11 +155,11 @@ public sealed class CloudAuthService : ICloudAuthService
             "UPDATE \"CloudRefreshTokens\" SET \"RevokedAt\" = @now, \"RevokedReason\" = 'Rotated', \"ReplacedByTokenId\" = @newTokenId WHERE \"Id\" = @id;",
             new { now, newTokenId, id = tokenRecord.Id }, tx);
         await connection.ExecuteAsync(
-            "INSERT INTO \"CloudRefreshTokens\" (\"Id\", \"UserId\", \"TokenFamilyId\", \"TokenHash\", \"CreatedAt\", \"ExpiresAt\") VALUES (@id, @userId, @familyId, @hash, @now, @expires);",
-            new { id = newTokenId, userId = user.Id, familyId = tokenRecord.TokenFamilyId, hash = newRefreshHash, now, expires = now.AddDays(_options.RefreshTokenLifetimeDays) }, tx);
+            "INSERT INTO \"CloudRefreshTokens\" (\"Id\", \"UserId\", \"TokenFamilyId\", \"TokenHash\", \"DeviceId\", \"CreatedAt\", \"ExpiresAt\") VALUES (@id, @userId, @familyId, @hash, @deviceId, @now, @expires);",
+            new { id = newTokenId, userId = user.Id, familyId = tokenRecord.TokenFamilyId, hash = newRefreshHash, deviceId = tokenRecord.DeviceId, now, expires = now.AddDays(_options.RefreshTokenLifetimeDays) }, tx);
         await tx.CommitAsync();
 
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Username, user.DisplayName, user.TokenVersion);
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Username, user.DisplayName, user.TokenVersion, tokenRecord.DeviceId);
         var workspace = await connection.QueryFirstOrDefaultAsync<string>(
             "SELECT \"Name\" FROM \"CloudWorkspaces\" WHERE \"Id\" = @id;", new { id = membership.WorkspaceId });
 
@@ -179,6 +192,19 @@ public sealed class CloudAuthService : ICloudAuthService
         return user != null && user.IsEnabled && user.TokenVersion == tokenVersion;
     }
 
+    public async Task<bool> ValidateDeviceAccessAsync(Guid userId, string deviceId)
+    {
+        var normalizedDeviceId = NormalizeDeviceId(deviceId);
+        if (string.IsNullOrWhiteSpace(normalizedDeviceId)) return false;
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var count = await connection.ExecuteScalarAsync<int>(
+            @"SELECT COUNT(*) FROM ""CloudDevices""
+              WHERE ""UserId"" = @userId AND ""DeviceId"" = @deviceId AND ""Status"" = @status;",
+            new { userId, deviceId = normalizedDeviceId, status = CloudDeviceStatus.Approved });
+        return count > 0;
+    }
+
     public async Task<CloudUserRecord?> CreateUserAsync(CreateUserRequest request, Guid actorUserId)
     {
         if (!CloudRole.IsValid(request.CloudRole) || !BusinessLabel.IsValid(request.BusinessLabel))
@@ -186,7 +212,7 @@ public sealed class CloudAuthService : ICloudAuthService
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
-        if (actorMembership == null) return null;
+        if (actorMembership == null || !CanManageCloudAdministration(actorMembership)) return null;
 
         var userId = Guid.NewGuid();
         var now = DateTime.UtcNow;
@@ -225,7 +251,7 @@ public sealed class CloudAuthService : ICloudAuthService
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
-        if (actorMembership == null) return false;
+        if (actorMembership == null || !CanManageCloudAdministration(actorMembership)) return false;
 
         // Ensure not last admin
         var adminCount = await connection.ExecuteScalarAsync<int>(
@@ -283,7 +309,7 @@ public sealed class CloudAuthService : ICloudAuthService
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
-        if (actorMembership == null) return false;
+        if (actorMembership == null || !CanManageCloudAdministration(actorMembership)) return false;
 
         var targetMembership = await connection.QueryFirstOrDefaultAsync<CloudWorkspaceMemberRecord>(
             @"SELECT * FROM ""CloudWorkspaceMembers""
@@ -334,7 +360,8 @@ public sealed class CloudAuthService : ICloudAuthService
     {
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         var sql = @"
-            SELECT u.""Id"", u.""Username"", u.""DisplayName"", u.""IsEnabled"", u.""CreatedAt"", u.""UpdatedAt"",
+            SELECT u.""Id"", u.""Username"", u.""DisplayName"", m.""CloudRole"", m.""BusinessLabel"",
+                   u.""IsEnabled"", u.""CreatedAt"" AS ""CreatedAtUtc"", u.""UpdatedAt"" AS ""UpdatedAtUtc"",
                    COALESCE(creator.""DisplayName"", '') AS ""CreatedByDisplayName""
             FROM ""CloudWorkspaceMembers"" m
             JOIN ""CloudUsers"" u ON u.""Id"" = m.""UserId""
@@ -359,6 +386,366 @@ public sealed class CloudAuthService : ICloudAuthService
               LIMIT @limit;",
             new { workspaceId, limit });
         return rows.ToList();
+    }
+
+    public async Task<CloudInvitationDto?> CreateInvitationAsync(CreateInvitationRequest request, Guid actorUserId)
+    {
+        if (!CloudRole.IsValid(request.CloudRole) || !BusinessLabel.IsValid(request.BusinessLabel))
+            return null;
+
+        var code = NormalizeInviteCode(request.Code);
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            code = GenerateInviteCode();
+        }
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
+        if (actorMembership == null || !CanManageCloudAdministration(actorMembership)) return null;
+
+        var exists = await connection.ExecuteScalarAsync<int>(
+            @"SELECT COUNT(*) FROM ""CloudInvitations"" WHERE ""Code"" = @code;",
+            new { code });
+        if (exists > 0) return null;
+
+        var now = DateTime.UtcNow;
+        var invitationId = Guid.NewGuid();
+        var maxUses = Math.Clamp(request.MaxUses, 1, 1000);
+        await using var tx = await connection.BeginTransactionAsync();
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudInvitations"" (
+                ""Id"", ""WorkspaceId"", ""Code"", ""CloudRole"", ""BusinessLabel"", ""Status"",
+                ""MaxUses"", ""UsedCount"", ""ExpiresAt"", ""CreatedByUserId"", ""CreatedAt"")
+              VALUES (
+                @id, @workspaceId, @code, @role, @label, @status,
+                @maxUses, 0, @expiresAt, @createdBy, @now);",
+            new
+            {
+                id = invitationId,
+                workspaceId = actorMembership.WorkspaceId,
+                code,
+                role = request.CloudRole,
+                label = request.BusinessLabel,
+                status = CloudInvitationStatus.Active,
+                maxUses,
+                expiresAt = request.ExpiresAtUtc,
+                createdBy = actorUserId,
+                now
+            }, tx);
+        await _auditLogService.LogAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            "InvitationCreated",
+            "invitation",
+            invitationId,
+            null,
+            JsonSerializer.Serialize(new { code, request.CloudRole, request.BusinessLabel, maxUses, request.ExpiresAtUtc }),
+            reason: null,
+            request.ClientRequestId);
+        await tx.CommitAsync();
+
+        return await GetInvitationDtoAsync(connection, invitationId);
+    }
+
+    public async Task<IReadOnlyList<CloudInvitationDto>> ListInvitationsAsync(Guid workspaceId)
+    {
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var rows = await connection.QueryAsync<CloudInvitationDto>(
+            @"SELECT i.""Id"", i.""WorkspaceId"", i.""Code"", i.""CloudRole"", i.""BusinessLabel"", i.""Status"",
+                     i.""MaxUses"", i.""UsedCount"", i.""ExpiresAt"" AS ""ExpiresAtUtc"",
+                     i.""CreatedAt"" AS ""CreatedAtUtc"", COALESCE(u.""DisplayName"", '') AS ""CreatedByDisplayName""
+              FROM ""CloudInvitations"" i
+              LEFT JOIN ""CloudUsers"" u ON u.""Id"" = i.""CreatedByUserId""
+              WHERE i.""WorkspaceId"" = @workspaceId
+              ORDER BY i.""CreatedAt"" DESC;",
+            new { workspaceId });
+        return rows.ToList();
+    }
+
+    public async Task<CloudUserApplicationDto?> SubmitApplicationAsync(SubmitUserApplicationRequest request, string ipAddress, string userAgent)
+    {
+        var inviteCode = NormalizeInviteCode(request.InviteCode);
+        var username = NormalizeUsername(request.Username);
+        var displayName = NormalizeDisplayName(request.DisplayName);
+        var deviceId = NormalizeDeviceId(request.DeviceId);
+        var deviceName = NormalizeDeviceName(request.DeviceName);
+        if (string.IsNullOrWhiteSpace(inviteCode)
+            || string.IsNullOrWhiteSpace(username)
+            || string.IsNullOrWhiteSpace(displayName)
+            || string.IsNullOrWhiteSpace(request.InitialPassword)
+            || string.IsNullOrWhiteSpace(deviceId))
+        {
+            return null;
+        }
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var invitation = await connection.QueryFirstOrDefaultAsync<InvitationRow>(
+            @"SELECT * FROM ""CloudInvitations""
+              WHERE ""Code"" = @inviteCode AND ""Status"" = @status;",
+            new { inviteCode, status = CloudInvitationStatus.Active });
+        if (invitation == null) return null;
+        if (invitation.ExpiresAt.HasValue && invitation.ExpiresAt.Value <= DateTime.UtcNow) return null;
+        if (invitation.UsedCount >= invitation.MaxUses) return null;
+
+        var usernameExists = await connection.ExecuteScalarAsync<int>(
+            @"SELECT COUNT(*) FROM ""CloudUsers"" WHERE ""Username"" = @username;",
+            new { username });
+        if (usernameExists > 0) return null;
+
+        var pendingExists = await connection.ExecuteScalarAsync<int>(
+            @"SELECT COUNT(*) FROM ""CloudUserApplications""
+              WHERE ""Username"" = @username AND ""Status"" = @status;",
+            new { username, status = CloudUserApplicationStatus.Pending });
+        if (pendingExists > 0) return null;
+
+        var applicationId = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        var passwordHash = _passwordHasher.HashPassword(request.InitialPassword);
+        await using var tx = await connection.BeginTransactionAsync();
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudUserApplications"" (
+                ""Id"", ""WorkspaceId"", ""InvitationId"", ""InviteCode"", ""Username"", ""DisplayName"",
+                ""PasswordHash"", ""Status"", ""RequestedDeviceId"", ""RequestedDeviceName"", ""RequestedAt"",
+                ""ClientRequestId"", ""IpAddress"", ""UserAgent"")
+              VALUES (
+                @id, @workspaceId, @invitationId, @inviteCode, @username, @displayName,
+                @passwordHash, @status, @deviceId, @deviceName, @now,
+                @clientRequestId, @ipAddress, @userAgent);",
+            new
+            {
+                id = applicationId,
+                workspaceId = invitation.WorkspaceId,
+                invitationId = invitation.Id,
+                inviteCode,
+                username,
+                displayName,
+                passwordHash,
+                status = CloudUserApplicationStatus.Pending,
+                deviceId,
+                deviceName,
+                now,
+                clientRequestId = request.ClientRequestId,
+                ipAddress,
+                userAgent
+            }, tx);
+        await _auditLogService.LogAsync(
+            connection,
+            tx,
+            invitation.WorkspaceId,
+            "UserApplicationSubmitted",
+            "userApplication",
+            applicationId,
+            null,
+            JsonSerializer.Serialize(new { username, displayName, deviceName }),
+            reason: null,
+            request.ClientRequestId,
+            ipAddress,
+            userAgent);
+        await tx.CommitAsync();
+
+        return await GetApplicationDtoAsync(connection, applicationId);
+    }
+
+    public async Task<IReadOnlyList<CloudUserApplicationDto>> ListApplicationsAsync(Guid workspaceId, int limit = 100)
+    {
+        limit = Math.Clamp(limit, 1, 500);
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var rows = await connection.QueryAsync<CloudUserApplicationDto>(
+            ApplicationDtoSelectSql + @"
+              WHERE a.""WorkspaceId"" = @workspaceId
+              ORDER BY a.""RequestedAt"" DESC
+              LIMIT @limit;",
+            new { workspaceId, limit });
+        return rows.ToList();
+    }
+
+    public async Task<CloudUserApplicationDto?> ApproveApplicationAsync(Guid applicationId, Guid actorUserId, string? reason, string? clientRequestId = null)
+    {
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
+        if (actorMembership == null || !CanManageCloudAdministration(actorMembership)) return null;
+
+        var app = await connection.QueryFirstOrDefaultAsync<ApplicationApprovalRow>(
+            @"SELECT a.*, i.""CloudRole"", i.""BusinessLabel""
+              FROM ""CloudUserApplications"" a
+              JOIN ""CloudInvitations"" i ON i.""Id"" = a.""InvitationId""
+              WHERE a.""Id"" = @applicationId AND a.""WorkspaceId"" = @workspaceId;",
+            new { applicationId, workspaceId = actorMembership.WorkspaceId });
+        if (app == null) return null;
+        if (!string.Equals(app.Status, CloudUserApplicationStatus.Pending, StringComparison.OrdinalIgnoreCase))
+        {
+            return await GetApplicationDtoAsync(connection, applicationId);
+        }
+
+        var usernameExists = await connection.ExecuteScalarAsync<int>(
+            @"SELECT COUNT(*) FROM ""CloudUsers"" WHERE ""Username"" = @username;",
+            new { username = app.Username });
+        if (usernameExists > 0) return null;
+
+        var now = DateTime.UtcNow;
+        var userId = Guid.NewGuid();
+        var deviceRecordId = Guid.NewGuid();
+        await using var tx = await connection.BeginTransactionAsync();
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudUsers"" (
+                ""Id"", ""Username"", ""DisplayName"", ""PasswordHash"", ""IsEnabled"",
+                ""CreatedByUserId"", ""CreatedAt"", ""UpdatedAt"")
+              VALUES (
+                @userId, @username, @displayName, @passwordHash, TRUE,
+                @actorUserId, @now, @now);",
+            new { userId, app.Username, app.DisplayName, app.PasswordHash, actorUserId, now }, tx);
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudWorkspaceMembers"" (
+                ""WorkspaceId"", ""UserId"", ""CloudRole"", ""BusinessLabel"", ""RolePolicyVersion"",
+                ""IsEnabled"", ""CreatedByUserId"", ""CreatedAt"", ""UpdatedByUserId"", ""UpdatedAt"")
+              VALUES (
+                @workspaceId, @userId, @role, @label, 1,
+                TRUE, @actorUserId, @now, @actorUserId, @now);",
+            new { workspaceId = app.WorkspaceId, userId, role = app.CloudRole, label = app.BusinessLabel, actorUserId, now }, tx);
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudDevices"" (
+                ""Id"", ""WorkspaceId"", ""UserId"", ""DeviceId"", ""DeviceName"", ""Status"",
+                ""FirstSeenAt"", ""LastSeenAt"", ""ApprovedByUserId"", ""ApprovedAt"", ""CreatedAt"", ""UpdatedAt"")
+              VALUES (
+                @id, @workspaceId, @userId, @deviceId, @deviceName, @status,
+                @now, @now, @actorUserId, @now, @now, @now);",
+            new
+            {
+                id = deviceRecordId,
+                workspaceId = app.WorkspaceId,
+                userId,
+                deviceId = app.RequestedDeviceId,
+                deviceName = app.RequestedDeviceName,
+                status = CloudDeviceStatus.Approved,
+                actorUserId,
+                now
+            }, tx);
+        await connection.ExecuteAsync(
+            @"UPDATE ""CloudUserApplications""
+              SET ""Status"" = @status, ""ReviewedByUserId"" = @actorUserId, ""ReviewedAt"" = @now,
+                  ""ReviewReason"" = @reason, ""CreatedUserId"" = @userId
+              WHERE ""Id"" = @applicationId;",
+            new { status = CloudUserApplicationStatus.Approved, actorUserId, now, reason, userId, applicationId }, tx);
+        await connection.ExecuteAsync(
+            @"UPDATE ""CloudInvitations""
+              SET ""UsedCount"" = ""UsedCount"" + 1
+              WHERE ""Id"" = @invitationId;",
+            new { invitationId = app.InvitationId }, tx);
+        await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "UserApplicationApproved", "userApplication", applicationId, null, null, reason, clientRequestId);
+        await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "UserCreated", "user", userId, null, null, reason: null, clientRequestId);
+        await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "DeviceApproved", "device", deviceRecordId, null, null, "First device from approved application.", clientRequestId);
+        await tx.CommitAsync();
+
+        return await GetApplicationDtoAsync(connection, applicationId);
+    }
+
+    public async Task<CloudUserApplicationDto?> RejectApplicationAsync(Guid applicationId, Guid actorUserId, string? reason, string? clientRequestId = null)
+    {
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
+        if (actorMembership == null || !CanManageCloudAdministration(actorMembership)) return null;
+
+        var now = DateTime.UtcNow;
+        await using var tx = await connection.BeginTransactionAsync();
+        var affected = await connection.ExecuteAsync(
+            @"UPDATE ""CloudUserApplications""
+              SET ""Status"" = @status, ""ReviewedByUserId"" = @actorUserId, ""ReviewedAt"" = @now,
+                  ""ReviewReason"" = @reason
+              WHERE ""Id"" = @applicationId AND ""WorkspaceId"" = @workspaceId AND ""Status"" = @pending;",
+            new
+            {
+                status = CloudUserApplicationStatus.Rejected,
+                actorUserId,
+                now,
+                reason,
+                applicationId,
+                workspaceId = actorMembership.WorkspaceId,
+                pending = CloudUserApplicationStatus.Pending
+            }, tx);
+        if (affected == 0)
+        {
+            await tx.RollbackAsync();
+            return await GetApplicationDtoAsync(connection, applicationId);
+        }
+
+        await _auditLogService.LogAsync(connection, tx, actorMembership.WorkspaceId, "UserApplicationRejected", "userApplication", applicationId, null, null, reason, clientRequestId);
+        await tx.CommitAsync();
+
+        return await GetApplicationDtoAsync(connection, applicationId);
+    }
+
+    public async Task<IReadOnlyList<CloudDeviceDto>> ListDevicesAsync(Guid workspaceId, Guid actorUserId)
+    {
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
+        if (actorMembership == null || actorMembership.WorkspaceId != workspaceId) return Array.Empty<CloudDeviceDto>();
+
+        var canManageDevices = CanManageCloudAdministration(actorMembership);
+        var sql = DeviceDtoSelectSql + (canManageDevices
+            ? @" WHERE d.""WorkspaceId"" = @workspaceId"
+            : @" WHERE d.""WorkspaceId"" = @workspaceId AND d.""UserId"" = @actorUserId")
+            + @" ORDER BY d.""UpdatedAt"" DESC;";
+        var rows = await connection.QueryAsync<CloudDeviceDto>(sql, new { workspaceId, actorUserId });
+        return rows.ToList();
+    }
+
+    public async Task<bool> ApproveDeviceAsync(Guid deviceRecordId, Guid actorUserId, string? clientRequestId = null)
+    {
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
+        if (actorMembership == null || !CanManageCloudAdministration(actorMembership))
+            return false;
+
+        var now = DateTime.UtcNow;
+        await using var tx = await connection.BeginTransactionAsync();
+        var affected = await connection.ExecuteAsync(
+            @"UPDATE ""CloudDevices""
+              SET ""Status"" = @status, ""ApprovedByUserId"" = @actorUserId, ""ApprovedAt"" = @now,
+                  ""RevokedByUserId"" = NULL, ""RevokedAt"" = NULL, ""UpdatedAt"" = @now
+              WHERE ""Id"" = @deviceRecordId AND ""WorkspaceId"" = @workspaceId;",
+            new { status = CloudDeviceStatus.Approved, actorUserId, now, deviceRecordId, workspaceId = actorMembership.WorkspaceId }, tx);
+        if (affected == 0)
+        {
+            await tx.RollbackAsync();
+            return false;
+        }
+
+        await _auditLogService.LogAsync(connection, tx, actorMembership.WorkspaceId, "DeviceApproved", "device", deviceRecordId, null, null, reason: null, clientRequestId);
+        await tx.CommitAsync();
+        return true;
+    }
+
+    public async Task<bool> RevokeDeviceAsync(Guid deviceRecordId, Guid actorUserId, string? clientRequestId = null)
+    {
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
+        if (actorMembership == null) return false;
+
+        var device = await connection.QueryFirstOrDefaultAsync<CloudDeviceRecord>(
+            @"SELECT * FROM ""CloudDevices""
+              WHERE ""Id"" = @deviceRecordId AND ""WorkspaceId"" = @workspaceId;",
+            new { deviceRecordId, workspaceId = actorMembership.WorkspaceId });
+        if (device == null) return false;
+
+        var canManageDevices = CanManageCloudAdministration(actorMembership);
+        if (!canManageDevices && device.UserId != actorUserId) return false;
+
+        var now = DateTime.UtcNow;
+        await using var tx = await connection.BeginTransactionAsync();
+        await connection.ExecuteAsync(
+            @"UPDATE ""CloudDevices""
+              SET ""Status"" = @status, ""RevokedByUserId"" = @actorUserId, ""RevokedAt"" = @now, ""UpdatedAt"" = @now
+              WHERE ""Id"" = @deviceRecordId;",
+            new { status = CloudDeviceStatus.Revoked, actorUserId, now, deviceRecordId }, tx);
+        await connection.ExecuteAsync(
+            @"UPDATE ""CloudRefreshTokens""
+              SET ""RevokedAt"" = @now, ""RevokedReason"" = 'DeviceRevoked'
+              WHERE ""UserId"" = @userId AND ""DeviceId"" = @deviceId AND ""RevokedAt"" IS NULL;",
+            new { now, userId = device.UserId, device.DeviceId }, tx);
+        await _auditLogService.LogAsync(connection, tx, actorMembership.WorkspaceId, "DeviceRevoked", "device", deviceRecordId, null, null, reason: null, clientRequestId);
+        await tx.CommitAsync();
+        return true;
     }
 
     public async Task EnsureBootstrapAdminAsync(string bootstrapToken)
@@ -493,22 +880,200 @@ public sealed class CloudAuthService : ICloudAuthService
         await tx.CommitAsync();
     }
 
-    private async Task<(string accessToken, string refreshToken)> GenerateTokensAsync(System.Data.Common.DbConnection connection, CloudUserRecord user)
+    private async Task<(string accessToken, string refreshToken)> GenerateTokensAsync(System.Data.Common.DbConnection connection, CloudUserRecord user, string deviceId)
     {
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Username, user.DisplayName, user.TokenVersion);
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Username, user.DisplayName, user.TokenVersion, deviceId);
         var refreshPlain = GenerateRefreshToken();
         var refreshHash = HashToken(refreshPlain);
         var tokenId = Guid.NewGuid();
         var familyId = Guid.NewGuid();
         var now = DateTime.UtcNow;
         await connection.ExecuteAsync(
-            "INSERT INTO \"CloudRefreshTokens\" (\"Id\", \"UserId\", \"TokenFamilyId\", \"TokenHash\", \"CreatedAt\", \"ExpiresAt\") VALUES (@id, @userId, @familyId, @hash, @now, @expires);",
-            new { id = tokenId, userId = user.Id, familyId, hash = refreshHash, now, expires = now.AddDays(_options.RefreshTokenLifetimeDays) });
+            "INSERT INTO \"CloudRefreshTokens\" (\"Id\", \"UserId\", \"TokenFamilyId\", \"TokenHash\", \"DeviceId\", \"CreatedAt\", \"ExpiresAt\") VALUES (@id, @userId, @familyId, @hash, @deviceId, @now, @expires);",
+            new { id = tokenId, userId = user.Id, familyId, hash = refreshHash, deviceId, now, expires = now.AddDays(_options.RefreshTokenLifetimeDays) });
         return (accessToken, refreshPlain);
     }
 
+    private async Task<CloudDeviceRecord?> EnsureApprovedLoginDeviceAsync(
+        System.Data.Common.DbConnection connection,
+        CloudUserRecord user,
+        CloudWorkspaceMemberRecord membership,
+        LoginRequest request,
+        string ipAddress,
+        string userAgent)
+    {
+        var deviceId = NormalizeDeviceId(request.DeviceId);
+        var deviceName = NormalizeDeviceName(request.DeviceName);
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            await RecordLoginFailureAsync(connection, user, request.Username, "DeviceIdMissing", request.ClientRequestId, ipAddress, userAgent);
+            return null;
+        }
+
+        var now = DateTime.UtcNow;
+        var existing = await connection.QueryFirstOrDefaultAsync<CloudDeviceRecord>(
+            @"SELECT * FROM ""CloudDevices""
+              WHERE ""WorkspaceId"" = @workspaceId AND ""UserId"" = @userId AND ""DeviceId"" = @deviceId;",
+            new { workspaceId = membership.WorkspaceId, userId = user.Id, deviceId });
+
+        if (existing != null)
+        {
+            await connection.ExecuteAsync(
+                @"UPDATE ""CloudDevices""
+                  SET ""DeviceName"" = @deviceName, ""LastSeenAt"" = @now,
+                      ""LastIpAddress"" = @ipAddress, ""LastUserAgent"" = @userAgent, ""UpdatedAt"" = @now
+                  WHERE ""Id"" = @id;",
+                new { id = existing.Id, deviceName, now, ipAddress, userAgent });
+
+            if (CloudDeviceStatus.IsActive(existing.Status))
+            {
+                existing.DeviceName = deviceName;
+                existing.LastSeenAt = now;
+                return existing;
+            }
+
+            await RecordLoginFailureAsync(connection, user, request.Username, $"Device{existing.Status}", request.ClientRequestId, ipAddress, userAgent);
+            return null;
+        }
+
+        var userDeviceCount = await connection.ExecuteScalarAsync<int>(
+            @"SELECT COUNT(*) FROM ""CloudDevices""
+              WHERE ""WorkspaceId"" = @workspaceId AND ""UserId"" = @userId;",
+            new { workspaceId = membership.WorkspaceId, userId = user.Id });
+        var status = userDeviceCount == 0 ? CloudDeviceStatus.Approved : CloudDeviceStatus.Pending;
+        var device = new CloudDeviceRecord
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = membership.WorkspaceId,
+            UserId = user.Id,
+            DeviceId = deviceId,
+            DeviceName = deviceName,
+            Status = status,
+            FirstSeenAt = now,
+            LastSeenAt = now,
+            ApprovedByUserId = status == CloudDeviceStatus.Approved ? user.Id : null,
+            ApprovedAt = status == CloudDeviceStatus.Approved ? now : null
+        };
+
+        await connection.ExecuteAsync(
+            @"INSERT INTO ""CloudDevices"" (
+                ""Id"", ""WorkspaceId"", ""UserId"", ""DeviceId"", ""DeviceName"", ""Status"",
+                ""FirstSeenAt"", ""LastSeenAt"", ""ApprovedByUserId"", ""ApprovedAt"",
+                ""LastIpAddress"", ""LastUserAgent"", ""CreatedAt"", ""UpdatedAt"")
+              VALUES (
+                @Id, @WorkspaceId, @UserId, @DeviceId, @DeviceName, @Status,
+                @FirstSeenAt, @LastSeenAt, @ApprovedByUserId, @ApprovedAt,
+                @ipAddress, @userAgent, @now, @now);",
+            new
+            {
+                device.Id,
+                device.WorkspaceId,
+                device.UserId,
+                device.DeviceId,
+                device.DeviceName,
+                device.Status,
+                device.FirstSeenAt,
+                device.LastSeenAt,
+                device.ApprovedByUserId,
+                device.ApprovedAt,
+                ipAddress,
+                userAgent,
+                now
+            });
+
+        await _auditLogService.LogAsync(
+            connection,
+            null,
+            membership.WorkspaceId,
+            status == CloudDeviceStatus.Approved ? "DeviceFirstActivated" : "DeviceApprovalRequired",
+            "device",
+            device.Id,
+            null,
+            JsonSerializer.Serialize(new { deviceId, deviceName, status }),
+            reason: null,
+            request.ClientRequestId,
+            ipAddress,
+            userAgent);
+
+        if (status == CloudDeviceStatus.Approved)
+        {
+            return device;
+        }
+
+        await RecordLoginFailureAsync(connection, user, request.Username, "DevicePendingApproval", request.ClientRequestId, ipAddress, userAgent);
+        return null;
+    }
+
+    private async Task<CloudInvitationDto?> GetInvitationDtoAsync(System.Data.Common.DbConnection connection, Guid invitationId)
+    {
+        return await connection.QueryFirstOrDefaultAsync<CloudInvitationDto>(
+            @"SELECT i.""Id"", i.""WorkspaceId"", i.""Code"", i.""CloudRole"", i.""BusinessLabel"", i.""Status"",
+                     i.""MaxUses"", i.""UsedCount"", i.""ExpiresAt"" AS ""ExpiresAtUtc"",
+                     i.""CreatedAt"" AS ""CreatedAtUtc"", COALESCE(u.""DisplayName"", '') AS ""CreatedByDisplayName""
+              FROM ""CloudInvitations"" i
+              LEFT JOIN ""CloudUsers"" u ON u.""Id"" = i.""CreatedByUserId""
+              WHERE i.""Id"" = @invitationId;",
+            new { invitationId });
+    }
+
+    private async Task<CloudUserApplicationDto?> GetApplicationDtoAsync(System.Data.Common.DbConnection connection, Guid applicationId)
+    {
+        return await connection.QueryFirstOrDefaultAsync<CloudUserApplicationDto>(
+            ApplicationDtoSelectSql + @" WHERE a.""Id"" = @applicationId;",
+            new { applicationId });
+    }
+
+    private const string ApplicationDtoSelectSql = @"
+        SELECT a.""Id"", a.""WorkspaceId"", a.""InvitationId"", a.""InviteCode"",
+               a.""Username"", a.""DisplayName"", a.""Status"",
+               a.""RequestedDeviceId"", a.""RequestedDeviceName"",
+               a.""RequestedAt"" AS ""RequestedAtUtc"", a.""ReviewedAt"" AS ""ReviewedAtUtc"",
+               COALESCE(reviewer.""DisplayName"", '') AS ""ReviewedByDisplayName"",
+               COALESCE(a.""ReviewReason"", '') AS ""ReviewReason"",
+               a.""CreatedUserId""
+        FROM ""CloudUserApplications"" a
+        LEFT JOIN ""CloudUsers"" reviewer ON reviewer.""Id"" = a.""ReviewedByUserId""";
+
+    private const string DeviceDtoSelectSql = @"
+        SELECT d.""Id"", d.""WorkspaceId"", d.""UserId"", u.""Username"", u.""DisplayName"",
+               d.""DeviceId"", d.""DeviceName"", d.""Status"",
+               d.""FirstSeenAt"" AS ""FirstSeenAtUtc"", d.""LastSeenAt"" AS ""LastSeenAtUtc"",
+               d.""ApprovedAt"" AS ""ApprovedAtUtc"", COALESCE(approver.""DisplayName"", '') AS ""ApprovedByDisplayName"",
+               d.""RevokedAt"" AS ""RevokedAtUtc"", COALESCE(revoker.""DisplayName"", '') AS ""RevokedByDisplayName""
+        FROM ""CloudDevices"" d
+        JOIN ""CloudUsers"" u ON u.""Id"" = d.""UserId""
+        LEFT JOIN ""CloudUsers"" approver ON approver.""Id"" = d.""ApprovedByUserId""
+        LEFT JOIN ""CloudUsers"" revoker ON revoker.""Id"" = d.""RevokedByUserId""";
+
+    private static bool CanManageCloudAdministration(CloudWorkspaceMemberRecord? membership) =>
+        membership != null
+        && string.Equals(membership.CloudRole, CloudRole.Admin, StringComparison.OrdinalIgnoreCase)
+        && (string.Equals(membership.BusinessLabel, BusinessLabel.Operator, StringComparison.Ordinal)
+            || string.Equals(membership.BusinessLabel, BusinessLabel.Investor, StringComparison.Ordinal));
+
     private static string GenerateRefreshToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
+
+    private static string GenerateInviteCode()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(8);
+        return Convert.ToHexString(bytes);
+    }
+
+    private static string NormalizeInviteCode(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToUpperInvariant();
+
+    private static string NormalizeUsername(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+
+    private static string NormalizeDisplayName(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+
+    private static string NormalizeDeviceId(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+
+    private static string NormalizeDeviceName(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "未命名设备" : value.Trim();
 
     private static CloudUserDto MapUser(CloudUserRecord user) => new()
     {
@@ -530,4 +1095,32 @@ public sealed class CloudAuthService : ICloudAuthService
         RolePolicyVersion = membership.RolePolicyVersion,
         IsEnabled = membership.IsEnabled
     };
+
+    private sealed class InvitationRow
+    {
+        public Guid Id { get; set; }
+        public Guid WorkspaceId { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string CloudRole { get; set; } = string.Empty;
+        public string BusinessLabel { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public int MaxUses { get; set; }
+        public int UsedCount { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+    }
+
+    private sealed class ApplicationApprovalRow
+    {
+        public Guid Id { get; set; }
+        public Guid WorkspaceId { get; set; }
+        public Guid InvitationId { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string RequestedDeviceId { get; set; } = string.Empty;
+        public string RequestedDeviceName { get; set; } = string.Empty;
+        public string CloudRole { get; set; } = string.Empty;
+        public string BusinessLabel { get; set; } = string.Empty;
+    }
 }

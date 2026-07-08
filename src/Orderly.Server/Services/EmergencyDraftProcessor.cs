@@ -74,6 +74,7 @@ public sealed class EmergencyDraftProcessor : IEmergencyDraftProcessor
             membership.CloudRole,
             membership.BusinessLabel,
             membership.WorkspaceId,
+            "server-emergency-draft",
             user.TokenVersion);
 
         var commandService = scope.ServiceProvider.GetRequiredService<CommerceCommandService>();

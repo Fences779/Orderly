@@ -98,14 +98,35 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             OnTokenValidated = async context =>
             {
                 var userIdClaim = context.Principal?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-                if (!Guid.TryParse(userIdClaim, out var userId)) return;
+                if (!Guid.TryParse(userIdClaim, out var userId))
+                {
+                    context.Fail("Invalid user id.");
+                    return;
+                }
+
                 var tokenVersionClaim = context.Principal?.FindFirst("token_version")?.Value;
-                if (!int.TryParse(tokenVersionClaim, out var tokenVersion)) return;
+                if (!int.TryParse(tokenVersionClaim, out var tokenVersion))
+                {
+                    context.Fail("Invalid token version.");
+                    return;
+                }
+
+                var deviceId = context.Principal?.FindFirst("device_id")?.Value;
+                if (string.IsNullOrWhiteSpace(deviceId))
+                {
+                    context.Fail("Device is required.");
+                    return;
+                }
 
                 var authService = context.HttpContext.RequestServices.GetRequiredService<ICloudAuthService>();
                 var membership = await authService.GetMembershipAsync(userId);
                 var user = await authService.GetUserAsync(userId);
-                if (user == null || !user.IsEnabled || !await authService.ValidateTokenVersionAsync(userId, tokenVersion) || membership == null || !membership.IsEnabled)
+                if (user == null
+                    || !user.IsEnabled
+                    || !await authService.ValidateTokenVersionAsync(userId, tokenVersion)
+                    || !await authService.ValidateDeviceAccessAsync(userId, deviceId)
+                    || membership == null
+                    || !membership.IsEnabled)
                 {
                     context.Fail("User or membership is no longer valid.");
                     return;
@@ -155,10 +176,11 @@ if (!migrationResult.Successful)
 }
 
 // Bootstrap admin
-var authService = app.Services.GetRequiredService<ICloudAuthService>();
 var bootstrapToken = Environment.GetEnvironmentVariable("ORDERLY_BOOTSTRAP_ADMIN_TOKEN");
 if (!string.IsNullOrEmpty(bootstrapToken))
 {
+    using var bootstrapScope = app.Services.CreateScope();
+    var authService = bootstrapScope.ServiceProvider.GetRequiredService<ICloudAuthService>();
     await authService.EnsureBootstrapAdminAsync(bootstrapToken);
 }
 

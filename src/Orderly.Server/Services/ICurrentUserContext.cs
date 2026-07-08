@@ -8,8 +8,9 @@ public interface ICurrentUserContext
     string? Role { get; }
     string? BusinessLabel { get; }
     Guid? WorkspaceId { get; }
+    string? DeviceId { get; }
     int TokenVersion { get; }
     bool IsAuthenticated { get; }
-    void Set(Guid userId, string username, string displayName, string role, string businessLabel, Guid workspaceId, int tokenVersion);
+    void Set(Guid userId, string username, string displayName, string role, string businessLabel, Guid workspaceId, string deviceId, int tokenVersion);
     void Clear();
 }
