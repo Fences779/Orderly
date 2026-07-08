@@ -167,6 +167,19 @@ public partial class CommerceCommandService
                 var collector = new NotificationCollector();
                 var (dto, entityType, entityId) = await execute(connection, transaction, sequence, collector, cancellationToken);
                 var responseJson = JsonSerializer.Serialize(dto, JsonOptions);
+                if (dto is CloudEntityDto entityDto)
+                {
+                    await CloudDataLifecycleService.RecordEntityVersionAsync(
+                        connection,
+                        transaction,
+                        workspaceId,
+                        entityType,
+                        entityId,
+                        entityDto.Revision,
+                        action,
+                        responseJson,
+                        userId);
+                }
 
                 await _idempotency.CompleteAsync(workspaceId, userId, action, clientRequestId, 200, responseJson, entityType, entityId, connection, transaction, cancellationToken);
                 await transaction.CommitAsync(cancellationToken);

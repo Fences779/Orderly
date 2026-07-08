@@ -36,6 +36,8 @@ serverOptions.LocalExportDirectory = GetEnvOrConfig("ORDERLY_LOCAL_EXPORT_DIR", 
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_EXPORT_RETENTION_HOURS"), out var exportRetentionHours)) serverOptions.ExportRetentionHours = exportRetentionHours;
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_EXPORT_MAX_RETRY_COUNT"), out var exportMaxRetryCount)) serverOptions.ExportMaxRetryCount = exportMaxRetryCount;
 if (long.TryParse(Environment.GetEnvironmentVariable("ORDERLY_EXPORT_MAX_LOCAL_BYTES"), out var exportMaxLocalBytes)) serverOptions.ExportMaxLocalBytes = exportMaxLocalBytes;
+if (long.TryParse(Environment.GetEnvironmentVariable("ORDERLY_ATTACHMENT_QUOTA_BYTES"), out var attachmentQuotaBytes)) serverOptions.AttachmentQuotaBytes = attachmentQuotaBytes;
+if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_ARCHIVE_RETENTION_DAYS"), out var archiveRetentionDays)) serverOptions.ArchiveRetentionDays = archiveRetentionDays;
 serverOptions.OssEndpoint = GetEnvOrConfig("ORDERLY_OSS_ENDPOINT", serverOptions.OssEndpoint);
 serverOptions.OssBucketName = GetEnvOrConfig("ORDERLY_OSS_BUCKET", serverOptions.OssBucketName);
 serverOptions.OssAccessKeyId = GetEnvOrConfig("ORDERLY_OSS_ACCESS_KEY_ID", serverOptions.OssAccessKeyId);
@@ -58,6 +60,7 @@ builder.Services.AddScoped<IWorkspaceSyncQueryService, WorkspaceSyncQueryService
 builder.Services.AddScoped<ICloudImportService, CloudImportService>();
 builder.Services.AddScoped<IIdempotencyService, IdempotencyService>();
 builder.Services.AddScoped<CommerceCommandService>();
+builder.Services.AddScoped<ICloudDataLifecycleService, CloudDataLifecycleService>();
 builder.Services.AddScoped<IEmergencyDraftRepository, EmergencyDraftRepository>();
 builder.Services.AddScoped<IEmergencyDraftProcessor, EmergencyDraftProcessor>();
 builder.Services.AddHostedService<EmergencyDraftBackgroundService>();
