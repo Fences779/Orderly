@@ -1,8 +1,6 @@
 -- Orderly Cloud Team Server initial PostgreSQL schema
 -- Created by AI implementation agent. Follows ORDERLY_TEAM_CLOUD_AI_IMPLEMENTATION_PLAN.md.
 
-BEGIN;
-
 -- ---------------------------------------------------------------------------
 -- Cloud account & workspace tables
 -- ---------------------------------------------------------------------------
@@ -80,10 +78,15 @@ CREATE TABLE IF NOT EXISTS "CloudAuditLogs" (
     "ClientRequestId" TEXT NULL,
     "OccurredAt" TIMESTAMPTZ NOT NULL,
     "IpAddress" TEXT NULL,
-    "UserAgent" TEXT NULL
+    "UserAgent" TEXT NULL,
+    "DeviceId" TEXT NULL,
+    "Result" TEXT NOT NULL DEFAULT 'Succeeded',
+    "CorrelationId" TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS ix_audit_workspace ON "CloudAuditLogs"("WorkspaceId", "OccurredAt" DESC);
 CREATE INDEX IF NOT EXISTS ix_audit_entity ON "CloudAuditLogs"("EntityType", "EntityId");
+CREATE INDEX IF NOT EXISTS ix_audit_correlation ON "CloudAuditLogs"("WorkspaceId", "CorrelationId");
+CREATE INDEX IF NOT EXISTS ix_audit_result ON "CloudAuditLogs"("WorkspaceId", "Result", "OccurredAt" DESC);
 
 CREATE TABLE IF NOT EXISTS "CloudEditPresences" (
     "WorkspaceId" UUID NOT NULL,
@@ -665,5 +668,3 @@ CREATE TABLE IF NOT EXISTS "CommerceBusinessMetricSnapshots" (
     "BusinessKey" TEXT NULL
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_metric_snapshots_workspace_business_key ON "CommerceBusinessMetricSnapshots"("WorkspaceId", "BusinessKey") WHERE "BusinessKey" IS NOT NULL AND "DeletedAt" IS NULL;
-
-COMMIT;

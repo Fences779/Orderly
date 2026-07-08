@@ -24,7 +24,8 @@ serverOptions.PostgresDatabase = GetEnvOrConfig("ORDERLY_POSTGRES_DB", serverOpt
 serverOptions.PostgresUser = GetEnvOrConfig("ORDERLY_POSTGRES_USER", serverOptions.PostgresUser);
 serverOptions.PostgresPassword = GetEnvOrConfig("ORDERLY_POSTGRES_PASSWORD", serverOptions.PostgresPassword);
 serverOptions.JwtSigningKey = GetEnvOrConfig("ORDERLY_JWT_SIGNING_KEY", serverOptions.JwtSigningKey);
-serverOptions.BootstrapAdminToken = GetEnvOrConfig("ORDERLY_BOOTSTRAP_ADMIN_TOKEN", serverOptions.BootstrapAdminToken);
+serverOptions.BootstrapAdminToken = Environment.GetEnvironmentVariable("ORDERLY_BOOTSTRAP_ADMIN_TOKEN") ?? serverOptions.BootstrapAdminToken;
+serverOptions.BootstrapAdminPassword = Environment.GetEnvironmentVariable("ORDERLY_BOOTSTRAP_ADMIN_PASSWORD") ?? serverOptions.BootstrapAdminPassword;
 serverOptions.AllowedOrigins = GetEnvOrConfig("ORDERLY_ALLOWED_ORIGINS", serverOptions.AllowedOrigins);
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_BACKUP_RETENTION_DAYS"), out var retention)) serverOptions.BackupRetentionDays = retention;
 if (bool.TryParse(Environment.GetEnvironmentVariable("ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP"), out var requirePreMigrationBackup)) serverOptions.RequirePreMigrationBackup = requirePreMigrationBackup;
@@ -76,15 +77,21 @@ builder.Services.AddSingleton<ISignalRNotifier, SignalRNotifier>();
 var keyBytes = Encoding.UTF8.GetBytes(serverOptions.JwtSigningKey);
 if (keyBytes.Length < 32)
 {
-    // Fallback for local development only; production must provide a real key.
-    var devKey = "ORDERLY_DEV_ONLY_JWT_SIGNING_KEY_MUST_BE_32B";
-    keyBytes = Encoding.UTF8.GetBytes(devKey);
+    if (!builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("ORDERLY_JWT_SIGNING_KEY must be at least 32 bytes outside Development.");
+    }
+
+    serverOptions.JwtSigningKey = "ORDERLY_DEV_ONLY_JWT_SIGNING_KEY_MUST_BE_32B";
+    keyBytes = Encoding.UTF8.GetBytes(serverOptions.JwtSigningKey);
+    Console.Error.WriteLine("WARNING: Orderly.Server is using the Development-only JWT signing key.");
 }
 var signingKey = new SymmetricSecurityKey(keyBytes);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -156,7 +163,7 @@ builder.Services.AddSignalR().AddJsonProtocol(options =>
 
 builder.Services.AddCors(options =>
 {
-    var origins = serverOptions.AllowedOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries);
+    var origins = ResolveAllowedOrigins(serverOptions);
     options.AddPolicy("OrderlyCors", policy =>
     {
         policy.WithOrigins(origins)
@@ -244,6 +251,26 @@ app.Run();
 
 static string GetEnvOrConfig(string envName, string fallback) =>
     Environment.GetEnvironmentVariable(envName) ?? fallback;
+
+static string[] ResolveAllowedOrigins(ServerOptions options)
+{
+    var configuredOrigins = options.AllowedOrigins
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Where(origin => !string.Equals(origin, "*", StringComparison.Ordinal))
+        .ToArray();
+
+    if (configuredOrigins.Length > 0)
+    {
+        return configuredOrigins;
+    }
+
+    if (Uri.TryCreate(options.PublicUrl, UriKind.Absolute, out var publicUri))
+    {
+        return new[] { publicUri.GetLeftPart(UriPartial.Authority) };
+    }
+
+    return new[] { "https://localhost:5001" };
+}
 
 static string GetBackupHealthStatus(FileInfo? latestDump, BackupHealthSnapshot health, ServerOptions options)
 {

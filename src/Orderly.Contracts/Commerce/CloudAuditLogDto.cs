@@ -14,5 +14,10 @@ public sealed class CloudAuditLogDto
     public string? AfterJson { get; set; }
     public string? Reason { get; set; }
     public string? ClientRequestId { get; set; }
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
+    public string? DeviceId { get; set; }
+    public string Result { get; set; } = string.Empty;
+    public string CorrelationId { get; set; } = string.Empty;
     public DateTime OccurredAtUtc { get; set; }
 }

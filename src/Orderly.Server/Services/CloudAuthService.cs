@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Dapper;
 using Orderly.Contracts.Auth;
@@ -14,19 +15,26 @@ public sealed class CloudAuthService : ICloudAuthService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtService _jwtService;
     private readonly IAuditLogService _auditLogService;
+    private readonly IIdempotencyService _idempotency;
     private readonly ServerOptions _options;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public CloudAuthService(
         PostgresConnectionFactory connectionFactory,
         IPasswordHasher passwordHasher,
         IJwtService jwtService,
         IAuditLogService auditLogService,
+        IIdempotencyService idempotency,
         ServerOptions options)
     {
         _connectionFactory = connectionFactory;
         _passwordHasher = passwordHasher;
         _jwtService = jwtService;
         _auditLogService = auditLogService;
+        _idempotency = idempotency;
         _options = options;
     }
 
@@ -219,6 +227,13 @@ public sealed class CloudAuthService : ICloudAuthService
         var passwordHash = _passwordHasher.HashPassword(request.InitialPassword);
 
         await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "user:create", request.ClientRequestId, request);
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<CloudUserRecord>(idempotency);
+        }
+
         await connection.ExecuteAsync(
             @"INSERT INTO ""CloudUsers"" (""Id"", ""Username"", ""DisplayName"", ""PasswordHash"", ""IsEnabled"", ""CreatedByUserId"", ""CreatedAt"", ""UpdatedAt"")
             VALUES (@id, @username, @displayName, @passwordHash, TRUE, @createdBy, @now, @now);",
@@ -241,13 +256,20 @@ public sealed class CloudAuthService : ICloudAuthService
             reason: null,
             request.ClientRequestId);
 
+        var createdUser = await connection.QueryFirstOrDefaultAsync<CloudUserRecord>(
+            "SELECT * FROM \"CloudUsers\" WHERE \"Id\" = @id;",
+            new { id = userId },
+            tx)
+            ?? throw new InvalidOperationException("Created user could not be loaded.");
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "user:create", request.ClientRequestId, createdUser, "user", userId);
         await tx.CommitAsync();
-        return await GetUserAsync(userId);
+        return createdUser;
     }
 
-    public async Task<bool> DisableUserAsync(Guid userId, Guid actorUserId)
+    public async Task<bool> DisableUserAsync(Guid userId, Guid actorUserId, string? clientRequestId = null)
     {
         if (userId == actorUserId) return false; // cannot disable self
+        if (string.IsNullOrWhiteSpace(clientRequestId)) return false;
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
@@ -268,6 +290,20 @@ public sealed class CloudAuthService : ICloudAuthService
 
         var now = DateTime.UtcNow;
         await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            actorUserId,
+            "user:disable",
+            clientRequestId,
+            new { userId });
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<bool>(idempotency);
+        }
+
         await connection.ExecuteAsync(
             @"UPDATE ""CloudWorkspaceMembers"" SET ""IsEnabled"" = FALSE, ""UpdatedByUserId"" = @actor, ""UpdatedAt"" = @now
               WHERE ""WorkspaceId"" = @workspaceId AND ""UserId"" = @userId;",
@@ -289,23 +325,72 @@ public sealed class CloudAuthService : ICloudAuthService
             userId,
             null,
             null,
-            reason: null);
+            reason: null,
+            clientRequestId);
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "user:disable", clientRequestId, true, "user", userId);
         await tx.CommitAsync();
         return true;
     }
 
-    public async Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword)
+    public async Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, string? clientRequestId = null)
     {
-        var user = await GetUserAsync(userId);
-        if (user == null) return false;
-        if (!_passwordHasher.VerifyPassword(currentPassword, user.PasswordHash)) return false;
-        await SetPasswordAsync(userId, newPassword);
+        if (string.IsNullOrWhiteSpace(clientRequestId)) return false;
+        if (string.IsNullOrWhiteSpace(newPassword)) return false;
+
+        await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
+        var membership = await GetMembershipForUserAsync(connection, userId);
+        if (membership == null) return false;
+
+        await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(
+            connection,
+            tx,
+            membership.WorkspaceId,
+            userId,
+            "auth:changePassword",
+            clientRequestId,
+            new
+            {
+                CurrentPasswordHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(currentPassword))),
+                NewPasswordHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(newPassword)))
+            });
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<bool>(idempotency);
+        }
+
+        var user = await connection.QueryFirstOrDefaultAsync<CloudUserRecord>(
+            "SELECT * FROM \"CloudUsers\" WHERE \"Id\" = @id FOR UPDATE;",
+            new { id = userId },
+            tx);
+        if (user == null || !_passwordHasher.VerifyPassword(currentPassword, user.PasswordHash))
+        {
+            await tx.RollbackAsync();
+            return false;
+        }
+
+        var now = DateTime.UtcNow;
+        var hash = _passwordHasher.HashPassword(newPassword);
+        await connection.ExecuteAsync(
+            @"UPDATE ""CloudUsers"" SET ""PasswordHash"" = @hash, ""TokenVersion"" = ""TokenVersion"" + 1,
+               ""PasswordChangedAt"" = @now, ""UpdatedAt"" = @now WHERE ""Id"" = @id;",
+            new { hash, now, id = userId },
+            tx);
+        await connection.ExecuteAsync(
+            "UPDATE \"CloudRefreshTokens\" SET \"RevokedAt\" = @now, \"RevokedReason\" = 'PasswordChanged' WHERE \"UserId\" = @userId AND \"RevokedAt\" IS NULL;",
+            new { now, userId },
+            tx);
+        await _auditLogService.LogAsync(connection, tx, membership.WorkspaceId, "UserPasswordChanged", "user", userId, null, null, clientRequestId: clientRequestId);
+        await CompleteIdempotencyAsync(connection, tx, membership.WorkspaceId, userId, "auth:changePassword", clientRequestId, true, "user", userId);
+        await tx.CommitAsync();
         return true;
     }
 
     public async Task<bool> ResetPasswordAsync(Guid userId, string newPassword, Guid actorUserId, string? clientRequestId = null)
     {
         if (string.IsNullOrWhiteSpace(newPassword)) return false;
+        if (string.IsNullOrWhiteSpace(clientRequestId)) return false;
 
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
@@ -320,6 +405,20 @@ public sealed class CloudAuthService : ICloudAuthService
         var hash = _passwordHasher.HashPassword(newPassword);
         var now = DateTime.UtcNow;
         await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            actorUserId,
+            "user:resetPassword",
+            clientRequestId,
+            new { userId, NewPasswordHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(newPassword))) });
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<bool>(idempotency);
+        }
+
         var affected = await connection.ExecuteAsync(
             @"UPDATE ""CloudUsers"" SET ""PasswordHash"" = @hash, ""TokenVersion"" = ""TokenVersion"" + 1,
                ""PasswordChangedAt"" = @now, ""UpdatedAt"" = @now WHERE ""Id"" = @id;",
@@ -340,6 +439,7 @@ public sealed class CloudAuthService : ICloudAuthService
             null,
             reason: null,
             clientRequestId);
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "user:resetPassword", clientRequestId, true, "user", userId);
         await tx.CommitAsync();
         return true;
     }
@@ -403,15 +503,27 @@ public sealed class CloudAuthService : ICloudAuthService
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
         if (actorMembership == null || !CanManageCloudAdministration(actorMembership)) return null;
 
-        var exists = await connection.ExecuteScalarAsync<int>(
-            @"SELECT COUNT(*) FROM ""CloudInvitations"" WHERE ""Code"" = @code;",
-            new { code });
-        if (exists > 0) return null;
-
         var now = DateTime.UtcNow;
         var invitationId = Guid.NewGuid();
         var maxUses = Math.Clamp(request.MaxUses, 1, 1000);
         await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "invitation:create", request.ClientRequestId, request);
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<CloudInvitationDto>(idempotency);
+        }
+
+        var exists = await connection.ExecuteScalarAsync<int>(
+            @"SELECT COUNT(*) FROM ""CloudInvitations"" WHERE ""Code"" = @code;",
+            new { code },
+            tx);
+        if (exists > 0)
+        {
+            await tx.RollbackAsync();
+            return null;
+        }
+
         await connection.ExecuteAsync(
             @"INSERT INTO ""CloudInvitations"" (
                 ""Id"", ""WorkspaceId"", ""Code"", ""CloudRole"", ""BusinessLabel"", ""Status"",
@@ -443,9 +555,12 @@ public sealed class CloudAuthService : ICloudAuthService
             JsonSerializer.Serialize(new { code, request.CloudRole, request.BusinessLabel, maxUses, request.ExpiresAtUtc }),
             reason: null,
             request.ClientRequestId);
+        var invitation = await GetInvitationDtoAsync(connection, invitationId)
+            ?? throw new InvalidOperationException("Invitation was created but could not be loaded.");
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "invitation:create", request.ClientRequestId, invitation, "invitation", invitationId);
         await tx.CommitAsync();
 
-        return await GetInvitationDtoAsync(connection, invitationId);
+        return invitation;
     }
 
     public async Task<IReadOnlyList<CloudInvitationDto>> ListInvitationsAsync(Guid workspaceId)
@@ -487,6 +602,15 @@ public sealed class CloudAuthService : ICloudAuthService
         if (invitation == null) return null;
         if (invitation.ExpiresAt.HasValue && invitation.ExpiresAt.Value <= DateTime.UtcNow) return null;
         if (invitation.UsedCount >= invitation.MaxUses) return null;
+
+        var existingApplication = await connection.QueryFirstOrDefaultAsync<Guid?>(
+            @"SELECT ""Id"" FROM ""CloudUserApplications""
+              WHERE ""WorkspaceId"" = @workspaceId AND ""ClientRequestId"" = @clientRequestId;",
+            new { workspaceId = invitation.WorkspaceId, clientRequestId = request.ClientRequestId });
+        if (existingApplication.HasValue)
+        {
+            return await GetApplicationDtoAsync(connection, existingApplication.Value);
+        }
 
         var usernameExists = await connection.ExecuteScalarAsync<int>(
             @"SELECT COUNT(*) FROM ""CloudUsers"" WHERE ""Username"" = @username;",
@@ -542,9 +666,11 @@ public sealed class CloudAuthService : ICloudAuthService
             request.ClientRequestId,
             ipAddress,
             userAgent);
+        var application = await GetApplicationDtoAsync(connection, applicationId)
+            ?? throw new InvalidOperationException("Application was created but could not be loaded.");
         await tx.CommitAsync();
 
-        return await GetApplicationDtoAsync(connection, applicationId);
+        return application;
     }
 
     public async Task<IReadOnlyList<CloudUserApplicationDto>> ListApplicationsAsync(Guid workspaceId, int limit = 100)
@@ -577,6 +703,7 @@ public sealed class CloudAuthService : ICloudAuthService
         {
             return await GetApplicationDtoAsync(connection, applicationId);
         }
+        if (string.IsNullOrWhiteSpace(clientRequestId)) return null;
 
         var usernameExists = await connection.ExecuteScalarAsync<int>(
             @"SELECT COUNT(*) FROM ""CloudUsers"" WHERE ""Username"" = @username;",
@@ -587,6 +714,20 @@ public sealed class CloudAuthService : ICloudAuthService
         var userId = Guid.NewGuid();
         var deviceRecordId = Guid.NewGuid();
         await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            actorUserId,
+            "application:approve",
+            clientRequestId,
+            new { applicationId, reason });
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<CloudUserApplicationDto>(idempotency);
+        }
+
         await connection.ExecuteAsync(
             @"INSERT INTO ""CloudUsers"" (
                 ""Id"", ""Username"", ""DisplayName"", ""PasswordHash"", ""IsEnabled"",
@@ -635,9 +776,12 @@ public sealed class CloudAuthService : ICloudAuthService
         await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "UserApplicationApproved", "userApplication", applicationId, null, null, reason, clientRequestId);
         await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "UserCreated", "user", userId, null, null, reason: null, clientRequestId);
         await _auditLogService.LogAsync(connection, tx, app.WorkspaceId, "DeviceApproved", "device", deviceRecordId, null, null, "First device from approved application.", clientRequestId);
+        var approvedApplication = await GetApplicationDtoAsync(connection, applicationId)
+            ?? throw new InvalidOperationException("Approved application could not be loaded.");
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "application:approve", clientRequestId, approvedApplication, "userApplication", applicationId);
         await tx.CommitAsync();
 
-        return await GetApplicationDtoAsync(connection, applicationId);
+        return approvedApplication;
     }
 
     public async Task<CloudUserApplicationDto?> RejectApplicationAsync(Guid applicationId, Guid actorUserId, string? reason, string? clientRequestId = null)
@@ -645,9 +789,24 @@ public sealed class CloudAuthService : ICloudAuthService
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
         if (actorMembership == null || !CanManageCloudAdministration(actorMembership)) return null;
+        if (string.IsNullOrWhiteSpace(clientRequestId)) return null;
 
         var now = DateTime.UtcNow;
         await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            actorUserId,
+            "application:reject",
+            clientRequestId,
+            new { applicationId, reason });
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<CloudUserApplicationDto>(idempotency);
+        }
+
         var affected = await connection.ExecuteAsync(
             @"UPDATE ""CloudUserApplications""
               SET ""Status"" = @status, ""ReviewedByUserId"" = @actorUserId, ""ReviewedAt"" = @now,
@@ -670,9 +829,12 @@ public sealed class CloudAuthService : ICloudAuthService
         }
 
         await _auditLogService.LogAsync(connection, tx, actorMembership.WorkspaceId, "UserApplicationRejected", "userApplication", applicationId, null, null, reason, clientRequestId);
+        var rejectedApplication = await GetApplicationDtoAsync(connection, applicationId)
+            ?? throw new InvalidOperationException("Rejected application could not be loaded.");
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "application:reject", clientRequestId, rejectedApplication, "userApplication", applicationId);
         await tx.CommitAsync();
 
-        return await GetApplicationDtoAsync(connection, applicationId);
+        return rejectedApplication;
     }
 
     public async Task<IReadOnlyList<CloudDeviceDto>> ListDevicesAsync(Guid workspaceId, Guid actorUserId)
@@ -696,9 +858,24 @@ public sealed class CloudAuthService : ICloudAuthService
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
         if (actorMembership == null || !CanManageCloudAdministration(actorMembership))
             return false;
+        if (string.IsNullOrWhiteSpace(clientRequestId)) return false;
 
         var now = DateTime.UtcNow;
         await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            actorUserId,
+            "device:approve",
+            clientRequestId,
+            new { deviceRecordId });
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<bool>(idempotency);
+        }
+
         var affected = await connection.ExecuteAsync(
             @"UPDATE ""CloudDevices""
               SET ""Status"" = @status, ""ApprovedByUserId"" = @actorUserId, ""ApprovedAt"" = @now,
@@ -712,6 +889,7 @@ public sealed class CloudAuthService : ICloudAuthService
         }
 
         await _auditLogService.LogAsync(connection, tx, actorMembership.WorkspaceId, "DeviceApproved", "device", deviceRecordId, null, null, reason: null, clientRequestId);
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "device:approve", clientRequestId, true, "device", deviceRecordId);
         await tx.CommitAsync();
         return true;
     }
@@ -721,6 +899,7 @@ public sealed class CloudAuthService : ICloudAuthService
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
         var actorMembership = await GetMembershipForUserAsync(connection, actorUserId);
         if (actorMembership == null) return false;
+        if (string.IsNullOrWhiteSpace(clientRequestId)) return false;
 
         var device = await connection.QueryFirstOrDefaultAsync<CloudDeviceRecord>(
             @"SELECT * FROM ""CloudDevices""
@@ -733,6 +912,20 @@ public sealed class CloudAuthService : ICloudAuthService
 
         var now = DateTime.UtcNow;
         await using var tx = await connection.BeginTransactionAsync();
+        var idempotency = await TryBeginIdempotencyAsync(
+            connection,
+            tx,
+            actorMembership.WorkspaceId,
+            actorUserId,
+            "device:revoke",
+            clientRequestId,
+            new { deviceRecordId });
+        if (!idempotency.ShouldExecute)
+        {
+            await tx.CommitAsync();
+            return Replay<bool>(idempotency);
+        }
+
         await connection.ExecuteAsync(
             @"UPDATE ""CloudDevices""
               SET ""Status"" = @status, ""RevokedByUserId"" = @actorUserId, ""RevokedAt"" = @now, ""UpdatedAt"" = @now
@@ -744,6 +937,7 @@ public sealed class CloudAuthService : ICloudAuthService
               WHERE ""UserId"" = @userId AND ""DeviceId"" = @deviceId AND ""RevokedAt"" IS NULL;",
             new { now, userId = device.UserId, device.DeviceId }, tx);
         await _auditLogService.LogAsync(connection, tx, actorMembership.WorkspaceId, "DeviceRevoked", "device", deviceRecordId, null, null, reason: null, clientRequestId);
+        await CompleteIdempotencyAsync(connection, tx, actorMembership.WorkspaceId, actorUserId, "device:revoke", clientRequestId, true, "device", deviceRecordId);
         await tx.CommitAsync();
         return true;
     }
@@ -762,7 +956,12 @@ public sealed class CloudAuthService : ICloudAuthService
         var workspaceId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var now = DateTime.UtcNow;
-        var passwordHash = _passwordHasher.HashPassword("OrderlyAdmin@123");
+        if (string.IsNullOrWhiteSpace(_options.BootstrapAdminPassword) || _options.BootstrapAdminPassword.Length < 12)
+        {
+            throw new InvalidOperationException("ORDERLY_BOOTSTRAP_ADMIN_PASSWORD must be set to a strong one-time initial password.");
+        }
+
+        var passwordHash = _passwordHasher.HashPassword(_options.BootstrapAdminPassword);
 
         await using var tx = await connection.BeginTransactionAsync();
         await connection.ExecuteAsync(
@@ -1053,6 +1252,62 @@ public sealed class CloudAuthService : ICloudAuthService
 
     private static string GenerateRefreshToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
     private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
+    private static string ComputeRequestHash<T>(T request)
+    {
+        var json = JsonSerializer.Serialize(request, JsonOptions);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
+    }
+
+    private async Task<IdempotencyBeginResult> TryBeginIdempotencyAsync<T>(
+        System.Data.Common.DbConnection connection,
+        System.Data.Common.DbTransaction transaction,
+        Guid workspaceId,
+        Guid userId,
+        string action,
+        string clientRequestId,
+        T request,
+        CancellationToken cancellationToken = default)
+    {
+        return await _idempotency.TryBeginAsync(
+            workspaceId,
+            userId,
+            action,
+            clientRequestId,
+            ComputeRequestHash(request),
+            connection,
+            transaction,
+            cancellationToken);
+    }
+
+    private async Task CompleteIdempotencyAsync<T>(
+        System.Data.Common.DbConnection connection,
+        System.Data.Common.DbTransaction transaction,
+        Guid workspaceId,
+        Guid userId,
+        string action,
+        string clientRequestId,
+        T response,
+        string? resourceType,
+        Guid? resourceId,
+        CancellationToken cancellationToken = default)
+    {
+        await _idempotency.CompleteAsync(
+            workspaceId,
+            userId,
+            action,
+            clientRequestId,
+            200,
+            JsonSerializer.Serialize(response, JsonOptions),
+            resourceType,
+            resourceId,
+            connection,
+            transaction,
+            cancellationToken);
+    }
+
+    private static T Replay<T>(IdempotencyBeginResult beginResult)
+        => JsonSerializer.Deserialize<T>(beginResult.ResponseBodyJson ?? string.Empty, JsonOptions)
+            ?? throw new InvalidOperationException("Idempotency replay could not be deserialized.");
 
     private static string GenerateInviteCode()
     {

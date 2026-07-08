@@ -28,6 +28,7 @@ public sealed class ServerOptions
     public bool RequirePreMigrationBackup { get; set; } = true;
     public bool RequirePreImportBackup { get; set; } = true;
     public string? BootstrapAdminToken { get; set; }
+    public string? BootstrapAdminPassword { get; set; }
     public string AllowedOrigins { get; set; } = "*";
 
     // Object storage (Aliyun OSS) settings for backups and exports.

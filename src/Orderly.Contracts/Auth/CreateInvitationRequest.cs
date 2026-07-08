@@ -8,4 +8,9 @@ public sealed class CreateInvitationRequest
     public int MaxUses { get; set; } = 1;
     public DateTime? ExpiresAtUtc { get; set; }
     public string ClientRequestId { get; set; } = Guid.NewGuid().ToString("N");
+    public string IdempotencyKey
+    {
+        get => ClientRequestId;
+        set => ClientRequestId = value;
+    }
 }

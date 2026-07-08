@@ -14,7 +14,9 @@ public interface IAuditLogService
         string? reason = null,
         string? clientRequestId = null,
         string? ipAddress = null,
-        string? userAgent = null);
+        string? userAgent = null,
+        string? result = null,
+        string? correlationId = null);
 
     Task LogAsync(
         IDbConnection connection,
@@ -28,5 +30,7 @@ public interface IAuditLogService
         string? reason = null,
         string? clientRequestId = null,
         string? ipAddress = null,
-        string? userAgent = null);
+        string? userAgent = null,
+        string? result = null,
+        string? correlationId = null);
 }

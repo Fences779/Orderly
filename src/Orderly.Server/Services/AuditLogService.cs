@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics;
 using Dapper;
 using Orderly.Server.Data;
 
@@ -25,14 +26,12 @@ public sealed class AuditLogService : IAuditLogService
         string? reason = null,
         string? clientRequestId = null,
         string? ipAddress = null,
-        string? userAgent = null)
+        string? userAgent = null,
+        string? result = null,
+        string? correlationId = null)
     {
-        var actorId = _currentUser.UserId;
-        var actorName = _currentUser.DisplayName ?? "system";
-        var actorRole = _currentUser.Role ?? "system";
-
         await using var connection = (System.Data.Common.DbConnection)await _connectionFactory.OpenConnectionAsync();
-        await LogAsync(connection, null, workspaceId, action, entityType, entityId, beforeJson, afterJson, reason, clientRequestId, ipAddress, userAgent);
+        await LogAsync(connection, null, workspaceId, action, entityType, entityId, beforeJson, afterJson, reason, clientRequestId, ipAddress, userAgent, result, correlationId);
     }
 
     public async Task LogAsync(
@@ -47,21 +46,30 @@ public sealed class AuditLogService : IAuditLogService
         string? reason = null,
         string? clientRequestId = null,
         string? ipAddress = null,
-        string? userAgent = null)
+        string? userAgent = null,
+        string? result = null,
+        string? correlationId = null)
     {
         var actorId = _currentUser.UserId;
         var actorName = _currentUser.DisplayName ?? "system";
         var actorRole = _currentUser.Role ?? "system";
+        var deviceId = _currentUser.DeviceId;
+        var auditResult = string.IsNullOrWhiteSpace(result) ? "Succeeded" : result.Trim();
+        var auditCorrelationId = string.IsNullOrWhiteSpace(correlationId)
+            ? Activity.Current?.TraceId.ToString() ?? clientRequestId ?? Guid.NewGuid().ToString("N")
+            : correlationId.Trim();
 
         const string sql = @"
             INSERT INTO ""CloudAuditLogs"" (
                 ""Id"", ""WorkspaceId"", ""ActorUserId"", ""ActorDisplayName"", ""ActorRole"",
                 ""Action"", ""EntityType"", ""EntityId"", ""BeforeJson"", ""AfterJson"",
-                ""Reason"", ""ClientRequestId"", ""OccurredAt"", ""IpAddress"", ""UserAgent"")
+                ""Reason"", ""ClientRequestId"", ""OccurredAt"", ""IpAddress"", ""UserAgent"",
+                ""DeviceId"", ""Result"", ""CorrelationId"")
             VALUES (
                 @id, @workspaceId, @actorId, @actorName, @actorRole,
                 @action, @entityType, @entityId, @beforeJson, @afterJson,
-                @reason, @clientRequestId, @occurredAt, @ipAddress, @userAgent);";
+                @reason, @clientRequestId, @occurredAt, @ipAddress, @userAgent,
+                @deviceId, @auditResult, @auditCorrelationId);";
 
         await connection.ExecuteAsync(sql, new
         {
@@ -79,7 +87,10 @@ public sealed class AuditLogService : IAuditLogService
             clientRequestId,
             occurredAt = DateTime.UtcNow,
             ipAddress,
-            userAgent
+            userAgent,
+            deviceId,
+            auditResult,
+            auditCorrelationId
         }, transaction);
     }
 }

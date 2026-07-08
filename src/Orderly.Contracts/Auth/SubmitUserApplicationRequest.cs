@@ -9,4 +9,9 @@ public sealed class SubmitUserApplicationRequest
     public string DeviceId { get; set; } = string.Empty;
     public string DeviceName { get; set; } = string.Empty;
     public string ClientRequestId { get; set; } = Guid.NewGuid().ToString("N");
+    public string IdempotencyKey
+    {
+        get => ClientRequestId;
+        set => ClientRequestId = value;
+    }
 }

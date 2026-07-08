@@ -99,7 +99,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ChangePasswordAsync([FromBody] ChangePasswordRequest request)
     {
         if (_currentUser.UserId is not Guid userId) return Unauthorized();
-        var ok = await _authService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword);
+        var ok = await _authService.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword, request.ClientRequestId);
         if (!ok) return BadRequest(new { Error = "Current password is incorrect." });
         return NoContent();
     }
@@ -109,7 +109,7 @@ public class AuthController : ControllerBase
     {
         if (_currentUser.UserId is not Guid userId) return Unauthorized();
         var membership = await _authService.GetMembershipAsync(userId);
-        if (membership == null || !_permissions.IsAdmin(membership)) return Forbid();
+        if (membership == null || !_permissions.CanManageUsers(membership)) return Forbid();
 
         var ok = await _authService.ResetPasswordAsync(request.UserId, request.NewPassword, userId, request.ClientRequestId);
         if (!ok) return BadRequest(new { Error = "Cannot reset password for this user." });

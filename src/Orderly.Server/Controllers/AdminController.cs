@@ -93,7 +93,8 @@ public sealed class AdminController : CloudControllerBase
         var rows = await connection.QueryAsync(
             @"SELECT ""Id"", ""WorkspaceId"", ""ActorUserId"", ""ActorDisplayName"", ""ActorRole"",
                      ""Action"", ""EntityType"", ""EntityId"", ""Reason"", ""ClientRequestId"",
-                     ""OccurredAt"" AS ""OccurredAtUtc"", ""IpAddress"", ""UserAgent""
+                     ""OccurredAt"" AS ""OccurredAtUtc"", ""IpAddress"", ""UserAgent"",
+                     ""DeviceId"", ""Result"", ""CorrelationId""
               FROM ""CloudAuditLogs""
               WHERE ""WorkspaceId"" = @workspaceId
                 AND (@action IS NULL OR ""Action"" = @action)

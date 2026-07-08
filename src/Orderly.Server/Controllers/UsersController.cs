@@ -126,7 +126,13 @@ public class UsersController : CloudControllerBase
     {
         var membership = await GetMembershipAsync();
         if (!Permissions.CanManageUsers(membership)) return Forbid();
-        var ok = await AuthService.DisableUserAsync(userId, UserId);
+        var clientRequestId = Request.Headers["Idempotency-Key"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(clientRequestId))
+        {
+            return BadRequest(new { Error = "Idempotency-Key header is required." });
+        }
+
+        var ok = await AuthService.DisableUserAsync(userId, UserId, clientRequestId);
         if (!ok) return BadRequest(new { Error = "Cannot disable the last admin or yourself." });
         return NoContent();
     }

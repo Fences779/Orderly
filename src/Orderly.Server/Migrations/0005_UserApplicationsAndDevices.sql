@@ -1,7 +1,5 @@
 -- Cloud Sync v1 user application, invitation, and device approval gate.
 
-BEGIN;
-
 ALTER TABLE "CloudRefreshTokens"
     ADD COLUMN IF NOT EXISTS "DeviceId" TEXT NULL;
 
@@ -71,5 +69,3 @@ CREATE TABLE IF NOT EXISTS "CloudDevices" (
 );
 CREATE INDEX IF NOT EXISTS ix_cloud_devices_workspace_status ON "CloudDevices"("WorkspaceId", "Status", "UpdatedAt" DESC);
 CREATE INDEX IF NOT EXISTS ix_cloud_devices_user ON "CloudDevices"("UserId", "UpdatedAt" DESC);
-
-COMMIT;
