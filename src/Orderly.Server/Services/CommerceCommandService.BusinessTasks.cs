@@ -18,13 +18,16 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有任务写入权限。");
+
         return await ExecuteWithIdempotencyAsync<BusinessTaskStatusCommand, CloudBusinessTaskDto>(
             workspaceId,
             "businessTask:status",
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceBusinessTasks", taskId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceBusinessTasks", taskId, command.ExpectedRevision, ct, command, EntityType.BusinessTask);
 
                 var before = await LoadBusinessTaskDtoAsync(connection, transaction, workspaceId, taskId, ct);
                 var beforeJson = await SnapshotJsonAsync(before);

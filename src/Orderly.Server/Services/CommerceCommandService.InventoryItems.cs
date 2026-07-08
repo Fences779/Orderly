@@ -3,6 +3,7 @@ using Dapper;
 using Orderly.Contracts.Commerce;
 using Orderly.Contracts.Permissions;
 using Orderly.Server.Mapping;
+using Orderly.Server.Models;
 
 namespace Orderly.Server.Services;
 
@@ -59,7 +60,7 @@ public partial class CommerceCommandService
                     },
                     transaction);
 
-                var dto = await LoadInventoryItemDtoAsync(connection, transaction, workspaceId, itemId, ct);
+                var dto = await LoadInventoryItemDtoAsync(connection, transaction, workspaceId, itemId, membership, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
                 await AuditAsync(connection, transaction, workspaceId, "InventoryItemCreated", EntityType.InventoryItem, itemId, null, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.InventoryItem, itemId, "created", dto.Revision);
@@ -86,9 +87,9 @@ public partial class CommerceCommandService
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceInventoryItems", itemId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceInventoryItems", itemId, command.ExpectedRevision, ct, command, EntityType.InventoryItem);
 
-                var before = await LoadInventoryItemDtoAsync(connection, transaction, workspaceId, itemId, ct);
+                var before = await LoadInventoryItemDtoAsync(connection, transaction, workspaceId, itemId, membership, ct);
                 var beforeJson = await SnapshotJsonAsync(before);
 
                 await connection.ExecuteAsync(
@@ -123,7 +124,7 @@ public partial class CommerceCommandService
                     },
                     transaction);
 
-                var dto = await LoadInventoryItemDtoAsync(connection, transaction, workspaceId, itemId, ct);
+                var dto = await LoadInventoryItemDtoAsync(connection, transaction, workspaceId, itemId, membership, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
                 await AuditAsync(connection, transaction, workspaceId, "InventoryItemUpdated", EntityType.InventoryItem, itemId, beforeJson, afterJson, command.Reason, command.ClientRequestId, collector);
                 await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.InventoryItem, itemId, "updated", dto.Revision);
@@ -133,7 +134,7 @@ public partial class CommerceCommandService
             cancellationToken);
     }
 
-    private async Task<CloudInventoryItemDto> LoadInventoryItemDtoAsync(IDbConnection connection, IDbTransaction transaction, Guid workspaceId, Guid itemId, CancellationToken cancellationToken)
+    private async Task<CloudInventoryItemDto> LoadInventoryItemDtoAsync(IDbConnection connection, IDbTransaction transaction, Guid workspaceId, Guid itemId, CloudWorkspaceMemberRecord membership, CancellationToken cancellationToken)
     {
         var row = await connection.QueryFirstOrDefaultAsync(
             "SELECT * FROM \"CommerceInventoryItems\" WHERE \"WorkspaceId\" = @workspaceId AND \"Id\" = @itemId;",
@@ -141,6 +142,6 @@ public partial class CommerceCommandService
             transaction)
             ?? throw new InvalidOperationException($"库存项 {itemId} 不存在。");
 
-        return CommerceDtoMapper.ToInventoryItemDto(row);
+        return CommerceDtoMapper.ToInventoryItemDto(row, _permissions.CanViewCosts(membership));
     }
 }

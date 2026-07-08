@@ -18,6 +18,12 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有订单写入权限。");
+
+        if (!_permissions.CanViewCosts(membership) && command.Items.Any(item => item.UnitCost.HasValue))
+            throw new UnauthorizedAccessException("没有成本字段写入权限。");
+
         return await ExecuteWithIdempotencyAsync<CreateOrderCommand, CloudOrderDto>(
             workspaceId,
             "order:create",
@@ -95,13 +101,16 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有订单写入权限。");
+
         return await ExecuteWithIdempotencyAsync<UpdateOrderCommand, CloudOrderDto>(
             workspaceId,
             "order:update",
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct, command, EntityType.Order);
 
                 var before = await LoadOrderDtoAsync(connection, transaction, workspaceId, orderId, membership, ct);
                 var beforeJson = await SnapshotJsonAsync(before);
@@ -150,13 +159,16 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有订单写入权限。");
+
         return await ExecuteWithIdempotencyAsync<CompleteOrderCommand, CloudOrderDto>(
             workspaceId,
             "order:complete",
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct, command, EntityType.Order);
 
                 var orderRow = await connection.QueryFirstOrDefaultAsync(
                     "SELECT * FROM \"CommerceOrders\" WHERE \"Id\" = @orderId;",
@@ -318,13 +330,16 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有订单写入权限。");
+
         return await ExecuteWithIdempotencyAsync<OrderStageCommand, CloudOrderDto>(
             workspaceId,
             $"order:stage:{dimension}",
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct, command, EntityType.Order);
 
                 var before = await LoadOrderDtoAsync(connection, transaction, workspaceId, orderId, membership, ct);
                 var beforeJson = await SnapshotJsonAsync(before);
@@ -370,6 +385,9 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有订单写入权限。");
+
         if (string.IsNullOrWhiteSpace(command.Note))
             throw new InvalidOperationException("备注内容不能为空。");
 
@@ -379,7 +397,7 @@ public partial class CommerceCommandService
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceOrders", orderId, command.ExpectedRevision, ct, command, EntityType.Order);
 
                 var before = await LoadOrderDtoAsync(connection, transaction, workspaceId, orderId, membership, ct);
                 var beforeJson = await SnapshotJsonAsync(before);

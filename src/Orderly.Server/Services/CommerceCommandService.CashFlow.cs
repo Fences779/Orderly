@@ -93,7 +93,7 @@ public partial class CommerceCommandService
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCashFlowEntries", entryId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCashFlowEntries", entryId, command.ExpectedRevision, ct, command, EntityType.CashFlowEntry);
 
                 var before = await LoadCashFlowDtoAsync(connection, transaction, workspaceId, entryId, ct);
                 var beforeJson = await SnapshotJsonAsync(before);
@@ -154,7 +154,7 @@ public partial class CommerceCommandService
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCashFlowEntries", entryId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCashFlowEntries", entryId, command.ExpectedRevision, ct, command, EntityType.CashFlowEntry);
 
                 var before = await LoadCashFlowDtoAsync(connection, transaction, workspaceId, entryId, ct);
                 var beforeJson = await SnapshotJsonAsync(before);

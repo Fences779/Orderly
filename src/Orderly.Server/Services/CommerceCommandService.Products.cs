@@ -83,7 +83,7 @@ public partial class CommerceCommandService
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceProducts", productId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceProducts", productId, command.ExpectedRevision, ct, command, EntityType.Product);
 
                 var before = await LoadProductDtoAsync(connection, transaction, workspaceId, productId, ct);
                 var beforeJson = await SnapshotJsonAsync(before);

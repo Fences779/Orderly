@@ -48,6 +48,16 @@ public sealed class ConflictExceptionMiddleware
                 Detail = ex.Message
             });
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new
+            {
+                Error = "没有权限执行该操作。",
+                Detail = ex.Message
+            });
+        }
     }
 }
 

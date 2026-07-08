@@ -14,6 +14,9 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有客户写入权限。");
+
         if (string.IsNullOrWhiteSpace(command.Name))
             throw new InvalidOperationException("客户名称不能为空。");
 
@@ -66,13 +69,16 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有客户写入权限。");
+
         return await ExecuteWithIdempotencyAsync<UpdateCustomerCommand, CloudCustomerDto>(
             workspaceId,
             "customer:update",
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCustomers", customerId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCustomers", customerId, command.ExpectedRevision, ct, command, EntityType.Customer);
 
                 var before = await LoadCustomerDtoAsync(connection, transaction, workspaceId, customerId, ct);
                 var beforeJson = await SnapshotJsonAsync(before);
@@ -118,6 +124,9 @@ public partial class CommerceCommandService
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
 
+        if (!_permissions.CanWriteBusinessData(membership))
+            throw new UnauthorizedAccessException("没有客户写入权限。");
+
         if (string.IsNullOrWhiteSpace(command.Note))
             throw new InvalidOperationException("备注内容不能为空。");
 
@@ -127,7 +136,7 @@ public partial class CommerceCommandService
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
-                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCustomers", customerId, command.ExpectedRevision, ct);
+                await ThrowIfRevisionMismatchAsync(connection, transaction, "CommerceCustomers", customerId, command.ExpectedRevision, ct, command, EntityType.Customer);
 
                 var before = await LoadCustomerDtoAsync(connection, transaction, workspaceId, customerId, ct);
                 var beforeJson = await SnapshotJsonAsync(before);

@@ -26,7 +26,7 @@ public class ArchiveController : CloudControllerBase
     }
 
     [HttpPost("{entityType}/{entityId:guid}/recover")]
-    public async Task<IActionResult> RecoverAsync(Guid workspaceId, string entityType, Guid entityId, [FromBody] WriteCommandBase command)
+    public async Task<IActionResult> RecoverAsync(Guid workspaceId, string entityType, Guid entityId, [FromBody] RecoverCommand command)
     {
         if (!await EnsureWorkspaceAccessAsync(workspaceId)) return Forbid();
         var result = await _commandService.RecoverAsync(workspaceId, entityType, entityId, command);

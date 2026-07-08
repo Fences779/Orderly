@@ -18,12 +18,13 @@ public partial class CommerceCommandService
         if (!_permissions.CanApprovePriceChange(membership))
             throw new UnauthorizedAccessException("没有审批改价申请的权限。");
 
-        return await ExecuteWithIdempotencyAsync<ReviewPriceChangeCommand, CloudPriceChangeRequestDto>(
+        return await ExecuteWithIdempotencyResultAsync<ReviewPriceChangeCommand, CloudPriceChangeRequestDto>(
             workspaceId,
             "price-change-request:approve",
             command,
             async (connection, transaction, sequence, collector, ct) =>
             {
+                var productSequence = sequence;
                 var requestRow = await connection.QueryFirstOrDefaultAsync(
                     @"SELECT * FROM ""CloudPriceChangeRequests""
                      WHERE ""Id"" = @requestId AND ""WorkspaceId"" = @workspaceId
@@ -47,14 +48,14 @@ public partial class CommerceCommandService
                          ""Revision"" = ""Revision"" + 1,
                          ""UpdatedAt"" = @now,
                          ""UpdatedByUserId"" = @updatedBy,
-                         ""LastChangeSequence"" = @sequence
+                         ""LastChangeSequence"" = @productSequence
                      WHERE ""Id"" = @productId;",
                     new
                     {
                         proposedPrice = (decimal)requestRow.ProposedPrice,
                         now,
                         updatedBy = userId,
-                        sequence,
+                        productSequence,
                         productId = (Guid)requestRow.ProductId
                     },
                     transaction);
@@ -81,14 +82,14 @@ public partial class CommerceCommandService
                 var productAfter = await LoadProductDtoAsync(connection, transaction, workspaceId, (Guid)requestRow.ProductId, membership, ct);
                 var productAfterJson = await SnapshotJsonAsync(productAfter);
                 await AuditAsync(connection, transaction, workspaceId, "PriceChangeApproved", EntityType.Product, (Guid)requestRow.ProductId, productBeforeJson, productAfterJson, command.ReviewNote, command.ClientRequestId, collector);
-                await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.Product, (Guid)requestRow.ProductId, "priceChanged", productAfter.Revision);
+                await RecordChangeAsync(connection, transaction, workspaceId, productSequence, EntityType.Product, (Guid)requestRow.ProductId, "priceChanged", productAfter.Revision);
 
                 collector.Add(RealtimeEvent.EntityUpdated, new RealtimeEventPayload
                 {
                     WorkspaceId = workspaceId,
                     EntityType = EntityType.Product,
                     EntityId = (Guid)requestRow.ProductId,
-                    Sequence = sequence,
+                    Sequence = productSequence,
                     ActorUserId = userId,
                     ActorDisplayName = _currentUser.DisplayName ?? string.Empty,
                     OccurredAtUtc = now,
@@ -99,9 +100,10 @@ public partial class CommerceCommandService
                 var dto = await LoadPriceChangeRequestDtoAsync(connection, transaction, workspaceId, requestId, ct);
                 var afterJson = await SnapshotJsonAsync(dto);
                 await AuditAsync(connection, transaction, workspaceId, "PriceChangeRequestApproved", EntityType.PriceChangeRequest, requestId, null, afterJson, command.ReviewNote, command.ClientRequestId, collector);
-                await RecordChangeAsync(connection, transaction, workspaceId, sequence, EntityType.PriceChangeRequest, requestId, "approved", 0);
+                var requestSequence = await AllocateSequenceAsync(connection, transaction, workspaceId);
+                await RecordChangeAsync(connection, transaction, workspaceId, requestSequence, EntityType.PriceChangeRequest, requestId, "approved", 0);
 
-                return (dto, EntityType.PriceChangeRequest, requestId);
+                return new CommandExecutionResult<CloudPriceChangeRequestDto>(dto, EntityType.PriceChangeRequest, requestId, requestSequence);
             },
             cancellationToken);
     }

@@ -77,7 +77,7 @@ public partial class CommerceCommandService
             cancellationToken);
     }
 
-    public async Task<CommandResult<CloudEntityDto>> RecoverAsync(Guid workspaceId, string entityType, Guid entityId, WriteCommandBase command, CancellationToken cancellationToken = default)
+    public async Task<CommandResult<CloudEntityDto>> RecoverAsync(Guid workspaceId, string entityType, Guid entityId, RecoverCommand command, CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? throw new InvalidOperationException("User not authenticated.");
         var membership = await GetMembershipAsync(userId);
@@ -87,7 +87,7 @@ public partial class CommerceCommandService
 
         var (tableName, entityTypeConstant) = ResolveEntityTable(entityType);
 
-        return await ExecuteWithIdempotencyAsync<WriteCommandBase, CloudEntityDto>(
+        return await ExecuteWithIdempotencyAsync<RecoverCommand, CloudEntityDto>(
             workspaceId,
             "recover",
             command,
@@ -155,7 +155,7 @@ public partial class CommerceCommandService
         {
             EntityType.Order => CommerceDtoMapper.ToOrderDto(row, _permissions.CanViewCosts(membership)),
             EntityType.Product => CommerceDtoMapper.ToProductDto(row, _permissions.CanViewCosts(membership)),
-            EntityType.InventoryItem => CommerceDtoMapper.ToInventoryItemDto(row),
+            EntityType.InventoryItem => CommerceDtoMapper.ToInventoryItemDto(row, _permissions.CanViewCosts(membership)),
             EntityType.Customer => CommerceDtoMapper.ToCustomerDto(row),
             EntityType.CashFlowEntry => CommerceDtoMapper.ToCashFlowEntryDto(row),
             _ => throw new InvalidOperationException($"不支持的实体类型: {entityType}")
