@@ -53,6 +53,32 @@ public static class CloudCacheSchemaInitializer
         await ExecuteAsync(connection, """
             CREATE INDEX IF NOT EXISTS IX_EmergencyDrafts_Status ON EmergencyDrafts (Status, CreatedAtUtc);
             """, cancellationToken);
+
+        await ExecuteAsync(connection, """
+            CREATE TABLE IF NOT EXISTS CloudOutboxEntries (
+                Id TEXT PRIMARY KEY,
+                EntityType TEXT NOT NULL,
+                EntityId TEXT NULL,
+                OperationType TEXT NOT NULL,
+                PayloadJson TEXT NOT NULL,
+                BaseRevision INTEGER NULL,
+                ClientRequestId TEXT NOT NULL,
+                Status TEXT NOT NULL,
+                AttemptCount INTEGER NOT NULL DEFAULT 0,
+                NextAttemptAtUtc TEXT NULL,
+                LastSubmitError TEXT NULL,
+                CreatedAtUtc TEXT NOT NULL,
+                UpdatedAtUtc TEXT NOT NULL
+            );
+            """, cancellationToken);
+
+        await ExecuteAsync(connection, """
+            CREATE UNIQUE INDEX IF NOT EXISTS UX_CloudOutboxEntries_ClientRequestId ON CloudOutboxEntries (ClientRequestId);
+            """, cancellationToken);
+
+        await ExecuteAsync(connection, """
+            CREATE INDEX IF NOT EXISTS IX_CloudOutboxEntries_StatusRetry ON CloudOutboxEntries (Status, NextAttemptAtUtc, CreatedAtUtc);
+            """, cancellationToken);
     }
 
     private static async Task ExecuteAsync(SqliteConnection connection, string commandText, CancellationToken cancellationToken)
