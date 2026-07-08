@@ -191,8 +191,6 @@ public sealed class CloudAuthIntegrationTests : IDisposable
 
     private async Task<(string Token, Guid UserId, Guid WorkspaceId)> CreateAdminAsync(string username, string password)
     {
-        var options = _factory.Services.GetRequiredService<ServerOptions>();
-        var authService = _factory.Services.GetRequiredService<ICloudAuthService>();
         var passwordHasher = _factory.Services.GetRequiredService<IPasswordHasher>();
 
         await using var connection = (System.Data.Common.DbConnection)await _factory.Services.GetRequiredService<PostgresConnectionFactory>().OpenConnectionAsync();
@@ -242,7 +240,8 @@ public sealed class CloudAuthIntegrationTests : IDisposable
         createResponse.EnsureSuccessStatusCode();
 
         var userId = await ExtractUserIdAsync(client, username);
-        var authService = _factory.Services.GetRequiredService<ICloudAuthService>();
+        using var scope = _factory.Services.CreateScope();
+        var authService = scope.ServiceProvider.GetRequiredService<ICloudAuthService>();
         var user = await authService.GetUserAsync(userId);
         var jwt = _factory.Services.GetRequiredService<IJwtService>();
         var deviceId = $"{username}-device";

@@ -54,6 +54,8 @@ public sealed class CustomersViewContractTests
         "ShowContent",
         // CustomersPageViewModel 数据集合
         "Customers",
+        "SelectedCustomer",
+        "Data.ArchiveCustomerCommand",
         // CustomerRow 行字段
         "Name",
         "PhoneDisplay",

@@ -53,6 +53,7 @@ public sealed class CashflowViewContractTests
         "ShowContent",
         "ErrorMessage",
         "RefreshCommand",
+        "CanViewCosts",
         "RealizedIncome",
         "RealizedExpense",
         "NetCashFlow",

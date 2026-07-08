@@ -53,6 +53,8 @@ public sealed class OrdersViewContractTests
         "IsEmpty",
         "ShowContent",
         "ErrorMessage",
+        "SelectedOrder",
+        "Data",
 
         // OrderRow 行字段。
         "OrderNo",

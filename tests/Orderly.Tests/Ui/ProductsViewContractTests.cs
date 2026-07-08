@@ -56,6 +56,8 @@ public sealed class ProductsViewContractTests
         "HasError",
         "ErrorMessage",
         "Data.CanViewCosts",
+        "Data.CanSubmitPriceChangeRequest",
+        "Data.SubmitPriceChangeRequestCommand",
         // 行级（ProductRow 投影字段）：DataGrid 列绑定。
         "Name",
         "Code",

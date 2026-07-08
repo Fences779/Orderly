@@ -127,7 +127,8 @@ public sealed class ArchiveIntegrationTests : IDisposable
 
         var user = await response.Content.ReadFromJsonAsync<CloudUserDto>();
         var jwt = _factory.Services.GetRequiredService<IJwtService>();
-        var authService = _factory.Services.GetRequiredService<ICloudAuthService>();
+        using var scope = _factory.Services.CreateScope();
+        var authService = scope.ServiceProvider.GetRequiredService<ICloudAuthService>();
         var fullUser = await authService.GetUserAsync(user!.Id);
         var deviceId = $"{username}-device";
         await using var connection = (System.Data.Common.DbConnection)await _factory.Services.GetRequiredService<PostgresConnectionFactory>().OpenConnectionAsync();
