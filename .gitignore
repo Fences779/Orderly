@@ -50,6 +50,7 @@ log/
 # Local environment / secrets
 .env
 .env.*
+!.env.example
 cloudbaserc.json
 cloudbaserc.*.json
 !cloudbaserc.example.json

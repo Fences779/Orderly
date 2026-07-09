@@ -1,4 +1,4 @@
-name: orderly-cloud
+name: ${ORDERLY_COMPOSE_PROJECT_NAME:-orderly-cloud}
 
 services:
   postgres:
@@ -38,6 +38,7 @@ services:
       ORDERLY_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       ORDERLY_JWT_SIGNING_KEY: ${ORDERLY_JWT_SIGNING_KEY:?Set ORDERLY_JWT_SIGNING_KEY in .env}
       ORDERLY_BOOTSTRAP_ADMIN_TOKEN: ${ORDERLY_BOOTSTRAP_ADMIN_TOKEN:-}
+      ORDERLY_BOOTSTRAP_ADMIN_PASSWORD: ${ORDERLY_BOOTSTRAP_ADMIN_PASSWORD:-}
       ORDERLY_ALLOWED_ORIGINS: ${ORDERLY_ALLOWED_ORIGINS:?Set ORDERLY_ALLOWED_ORIGINS in .env}
       ORDERLY_BACKUP_RETENTION_DAYS: ${ORDERLY_BACKUP_RETENTION_DAYS:-30}
       ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP: ${ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP:-true}
@@ -46,6 +47,7 @@ services:
       ORDERLY_RESTORE_DRILL_INTERVAL_HOURS: ${ORDERLY_RESTORE_DRILL_INTERVAL_HOURS:-24}
       ORDERLY_LOCAL_BACKUP_DIR: /opt/orderly/backups
       ORDERLY_LOCAL_EXPORT_DIR: /opt/orderly/exports
+      ORDERLY_LOCAL_BLOB_DIR: ${ORDERLY_LOCAL_BLOB_DIR:-}
       ORDERLY_EXPORT_RETENTION_HOURS: ${ORDERLY_EXPORT_RETENTION_HOURS:-24}
       ORDERLY_EXPORT_MAX_RETRY_COUNT: ${ORDERLY_EXPORT_MAX_RETRY_COUNT:-2}
       ORDERLY_EXPORT_MAX_LOCAL_BYTES: ${ORDERLY_EXPORT_MAX_LOCAL_BYTES:-2147483648}
@@ -58,6 +60,9 @@ services:
     volumes:
       - orderly-backups:/opt/orderly/backups
       - orderly-exports:/opt/orderly/exports
+      - orderly-blobs:/opt/orderly/blobs
+    ports:
+      - "${ORDERLY_API_HTTP_PORT:-18082}:8080"
     expose:
       - "8080"
     healthcheck:
@@ -69,6 +74,8 @@ services:
 
   caddy:
     image: caddy:2-alpine
+    profiles:
+      - edge
     restart: unless-stopped
     depends_on:
       orderly-server:
@@ -87,5 +94,6 @@ volumes:
   orderly-postgres-data:
   orderly-backups:
   orderly-exports:
+  orderly-blobs:
   orderly-caddy-data:
   orderly-caddy-config:

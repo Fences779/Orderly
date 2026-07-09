@@ -20,6 +20,7 @@ public sealed class ServerOptions
     public bool RestoreDrillEnabled { get; set; } = true;
     public int RestoreDrillIntervalHours { get; set; } = 24;
     public string LocalExportDirectory { get; set; } = "/opt/orderly/exports";
+    public string LocalBlobDirectory { get; set; } = string.Empty;
     public int ExportRetentionHours { get; set; } = 24;
     public int ExportMaxRetryCount { get; set; } = 2;
     public long ExportMaxLocalBytes { get; set; } = 2L * 1024 * 1024 * 1024;

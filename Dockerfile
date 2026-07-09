@@ -15,7 +15,7 @@ ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
 COPY --from=build /app/publish .
-RUN mkdir -p /opt/orderly/backups /opt/orderly/exports \
+RUN mkdir -p /opt/orderly/backups /opt/orderly/exports /opt/orderly/blobs \
     && chown -R app:app /opt/orderly
 
 USER app

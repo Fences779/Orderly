@@ -34,6 +34,7 @@ if (bool.TryParse(Environment.GetEnvironmentVariable("ORDERLY_RESTORE_DRILL_ENAB
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_RESTORE_DRILL_INTERVAL_HOURS"), out var restoreDrillIntervalHours)) serverOptions.RestoreDrillIntervalHours = restoreDrillIntervalHours;
 serverOptions.LocalBackupDirectory = GetEnvOrConfig("ORDERLY_LOCAL_BACKUP_DIR", serverOptions.LocalBackupDirectory);
 serverOptions.LocalExportDirectory = GetEnvOrConfig("ORDERLY_LOCAL_EXPORT_DIR", serverOptions.LocalExportDirectory);
+serverOptions.LocalBlobDirectory = GetEnvOrConfig("ORDERLY_LOCAL_BLOB_DIR", serverOptions.LocalBlobDirectory);
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_EXPORT_RETENTION_HOURS"), out var exportRetentionHours)) serverOptions.ExportRetentionHours = exportRetentionHours;
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_EXPORT_MAX_RETRY_COUNT"), out var exportMaxRetryCount)) serverOptions.ExportMaxRetryCount = exportMaxRetryCount;
 if (long.TryParse(Environment.GetEnvironmentVariable("ORDERLY_EXPORT_MAX_LOCAL_BYTES"), out var exportMaxLocalBytes)) serverOptions.ExportMaxLocalBytes = exportMaxLocalBytes;
@@ -65,7 +66,21 @@ builder.Services.AddScoped<ICloudDataLifecycleService, CloudDataLifecycleService
 builder.Services.AddScoped<IEmergencyDraftRepository, EmergencyDraftRepository>();
 builder.Services.AddScoped<IEmergencyDraftProcessor, EmergencyDraftProcessor>();
 builder.Services.AddHostedService<EmergencyDraftBackgroundService>();
-builder.Services.AddSingleton<IBlobStorage, AliyunOssBlobStorage>();
+builder.Services.AddSingleton<IBlobStorage>(provider =>
+{
+    var options = provider.GetRequiredService<ServerOptions>();
+    if (options.OssEnabled)
+    {
+        return new AliyunOssBlobStorage(options);
+    }
+
+    if (!string.IsNullOrWhiteSpace(options.LocalBlobDirectory))
+    {
+        return new LocalFileBlobStorage(options);
+    }
+
+    return new AliyunOssBlobStorage(options);
+});
 builder.Services.AddScoped<IExportService, ExportService>();
 builder.Services.AddHostedService<ExportBackgroundService>();
 builder.Services.AddScoped<IDatabaseBackupService, DatabaseBackupService>();
