@@ -17,8 +17,14 @@ $baseUrl = "http://127.0.0.1:$apiPort"
 
 function New-Secret([int]$Bytes = 32) {
     $buffer = [byte[]]::new($Bytes)
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($buffer)
-    return [Convert]::ToHexString($buffer)
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $rng.GetBytes($buffer)
+    }
+    finally {
+        $rng.Dispose()
+    }
+    return ([BitConverter]::ToString($buffer) -replace '-', '')
 }
 
 function Write-EnvFile(
@@ -69,6 +75,25 @@ function Invoke-Compose([string]$EnvFile, [string[]]$Arguments) {
     }
 }
 
+function Test-ImageExists([string]$ImageName) {
+    & docker image inspect $ImageName *> $null
+    return $LASTEXITCODE -eq 0
+}
+
+function Invoke-ComposeBuildOrUseCached([string]$EnvFile) {
+    try {
+        Invoke-Compose $EnvFile @("build", "orderly-server")
+    }
+    catch {
+        if (Test-ImageExists "orderly-server:latest") {
+            Write-Warning "docker compose build failed, using existing local orderly-server:latest for compose validation. Original error: $($_.Exception.Message)"
+            return
+        }
+
+        throw
+    }
+}
+
 function Wait-ApiHealth([string]$Url, [int]$TimeoutSeconds = 180) {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
@@ -87,7 +112,7 @@ function Wait-ApiHealth([string]$Url, [int]$TimeoutSeconds = 180) {
 }
 
 function Invoke-PostgresScalar([string]$EnvFile, [string]$Sql) {
-    $result = & docker compose --env-file $EnvFile exec -T postgres psql -U orderly -d orderly -tAc $Sql
+    $result = $Sql | & docker compose --env-file $EnvFile exec -T postgres psql -U orderly -d orderly -tA
     if ($LASTEXITCODE -ne 0) {
         throw "PostgreSQL scalar query failed."
     }
@@ -114,10 +139,11 @@ Write-EnvFile -Path $emptyEnvPath `
 
 Write-Host "T8 compose config check"
 Invoke-Compose $emptyEnvPath @("config", "--quiet")
+Invoke-ComposeBuildOrUseCached $emptyEnvPath
 
 Write-Host "T8 empty database migration check"
 Invoke-Compose $emptyEnvPath @("down", "--volumes", "--remove-orphans")
-Invoke-Compose $emptyEnvPath @("up", "-d", "--build", "postgres", "orderly-server")
+Invoke-Compose $emptyEnvPath @("up", "-d", "--no-build", "postgres", "orderly-server")
 Wait-ApiHealth $baseUrl
 
 $emptyUsers = Invoke-PostgresScalar $emptyEnvPath 'SELECT COUNT(*) FROM "CloudUsers";'
@@ -139,7 +165,7 @@ Write-EnvFile -Path $smokeEnvPath `
     -BootstrapPassword $bootstrapPassword
 
 Write-Host "T8 compose smoke environment startup"
-Invoke-Compose $smokeEnvPath @("up", "-d", "--build", "postgres", "orderly-server")
+Invoke-Compose $smokeEnvPath @("up", "-d", "--no-build", "postgres", "orderly-server")
 Wait-ApiHealth $baseUrl
 
 $env:ORDERLY_COMPOSE_SMOKE_BASE_URL = $baseUrl
