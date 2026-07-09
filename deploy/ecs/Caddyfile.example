@@ -1,0 +1,40 @@
+{
+    email {$ORDERLY_TLS_CONTACT_EMAIL}
+}
+
+{$ORDERLY_DOMAIN} {
+    encode zstd gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy no-referrer
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+
+    @blockedPublicAttachmentPaths path /attachments/* /blobs/* /files/* /object-storage/* /opt/orderly/*
+    respond @blockedPublicAttachmentPaths 404
+
+    # SignalR websocket is handled by Caddy reverse_proxy automatically.
+    # Keep /hubs/workspace proxied to the API; do not terminate it as a static route.
+    reverse_proxy orderly-server:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Optional before public exposure:
+    # Restrict /api/workspaces/*/admin* by VPN, office IP, or an upstream access gateway.
+    # Keep the app-level JWT/admin permission checks enabled regardless of proxy policy.
+
+    log {
+        output file /var/log/caddy/orderly-access.log {
+            roll_size 20MiB
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}

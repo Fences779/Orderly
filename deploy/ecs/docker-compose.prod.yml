@@ -1,0 +1,109 @@
+name: ${ORDERLY_COMPOSE_PROJECT_NAME:-orderly-prod}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "10"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in production env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in production env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in production env}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - /opt/orderly/data/postgres:/var/lib/postgresql/data
+      - /opt/orderly/backups:/opt/orderly/backups
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging: *default-logging
+
+  orderly-server:
+    image: ${ORDERLY_SERVER_IMAGE:?Set ORDERLY_SERVER_IMAGE in production env}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:8080
+      TZ: ${TZ:-Asia/Shanghai}
+      ORDERLY_PUBLIC_URL: ${ORDERLY_PUBLIC_URL:?Set ORDERLY_PUBLIC_URL in production env}
+      ORDERLY_POSTGRES_HOST: postgres
+      ORDERLY_POSTGRES_PORT: 5432
+      ORDERLY_POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in production env}
+      ORDERLY_POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in production env}
+      ORDERLY_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in production env}
+      ORDERLY_JWT_SIGNING_KEY: ${ORDERLY_JWT_SIGNING_KEY:?Set ORDERLY_JWT_SIGNING_KEY in production env}
+      ORDERLY_BOOTSTRAP_ADMIN_TOKEN: ${ORDERLY_BOOTSTRAP_ADMIN_TOKEN:-}
+      ORDERLY_BOOTSTRAP_ADMIN_PASSWORD: ${ORDERLY_BOOTSTRAP_ADMIN_PASSWORD:-}
+      ORDERLY_ALLOWED_ORIGINS: ${ORDERLY_ALLOWED_ORIGINS:?Set ORDERLY_ALLOWED_ORIGINS in production env}
+      ORDERLY_BACKUP_RETENTION_DAYS: ${ORDERLY_BACKUP_RETENTION_DAYS:-30}
+      ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP: ${ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP:-true}
+      ORDERLY_REQUIRE_PRE_IMPORT_BACKUP: ${ORDERLY_REQUIRE_PRE_IMPORT_BACKUP:-true}
+      ORDERLY_RESTORE_DRILL_ENABLED: ${ORDERLY_RESTORE_DRILL_ENABLED:-true}
+      ORDERLY_RESTORE_DRILL_INTERVAL_HOURS: ${ORDERLY_RESTORE_DRILL_INTERVAL_HOURS:-24}
+      ORDERLY_LOCAL_BACKUP_DIR: /opt/orderly/backups
+      ORDERLY_LOCAL_EXPORT_DIR: /opt/orderly/exports
+      ORDERLY_LOCAL_BLOB_DIR: ${ORDERLY_LOCAL_BLOB_DIR:-}
+      ORDERLY_EXPORT_RETENTION_HOURS: ${ORDERLY_EXPORT_RETENTION_HOURS:-24}
+      ORDERLY_EXPORT_MAX_RETRY_COUNT: ${ORDERLY_EXPORT_MAX_RETRY_COUNT:-2}
+      ORDERLY_EXPORT_MAX_LOCAL_BYTES: ${ORDERLY_EXPORT_MAX_LOCAL_BYTES:-2147483648}
+      ORDERLY_ATTACHMENT_QUOTA_BYTES: ${ORDERLY_ATTACHMENT_QUOTA_BYTES:-1073741824}
+      ORDERLY_ARCHIVE_RETENTION_DAYS: ${ORDERLY_ARCHIVE_RETENTION_DAYS:-30}
+      ORDERLY_OSS_ENDPOINT: ${ORDERLY_OSS_ENDPOINT:?Set ORDERLY_OSS_ENDPOINT in production env}
+      ORDERLY_OSS_BUCKET: ${ORDERLY_OSS_BUCKET:?Set ORDERLY_OSS_BUCKET in production env}
+      ORDERLY_OSS_ACCESS_KEY_ID: ${ORDERLY_OSS_ACCESS_KEY_ID:?Set ORDERLY_OSS_ACCESS_KEY_ID in production env}
+      ORDERLY_OSS_ACCESS_KEY_SECRET: ${ORDERLY_OSS_ACCESS_KEY_SECRET:?Set ORDERLY_OSS_ACCESS_KEY_SECRET in production env}
+      ORDERLY_OSS_BACKUP_PREFIX: ${ORDERLY_OSS_BACKUP_PREFIX:-backups/}
+      ORDERLY_OSS_EXPORT_PREFIX: ${ORDERLY_OSS_EXPORT_PREFIX:-exports/}
+    volumes:
+      - /opt/orderly/backups:/opt/orderly/backups
+      - /opt/orderly/logs/api:/opt/orderly/logs
+      - /opt/orderly/data/object-storage:/opt/orderly/blobs
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    logging: *default-logging
+
+  caddy:
+    image: caddy:2-alpine
+    profiles:
+      - edge
+    restart: unless-stopped
+    depends_on:
+      orderly-server:
+        condition: service_healthy
+    environment:
+      ORDERLY_DOMAIN: ${ORDERLY_DOMAIN:?Set ORDERLY_DOMAIN in production env}
+      ORDERLY_TLS_CONTACT_EMAIL: ${ORDERLY_TLS_CONTACT_EMAIL:-ops@example.invalid}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${ORDERLY_CADDYFILE_PATH:-/opt/orderly/compose/Caddyfile}:/etc/caddy/Caddyfile:ro
+      - /opt/orderly/logs/caddy:/var/log/caddy
+      - /opt/orderly/data/caddy:/data
+      - /opt/orderly/data/caddy-config:/config
+    healthcheck:
+      test: ["CMD-SHELL", "caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
