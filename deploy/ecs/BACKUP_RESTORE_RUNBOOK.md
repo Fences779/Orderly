@@ -5,6 +5,8 @@
 ## 备份范围
 
 - PostgreSQL：业务数据、账号、权限、设备、审计、幂等、Cursor、附件元数据。
+- PostgreSQL 运行面：现有 `orderly-postgres` 容器和 `compose_postgres_data` volume，只能备份和只读检查，不能由新应用 compose 重建。
+- Redis 运行面：现有 `orderly-redis` 容器和 `compose_redis_data` volume，当前 API 不消费 Redis，但必须保留。
 - 附件文件：OSS 中的 `attachments/` 对象，或紧急 fallback 下的 `/opt/orderly/data/object-storage`。
 - 导出文件：`/opt/orderly/exports` 与 OSS export prefix，按业务需要保留。
 - 配置：`/opt/orderly/env/orderly.prod.env` 只备份到受控密钥库，不进入普通文件备份包。
@@ -57,6 +59,8 @@
 5. 恢复附件文件或确认 OSS 对象仍完整。
 6. 启动 API，检查 `/health`、`/health/db`、`/health/backups`。
 7. 做登录、同步、附件下载、审计查询 smoke。
+
+恢复动作不得删除、重建或改名 `compose_postgres_data` / `compose_redis_data`。如果需要恢复到新库，必须使用新库名或新 volume，并由人类确认切换路径。
 
 ## 告警占位
 

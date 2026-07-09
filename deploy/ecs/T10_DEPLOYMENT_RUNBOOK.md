@@ -1,70 +1,143 @@
-# T10 ECS Deployment Runbook
+# T10-C Existing Baseline Adoption Runbook
 
-本文件是下一阶段人工部署步骤。T9 不执行这里的任何命令。
+本文件是 T10-C 的人工执行顺序。T10-B 只更新本地仓库和文档，不执行这里的部署命令。
 
-## 1. ECS 登录前检查
+## 0. 架构边界
 
-- T8 Docker Compose 验收 PASS。
-- T9 ECS 准备 PASS。
-- 当前 git commit、镜像 tag、回滚 tag 已确认。
-- 安全组方案已确认：只开放 80/443，SSH 仅限管理来源，PostgreSQL 不开放公网。
-- 真实域名、DNS、HTTPS 由人类确认后再做。
+- 现有 `orderly-postgres`、`orderly-redis`、`compose_postgres_data`、`compose_redis_data` 归旧 baseline 所有。
+- 新应用 compose project 使用 `ORDERLY_COMPOSE_PROJECT_NAME=orderly-app`。
+- 新应用 compose 只拥有 `orderly-server` 和可选 `caddy`。
+- 新应用 compose 通过 external network `compose_default` 访问旧 baseline。
+- 新应用 compose 不声明 `postgres` / `redis` service，不声明旧 volume，不设置会冲突的 `container_name`。
+- PostgreSQL 和 Redis 不开放宿主机端口，不开放公网。
 
-## 2. 上传配置
+## 1. 远端只读 preflight
 
-上传到 ECS：
+```bash
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+whoami
+hostname
+date -Is
+docker ps --filter name=orderly-postgres --filter name=orderly-redis --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+docker network inspect compose_default --format "network={{.Name}} driver={{.Driver}} labels={{json .Labels}}"
+docker volume inspect compose_postgres_data compose_redis_data --format "volume={{.Name}} driver={{.Driver}} mount={{.Mountpoint}} labels={{json .Labels}}"
+'
+```
 
-- `docker-compose.prod.yml` -> `/opt/orderly/compose/docker-compose.prod.yml`
-- `Caddyfile.example` -> `/opt/orderly/compose/Caddyfile`
+停止条件：
+
+- `orderly-postgres` 或 `orderly-redis` 不存在或不是 running。
+- `compose_default` 不存在。
+- 任一现有 volume 不存在。
+- 发现宿主机发布了 `5432` 或 `6379`。
+
+## 2. Docker network 连通性验证
+
+只使用现有容器做 DNS / 内网检查，不创建临时容器：
+
+```bash
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+docker exec orderly-postgres getent hosts orderly-redis
+docker exec orderly-redis getent hosts orderly-postgres
+docker exec orderly-postgres sh -lc "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""
+docker exec orderly-redis sh -lc "export REDISCLI_AUTH=\"$(cat /run/secrets/redis_password)\"; redis-cli --no-auth-warning PING"
+'
+```
+
+不得输出 secret 内容。
+
+## 3. 配置文件上传
+
+上传目标：
+
+- `deploy/ecs/docker-compose.prod.yml` -> `/opt/orderly/compose/docker-compose.prod.yml`
+- `deploy/ecs/Caddyfile.example` -> `/opt/orderly/compose/Caddyfile`
 - 真实 env -> `/opt/orderly/env/orderly.prod.env`
 
-## 3. 创建目录
+真实 env 必须包含：
+
+- `ORDERLY_COMPOSE_PROJECT_NAME=orderly-app`
+- `ORDERLY_APP_UID=1000`
+- `ORDERLY_APP_GID=1000`
+- `ORDERLY_EXISTING_DOCKER_NETWORK=compose_default`
+- `ORDERLY_POSTGRES_HOST=orderly-postgres`
+- `ORDERLY_POSTGRES_PORT=5432`
+- `ORDERLY_POSTGRES_DB=orderly`
+- `ORDERLY_POSTGRES_USER=orderly`
+- `ORDERLY_EXISTING_POSTGRES_PASSWORD_FILE=/opt/orderly/env/postgres_password`
+- `ORDERLY_POSTGRES_PASSWORD_FILE=/run/secrets/existing_postgres_password`
+- `ORDERLY_REDIS_HOST=orderly-redis`
+- `ORDERLY_REDIS_PORT=6379`
+- `ORDERLY_REDIS_PASSWORD_FILE=/opt/orderly/env/redis_password`
+
+## 4. secret 存在性和权限验证
+
+只输出文件名、权限、属主、大小和哈希，不输出内容：
 
 ```bash
-sudo mkdir -p /opt/orderly/compose /opt/orderly/env /opt/orderly/logs/api /opt/orderly/logs/caddy /opt/orderly/backups /opt/orderly/data/postgres /opt/orderly/data/object-storage /opt/orderly/data/caddy /opt/orderly/data/caddy-config
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+stat -c "%A %U %G %s %n" /opt/orderly/env/postgres_password /opt/orderly/env/redis_password /opt/orderly/env/orderly.prod.env
+sha256sum /opt/orderly/env/postgres_password /opt/orderly/env/redis_password /opt/orderly/env/orderly.prod.env
+'
 ```
 
-## 4. 写入 secret
+停止条件：
 
-- 只在 `/opt/orderly/env/orderly.prod.env` 或密钥管理服务中写真实值。
-- 替换所有 `__SET_*__`。
-- Bootstrap secret 只保留到首个管理员初始化完成。
+- `postgres_password` 或 `redis_password` 缺失。
+- `orderly.prod.env` 仍有 `__SET_` 占位符。
+- `orderly.prod.env` 权限过宽。
+- `ORDERLY_ALLOWED_ORIGINS=*`。
 
-## 5. 启动 PostgreSQL
+## 5. docker compose config
 
 ```bash
-docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml up -d postgres
-docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml ps
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml config --quiet
+docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml config --services
+'
 ```
 
-## 6. 应用 migration
+验收：
+
+- services 只能包含 `orderly-server`；带 `--profile edge` 时才包含 `caddy`。
+- 不得包含 `postgres` 或 `redis`。
+- 不得声明 `compose_postgres_data` 或 `compose_redis_data`。
+
+## 6. pull / build
+
+如果使用远端镜像：
 
 ```bash
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml pull orderly-server
+docker compose --profile edge --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml pull caddy
+'
+```
+
+如果改为 ECS 本机构建，必须先单独授权上传源码或构建上下文；默认不使用本机构建。
+
+## 7. 启动应用容器
+
+注意：启动 `orderly-server` 会执行 DbUp migration。没有“允许启动 API 并执行 DbUp”的明确授权时，T10-C 必须停在第 6 步。
+
+```bash
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
 docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml up -d orderly-server
-docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml logs --tail=200 orderly-server
-```
-
-API 启动时执行 DbUp。升级前必须已有备份，且 `ORDERLY_REQUIRE_PRE_MIGRATION_BACKUP=true`。
-
-## 7. 启动 API
-
-如果上一段已启动成功，此处只确认状态：
-
-```bash
 docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml ps
+'
 ```
 
-## 8. Health check
-
-在 ECS 本机内网检查：
+## 8. healthcheck
 
 ```bash
-docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml exec orderly-server curl -fsS http://localhost:8080/health
-docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml exec orderly-server curl -fsS http://localhost:8080/health/db
-docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml exec orderly-server curl -fsS http://localhost:8080/health/backups
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml exec -T orderly-server curl -fsS http://localhost:8080/health
+docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml exec -T orderly-server curl -fsS http://localhost:8080/health/db
+docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml exec -T orderly-server curl -fsS http://localhost:8080/health/backups
+'
 ```
 
-## 9. Smoke test
+## 9. API smoke test
 
 - Bootstrap 管理员登录。
 - 用户申请、审批、员工登录。
@@ -75,38 +148,64 @@ docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/comp
 - 审计日志可查。
 - 普通用户永久删除被拒绝。
 
-## 10. Reverse proxy
+## 10. SignalR smoke test
 
-确认 API 内网健康后，再启动代理：
+- 连接 `/hubs/workspace`。
+- 带有效 JWT 连接成功。
+- 无效或无权限 JWT 被拒绝。
+- 一端同步写入后，另一端收到 workspace 通知。
+
+## 11. 数据库只读连通性验证
 
 ```bash
-docker compose --profile edge --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml up -d caddy
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+docker compose --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml exec -T orderly-server sh -lc "printenv ORDERLY_POSTGRES_HOST ORDERLY_POSTGRES_DB ORDERLY_POSTGRES_USER"
+docker exec orderly-postgres sh -lc "psql -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -Atc \"select current_database(), current_user;\""
+'
 ```
 
-## 11. 域名 / HTTPS
+不得输出 PostgreSQL 密码。
 
-- 人类确认 DNS 已指向 ECS。
-- 人类确认安全组开放 80/443。
-- 人类确认 Caddy 证书申请成功。
-- 未确认前不对真实业务开放。
+## 12. Redis 连通性验证
 
-## 12. 回滚方案
+当前 API 不消费 Redis。T10-C 只确认旧 Redis baseline 仍健康：
 
-- 保留上一个 API 镜像 tag。
-- 保留升级前数据库 dump。
-- 若只是不兼容应用镜像，切回旧 tag 并重启 API。
-- 若 migration 已变更 schema，先评估是否可向后兼容；不可兼容时按备份恢复流程处理。
-- 回滚过程不得删除生产 volume。
+```bash
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+docker exec orderly-redis sh -lc "export REDISCLI_AUTH=\"$(cat /run/secrets/redis_password)\"; redis-cli --no-auth-warning PING"
+docker exec orderly-redis sh -lc "export REDISCLI_AUTH=\"$(cat /run/secrets/redis_password)\"; redis-cli --no-auth-warning DBSIZE"
+'
+```
 
-## 13. 部署后观察指标
+## 13. 启动 Caddy
 
-- `/health`
-- `/health/db`
-- `/health/backups`
-- API 容器 restart 次数
-- PostgreSQL health
-- Caddy 4xx/5xx
-- 最近一次备份时间
-- 最近一次恢复演练状态
-- 登录失败和设备拒绝数量
-- 同步冲突、幂等重放、Cursor 补拉异常
+只有 API 内网健康、域名和安全组已确认后才执行：
+
+```bash
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+docker compose --profile edge --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml up -d caddy
+docker compose --profile edge --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml ps
+'
+```
+
+## 14. rollback 条件和命令
+
+可直接回滚应用容器的条件：
+
+- 新 API 镜像启动失败。
+- `/health`、`/health/db` 或 `/health/backups` 不健康。
+- API smoke 或 SignalR smoke 失败。
+- Caddy 反代失败。
+
+只停新应用，不碰旧 PostgreSQL/Redis/volume：
+
+```bash
+ssh -o BatchMode=yes orderlyops@118.178.237.56 'set -eu
+docker compose --profile edge --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml stop caddy orderly-server || true
+docker compose --profile edge --env-file /opt/orderly/env/orderly.prod.env -f /opt/orderly/compose/docker-compose.prod.yml rm -f caddy orderly-server || true
+docker ps --filter name=orderly-postgres --filter name=orderly-redis --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+docker volume inspect compose_postgres_data compose_redis_data >/dev/null
+'
+```
+
+如果 DbUp 已经修改 schema，不能只靠停容器回滚数据；必须进入备份恢复流程，由人类确认恢复目标库。任何情况下都禁止 `docker compose down -v`，禁止删除或重建 `compose_postgres_data` / `compose_redis_data`。

@@ -115,17 +115,24 @@ if ($script:failures.Count -eq 0) {
     $requiredEnv = @(
         'ASPNETCORE_ENVIRONMENT',
         'ORDERLY_SERVER_IMAGE',
+        'ORDERLY_APP_UID',
+        'ORDERLY_APP_GID',
+        'ORDERLY_EXISTING_DOCKER_NETWORK',
+        'ORDERLY_EXISTING_POSTGRES_CONTAINER',
+        'ORDERLY_EXISTING_REDIS_CONTAINER',
+        'ORDERLY_EXISTING_POSTGRES_PASSWORD_FILE',
+        'ORDERLY_EXISTING_REDIS_PASSWORD_FILE',
         'ORDERLY_DOMAIN',
         'ORDERLY_PUBLIC_URL',
         'ORDERLY_ALLOWED_ORIGINS',
-        'POSTGRES_DB',
-        'POSTGRES_USER',
-        'POSTGRES_PASSWORD',
         'ORDERLY_POSTGRES_HOST',
         'ORDERLY_POSTGRES_PORT',
         'ORDERLY_POSTGRES_DB',
         'ORDERLY_POSTGRES_USER',
-        'ORDERLY_POSTGRES_PASSWORD',
+        'ORDERLY_POSTGRES_PASSWORD_FILE',
+        'ORDERLY_REDIS_HOST',
+        'ORDERLY_REDIS_PORT',
+        'ORDERLY_REDIS_PASSWORD_FILE',
         'ORDERLY_JWT_SIGNING_KEY',
         'ORDERLY_BOOTSTRAP_ADMIN_TOKEN',
         'ORDERLY_BOOTSTRAP_ADMIN_PASSWORD',
@@ -177,31 +184,46 @@ if ($script:failures.Count -eq 0) {
     $apiBlock = Get-ServiceBlock $composeText 'orderly-server'
     $caddyBlock = Get-ServiceBlock $composeText 'caddy'
 
-    if ($null -eq $postgresBlock) { Add-Failure 'postgres service is missing.' }
     if ($null -eq $apiBlock) { Add-Failure 'orderly-server service is missing.' }
     if ($null -eq $caddyBlock) { Add-Failure 'caddy service is missing.' }
 
-    if ($postgresBlock -and $postgresBlock -match '(?m)^\s+ports\s*:') {
-        Add-Failure 'PostgreSQL must not expose public ports.'
+    if ($postgresBlock) {
+        Add-Failure 'Application compose must not declare a postgres service; use existing orderly-postgres as an external dependency.'
     }
 
     $redisBlock = Get-ServiceBlock $composeText 'redis'
-    if ($redisBlock -and $redisBlock -match '(?m)^\s+ports\s*:') {
-        Add-Failure 'Redis must not expose public ports.'
+    if ($redisBlock) {
+        Add-Failure 'Application compose must not declare a redis service; use existing orderly-redis as an external baseline resource.'
     }
 
     if ($apiBlock -and $apiBlock -match '(?m)^\s+ports\s*:') {
         Add-Failure 'API must not expose public ports; expose it only to reverse proxy.'
     }
 
-    foreach ($service in @('postgres', 'orderly-server', 'caddy')) {
+    if ($composeText -match '(?m)^\s+container_name\s*:') {
+        Add-Failure 'Application compose must not set container_name; avoid conflicts with existing orderly-postgres/orderly-redis.'
+    }
+
+    if ($composeText -match 'compose_postgres_data' -or $composeText -match 'compose_redis_data') {
+        Add-Failure 'Application compose must not declare or mount existing PostgreSQL/Redis volumes.'
+    }
+
+    if ($composeText -notmatch '(?m)^\s+external\s*:\s*true\s*$' -or $composeText -notmatch 'ORDERLY_EXISTING_DOCKER_NETWORK') {
+        Add-Failure 'Application compose must attach to the existing Docker network using external: true.'
+    }
+
+    if ($composeText -notmatch 'existing_postgres_password' -or $composeText -notmatch 'ORDERLY_EXISTING_POSTGRES_PASSWORD_FILE') {
+        Add-Failure 'Application compose must read the existing PostgreSQL password through a Compose secret file.'
+    }
+
+    foreach ($service in @('orderly-server', 'caddy')) {
         $block = Get-ServiceBlock $composeText $service
         if ($block -and $block -notmatch '(?m)^\s+healthcheck\s*:') {
             Add-Failure "$service is missing healthcheck."
         }
     }
 
-    foreach ($requiredPath in @('/opt/orderly/data/postgres', '/opt/orderly/backups', '/opt/orderly/logs', '/opt/orderly/data/object-storage')) {
+    foreach ($requiredPath in @('/opt/orderly/backups', '/opt/orderly/logs', '/opt/orderly/data/object-storage')) {
         if ($composeText -notmatch [regex]::Escape($requiredPath)) {
             Add-Failure "Compose is missing required ECS path: $requiredPath"
         }
@@ -238,7 +260,7 @@ if ($script:failures.Count -eq 0) {
     $migrationPath = Join-Path $ecsPath 'MIGRATION_RUNBOOK.md'
     if (Test-Path -LiteralPath $migrationPath) {
         $migrationText = Get-Content -LiteralPath $migrationPath -Raw
-        foreach ($term in @('DbUp', '首次空库', '后续升级', '备份', '不重写历史 migration', '不清空生产库')) {
+        foreach ($term in @('DbUp', '首次接管', '后续升级', '备份', '不重写历史 migration', '不清空生产库')) {
             if ($migrationText -notmatch [regex]::Escape($term)) {
                 Add-Failure "Migration runbook missing term: $term"
             }
@@ -264,8 +286,12 @@ if ($script:failures.Count -eq 0) {
         foreach ($line in Get-Content -LiteralPath $file.FullName) {
             $lineNumber++
             if ($line -match $assignmentPattern) {
+                if ($Matches[1] -eq 'PASSWORD' -and $line -match '_PASSWORD_FILE\s*[:=]') {
+                    continue
+                }
+
                 $value = $Matches[2].Trim().Trim('"').Trim("'")
-                if ([string]::IsNullOrWhiteSpace($value) -or (Test-PlaceholderValue $value) -or $value.StartsWith('${')) {
+                if ([string]::IsNullOrWhiteSpace($value) -or (Test-PlaceholderValue $value) -or $value.StartsWith('${') -or $value.StartsWith('/opt/orderly/env/') -or $value.StartsWith('/run/secrets/')) {
                     continue
                 }
 
@@ -275,21 +301,21 @@ if ($script:failures.Count -eq 0) {
     }
 
     $dangerPatterns = @(
-        'down\s+--volumes',
-        'docker\s+system\s+prune',
-        'rm\s+-rf\s+/opt/orderly',
-        'DROP\s+DATABASE\s+orderly',
-        'TRUNCATE\s+TABLE',
-        'DELETE\s+FROM\s+"?Cloud',
-        'git\s+reset\s+--hard'
+        '^\s*docker\s+compose\b.*\sdown\s+(-v|--volumes)\b',
+        '^\s*docker\s+system\s+prune\b',
+        '^\s*rm\s+-rf\s+/opt/orderly\b',
+        '^\s*DROP\s+DATABASE\s+orderly\b',
+        '^\s*TRUNCATE\s+TABLE\b',
+        '^\s*DELETE\s+FROM\s+"?Cloud',
+        '^\s*git\s+reset\s+--hard\b'
     )
     foreach ($file in $scanFiles) {
         $lineNumber = 0
         foreach ($line in Get-Content -LiteralPath $file.FullName) {
             $lineNumber++
             foreach ($pattern in $dangerPatterns) {
-                if ($line -match $pattern -and $line -notmatch '(禁止|不允许|不要|Never|Do not)') {
-                    Add-Failure "Possible production-dangerous command in $($file.FullName):$lineNumber"
+                if ($line -match $pattern -and $line -notmatch '(禁止|不允许|不要|不执行|不得|不能|避免|Never|Do not)') {
+                    Add-Failure "Possible production-dangerous command in $($file.FullName):$lineNumber pattern=$pattern line=$line"
                 }
             }
         }

@@ -1,4 +1,4 @@
-name: ${ORDERLY_COMPOSE_PROJECT_NAME:-orderly-prod}
+name: ${ORDERLY_COMPOSE_PROJECT_NAME:-orderly-app}
 
 x-logging: &default-logging
   driver: json-file
@@ -7,43 +7,20 @@ x-logging: &default-logging
     max-file: "10"
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in production env}
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in production env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in production env}
-      TZ: ${TZ:-Asia/Shanghai}
-    volumes:
-      - /opt/orderly/data/postgres:/var/lib/postgresql/data
-      - /opt/orderly/backups:/opt/orderly/backups
-    expose:
-      - "5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-    logging: *default-logging
-
   orderly-server:
     image: ${ORDERLY_SERVER_IMAGE:?Set ORDERLY_SERVER_IMAGE in production env}
+    user: "${ORDERLY_APP_UID:-1000}:${ORDERLY_APP_GID:-1000}"
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_URLS: http://+:8080
       TZ: ${TZ:-Asia/Shanghai}
       ORDERLY_PUBLIC_URL: ${ORDERLY_PUBLIC_URL:?Set ORDERLY_PUBLIC_URL in production env}
-      ORDERLY_POSTGRES_HOST: postgres
-      ORDERLY_POSTGRES_PORT: 5432
-      ORDERLY_POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in production env}
-      ORDERLY_POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in production env}
-      ORDERLY_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in production env}
+      ORDERLY_POSTGRES_HOST: ${ORDERLY_POSTGRES_HOST:?Set existing PostgreSQL Docker DNS name}
+      ORDERLY_POSTGRES_PORT: ${ORDERLY_POSTGRES_PORT:-5432}
+      ORDERLY_POSTGRES_DB: ${ORDERLY_POSTGRES_DB:?Set existing PostgreSQL database name}
+      ORDERLY_POSTGRES_USER: ${ORDERLY_POSTGRES_USER:?Set existing PostgreSQL user}
+      ORDERLY_POSTGRES_PASSWORD_FILE: /run/secrets/existing_postgres_password
       ORDERLY_JWT_SIGNING_KEY: ${ORDERLY_JWT_SIGNING_KEY:?Set ORDERLY_JWT_SIGNING_KEY in production env}
       ORDERLY_BOOTSTRAP_ADMIN_TOKEN: ${ORDERLY_BOOTSTRAP_ADMIN_TOKEN:-}
       ORDERLY_BOOTSTRAP_ADMIN_PASSWORD: ${ORDERLY_BOOTSTRAP_ADMIN_PASSWORD:-}
@@ -71,8 +48,12 @@ services:
       - /opt/orderly/backups:/opt/orderly/backups
       - /opt/orderly/logs/api:/opt/orderly/logs
       - /opt/orderly/data/object-storage:/opt/orderly/blobs
+    secrets:
+      - existing_postgres_password
     expose:
       - "8080"
+    networks:
+      - existing-orderly-baseline
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null"]
       interval: 30s
@@ -100,6 +81,8 @@ services:
       - /opt/orderly/logs/caddy:/var/log/caddy
       - /opt/orderly/data/caddy:/data
       - /opt/orderly/data/caddy-config:/config
+    networks:
+      - existing-orderly-baseline
     healthcheck:
       test: ["CMD-SHELL", "caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1"]
       interval: 30s
@@ -107,3 +90,12 @@ services:
       retries: 5
       start_period: 20s
     logging: *default-logging
+
+networks:
+  existing-orderly-baseline:
+    name: ${ORDERLY_EXISTING_DOCKER_NETWORK:?Set existing Docker network name}
+    external: true
+
+secrets:
+  existing_postgres_password:
+    file: ${ORDERLY_EXISTING_POSTGRES_PASSWORD_FILE:?Set existing PostgreSQL password file path}

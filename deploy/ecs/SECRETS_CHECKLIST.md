@@ -9,9 +9,14 @@
 | ASP.NET 环境 | `ASPNETCORE_ENVIRONMENT` | 必须是 `Production` |
 | 公网入口 | `ORDERLY_PUBLIC_URL` | T10 配置真实域名后填写 HTTPS URL |
 | 允许来源 | `ORDERLY_ALLOWED_ORIGINS` | 只填真实前端/客户端来源，不允许 `*` |
-| Postgres 库名 | `POSTGRES_DB` / `ORDERLY_POSTGRES_DB` | 两者保持一致 |
-| Postgres 用户 | `POSTGRES_USER` / `ORDERLY_POSTGRES_USER` | 两者保持一致 |
-| Postgres 密码 | `POSTGRES_PASSWORD` / `ORDERLY_POSTGRES_PASSWORD` | 强随机值，不提交 |
+| Existing Docker network | `ORDERLY_EXISTING_DOCKER_NETWORK` | 当前应为 `compose_default` |
+| Existing Postgres 容器 | `ORDERLY_EXISTING_POSTGRES_CONTAINER` | 当前应为 `orderly-postgres` |
+| Existing Redis 容器 | `ORDERLY_EXISTING_REDIS_CONTAINER` | 当前应为 `orderly-redis` |
+| API 运行用户 | `ORDERLY_APP_UID` / `ORDERLY_APP_GID` | 当前应匹配 `orderlyops`，即 `1000:1000`，用于读取既有 secret 文件并写应用挂载目录 |
+| Postgres 库名 | `ORDERLY_POSTGRES_DB` | 连接现有库，当前应为 `orderly` |
+| Postgres 用户 | `ORDERLY_POSTGRES_USER` | 连接现有用户，当前应为 `orderly` |
+| Postgres 密码文件 | `ORDERLY_EXISTING_POSTGRES_PASSWORD_FILE` / `ORDERLY_POSTGRES_PASSWORD_FILE` | 宿主文件为 `/opt/orderly/env/postgres_password`；容器内读取 `/run/secrets/existing_postgres_password` |
+| Redis 连接标识 | `ORDERLY_REDIS_HOST` / `ORDERLY_REDIS_PORT` / `ORDERLY_REDIS_PASSWORD_FILE` | 当前 API 不消费 Redis，仅用于 T10-C baseline 验证和后续规划 |
 | JWT 签名密钥 | `ORDERLY_JWT_SIGNING_KEY` | 至少 32 字节，建议 64 字节以上随机值 |
 | 一次性初始化令牌 | `ORDERLY_BOOTSTRAP_ADMIN_TOKEN` | 只用于首次初始化管理员，完成后清空并重启 |
 | 一次性管理员密码 | `ORDERLY_BOOTSTRAP_ADMIN_PASSWORD` | 至少 12 位强密码，完成后由管理员立刻改密 |
@@ -34,6 +39,8 @@
 - `.env.prod.example` 不能直接用于生产。
 - 真实 secret 不进 git。
 - 不把 secret 写入 runbook、截图、聊天记录或 issue。
+- 不输出 `/opt/orderly/env/postgres_password` 或 `/opt/orderly/env/redis_password` 的内容；只允许看权限、大小、文件名和哈希。
 - Bootstrap secret 用完后清空。
 - OSS bucket 禁止公开读，附件下载只能走 API 鉴权路径。
 - 数据库端口不开放公网安全组。
+- 新应用 compose 不创建、不删除、不重建 `orderly-postgres`、`orderly-redis`、`compose_postgres_data`、`compose_redis_data`。

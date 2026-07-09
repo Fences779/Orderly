@@ -22,7 +22,7 @@ serverOptions.PostgresHost = GetEnvOrConfig("ORDERLY_POSTGRES_HOST", serverOptio
 if (int.TryParse(Environment.GetEnvironmentVariable("ORDERLY_POSTGRES_PORT"), out var pgPort)) serverOptions.PostgresPort = pgPort;
 serverOptions.PostgresDatabase = GetEnvOrConfig("ORDERLY_POSTGRES_DB", serverOptions.PostgresDatabase);
 serverOptions.PostgresUser = GetEnvOrConfig("ORDERLY_POSTGRES_USER", serverOptions.PostgresUser);
-serverOptions.PostgresPassword = GetEnvOrConfig("ORDERLY_POSTGRES_PASSWORD", serverOptions.PostgresPassword);
+serverOptions.PostgresPassword = GetSecretEnvOrFile("ORDERLY_POSTGRES_PASSWORD", "ORDERLY_POSTGRES_PASSWORD_FILE", serverOptions.PostgresPassword);
 serverOptions.JwtSigningKey = GetEnvOrConfig("ORDERLY_JWT_SIGNING_KEY", serverOptions.JwtSigningKey);
 serverOptions.BootstrapAdminToken = Environment.GetEnvironmentVariable("ORDERLY_BOOTSTRAP_ADMIN_TOKEN") ?? serverOptions.BootstrapAdminToken;
 serverOptions.BootstrapAdminPassword = Environment.GetEnvironmentVariable("ORDERLY_BOOTSTRAP_ADMIN_PASSWORD") ?? serverOptions.BootstrapAdminPassword;
@@ -266,6 +266,34 @@ app.Run();
 
 static string GetEnvOrConfig(string envName, string fallback) =>
     Environment.GetEnvironmentVariable(envName) ?? fallback;
+
+static string GetSecretEnvOrFile(string envName, string fileEnvName, string fallback)
+{
+    var value = Environment.GetEnvironmentVariable(envName);
+    if (!string.IsNullOrWhiteSpace(value))
+    {
+        return value;
+    }
+
+    var path = Environment.GetEnvironmentVariable(fileEnvName);
+    if (string.IsNullOrWhiteSpace(path))
+    {
+        return fallback;
+    }
+
+    if (!File.Exists(path))
+    {
+        throw new InvalidOperationException($"{fileEnvName} points to a missing file.");
+    }
+
+    var fileValue = File.ReadAllText(path).Trim();
+    if (string.IsNullOrWhiteSpace(fileValue))
+    {
+        throw new InvalidOperationException($"{fileEnvName} points to an empty file.");
+    }
+
+    return fileValue;
+}
 
 static string[] ResolveAllowedOrigins(ServerOptions options)
 {
